@@ -1,0 +1,109 @@
+;-----------------------------------------------------------------------------------------------------------------------
+;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
+;правовым вопросам обращайтесь на email.
+;-----------------------------------------------------------------------------------------------------------------------
+;28.05.2020  w5277c@gmail.com        Начало
+;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF_CORE5277_RAM_FIND_USED_BLOCK_MT
+.else
+.set DEF_CORE5277_RAM_FIND_USED_BLOCK_MT = 1
+
+;--------------------------------------------------------
+_CORE5277_RAM_FIND_USED_BLOCK_MT:
+;--------------------------------------------------------
+;Ищем ближайший занятый блок выделяемой памяти в задачах,
+;адрес которого будет больше, чем указанный адрес
+;IN: Y - адрес текущего блока
+;OUT: Y - адрес найденного блока, ACCUM - длина блока,
+;flag Z - результат(true-найдено)
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Z
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH TEMP
+	PUSH LOOP_CNTR
+
+	LDI XH,0xff
+	LDI XL,0xff
+
+	LDI LOOP_CNTR,0x00
+	LDI ZH,high(_CORE5277_DRIVERS_HEADER)
+	LDI ZL,low(_CORE5277_DRIVERS_HEADER)
+_CORE5277_RAM_FIND_USED_BLOCK_MT__LOOP1:
+	MCALL _CORE5277_RAM_FIND_USED_BLOCK_MT__BODY
+	LDI TEMP,_CORE5277_DRIVER_HEADER_SIZE
+	ADD ZL,TEMP
+	LDI TEMP,0x00
+	ADC ZH,TEMP
+	INC LOOP_CNTR
+	CPI LOOP_CNTR,_CORE5277_DRIVERS_MAX_QNT
+	BRNE _CORE5277_RAM_FIND_USED_BLOCK_MT__LOOP1
+
+	LDI LOOP_CNTR,0x00
+	LDI ZH,high(_CORE5277_TASKS_HEADER)
+	LDI ZL,low(_CORE5277_TASKS_HEADER)
+_CORE5277_RAM_FIND_USED_BLOCK_MT__LOOP2:
+	MCALL _CORE5277_RAM_FIND_USED_BLOCK_MT__BODY
+	LDI TEMP,_CORE5277_TASK_HEADER_SIZE
+	ADD ZL,TEMP
+	LDI TEMP,0x00
+	ADC ZH,TEMP
+	INC LOOP_CNTR
+	CPI LOOP_CNTR,_CORE5277_TASKS_MAX_QNT
+	BRNE _CORE5277_RAM_FIND_USED_BLOCK_MT__LOOP2
+
+	CPI XH,0xff
+	BRNE _CORE5277_RAM_FIND_USED_BLOCK_MT__OK
+	CPI XL,0xff
+	BRNE _CORE5277_RAM_FIND_USED_BLOCK_MT__OK
+	CLZ
+	RJMP _CORE5277_RAM_FIND_USED_BLOCK_MT__END
+_CORE5277_RAM_FIND_USED_BLOCK_MT__OK:
+	MOV YH,XH
+	MOV YL,XL
+	SEZ
+_CORE5277_RAM_FIND_USED_BLOCK_MT__END:
+	POP LOOP_CNTR
+	POP TEMP
+	POP TEMP_L
+	POP TEMP_H
+	POP_Z
+	POP_X
+	RET
+
+_CORE5277_RAM_FIND_USED_BLOCK_MT__BODY:
+	;Проверяем на активную задачу
+	LDD TEMP,Z+_CORE5277_PROC_STATE
+	ANDI TEMP,0x0f
+	CPI TEMP,_CORE5277_PROC_STATE_ABSENT
+	BREQ _CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT
+	LDD TEMP_H,Z+_CORE5277_PROC_RAM_OFFSET+0x00
+	LDD TEMP_L,Z+_CORE5277_PROC_RAM_OFFSET+0x01
+	LDD TEMP,Z+_CORE5277_PROC_RAM_SIZE
+	;Проверяем на нули
+	CPI TEMP_H,0x00
+	BRNE PC+0x03
+	CPI TEMP_L,0x00
+	BREQ _CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT
+	CPI TEMP,0x00
+	BREQ _CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT
+	;Проверям, что адрес найденного блока больше заданного
+	CP YH,TEMP_H
+	BREQ PC+0x02
+	BRCC _CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT
+	CP YL,TEMP_L
+	BRCC _CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT
+	;Заменяем результат, если полученный адрес меньше предыдущего
+	CP XH,TEMP_H
+	BRCS _CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT
+	BRNE PC+0x03
+	CP XL,TEMP_L
+	BRCS _CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT
+	MOV XH,TEMP_H
+	MOV XL,TEMP_L
+	MOV ACCUM,TEMP
+_CORE5277_RAM_FIND_USED_BLOCK_MT__NEXT:
+	RET
+.endif

@@ -1,0 +1,100 @@
+;-----------------------------------------------------------------------------------------------------------------------
+;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
+;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;-----------------------------------------------------------------------------------------------------------------------
+;19.09.2020  w5277c@gmail.com        Начало
+;-----------------------------------------------------------------------------------------------------------------------
+;BUILD: avra  -I ../../ main.asm
+
+	.INCLUDE "./inc/devices/atmega328.inc"
+	.SET	REALTIME									= 0	;0-1
+	.SET	TIMERS									= 1	;0-4
+	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
+	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+;---INCLUDES---------------------------------------------
+	.INCLUDE "core5277.asm"
+	;Блок драйверов
+	.include	"./inc/drivers/uart_h.inc"
+	;---
+	;Блок задач
+	;---
+	;Дополнительно
+	.include	"./inc/io/log_bytes.inc"
+	.include	"./inc/io/logstr_new_line.inc"
+	.include	"./inc/mem/eeprom_write_byte.inc"
+	.include	"./inc/mem/eeprom_read_byte.inc"
+	.include	"./inc/core/wait_1s.inc"
+	.include	"./inc/mem/ram_fill8.inc"
+	;---
+
+;---CONSTANTS--------------------------------------------
+	;Идентификаторы драйверов(0-7|0-15)
+	.EQU	PID_UART_DRV							= 0|(1<<CORE5277_PROCID_OPT_DRV)
+	;Идентификаторы задач(0-3|0-15)
+	.EQU	PID_TASK									= 0
+	;Идентификаторы таймеров
+	.EQU	TID_UART									= 0
+;--------------------------------------------------------;Выполняемый код при старте контроллера
+MAIN:
+	CLI
+	;Инициализация стека
+	LDI TEMP,high(RAMEND)
+	STS SPH,TEMP
+	LDI TEMP,low(RAMEND)
+	STS SPL,TEMP
+
+	;Инициализация ядра
+	MCALL CORE5277_INIT
+
+	;Инициализация UART
+	LDI PID,PID_UART_DRV
+	LDI ZH,high(DRV_HUART_INIT)
+	LDI ZL,low(DRV_HUART_INIT)
+	LDI TEMP_H,PD4
+	LDI TEMP_L,0xff
+	LDI ACCUM,TID_UART
+	LDI FLAGS,(1<<DRV_HUART_OPT_BREAK)
+	LDI YH,DRV_HUART_BAUDRATE_9600
+	MCALL CORE5277_CREATE
+
+	;Инициализация задачи тестирования
+	LDI PID,PID_TASK
+	LDI ZH,high(TASK__INIT)
+	LDI ZL,low(TASK__INIT)
+	MCALL CORE5277_CREATE
+
+	MJMP CORE5277_START
+
+	TASK_DATA:
+	.db	"Hello world!",0x0d,0x0a,0x00
+
+;--------------------------------------------------------;Задача
+TASK__INIT:
+	LDI ACCUM,0x21
+	MCALL CORE5277_RAM_REALLOC
+
+	MCALL CORE5277_READY
+;--------------------------------------------------------
+TASK__INFINITE_LOOP:
+	LDI LOOP_CNTR,0x21
+	LDI TEMP,0x00
+	MOV XH,ZH
+	MOV XL,ZL
+	MCALL CORE5277_RAM_FILL8
+
+	LDI TEMP,PID_UART_DRV
+	LDI YH,high(TASK_DATA)|0x80
+	LDI YL,low(TASK_DATA)
+	LDI TEMP_EH,14
+	LDI TEMP_EL,0x20
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x00
+	MCALL CORE5277_EXEC
+	CPI TEMP_H,DRV_HUART_ST_READY
+	BRNE TASK__INFINITE_LOOP
+
+	MOV YH,ZH
+	MOV YL,ZL
+	MCALL CORE5277_LOG_STR
+	RJMP TASK__INFINITE_LOOP
+
