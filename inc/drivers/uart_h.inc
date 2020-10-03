@@ -13,6 +13,9 @@
 .include	"./inc/io/port_set_lo.inc"
 .include	"./inc/io/port_set_hi.inc"
 .include	"./inc/core/wait.inc"
+.include	"./inc/core/timer_set.inc"
+.include	"./inc/core/timer_start.inc"
+.include	"./inc/core/timer_stop.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
@@ -149,7 +152,6 @@ _DRV_HUART_INIT__NO_LED_PORT:
 	POP TEMP_L
 	POP TEMP_H
 	POP_Z
-
 	MCALL CORE5277_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация

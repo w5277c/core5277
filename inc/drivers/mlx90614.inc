@@ -5,6 +5,8 @@
 ;17.06.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 
+.include	"./inc/mem/ram_offset.inc"
+.include	"./inc/mem/ram_realloc.inc"
 .include	"./inc/math/mul24x8.inc"
 .include	"./inc/math/div16x8.inc"
 
