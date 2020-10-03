@@ -4,6 +4,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;05.03.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;03.10.2020  w5277c@gmail.com        Атомарность
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_CORE5277_PORT_MODE_IN
 .else
@@ -26,10 +27,14 @@ CORE5277_PORT_MODE_IN:
 	MCALL CORE5277_PORT_OFFSETS
 	CLR ZH
 	MOV ZL,TEMP_L
+
+	LDS TEMP_L,SREG
+	CLI
 	LD TEMP,Z
 	COM ACCUM
 	AND TEMP,ACCUM
 	ST Z,TEMP
+	STS SREG,TEMP_L
 
 	POP ACCUM
 	POP TEMP

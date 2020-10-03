@@ -217,7 +217,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED ########"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"core5277_v0.2.6",0x0d,0x0a,0x00
+	.db   0x0d,0x0a,"core5277_v0.2.7",0x0d,0x0a,0x00
 	.INCLUDE "./inc/io/log_init.inc"
 .ELSE
 	.MESSAGE "######## LOGGING DISABLED ########"
@@ -592,6 +592,8 @@ CORE5277_UPTIME_WRITE:
 ;IN: Y - адрес для записи
 ;--------------------------------------------------------
 	PUSH TEMP
+	LDS TEMP,SREG
+	PUSH TEMP
 	CLI
 	LDS TEMP,_CORE5277_UPTIME+0x00
 	STD Y+0x00,TEMP
@@ -603,7 +605,8 @@ CORE5277_UPTIME_WRITE:
 	STD Y+0x03,TEMP
 	LDS TEMP,_CORE5277_UPTIME+0x04
 	STD Y+0x04,TEMP
-	SEI
+	POP TEMP
+	STS SREG,TEMP
 	POP TEMP
 	RET
 
@@ -613,13 +616,16 @@ CORE5277_UPTIME_GET:
 ;Помещаем в регистры 5 байт UPTIME
 ;OUT: TEMP_EH,TEMP_EL,TEMP_H,TEMP_L,TEMP - UPTIME
 ;--------------------------------------------------------
+	PUSH ACCUM
+	LDS ACCUM,SREG
 	CLI
 	LDS TEMP_EH,_CORE5277_UPTIME+0x00
 	LDS TEMP_EL,_CORE5277_UPTIME+0x01
 	LDS TEMP_H,_CORE5277_UPTIME+0x02
 	LDS TEMP_L,_CORE5277_UPTIME+0x03
 	LDS TEMP,_CORE5277_UPTIME+0x04
-	SEI
+	STS SREG,ACCUM
+	POP ACCUM
 	RET
 
 ;========================================================================

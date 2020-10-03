@@ -1,0 +1,8 @@
+
+examples/aqua_module/main.cof
+
+*.hex
+
+*.obj
+
+*.cof

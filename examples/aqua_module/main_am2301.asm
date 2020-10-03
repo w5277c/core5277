@@ -2,7 +2,7 @@
 ;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
 ;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;13.09.2020  w5277c@gmail.com        Начало
+;03.10.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
@@ -14,11 +14,12 @@
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "core5277.asm"
 	;Блок драйверов
-	.INCLUDE "./inc/drivers/i2c_h.inc"
-	.INCLUDE "./inc/drivers/mlx90614.inc"
+	.INCLUDE "./inc/drivers/pcint_h.inc"
+	.INCLUDE "./inc/drivers/am2301.inc"
 	;Блок задач
 	;---
 	;Дополнительно
+	.include	"./inc/io/log_char.inc"
 	.include	"./inc/io/log_sdnf.inc"
 	.include	"./inc/io/log_romstr.inc"
 	.include	"./inc/io/logstr_new_line.inc"
@@ -26,8 +27,8 @@
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_I2C_DRV								= 0|(1<<CORE5277_PROCID_OPT_DRV)
-	.EQU	PID_MLX90614_DRV						= 1|(1<<CORE5277_PROCID_OPT_DRV)
+	.EQU	PID_PCINT_DRV							= 0|(1<<CORE5277_PROCID_OPT_DRV)
+	.EQU	PID_AM2301_DRV							= 1|(1<<CORE5277_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
@@ -45,23 +46,21 @@ MAIN:
 	;Инициализация ядра
 	MCALL CORE5277_INIT
 
-	;Инициализация 1WIRE
-	LDI PID,PID_I2C_DRV
-	LDI ZH,high(DRV_I2C_INIT)
-	LDI ZL,low(DRV_I2C_INIT)
-	LDI XH,0x00
-	LDI XL,DRV_I2C_FREQ_100KHZ
-	LDI YH,PB4
+	;Инициализация PCINT
+	LDI PID,PID_PCINT_DRV
+	LDI ZH,high(DRV_HPCINT_INIT)
+	LDI ZL,low(DRV_HPCINT_INIT)
 	MCALL CORE5277_CREATE
 
-	;Инициализация MLX90614
-	LDI PID,PID_MLX90614_DRV
-	LDI ZH,high(DRV_MLX90614_INIT)
-	LDI ZL,low(DRV_MLX90614_INIT)
-	LDI ACCUM,PID_I2C_DRV
+	;Инициализация AM2301
+	LDI PID,PID_AM2301_DRV
+	LDI ZH,high(DRV_AM2301_INIT)
+	LDI ZL,low(DRV_AM2301_INIT)
+	LDI TEMP_H,PID_PCINT_DRV
+	LDI TEMP_L,PC1
 	MCALL CORE5277_CREATE
 
-	;Инициализация задачи тестирования MLX90614
+	;Инициализация задачи тестирования AM2301
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
@@ -70,22 +69,32 @@ MAIN:
 	MJMP CORE5277_START
 
 ;--------------------------------------------------------;Задача
+	TASK__LOGSTR_ERROR:
+	.db   "error",0x0d,0x0a,0x00
+
 TASK__INIT:
 	MCALL CORE5277_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI TEMP_H,0x00
-	LDI TEMP_L,high(500/2)
-	LDI TEMP,low(500/2)
-	MCALL CORE5277_WAIT_2MS											;Ждем 500мс
+	LDI TEMP_L,high(1000/2)
+	LDI TEMP,low(1000/2)
+	MCALL CORE5277_WAIT_2MS											;Ждем 1000мс
 
-	LDI TEMP,PID_MLX90614_DRV
+	LDI TEMP,PID_AM2301_DRV
 	MCALL CORE5277_EXEC
-	BRNE TASK__INFINITE_LOOP
+	CPI TEMP,DRV_AM2301_RESULT_OK
+	BRNE TASK__ERROR
 
-	MOV TEMP_H,ZH
-	MOV TEMP_L,ZL
+	MCALL CORE5277_LOG_SDNF
+	LDI TEMP,'/'
+	MCALL CORE5277_LOG_CHAR
+	MOV TEMP_H,TEMP_EH
+	MOV TEMP_L,TEMP_EL
 	MCALL CORE5277_LOG_SDNF
 	CORE5277_LOG_ROMSTR LOGSTR_NEW_LINE
 	RJMP TASK__INFINITE_LOOP
 
+TASK__ERROR:
+	CORE5277_LOG_ROMSTR TASK__LOGSTR_ERROR
+	RJMP TASK__INFINITE_LOOP
