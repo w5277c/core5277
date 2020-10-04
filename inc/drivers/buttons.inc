@@ -14,7 +14,6 @@
 .include	"./inc/core/wait.inc"
 .include	"./inc/core/timer_set.inc"
 .include	"./inc/core/timer_start.inc"
-.include	"./inc/core/timer_stop.inc"
 .include	"./inc/io/port_mode_in.inc"
 .include	"./inc/io/port_set_hi.inc"
 .include	"./inc/io/port_get.inc"
@@ -24,10 +23,9 @@
 	.EQU	_DRV_BUTTONS_QUEUE_MAX_SIZE					= 0x05;Количество кнопок очереди для событий
 	;---
 	.EQU	_DRV_BUTTONS_BUTTONS_QNT						= 0x00;1B - Количество кнопок
-	.EQU	_DRV_BUTTONS_MODE									= 0x01;1B - Режим работы
-	.EQU	_DRV_BUTTONS_CNTR									= 0x02;1B - Счетчик опроса(1ед = 10мс)
-	.EQU	_DRV_BUTTONS_QUEUE_SIZE							= 0x03;1B - Кол-во элементов в очереди
-	.EQU	_DRV_BUTTONS_QUEUE								= 0x04;_DRV_BUTTONS_QUEUE_MAX_SIZE*2 - очередь событий [PORT,RESULT]
+	.EQU	_DRV_BUTTONS_CNTR									= 0x01;1B - Счетчик опроса(1ед = 10мс)
+	.EQU	_DRV_BUTTONS_QUEUE_SIZE							= 0x02;1B - Кол-во элементов в очереди
+	.EQU	_DRV_BUTTONS_QUEUE								= 0x03;_DRV_BUTTONS_QUEUE_MAX_SIZE*2 - очередь событий [PORT,RESULT]
 	.EQU	_DRV_BUTTONS_DATA									= _DRV_BUTTONS_QUEUE+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2);x4B - Данные кнопок
 
 	;---Структура данных по кнопкам---
@@ -35,12 +33,7 @@
 	.EQU	_DRV_BUTTONS_CNTR_N_FLAGS						= 0x01;Счетчик высоких состояний и флаги(старший ниббл)
 	.EQU	_DRV_BUTTONS_TIME									= 0x02;Время отсчета
 	.EQU	_DRV_BUTTONS_RESULT								= 0x03;Результат |rqqqssss|, r - повтор, q-кол-во нажатий(1-4), s-состояния(история 0-короткое/1-длинное)
-
-	;---Режим работы---
-	.EQU	DRV_BUTTONS_MODE_BUTTONS						= 0x00;
-	.EQU	DRV_BUTTONS_MODE_SWITCHES						= 0x01;
-	.EQU	DRV_BUTTONS_MODE_SENSORS						= 0x02;
-	;---
+	;---Тайминги---
 	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME			= 0x30;0.480сек
 	.EQU	_DRV_BUTTONS_HOLD_TIME							= 0x60;0.960сек
 	.EQU	_DRV_BUTTONS_TIMEOUT								= 0x24;0.360сек
@@ -56,13 +49,12 @@
 	.EQU	DRV_BUTTONS_OP_GET								= 0x01
 	.EQU	DRV_BUTTONS_OP_WAIT								= 0x02
 
-	.EQU	_DRV_BUTTONS_RAM_SIZE							= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
+	.EQU	_DRV_BUTTONS_RAM_SIZE							= 0x03+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
 ;--------------------------------------------------------
 DRV_BUTTONS_INIT:
 ;--------------------------------------------------------
 ;Инициализация
 ;IN: ACCUM - ид таймера
-;TEMP - режим работы
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_X
@@ -76,7 +68,6 @@ DRV_BUTTONS_INIT:
 	MCALL CORE5277_RAM_REALLOC
 	POP ACCUM
 
-	STD Z+_DRV_BUTTONS_MODE,TEMP
 	LDI TEMP,0x00
 	STD Z+_DRV_BUTTONS_QUEUE_SIZE,TEMP
 	STD Z+_DRV_BUTTONS_BUTTONS_QNT,TEMP
@@ -93,6 +84,9 @@ DRV_BUTTONS_INIT:
 	LDI TEMP_H,high(DRV_BUTTONS_TIMER_EVENT)
 	LDI TEMP_L,low(DRV_BUTTONS_TIMER_EVENT)
 	MCALL CORE5277_TIMER_SET
+	;Запускаю таймер с периодом в 10мс
+	LDI ACCUM,0x05
+	MCALL CORE5277_TIMER_START
 
 	POP TEMP_L
 	POP TEMP_H
