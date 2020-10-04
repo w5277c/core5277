@@ -253,6 +253,8 @@ DRV_BUTTONS_TIMER_EVENT:
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
+	PUSH_X
+	PUSH_Y
 	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -262,11 +264,12 @@ DRV_BUTTONS_TIMER_EVENT:
 	LDD LOOP_CNTR,Z+_DRV_BUTTONS_BUTTONS_QNT
 
 	;Инкрементирую счетчик опроса
-	LDD TEMP_H,Z+_DRV_BUTTONS_CNTR
-	INC TEMP_H
-	STD Z+_DRV_BUTTONS_CNTR,TEMP_H
+	LDD TEMP,Z+_DRV_BUTTONS_CNTR
+	CPI TEMP,_DRV_BUTTONS_MAX_CNTR
+	BREQ DRV_BUTTONS_TIMER_EVENT__ANALYZE
+	INC TEMP
+	STD Z+_DRV_BUTTONS_CNTR,TEMP
 
-	PUSH_Z
 	;Смещаемся на данные первой кнопки
 	LDI TEMP,_DRV_BUTTONS_DATA
 	ADD ZL,TEMP
@@ -287,9 +290,6 @@ DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
 	OR TEMP,TEMP_L
 	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
 DRV_BUTTONS_TIMER_EVENT__LO_STATE:
-	CPI TEMP_H,_DRV_BUTTONS_MAX_CNTR
-	BRNE PC+0x03
-	MCALL _DRV_BUTTONS_ANALYZE
 
 	LDI TEMP,_DRV_BUTTONS_STRUCT_SIZE
 	ADD ZL,TEMP
@@ -297,205 +297,228 @@ DRV_BUTTONS_TIMER_EVENT__LO_STATE:
 	ADC ZH,TEMP
 	DEC LOOP_CNTR
 	BRNE DRV_BUTTONS_TIMER_EVENT__READ_LOOP
+	RJMP DRV_BUTTONS_TIMER_EVENT__END
 
-	POP_Z
+DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	;Сбрасываю счетчик, если отсчет завершен
-	CPI TEMP_H,_DRV_BUTTONS_MAX_CNTR
-	BRNE PC+0x05
 	LDI TEMP,0x00
 	STD Z+_DRV_BUTTONS_CNTR,TEMP
+
+	;Запоминаем Z в Y, для доступа к основным параметрам типа _DRV_BUTTONS_QUEUE_SIZE
+	MOV YH,ZH
+	MOV YL,ZL
+
+	;Смещаемся на данные первой кнопки
+	LDI TEMP,_DRV_BUTTONS_DATA
+	ADD ZL,TEMP
+	LDI TEMP,0x00
+	ADC ZH,TEMP
+
+DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
+	;Проверяю на только что добавленную кнопку
+	LDD TEMP_H,Z+_DRV_BUTTONS_CNTR_N_FLAGS
+	;Считываем предыдущее состояние порта в T
+	BST TEMP_H,_DRV_BUTTONS_FL_STATE
+	MOV TEMP_L,TEMP_H
+	;Сбрасываем счетчик и состояние в 0
+	ANDI TEMP_H,low(~((1<<_DRV_BUTTONS_FL_STATE)|0x0f))
+	ANDI TEMP_L,0x0f
+	LDI TEMP,_DRV_BUTTONS_MAX_CNTR/2
+	CP TEMP,TEMP_L
+	BRCC PC+0x02
+	;Устанавливаем состояние в 1
+	ORI TEMP_H,(1<<_DRV_BUTTONS_FL_STATE)
+	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+
+;TODO Нужно учитывать, что кнопка может быть нажата до запуса МК, не обрабатываем пока не отпустят
+
+	;Проверяем на только что добавленную кнопку
+	SBRS TEMP_H,_DRV_BUTTONS_FL_INIT
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT
+	CLR TEMP_H
+	STD Z+_DRV_BUTTONS_TIME,TEMP_H
+	STD Z+_DRV_BUTTONS_RESULT,TEMP_H
+	ORI TEMP_H,(1<<_DRV_BUTTONS_FL_FIRST_SCAN)
+	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT:
+	;Проверяем на первое сканирование
+	SBRS TEMP_H,_DRV_BUTTONS_FL_FIRST_SCAN
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN
+	;Если кнопка нажата, то остаемся в режиме первого сканирования
+	BRCC PC+0x02
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+	;Иначе, конпка не нажата, сбрасываем флаг первого сканирования
+	CLR TEMP_H
+	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN:
+	;Флаг T хранит старое значение, флаг C хранит новое(true-нажата)
+	ROL TEMP
+	BLD TEMP_L,0x00
+	;Записываем в флаг T новое состояние
+	BST TEMP,0x00
+	EOR TEMP,TEMP_L
+	SBRC TEMP,0x00
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED
+
+	;Увеличиваем время нахождения в одном и том-же состоянии
+	LDD TEMP_L,Z+_DRV_BUTTONS_TIME
+	CPI TEMP_L,0xff
+	BREQ PC+0x02
+	INC TEMP_L
+	STD Z+_DRV_BUTTONS_TIME,TEMP_L
+
+	;Проверка на таймауты
+	;Считываем результат
+	LDD TEMP_H,Z+_DRV_BUTTONS_RESULT
+	;Переходим, если кнопка нажата
+	BRTS _DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED
+	;Кнопка не нажата, проверяем таймаут если нажатия были
+	MOV TEMP,TEMP_H
+	ANDI TEMP,0b01110000
+	;Если нажатий не было, проверяем следующую кнопку
+	BRNE PC+0x02
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+	CPI TEMP_L,_DRV_BUTTONS_TIMEOUT
+	;Таймаут не достигнут
+	BRCC PC+0x03
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+	MCALL _DRV_BUTTONS__QUEUE_ADD
+	LDI TEMP,0x00
+	STD Z+_DRV_BUTTONS_RESULT,TEMP
+	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED:
+	CPI TEMP_L,_DRV_BUTTONS_HOLD_TIME
+	BRCC PC+0x02
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+	;Пропускаем блок, если r уже установлен
+	SBRC TEMP_H,0x07
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_LONG_PRESS_REPEATE
+	;Заполняем переменные и вызываем обработчик
+	MOV TEMP,TEMP_H
+	;Инкрементируем количество нажатий
+	SWAP TEMP
+	ANDI TEMP,0b00000111
+	INC TEMP
+	SWAP TEMP
+	;Добавляем длинное нажатие
+	SEC
+	ROL TEMP_H
+	ANDI TEMP_H,0b00001111
+	OR TEMP_H,TEMP
+	;Включаем r(повтор)
+	ORI TEMP_H,0b10000000
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_LONG_PRESS_REPEATE:
+	MCALL _DRV_BUTTONS__QUEUE_ADD
+	;Сбраываем, оставляя бит состояния порта включенным
+	LDI TEMP,(1<<_DRV_BUTTONS_FL_STATE)
+	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
+	;Не сбрасываем результат, для следующего события длинного нажатия(если кнопку так и не отпустили)
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
+	;Считываю и сбрасываю счетчик нахождения в одном состоянии
+	LDD TEMP_L,Z+_DRV_BUTTONS_TIME
+	CLR TEMP
+	STD Z+_DRV_BUTTONS_TIME,TEMP
+	;Если кнопку нажали, то просто выходим
+	BRTS _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+
+	;Получаем результат
+	LDD TEMP_H,Z+_DRV_BUTTONS_RESULT
+	;Получаем количество нажатых кнопок
+	MOV TEMP,TEMP_H
+	SWAP TEMP
+	ANDI TEMP,0x0f
+
+	;Проверяем на максимальное занчение
+	CPI TEMP,0x04
+	;Ничего не делаем, если достигнут максимум
+	BREQ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+	;Увеличиваем счетчик нажатий
+	INC TEMP
+	;Добавяем навое нажатие в результат
+	PUSH TEMP
+	LDI TEMP,_DRV_BUTTONS_SHORT_PRESS_MAX_TIME
+	CP TEMP,TEMP_L
+	POP TEMP
+	ROL TEMP_H
+	ANDI TEMP_H,0b00001111
+	SWAP TEMP
+	OR TEMP_H,TEMP
+	STD Z+_DRV_BUTTONS_RESULT,TEMP_H
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT:
+	LDI TEMP,_DRV_BUTTONS_STRUCT_SIZE
+	ADD ZL,TEMP
+	LDI TEMP,0x00
+	ADC ZH,TEMP
+	DEC LOOP_CNTR
+	BREQ PC+0x02
+	RJMP DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP
 
 DRV_BUTTONS_TIMER_EVENT__END:
 	POP TEMP_L
 	POP TEMP_H
 	POP_Z
+	POP_Y
+	POP_X
 	POP LOOP_CNTR
 	POP ACCUM
 	POP TEMP
 	RET
 
 ;--------------------------------------------------------
-_DRV_BUTTONS_ANALYZE:
+_DRV_BUTTONS__QUEUE_ADD:
 ;--------------------------------------------------------
-;Анализ кнопки
-;IN: LOOP_CNTR - ид кнопки(1-n),
-;Z - смещение на структуру кнопки
+;Добавляем элемент в очередь
+;IN: Y - Адрес основных переменных, Z - адрес данных
+;кнопки, TEMP_H - результат обработки кнопки
 ;--------------------------------------------------------
-RET
-;	PUSH_Z
-;	PUSH LOOP_CNTR
-;	PUSH TEMP
-;	PUSH ACCUM
-;
-;	;Проверяю на только что добавленную кнопку
-;	LDD TEMP_H,Z+DRV_BUTTONS__CNTR_N_FLAGS
-;	;Запоминаем предыдущее состояние порта в T
-;	BST TEMP_H,DRV_BUTTONS__FL_STATE
-;	MOV TEMP_L,TEMP_H
-;	;Сбрасываем счетчик и состояние в 0
-;	ANDI TEMP_H,low(~((1<<DRV_BUTTONS__FL_STATE)|0x0f))
-;	ANDI TEMP_L,0x0f
-;	LDI TEMP,0x04
-;	CP TEMP,TEMP_L
-;	BRCC PC+0x02
-;	;Устанавливаем состояние в 1
-;	ORI TEMP_H,(1<<DRV_BUTTONS__FL_STATE)
-;	STD Z+DRV_BUTTONS__CNTR_N_FLAGS,TEMP_H
+	PUSH TEMP
+	PUSH TEMP_L
+	;Достигнут таймаут, добавляем событие в очередь
+	LDD TEMP,Y+_DRV_BUTTONS_QUEUE_SIZE
+	CPI TEMP,_DRV_BUTTONS_QUEUE_MAX_SIZE
+	;Пропускаем добавление, если очередь заполнена
+	BREQ _DRV_BUTTONS__QUEUE_ADD_END
 
-;TODO Нужно учитывать, что кнопка может быть нажата до запуса МК, не обрабатываем пока не отпустят
+	;Вычисляем адрес очереди
+	MOV XH,YH
+	MOV XL,YL
+	LDI TEMP,_DRV_BUTTONS_QUEUE
+	ADD XL,TEMP
+	LDI TEMP,0x00
+	ADC XH,TEMP
 
-;	;Проверяем на только что добавленную кнопку
-;	SBRS TEMP_H,DRV_BUTTONS__FL_INIT
-;	RJMP _DRV_BUTTONS_ANALYZE__NOT_INIT
-;	CLR TEMP_H
-;	STD Z+DRV_BUTTONS__TIME,TEMP_H
-;	STD Z+DRV_BUTTONS__RESULT,TEMP_H
-;	ORI TEMP_H,(1<<DRV_BUTTONS__FL_FIRST_SCAN)
-;	STD Z+DRV_BUTTONS__CNTR_N_FLAGS,TEMP_H
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;
-;_DRV_BUTTONS_ANALYZE__NOT_INIT:
-;	;Проверяем на первое сканирование
-;	SBRS TEMP_H,DRV_BUTTONS__FL_FIRST_SCAN
-;	RJMP _DRV_BUTTONS_ANALYZE__NOT_FIRST_SCAN
-;	;Если кнопка нажата, то остаемся в режиме первого сканирования
-;	BRCC PC+0x02
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;	;Иначе, конпка не нажата, сбрасываем флаг первого сканирования
-;	CLR TEMP_H
-;	STD Z+DRV_BUTTONS__CNTR_N_FLAGS,TEMP_H
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;
-;_DRV_BUTTONS_ANALYZE__NOT_FIRST_SCAN:
-;	;Флаг T хранит старое значение, флаг C хранит новое(true-нажата)
-;	ROL TEMP
-;	BLD TEMP_L,0x00
-;	;Записываем в флаг T новое состояние
-;	BST TEMP,0x00
-;	EOR TEMP,TEMP_L
-;	SBRC TEMP,0x00
-;	RJMP _DRV_BUTTONS_ANALYZE__STATE_CHANGED
-;
-;	;Увеличиваем время нахождения в одном и том-же состоянии
-;	LDD TEMP_L,Z+DRV_BUTTONS__TIME
-;	CPI TEMP_L,0xff
-;	BREQ PC+0x02
-;	INC TEMP_L
-;	STD Z+DRV_BUTTONS__TIME,TEMP_L
-;
-;	;Проверка на таймауты
-;	;Считываем результат
-;	LDD TEMP_H,Z+DRV_BUTTONS__RESULT
-;	;Переходим, если кнопка нажата
-;	BRTS _DRV_BUTTONS_ANALYZE__BUTTON_PRESSED
-;	;Кнопка не нажата, проверяем таймаут если нажатия были
-;	MOV TEMP,TEMP_H
-;	ANDI TEMP,0b01110000
-;	;Если нажатий не было, выходим
-;	BRNE PC+0x02
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;	CPI TEMP_L,DRV_BUTTONS__TIMEOUT
-;	;Таймаут не достигнут
-;	BRCC PC+0x02
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;
-;	;Достигнут таймаут, заполняем переменные и вызываем обработчик
-;	MOV ACCUM,LOOP_CNTR
-;	PUSH TEMP_H
-;	LDI TEMP,DRV_BUTTONS__HANDLER_OFFSET
-;	MCALL CORE5277_VAR_GET16
-;	POP TEMP
-;	PUSH_Z
-;	MOV ZH,TEMP_H
-;	MOV ZL,TEMP_L
-;	ICALL
-;	POP_Z
-;	CLR TEMP
-;	STD Z+DRV_BUTTONS__TIME,TEMP
-;	STD Z+DRV_BUTTONS__RESULT,TEMP
-;	STD Z+DRV_BUTTONS__CNTR_N_FLAGS,TEMP
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;
-;_DRV_BUTTONS_ANALYZE__BUTTON_PRESSED:
-;	CPI TEMP_L,DRV_BUTTONS__HOLD_TIME
-;	BRCC PC+0x02
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;	;Пропускаем блок, если r уже установлен
-;	SBRC TEMP_H,0x07
-;	RJMP _DRV_BUTTONS_ANALYZE__LONG_PRESS_REPEATE
-;	;Заполняем переменные и вызываем обработчик
-;	MOV TEMP,TEMP_H
-;	;Инкрементируем количество нажатий
-;	SWAP TEMP
-;	ANDI TEMP,0b00000111
-;	INC TEMP
-;	SWAP TEMP
-;	;Добавляем длинное нажатие
-;	SEC
-;	ROL TEMP_H
-;	ANDI TEMP_H,0b00001111
-;	OR TEMP_H,TEMP
-;	;Включаем r(повтор)
-;	ORI TEMP_H,0b10000000
-;
-;_DRV_BUTTONS_ANALYZE__LONG_PRESS_REPEATE:
-;	MOV ACCUM,LOOP_CNTR
-;	PUSH TEMP_H
-;	LDI TEMP,DRV_BUTTONS__HANDLER_OFFSET
-;	MCALL CORE5277_VAR_GET16
-;	POP TEMP
-;	PUSH_Z
-;	MOV ZH,TEMP_H
-;	MOV ZL,TEMP_L
-;	ICALL
-;	POP_Z
-;	CLR TEMP
-;	STD Z+DRV_BUTTONS__TIME,TEMP
-;	;Сбраываем, оставляя бит состояния порта включенным
-;	LDI TEMP,(1<<DRV_BUTTONS__FL_STATE)
-;	STD Z+DRV_BUTTONS__CNTR_N_FLAGS,TEMP
-;	;Не сбрасываем результат, для следующего события длинного нажатия(если кнопку так и не отпустили)
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-
-;_DRV_BUTTONS_ANALYZE__STATE_CHANGED:
-;	;Считываю и сбрасываю счетчик нахождения в одном состоянии
-;	LDD TEMP_L,Z+DRV_BUTTONS__TIME
-;	CLR TEMP
-;	STD Z+DRV_BUTTONS__TIME,TEMP
-;	;Если кнопку нажали, то просто выходим
-;	BRTS _DRV_BUTTONS_ANALYZE__END
-;
-;	;Получаем результат
-;	LDD TEMP_H,Z+DRV_BUTTONS__RESULT
-;	;Получаем количество нажатых кнопок
-;	MOV TEMP,TEMP_H
-;	SWAP TEMP
-;	ANDI TEMP,0x0f
-;
-;	;Проверяем на максимальное занчение
-;	CPI TEMP,0x04
-;	;Ничего не делаем, если достигнут максимум
-;	BREQ _DRV_BUTTONS_ANALYZE__END
-;	;Увеличиваем счетчик нажатий
-;	INC TEMP
-;	;Добавяем навое нажатие в результат
-;	PUSH TEMP
-;	LDI TEMP,DRV_BUTTONS__SHORT_PRESS_MAX_TIME
-;	CP TEMP,TEMP_L
-;	POP TEMP
-;	ROL TEMP_H
-;	ANDI TEMP_H,0b00001111
-;	SWAP TEMP
-;	OR TEMP_H,TEMP
-;	STD Z+DRV_BUTTONS__RESULT,TEMP_H
-;	RJMP _DRV_BUTTONS_ANALYZE__END
-;
-;_DRV_BUTTONS_ANALYZE__END:
-;	POP ACCUM
-;	POP TEMP
-;	POP LOOP_CNTR
-;	POP_Z
-;	RET
-
-
+	LDS TEMP_L,SREG
+	CLI
+	LDD TEMP,Y+_DRV_BUTTONS_QUEUE_SIZE
+	;Вычисляю смещение в очереди
+	PUSH TEMP
+	LSL TEMP
+	ADD XL,TEMP
+	LDI TEMP,0x00
+	ADC XH,TEMP
+	POP TEMP
+	INC TEMP
+	STD Y+_DRV_BUTTONS_QUEUE_SIZE,TEMP
+	;Записываю кнопку в очередь
+	LDD TEMP,Z+_DRV_BUTTONS_PORT
+	ST X+,TEMP															;Порт кнопки
+	ST X,TEMP_H															;Результат
+	STS SREG,TEMP_L
+	;Очищаю данные кнопки
+	CLR TEMP
+	STD Z+_DRV_BUTTONS_TIME,TEMP
+_DRV_BUTTONS__QUEUE_ADD_END:
+	POP TEMP_L
+	POP TEMP
+	RET
 
