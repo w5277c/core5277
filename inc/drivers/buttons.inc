@@ -73,7 +73,8 @@ DRV_BUTTONS_INIT:
 	STD Z+_DRV_BUTTONS_BUTTONS_QNT,TEMP
 	STD Z+_DRV_BUTTONS_CNTR,TEMP
 
-	LDI LOOP_CNTR,_DRV_BUTTONS_QUEUE_SIZE*2
+	LDI LOOP_CNTR,_DRV_BUTTONS_QUEUE_MAX_SIZE*2
+	CLR XH
 	LDI XL,_DRV_BUTTONS_QUEUE
 	ADD XL,ZL
 	ADC XH,ZH
@@ -171,12 +172,10 @@ _DRV_BUTTONS_OP_WAIT:
 ;Ожидаем нажатие
 ;OUT: TEMP_H - порт, TEMP_L - результат
 ;--------------------------------------------------------
-	MCALL CORE5277_RAM_OFFSET
-
 _DRV_BUTTONS_OP_WAIT__LOOP:
 	LDD TEMP,Z+_DRV_BUTTONS_QUEUE_SIZE
 	CPI TEMP,0x00
-	BRNE _DRV_BUTTONS_PULL_QUEUE
+	BRNE _DRV_BUTTONS_OP_GET
 	MCALL CORE5277_WAIT
 	RJMP _DRV_BUTTONS_OP_WAIT__LOOP
 
@@ -184,17 +183,6 @@ _DRV_BUTTONS_OP_WAIT__LOOP:
 _DRV_BUTTONS_OP_GET:
 ;--------------------------------------------------------
 ;Считываем нажатие
-;OUT: TEMP_H - порт(0xff - нет нажатий),
-;TEMP_L - результат
-;--------------------------------------------------------
-	MCALL CORE5277_RAM_OFFSET
-	RJMP _DRV_BUTTONS_PULL_QUEUE
-
-;--------------------------------------------------------
-_DRV_BUTTONS_PULL_QUEUE:
-;--------------------------------------------------------
-;Внутренняя процедура чтения нажатия
-;IN: Z - адресс на выделенную память
 ;OUT: TEMP_H - порт(0xff - нет нажатий),
 ;TEMP_L - результат
 ;--------------------------------------------------------
@@ -212,6 +200,7 @@ _DRV_BUTTONS_PULL_QUEUE:
 	DEC LOOP_CNTR
 	STD Z+_DRV_BUTTONS_QUEUE_SIZE,LOOP_CNTR
 
+	LDI XH,0x00
 	LDI XL,_DRV_BUTTONS_QUEUE
 	LSL LOOP_CNTR
 	ADD XL,LOOP_CNTR
@@ -222,6 +211,7 @@ _DRV_BUTTONS_PULL_QUEUE:
 	;Если очередь не пуста, то сдвигаем данные очереди
 	CPI LOOP_CNTR,0x00
 	BREQ _DRV_BUTTONS_PULL_QUEUE__END
+	LDI XH,0x00
 	LDI XL,_DRV_BUTTONS_QUEUE+0x02
 	ADD XL,ZL
 	ADC XH,ZH
@@ -378,7 +368,7 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN:
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	CPI TEMP_L,_DRV_BUTTONS_TIMEOUT
 	;Таймаут не достигнут
-	BRCC PC+0x03
+	BRCC PC+0x02
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	MCALL _DRV_BUTTONS__QUEUE_ADD
 	LDI TEMP,0x00

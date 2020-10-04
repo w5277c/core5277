@@ -18,9 +18,8 @@ CORE5277_RAM_EXTEND:
 ;Увеличиваем блок выделенной памяти
 ;IN: PID, ACCUM - размер, на который нужно увеличить
 ;общий выделенный объем(сумма не может превышать 0x100)
-;OUT: Z - адрес на всю выделенную часть, TEMP - общий
-;объем, X - адрес на добавленную часть,
-;flag Z(false - error,owerflow)
+;OUT: Z - адрес на всю выделенную часть, X - адрес на
+;добавленную часть, flag Z(false - error,owerflow)
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH TEMP
@@ -43,8 +42,10 @@ CORE5277_RAM_EXTEND:
 	CPI YL,0x00
 	BRNE _CORE5277_RAM_EXTEND__ALLOCATED
 
+	PUSH TEMP
 	MOV TEMP,ACCUM
 	MCALL _CORE5277_RAM_FIND_FREE_BLOCK
+	POP TEMP
 	BRNE _CORE5277_RAM_EXTEND__ERROR
 
 	;Проверяем, нужно ли обновлять вершину выделяемой памяти
@@ -65,22 +66,22 @@ CORE5277_RAM_EXTEND:
 	RJMP _CORE5277_RAM_EXTEND__SUCCESS
 
 _CORE5277_RAM_EXTEND__ALLOCATED:
+	PUSH TEMP
 	MOV TEMP,ACCUM
 	MCALL _CORE5277_RAM_RESIZE
+	POP TEMP
 	BRNE _CORE5277_RAM_EXTEND__ERROR
 
 _CORE5277_RAM_EXTEND__SUCCESS:
 	MOV ZH,YH
 	MOV ZL,YL
-	POP ACCUM
-	PUSH ACCUM
 	MOV XH,YH
 	MOV XL,YL
-	ADD XL,ACCUM
+	ADD XL,TEMP
 	CLR ACCUM
 	ADC XH,ACCUM
 	SEZ
-	RJMP _CORE5277_RAM_REALLOC__END
+	RJMP _CORE5277_RAM_EXTEND__END
 _CORE5277_RAM_EXTEND__ERROR:
 	CLZ
 _CORE5277_RAM_EXTEND__END:

@@ -6,3 +6,5 @@ examples/aqua_module/main.cof
 *.obj
 
 *.cof
+
+examples/aqua_module/Debug/
