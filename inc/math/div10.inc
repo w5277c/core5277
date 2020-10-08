@@ -13,20 +13,23 @@ CORE5277_DIV10:
 ;--------------------------------------------------------
 ;Деление 8b числа на 10
 ;IN: TEMP - 8b число
-;OUT: TEMP результат
+;OUT: TEMP_L результат
 ;--------------------------------------------------------
-	PUSH RESULT_H
-	PUSH RESULT_L
+	PUSH _RESULT_H
+	PUSH _RESULT_L
 	PUSH ACCUM
+	PUSH TEMP
 
-	LDI ACCUM,51
+	LDI ACCUM,205														;204.8
 	MUL TEMP,ACCUM
-	INC RESULT_H
-	LSR RESULT_H
-	MOV TEMP,RESULT_H
+	MOV TEMP_L,_RESULT_H
+	LSR TEMP_L
+	LSR TEMP_L
+	LSR TEMP_L
 
+	POP TEMP
 	POP ACCUM
-	POP RESULT_L
-	POP RESULT_H
+	POP _RESULT_L
+	POP _RESULT_H
 	RET
 .endif

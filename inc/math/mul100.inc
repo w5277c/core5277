@@ -2,57 +2,30 @@
 ;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
 ;правовым вопросам обращайтесь на email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2020  w5277c@gmail.com        Начало
-;08.10.2020  w5277c@gmail.com        Все плохо, храмает точность, например для 59942
+;08.10.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_DIV100
+.ifdef DEF_CORE5277_MUL100
 .else
-.set DEF_CORE5277_DIV100 = 1
+.set DEF_CORE5277_MUL100 = 1
 
 ;--------------------------------------------------------
-CORE5277_DIV100:
+CORE5277_MUL100:
 ;--------------------------------------------------------
-;Деление 16b числа на 100 (неточное!)
-;IN: TEMP_H/TEMP_L - 16b число
-;OUT: TEMP_H/TEMP_L результат
+;Умножение 8b числа на 100
+;IN: TEMP - 8b число
+;OUT: TEMP_H,TEMP_L результат
 ;--------------------------------------------------------
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH ACCUM
-	PUSH TEMP
 	PUSH _RESULT_H
 	PUSH _RESULT_L
+	PUSH ACCUM
 
-	MOV TEMP,TEMP_H
-	MOV ACCUM,TEMP_L
-	;Умножаем на 656
-	;x*144
-	LDI TEMP_EH,144
-	CLR TEMP_EL
-	MUL ACCUM,TEMP_EH
+	LDI ACCUM,100
+	MUL TEMP,ACCUM
 	MOV TEMP_H,_RESULT_H
 	MOV TEMP_L,_RESULT_L
-	MUL TEMP,TEMP_EH
-	ADD TEMP_H,_RESULT_L
-	ADC TEMP_EL,_RESULT_H
-	;x*512
-	CLR TEMP_EH
-	CLR LOOP_CNTR
-	LSL ACCUM
-	ROL TEMP
-	ROL LOOP_CNTR
 
-	ADD TEMP_H,ACCUM
-	ADC TEMP_EL,TEMP
-	ADC TEMP_EH,LOOP_CNTR
-	MOV TEMP_H,TEMP_EH
-	MOV TEMP_L,TEMP_EL
-
+	POP ACCUM
 	POP _RESULT_L
 	POP _RESULT_H
-	POP TEMP
-	POP ACCUM
-	POP TEMP_EL
-	POP TEMP_EH
 	RET
 .endif
