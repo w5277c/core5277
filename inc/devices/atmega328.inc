@@ -23,7 +23,7 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 2048
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
 	#pragma AVRPART MEMORY EEPROM 1024
-        
+
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA48
 	.MESSAGE "######## DEVICE ATmega328 ########"
@@ -331,7 +331,43 @@
 	.EQU		EEMPE									= 0x02
 	.EQU		EEPE									= 0x01
 	.EQU		EERE									= 0x00
-
+	;---ADC---
+	.EQU	ADMUX										= 0x7c
+	.EQU		REFS1									= 0x07
+	.EQU		REFS0									= 0x06
+	.EQU		ADLAR									= 0x05
+	.EQU		MUX3									= 0x03
+	.EQU		MUX2									= 0x02
+	.EQU		MUX1									= 0x01
+	.EQU		MUX0									= 0x00
+	.EQU	ADCSRA									= 0x7a
+	.EQU		ADEN									= 0x07
+	.EQU		ADSC									= 0x06
+	.EQU		ADATE									= 0x05
+	.EQU		ADIF									= 0x04
+	.EQU		ADIE									= 0x03
+	.EQU		ADPS2									= 0x02
+	.EQU		ADPS1									= 0x01
+	.EQU		ADPS0									= 0x00
+	.EQU	ADCSRB									= 0x7b
+	.EQU		ACME									= 0x06
+	.EQU		ADTS2									= 0x02
+	.EQU		ADTS1									= 0x01
+	.EQU		ADTS0									= 0x00
+	.EQU	ADCL										= 0x78
+	.EQU	ADCH										= 0x79
+	.EQU	ADC0										= 0x00
+	.EQU	ADC1										= 0x01
+	.EQU	ADC2										= 0x02
+	.EQU	ADC3										= 0x03
+	.EQU	ADC4										= 0x04
+	.EQU	ADC5										= 0x05
+	.EQU	ADC6										= 0x06
+	.EQU	ADC7										= 0x07
+	;---ADC-VOLTAGE-REFERENCE---
+	.EQU	ADC_VREF_AREF						= (0<<REFS1)|(0<<REFS0)
+	.EQU	ADC_VREF_AVCC						= (0<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_1_1_CAP					= (1<<REFS1)|(1<<REFS0)
 
 .ORG 0x0000
 	JMP	MAIN															; Reset Handler

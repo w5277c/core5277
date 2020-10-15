@@ -176,6 +176,39 @@
 	.EQU	PCMSK0									= 0x00
 	.EQU	PCMSK1									= 0x00
 	.EQU	PCMSK2									= 0x00
+	;---ADC---
+	.EQU	ADMUX										= 0x27
+	.EQU		REFS1									= 0x07
+	.EQU		REFS0									= 0x06
+	.EQU		ADLAR									= 0x05
+	.EQU		MUX4									= 0x04
+	.EQU		MUX3									= 0x03
+	.EQU		MUX2									= 0x02
+	.EQU		MUX1									= 0x01
+	.EQU		MUX0									= 0x00
+	.EQU	ADCSRA									= 0x26
+	.EQU		ADEN									= 0x07
+	.EQU		ADSC									= 0x06
+	.EQU		ADATE									= 0x05
+	.EQU		ADIF									= 0x04
+	.EQU		ADIE									= 0x03
+	.EQU		ADPS2									= 0x02
+	.EQU		ADPS1									= 0x01
+	.EQU		ADPS0									= 0x00
+	.EQU	ADCL										= 0x24
+	.EQU	ADCH										= 0x25
+	.EQU	ADC0										= 0x00
+	.EQU	ADC1										= 0x01
+	.EQU	ADC2										= 0x02
+	.EQU	ADC3										= 0x03
+	.EQU	ADC4										= 0x04
+	.EQU	ADC5										= 0x05
+	.EQU	ADC6										= 0x06
+	.EQU	ADC7										= 0x07
+	;---ADC-VOLTAGE-REFERENCE---
+	.EQU	ADC_VREF_AREF						= (0<<REFS1)|(0<<REFS0)
+	.EQU	ADC_VREF_AVCC						= (0<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_2_56_CAP					= (1<<REFS1)|(1<<REFS0)
 
 
 .CSEG
