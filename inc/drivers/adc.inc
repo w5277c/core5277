@@ -10,19 +10,34 @@
 .include	"./inc/mem/ram_realloc.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_ADC_ITERACTIONS_QNT						= 0x10;Количество опросов для усреднения показания
-	.EQU	_DRV_ADC_RAM_INIT_SIZE							= 0x02;Размер изначально используемой памяти
-	.EQU	_DRV_ADC_STRUCT_SIZE								= 0x07;Размер структуры данных для каждого элемента
-	;---
-	.EQU	_DRV_ADC_ITEMS_QNT								= 0x00;1B - количество элементов
-	.EQU	_DRV_ADC_CURRENT_ITEM							= 0x01;1B - текущий элемент
-	.EQU	_DRV_ADC_DATA										= 0x02;?B - блок данных
+	.EQU	_DRV_ADC_RAM_INIT_SIZE							= 0x03;Размер изначально используемой памяти
+	.EQU	_DRV_ADC_STRUCT_SIZE								= 0x0b;Размер структуры данных для каждого элемента
+
+	;---PRESCALLER---
+	.EQU	DRV_ADC_PRESC_X1									= 0x00
+	.EQU	DRV_ADC_PRESC_X2									= 0x01
+	.EQU	DRV_ADC_PRESC_X4									= 0x02
+	.EQU	DRV_ADC_PRESC_X8									= 0x03
+	.EQU	DRV_ADC_PRESC_X16									= 0x04
+	.EQU	DRV_ADC_PRESC_X32									= 0x05
+	.EQU	DRV_ADC_PRESC_X64									= 0x06
+	.EQU	DRV_ADC_PRESC_X128								= 0x07
+
+	;---DATA---
+	.EQU	_DRV_ADC_TIMER_ID									= 0x00;1B - ид таймера
+	.EQU	_DRV_ADC_ITEMS_QNT								= 0x01;1B - количество элементов
+	.EQU	_DRV_ADC_CURRENT_ITEM							= 0x02;1B - текущий элемент
+	.EQU	_DRV_ADC_DATA										= 0x03;?B - блок данных
 
 	;---Структура данных---
 	.EQU	_DRV_ADC_PORT										= 0x00;1B - ADC порт
-	.EQU	_DRV_ADC_COUNTER									= 0x01;1B - Счетчик
-	.EQU	_DRV_ADC_SUM										= 0x02;3B - Сумма показаний
-	.EQU	_DRV_ADC_RESULT									= 0x05;2B - Результат (0xffff - нет результата)
+	.EQU	_DRV_ADC_TIMER_PERIOD							= 0x01;1B - период таймера
+	.EQU	_DRV_ADC_ITER_QNT									= 0x02;1B - количество итераций (64 максимум)
+	.EQU	_DRV_ADC_ITER_CNT									= 0x03;1B - счетчик итераций
+	.EQU	_DRV_ADC_PRESCALLER								= 0x04;1B - делитель
+	.EQU	_DRV_ADC_VREF										= 0x05;1B - делитель
+	.EQU	_DRV_ADC_SUM										= 0x06;3B - сумма показаний
+	.EQU	_DRV_ADC_RESULT									= 0x09;2B - результат (0xffff - нет результата)
 	;---OPERATIONS---
 	.EQU	DRV_ADC_OP_ADD										= 0x00
 	.EQU	DRV_ADC_OP_GET										= 0x01
@@ -31,29 +46,27 @@
 DRV_ADC_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN - ACCUM - опорное напряжение VREF(ADC_VREF_...)
+;IN: ACCUM - ид таймера
 ;--------------------------------------------------------
+	PUSH ACCUM
+	PUSH TEMP_H
+	PUSH TEMP_L
+
+	PUSH ACCUM
 	;Выделяем память
 	LDI ACCUM,_DRV_ADC_RAM_INIT_SIZE
 	MCALL CORE5277_RAM_REALLOC
+	POP ACCUM
 
-	LDI TEMP,0x00
-	STD Z+_DRV_ADC_ITEMS_QNT,TEMP
-	STD Z+_DRV_ADC_CURRENT_ITEM,TEMP
-
+	STD Z+_DRV_ADC_TIMER_ID,ACCUM
+	LDI ACCUM,0x00
+	STD Z+_DRV_ADC_ITEMS_QNT,ACCUM
+	STD Z+_DRV_ADC_CURRENT_ITEM,ACCUM
 .IFDEF ADCSRB
-	CLR TEMP
-	STS ADCSRB,TEMP													;Одноразовое конвертирование без автоматического повторения (ADATE=0)
+	STS ADCSRB,ACCUM
 .ENDIF
-	LDI TEMP,(0<<ADLAR)												;(0<<ADLAR) - направление представления байт (right)
-	OR TEMP,ACCUM
-	STS ADMUX,TEMP
-	LDI TEMP,(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(0<<ADEN)|(1<<ADSC)|(1<<ADIE)
-																			;(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0) - делитель 128
-																			;(0<<ADEN) - АЦП выключен
-																			;(1<<ADSC) - Одноразовый старт конверитрования
-																			;(1<<ADIE) - Разрешаем прерывание по окончанию кнвертирования
-	STS ADCSRA,TEMP													;(0<<ADATE) - Выключен режим AutoTriggering
+	STS ADMUX,ACCUM
+	STS ADCSRA,ACCUM
 
 	;Подаю питание на ADC
 	_CORE5277_PRR_RESET PRSDC
@@ -65,16 +78,16 @@ DRV_ADC_INIT:
 	MCALL CORE5277_IR_VECTOR_SET
 
 	;Завершаем инициализацию
+	POP TEMP_L
+	POP TEMP_H
+	POP ACCUM
 	MCALL CORE5277_READY
 ;--------------------------------------------------------
-;Основной код, активируем порт.
-;IN: ACCUM - ADC порт(ADC0-ADC7)
-;FLAGS - тип операции
+;Основной код, анализируем тип операции.
+;IN: FLAGS - код операции DRV_ADC_OP_GET...
+;Остальные параметры см. в обработчике операций
 ;--------------------------------------------------------
-	PUSH_Z
 	PUSH TEMP
-
-	MCALL CORE5277_RAM_OFFSET
 
 	CPI FLAGS,DRV_ADC_OP_ADD
 	BRNE PC+0x04
@@ -86,7 +99,6 @@ DRV_ADC_INIT:
 
 _DRV_BUTTONS_PROC_END:
 	POP TEMP
-	POP_Z
 	RET
 
 ;--------------------------------------------------------
@@ -94,20 +106,42 @@ _DRV_ADC_OP_ADD:
 ;--------------------------------------------------------
 ;Добавляем порт
 ;IN: ACCUM - ADC порт(ADC0-ADC7)
+;FLAGS - опорное напряжение(VREF), LOOP_CNTR - PRESCALLER,
+;TEMP_H - кол-во итераций для вычисления среднего,
+;TEMP_L - период таймера для итераций
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH_X
+	PUSH_Y
+	PUSH_Z
 
 	;Увеличиваем размер выделенной памяти на _DRV_ADC_STRUCT_SIZE
 	PUSH ACCUM
 	LDI ACCUM,_DRV_ADC_STRUCT_SIZE
 	MCALL CORE5277_RAM_EXTEND
 	POP ACCUM
-	PUSH_X
 
-;TODO
+	STD Y+_DRV_ADC_PORT,ACCUM
+	STD Y+_DRV_ADC_TIMER_PERIOD,TEMP_L
+	STD Y+_DRV_ADC_ITER_QNT,TEMP_H
+	STD Y+_DRV_ADC_PRESCALLER,LOOP_CNTR
 
-	POP_X
+	LDI TEMP,0x00
+	STD Y+_DRV_ADC_ITER_CNTR,TEMP
+	LDI TEMP,0xff
+	STD Y+_DRV_ADC_RESULT+0x00,TEMP
+	STD Y+_DRV_ADC_RESULT+0x01,TEMP
+
+	LDD TEMP,Z+_DRV_ADC_ITEMS_QNT
+
+	INC TEMP
+	STD Z+_DRV_ADC_ITEMS_QNT,TEMP
+	CPI TEMP,0x01
+	BRNE _DRV_ADC_OP_ADD__NOT_FIRST
+	_MCALL _DRV_ADC_START
+_DRV_ADC_OP_ADD__NOT_FIRST:
+
+	POP_Z
+	POP_Y
 	POP ACCUM
 	RET
 
@@ -117,11 +151,63 @@ _DRV_ADC_OP_GET:
 ;Считываем показание
 ;OUT: TEMP_H, TEMP_L - показание(0xffff - нет показания)
 ;--------------------------------------------------------
+	PUSH_Z
+
+	LDI TEMP_H,0xff
+	LDI TEMP_L,0xff
+
+	MCALL CORE5277_RAM_OFFSET
+
+	LDD LOOP_CNTR,Z+_DRV_ADC_ITEMS_QNT
+
+	LDI TEMP,_DRV_ADC_DATA
+	ADD ZL,TEMP
+	LDI TEMP,0x00
+	ADC ZH,TEMP
+
+_DRV_ADC_OP_GET__LOOP:
+	LDD TEMP,Z+_DRV_ADC_PORT
+	CP TEMP,ACCUM
+	BRNE _DRV_ADC_OP_GET__NEXT
+
+	LDS TEMP,SREG
+	CLI
+	LDD TEMP_H,Z+_DRV_ADC_RESULT+0x00
+	LDD TEMP_L,Z+_DRV_ADC_RESULT+0x01
+	STS SREG,TEMP
+	RJMP _DRV_ADC_OP_GET__END
+
+_DRV_ADC_OP_GET__NEXT:
+	ADIW ZL,_DRV_ADC_STRUCT_SIZE
+	DEC LOOP_CNTR
+	BRNE _DRV_ADC_OP_GET__LOOP
+
+_DRV_ADC_OP_GET__END:
+	POP_Z
+	RET
+
+
+;--------------------------------------------------------
+_DRV_ADC_START:
+;--------------------------------------------------------
+;Запускаем ADC
+;IN: Y - адрес на блок данных элемента
+;--------------------------------------------------------
 
 ;TODO
 
 	RET
 
+
+;--------------------------------------------------------
+_DRV_ADC_TIMER_EVENT:
+;--------------------------------------------------------
+;Обработчик по таймеру
+;--------------------------------------------------------
+
+;TODO
+
+	RET
 ;--------------------------------------------------------
 _DRV_ADC_EVENT:
 ;--------------------------------------------------------

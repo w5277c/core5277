@@ -18,10 +18,10 @@ CORE5277_RAM_EXTEND:
 ;Увеличиваем блок выделенной памяти
 ;IN: PID, ACCUM - размер, на который нужно увеличить
 ;общий выделенный объем(сумма не может превышать 0x100)
-;OUT: Z - адрес на всю выделенную часть, X - адрес на
+;OUT: Z - адрес на всю выделенную часть, Y - адрес на
 ;добавленную часть, flag Z(false - error,owerflow)
 ;--------------------------------------------------------
-	PUSH_Y
+	PUSH_X
 	PUSH TEMP
 	PUSH ACCUM
 	MCALL CORE5277_DISPATCHER_LOCK
@@ -75,11 +75,9 @@ _CORE5277_RAM_EXTEND__ALLOCATED:
 _CORE5277_RAM_EXTEND__SUCCESS:
 	MOV ZH,YH
 	MOV ZL,YL
-	MOV XH,YH
-	MOV XL,YL
-	ADD XL,TEMP
+	ADD YL,TEMP
 	CLR ACCUM
-	ADC XH,ACCUM
+	ADC YH,ACCUM
 	SEZ
 	RJMP _CORE5277_RAM_EXTEND__END
 _CORE5277_RAM_EXTEND__ERROR:
@@ -88,6 +86,6 @@ _CORE5277_RAM_EXTEND__END:
 	MCALL CORE5277_DISPATCHER_UNLOCK
 	POP ACCUM
 	POP TEMP
-	POP_Y
+	POP_X
 	RET
 .endif

@@ -28,8 +28,8 @@
 	;---
 	.EQU	_DRV_SUART_DATA_SIZE					= 0x14			;Размер выделяемого блока под данные(20 байт)
 	;---
-	.EQU	DRV_SUART_BAUDRATE_19200			= 0x01			;Скоростной режим 19200
-	.EQU	DRV_SUART_BAUDRATE_9600				= 0x02			;Скоростной режим 9600
+	.EQU	DRV_SUART_BAUDRATE_19200			= 0x81			;Скоростной режим 19200
+	.EQU	DRV_SUART_BAUDRATE_9600				= 0x82			;Скоростной режим 9600
 
 	;---STATES_IDS---
 	.EQU	DRV_SUART_ST_READY					= 0x00;

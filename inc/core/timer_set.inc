@@ -16,9 +16,13 @@ CORE5277_TIMER_SET:
 ;Установка таймера
 ;IN: TEMP - номер таймера(0-...),
 ;TEMP_H,TEMP_L - адрес обработчика
+;ACCUM - кол-во итераций:
+;7-й бит включен - итерация по 0.002c иначе по 0.000 050с
+;диапазон значений 0x01-0x7f
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
+	PUSH ACCUM
 
 	MOV ZL,TEMP
 	LSL TEMP
@@ -31,11 +35,15 @@ CORE5277_TIMER_SET:
 	CLR TEMP
 	ADC ZH,TEMP
 
+	STD Z+_CORE5277_TIMER_DEFAULT,ACCUM
+	ANDI ACCUM,0x7f
+	STD Z+_CORE5277_TIMER_CNTR,ACCUM
 	LDI TEMP,0xff
 	STD Z+_CORE5277_TIMER_PROC_ID,TEMP
 	STD Z+_CORE5277_TIMER_HANDLER+0x00,TEMP_H
 	STD Z+_CORE5277_TIMER_HANDLER+0x01,TEMP_L
 
+	POP ACCUM
 	POP TEMP
 	POP_Z
 	RET
