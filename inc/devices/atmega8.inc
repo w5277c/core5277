@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Р’Р»Р°РґРµР»СЊС†РµРј РґР°РЅРЅРѕРіРѕ РёСЃС…РѕРґРЅРѕРіРѕ РєРѕРґР° СЏРІР»СЏРµС‚СЃСЏ РЈРґРѕРІРёС‡РµРЅРєРѕ РљРѕРЅСЃС‚Р°РЅС‚РёРЅ РђР»РµРєСЃР°РЅРґСЂРѕРІРёС‡, РµРјР°Р№Р»:w5277c@gmail.com, РїРѕ РІСЃРµРј
+;РїСЂР°РІРѕРІС‹Рј РІРѕРїСЂРѕСЃР°Рј РѕР±СЂР°С‰Р°Р№С‚РµСЃСЊ РЅР° email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.05.2020  w5277c@gmail.com        Начало
+;02.05.2020  w5277c@gmail.com        РќР°С‡Р°Р»Рѕ
 ;-----------------------------------------------------------------------------------------------------------------------
 ;---DESCRIPTION------------------------------------------
 ;core5277 for ATMega8 (8Kb ROM, 512b EEPROM, 1Kb SRAM) at 16MHz (LITTLE ENDIAN)
@@ -23,16 +23,18 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 1024
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
+	#include "/inc/devices/_common.inc"
+
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA8
 	.MESSAGE "######## DEVICE ATmega8 ########"
-	.EQU	_CORE5277_DRIVERS_MAX_QNT			= 0x10			;Максимальное количество драйверов
-	.EQU	_CORE5277_TASKS_MAX_QNT				= 0x08			;Максимальное количество задач
-	.EQU	_CORE5277_IR_QNT						= 0x14			;Количество перырваний(без RESET)
-	.EQU	_CORE5277_RES_QUEUE_SIZE			= 0x10			;Размер очереди к ресурсам(8 элементов по 2 байта)
-	.EQU	_CORE5277_PCINT_PORTS_QNT			= 0x00			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_CORE5277_RAM_BORDER_SIZE			= 0x04			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_CORE5277_STACK_SIZE					= 0x40			;Стек ядра
+	.EQU	_CORE5277_DRIVERS_MAX_QNT			= 0x10			;РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РґСЂР°Р№РІРµСЂРѕРІ
+	.EQU	_CORE5277_TASKS_MAX_QNT				= 0x08			;РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ Р·Р°РґР°С‡
+	.EQU	_CORE5277_IR_QNT						= 0x14			;РљРѕР»РёС‡РµСЃС‚РІРѕ РїРµСЂС‹СЂРІР°РЅРёР№(Р±РµР· RESET)
+	.EQU	_CORE5277_RES_QUEUE_SIZE			= 0x10			;Р Р°Р·РјРµСЂ РѕС‡РµСЂРµРґРё Рє СЂРµСЃСѓСЂСЃР°Рј(8 СЌР»РµРјРµРЅС‚РѕРІ РїРѕ 2 Р±Р°Р№С‚Р°)
+	.EQU	_CORE5277_PCINT_PORTS_QNT			= 0x00			;РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕСЂС‚РѕРІ РїРѕРґРґРµСЂР¶РёРІР°СЋС‰РёС… РІРЅРµС€РЅРёРµ РїСЂРµСЂС‹РІР°РЅРёСЏ(PCINT)
+	.EQU	_CORE5277_RAM_BORDER_SIZE			= 0x04			;РњРёРЅРёРјР°Р»СЊРЅРѕРµ РґРѕРїСѓСЃС‚РёРјРѕРµ СЂР°СЃСЃС‚РѕСЏРЅРёРµ РјРµР¶РґСѓ РІРµСЂС€РёРЅР°РјРё FREE_RAM Рё STACK
+	.EQU	_CORE5277_STACK_SIZE					= 0x40			;РЎС‚РµРє СЏРґСЂР°
 	.EQU	RAMEND									= 0x04ff
 
 	;---IR---
@@ -89,7 +91,7 @@
 	.EQU	PD6										= (0x03<<4)|0x06
 	.EQU	PD7										= (0x03<<4)|0x07
 
-	;Отсутствуют
+	;РћС‚СЃСѓС‚СЃС‚РІСѓСЋС‚
 	.EQU	CORE5277_IR_PCINT0					= 0x00
 	.EQU	CORE5277_IR_PCINT1					= 0x00
 	.EQU	CORE5277_IR_PCINT2					= 0x00
@@ -172,7 +174,7 @@
 
 
 
-_CORE5277_PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,DDRB,PORTB, и т.д.
+_CORE5277_PORTS_TABLE:												;РўР°Р±Р»РёС†Р° РёР· Р°РґСЂРµСЃРѕРІ IO СЂРµРіРёСЃС‚СЂРѕРІ (A,B,C,D), РїРѕРѕС‡РµСЂРµРґРЅРѕ DDRA,PORTA,DDRB,PORTB, Рё С‚.Рґ.
 	.db	0x00,0x00,0x00,0x38,0x37,0x36,0x35,0x34,0x33,0x32,0x31,0x30
 _CORE5277_PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00
@@ -188,7 +190,7 @@ _CORE5277_PCINT_TABLE:
 
 .MACRO _CORE5277_TIMERA_INIT
 	LDS TEMP,PRR
-	ANDI TEMP,~(1<<PRTIM0)											;Подпитываю TIMER0
+	ANDI TEMP,~(1<<PRTIM0)											;РџРѕРґРїРёС‚С‹РІР°СЋ TIMER0
 	STS PRR,TEMP
 
 	LDI TEMP,(0<<WGM01)|(0<<WGM00)
@@ -212,7 +214,7 @@ _CORE5277_PCINT_TABLE:
 .MACRO _CORRE5277_TIMERA_CORRECTOR
 	LDS TEMP,TCNT0
 	SBRS _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
-	SUBI TEMP,low(0x100-0x62)										;Подобрано вручную, было 0x64
+	SUBI TEMP,low(0x100-0x62)										;РџРѕРґРѕР±СЂР°РЅРѕ РІСЂСѓС‡РЅСѓСЋ, Р±С‹Р»Рѕ 0x64
 	SBRC _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
 	SUBI TEMP,low(0x100-0x66)
 	STS OCR0A,TEMP
@@ -220,34 +222,34 @@ _CORE5277_PCINT_TABLE:
 
 .MACRO _CORRE5277_IR_OFFSET_CORRECTOR
 	NOP
-	DEC _CORE5277_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
+	DEC _CORE5277_TEMP_L												;РџРѕР»СѓС‡РµРЅРѕ РЅР° Р±Р°Р·Рµ Р°РґСЂРµСЃР° РІС‹С…РѕРґР° РёР· РїСЂРѕС†РµРґСѓСЂС‹(РЅРµ РІС…РѕРґР°), С‚.Рµ. СѓРІРµР»РёС‡РµРЅ РЅР° 1
 .ENDMACRO
 
 .MACRO _CORE5277_TIMERB
-	;SUBI TEMP,0x08														;Подобрано вручную, не должно быть вообще
+	;SUBI TEMP,0x08														;РџРѕРґРѕР±СЂР°РЅРѕ РІСЂСѓС‡РЅСѓСЋ, РЅРµ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РІРѕРѕР±С‰Рµ
 	LDS TEMP_L,TCNT0
 	ADD TEMP_L,TEMP
 	STS OCR0B,TEMP_L
 	IN TEMP,TIFR0
 	ORI TEMP,(1<<OCF0B)
 	STS TIFR0,TEMP
-	;Установка флага
+	;РЈСЃС‚Р°РЅРѕРІРєР° С„Р»Р°РіР°
 	LDI TEMP,(1<<_CFL_TIMER_B_USE)
 	OR _CORE5277_COREFLAGS,TEMP
-	;Запуск таймера
+	;Р—Р°РїСѓСЃРє С‚Р°Р№РјРµСЂР°
 	LDS TEMP,TIMSK0
 	ORI TEMP,(1<<OCIE0B)
 	STS TIMSK0,TEMP
 	SBRC _CORE5277_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
-	;Останов таймера
+	;РћСЃС‚Р°РЅРѕРІ С‚Р°Р№РјРµСЂР°
 	LDS TEMP,TIMSK0
 	ANDI TEMP,~(1<<OCIE0B)
 	STS TIMSK0,TEMP
 .ENDMACRO
 
 .MACRO _CORE5277_PRR_RESET
-	;Подаем питание на TWI
+	;РџРѕРґР°РµРј РїРёС‚Р°РЅРёРµ РЅР° TWI
 	PUSH TEMP
 	LDS TEMP,PRR
 	ANDI TEMP,~(1<<@0)

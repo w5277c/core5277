@@ -1,35 +1,35 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Р’Р»Р°РґРµР»СЊС†РµРј РґР°РЅРЅРѕРіРѕ РёСЃС…РѕРґРЅРѕРіРѕ РєРѕРґР° СЏРІР»СЏРµС‚СЃСЏ РЈРґРѕРІРёС‡РµРЅРєРѕ РљРѕРЅСЃС‚Р°РЅС‚РёРЅ РђР»РµРєСЃР°РЅРґСЂРѕРІРёС‡, РµРјР°Р№Р»:w5277c@gmail.com, РїРѕ РІСЃРµРј
+;РїСЂР°РІРѕРІС‹Рј РІРѕРїСЂРѕСЃР°Рј РѕР±СЂР°С‰Р°Р№С‚РµСЃСЊ РЅР° email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.04.2020  w5277c@gmail.com        Начало
+;03.04.2020  w5277c@gmail.com        РќР°С‡Р°Р»Рѕ
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./inc/core/wait.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_SUART_DATA_RX_PORT				= 0x00			;1B - Порт, пин для приема
-	.EQU	_DRV_SUART_DATA_TX_PORT				= 0x01			;1B - Порт, пин для передачи
-	.EQU	_DRV_SUART_DATA_DR_PORT				= 0x02			;1B - Порт, пин для задания направления прием/передача
-	.EQU	_DRV_SUART_DATA_LED_PORT			= 0x03			;1B - Порт, пин для индикации работы
-	.EQU	_DRV_SUART_DATA_PCI_DRV				= 0x04			;1B - ид драйвера внешних прерываний
-	.EQU	_DRV_SUART_DATA_TIMER_ID			= 0x05			;1B - ид таймера
-	.EQU	_DRV_SUART_DATA_BAUDRATE			= 0x06			;1B - скорость UART
-	.EQU	_DRV_SUART_DATA_FIRST_TIMEOUT		= 0x07			;2B - Таймаут ожидания первого байта (2ms)
-	.EQU	_DRV_SUART_DATA_NEXT_TIMEOUT		= 0x09			;1B - Таймаут ожидания последующего байта(0.050ms)
-	.EQU	_DRV_SUART_DATA_SRC_ADDR			= 0x0a			;2B - Адрес блока данных для передачи
-	.EQU	_DRV_SUART_DATA_DST_ADDR			= 0x0c			;2B - Адрес блока данных для приема
-	.EQU	_DRV_SUART_DATA_TX_LEN				= 0x0e			;1B - длина данных для передачи
-	.EQU	_DRV_SUART_DATA_RX_LEN				= 0x0f			;1B - максимальныйх размер данных для приема
-	.EQU	_DRV_SUART_DATA_ACCUM				= 0x10			;1B - текущая позиция в буфере
-	.EQU	_DRV_SUART_DATA_BUFFER_POS			= 0x11			;1B - текущая позиция в буфере
-	.EQU	_DRV_SUART_DATA_BIT_NUM				= 0x12			;1B - текущий номер бита
-	.EQU	_DRV_SUART_DATA_STATE				= 0x13			;1B - текущий статус
+	.EQU	_DRV_SUART_DATA_RX_PORT				= 0x00			;1B - РџРѕСЂС‚, РїРёРЅ РґР»СЏ РїСЂРёРµРјР°
+	.EQU	_DRV_SUART_DATA_TX_PORT				= 0x01			;1B - РџРѕСЂС‚, РїРёРЅ РґР»СЏ РїРµСЂРµРґР°С‡Рё
+	.EQU	_DRV_SUART_DATA_DR_PORT				= 0x02			;1B - РџРѕСЂС‚, РїРёРЅ РґР»СЏ Р·Р°РґР°РЅРёСЏ РЅР°РїСЂР°РІР»РµРЅРёСЏ РїСЂРёРµРј/РїРµСЂРµРґР°С‡Р°
+	.EQU	_DRV_SUART_DATA_LED_PORT			= 0x03			;1B - РџРѕСЂС‚, РїРёРЅ РґР»СЏ РёРЅРґРёРєР°С†РёРё СЂР°Р±РѕС‚С‹
+	.EQU	_DRV_SUART_DATA_PCI_DRV				= 0x04			;1B - РёРґ РґСЂР°Р№РІРµСЂР° РІРЅРµС€РЅРёС… РїСЂРµСЂС‹РІР°РЅРёР№
+	.EQU	_DRV_SUART_DATA_TIMER_ID			= 0x05			;1B - РёРґ С‚Р°Р№РјРµСЂР°
+	.EQU	_DRV_SUART_DATA_BAUDRATE			= 0x06			;1B - СЃРєРѕСЂРѕСЃС‚СЊ UART
+	.EQU	_DRV_SUART_DATA_FIRST_TIMEOUT		= 0x07			;2B - РўР°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РїРµСЂРІРѕРіРѕ Р±Р°Р№С‚Р° (2ms)
+	.EQU	_DRV_SUART_DATA_NEXT_TIMEOUT		= 0x09			;1B - РўР°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РїРѕСЃР»РµРґСѓСЋС‰РµРіРѕ Р±Р°Р№С‚Р°(0.050ms)
+	.EQU	_DRV_SUART_DATA_SRC_ADDR			= 0x0a			;2B - РђРґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
+	.EQU	_DRV_SUART_DATA_DST_ADDR			= 0x0c			;2B - РђРґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
+	.EQU	_DRV_SUART_DATA_TX_LEN				= 0x0e			;1B - РґР»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
+	.EQU	_DRV_SUART_DATA_RX_LEN				= 0x0f			;1B - РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№С… СЂР°Р·РјРµСЂ РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
+	.EQU	_DRV_SUART_DATA_ACCUM				= 0x10			;1B - С‚РµРєСѓС‰Р°СЏ РїРѕР·РёС†РёСЏ РІ Р±СѓС„РµСЂРµ
+	.EQU	_DRV_SUART_DATA_BUFFER_POS			= 0x11			;1B - С‚РµРєСѓС‰Р°СЏ РїРѕР·РёС†РёСЏ РІ Р±СѓС„РµСЂРµ
+	.EQU	_DRV_SUART_DATA_BIT_NUM				= 0x12			;1B - С‚РµРєСѓС‰РёР№ РЅРѕРјРµСЂ Р±РёС‚Р°
+	.EQU	_DRV_SUART_DATA_STATE				= 0x13			;1B - С‚РµРєСѓС‰РёР№ СЃС‚Р°С‚СѓСЃ
 	;---
-	.EQU	_DRV_SUART_DATA_SIZE					= 0x14			;Размер выделяемого блока под данные(20 байт)
+	.EQU	_DRV_SUART_DATA_SIZE					= 0x14			;Р Р°Р·РјРµСЂ РІС‹РґРµР»СЏРµРјРѕРіРѕ Р±Р»РѕРєР° РїРѕРґ РґР°РЅРЅС‹Рµ(20 Р±Р°Р№С‚)
 	;---
-	.EQU	DRV_SUART_BAUDRATE_19200			= 0x81			;Скоростной режим 19200
-	.EQU	DRV_SUART_BAUDRATE_9600				= 0x82			;Скоростной режим 9600
+	.EQU	DRV_SUART_BAUDRATE_19200			= 0x81			;РЎРєРѕСЂРѕСЃС‚РЅРѕР№ СЂРµР¶РёРј 19200
+	.EQU	DRV_SUART_BAUDRATE_9600				= 0x82			;РЎРєРѕСЂРѕСЃС‚РЅРѕР№ СЂРµР¶РёРј 9600
 
 	;---STATES_IDS---
 	.EQU	DRV_SUART_ST_READY					= 0x00;
@@ -42,15 +42,15 @@
 
 DRV_SUART_INIT:
 ;--------------------------------------------------------
-;Инициализация
-;IN: XH - RX порт, XL - TX порт,
-;TEMP_H - порт направления передача/прием
-;(0xff-не используется),
-;TEMP_L - порт индикации передачи
-;(0xff-не используется)
-;ACCUM - ид таймера
-;YH - скорость передачи данных
-;YL - ид PCI драйвера
+;РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ
+;IN: XH - RX РїРѕСЂС‚, XL - TX РїРѕСЂС‚,
+;TEMP_H - РїРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РїРµСЂРµРґР°С‡Р°/РїСЂРёРµРј
+;(0xff-РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ),
+;TEMP_L - РїРѕСЂС‚ РёРЅРґРёРєР°С†РёРё РїРµСЂРµРґР°С‡Рё
+;(0xff-РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ)
+;ACCUM - РёРґ С‚Р°Р№РјРµСЂР°
+;YH - СЃРєРѕСЂРѕСЃС‚СЊ РїРµСЂРµРґР°С‡Рё РґР°РЅРЅС‹С…
+;YL - РёРґ PCI РґСЂР°Р№РІРµСЂР°
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP_H
@@ -71,33 +71,33 @@ DRV_SUART_INIT:
 	STD Z+_DRV_SUART_DATA_BAUDRATE,YH
 	STD Z+_DRV_SUART_DATA_PCI_DRV,YL
 
-	;Инициализирую программный таймер
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїСЂРѕРіСЂР°РјРјРЅС‹Р№ С‚Р°Р№РјРµСЂ
 	PUSH TEMP_L
 	PUSH TEMP_H
-	;Инициализирую порт направления данных
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РґР°РЅРЅС‹С…
 	POP ACCUM
 	CPI ACCUM,0xff
 	BREQ _DRV_SUART_INIT__NO_DR_PORT
 	MCALL CORE5277_PORTS_MODE_OUT
 	MCALL CORE5277_PORTS_SET_LO
 _DRV_SUART_INIT__NO_DR_PORT:
-	;Инициализирую порт индикации
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ РёРЅРґРёРєР°С†РёРё
 	POP ACCUM
 	CPI ACCUM,0xff
 	BREQ _DRV_SUART_INIT__NO_LED_PORT
 	MCALL CORE5277_PORTS_MODE_OUT
 	MCALL CORE5277_PORTS_SET_LO
 _DRV_SUART_INIT__NO_LED_PORT:
-	;Инициализирую порт RX
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ RX
 	MOV ACCUM,XH
 	MCALL CORE5277_PORTS_MODE_IN
 	MCALL CORE5277_PORTS_SET_HI
-	;Инициализирую порт TX
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ TX
 	MOV ACCUM,XL
 	MCALL CORE5277_PORTS_MODE_OUT
 	MCALL CORE5277_PORTS_SET_HI
-	;Расчитываю NEXT TIMEOUT										;Для 9600 таймаут составит 1.3ms(~13бит), для 19200 составит 0.65ms(~13бит)
-	LDI TEMP,0x0d														;Таймаут будет базироваться на _CORE5277_MAIN_TIMER_CNTR(отсчет каждые 0.050ms)
+	;Р Р°СЃС‡РёС‚С‹РІР°СЋ NEXT TIMEOUT										;Р”Р»СЏ 9600 С‚Р°Р№РјР°СѓС‚ СЃРѕСЃС‚Р°РІРёС‚ 1.3ms(~13Р±РёС‚), РґР»СЏ 19200 СЃРѕСЃС‚Р°РІРёС‚ 0.65ms(~13Р±РёС‚)
+	LDI TEMP,0x0d														;РўР°Р№РјР°СѓС‚ Р±СѓРґРµС‚ Р±Р°Р·РёСЂРѕРІР°С‚СЊСЃСЏ РЅР° _CORE5277_MAIN_TIMER_CNTR(РѕС‚СЃС‡РµС‚ РєР°Р¶РґС‹Рµ 0.050ms)
 	CPI YH,0x01
 	BRNE PC+0x02
 	LDI TEMP,0x1a
@@ -113,93 +113,93 @@ _DRV_SUART_INIT__NO_LED_PORT:
 	LDI ACCUM,(1<<CORE5277_MODEBITS_DRV_BSEM)
 	MCALL CORE5277_DRIVER_READY
 ;--------------------------------------------------------
-;Основной код, коммуникация
-;IN: Y - src адрес, X - dst адрес,
-;TEMP_EH - TX длина, TEMP_EL - RX максимальная длина
-;TEMP_H,TEMP_L - таймаут ожидания данных(2ms)
-;OUT: TEMP_H - результат(состояние UART'а),
-;TEMP_L - длина полученных данных
+;РћСЃРЅРѕРІРЅРѕР№ РєРѕРґ, РєРѕРјРјСѓРЅРёРєР°С†РёСЏ
+;IN: Y - src Р°РґСЂРµСЃ, X - dst Р°РґСЂРµСЃ,
+;TEMP_EH - TX РґР»РёРЅР°, TEMP_EL - RX РјР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР°
+;TEMP_H,TEMP_L - С‚Р°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РґР°РЅРЅС‹С…(2ms)
+;OUT: TEMP_H - СЂРµР·СѓР»СЊС‚Р°С‚(СЃРѕСЃС‚РѕСЏРЅРёРµ UART'Р°),
+;TEMP_L - РґР»РёРЅР° РїРѕР»СѓС‡РµРЅРЅС‹С… РґР°РЅРЅС‹С…
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
 
-	;Получаю адрес выделенной памяти
+	;РџРѕР»СѓС‡Р°СЋ Р°РґСЂРµСЃ РІС‹РґРµР»РµРЅРЅРѕР№ РїР°РјСЏС‚Рё
 	MOV TEMP,DRIVER_ID
 	MCALL CORE5277_RAM_GET_OFFSET
-	;Запоминаем таймаут ожидания первого байта
+	;Р—Р°РїРѕРјРёРЅР°РµРј С‚Р°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РїРµСЂРІРѕРіРѕ Р±Р°Р№С‚Р°
 	STD Z+_DRV_SUART_DATA_FIRST_TIMEOUT+0x00,TEMP_H
 	STD Z+_DRV_SUART_DATA_FIRST_TIMEOUT+0x01,TEMP_L
-	;Запоминаем SRC
+	;Р—Р°РїРѕРјРёРЅР°РµРј SRC
 	SBRS YH,0x07
 	RJMP PC+0x04
-	;Умножаем на 2 адрес рабоыт с ROM
+	;РЈРјРЅРѕР¶Р°РµРј РЅР° 2 Р°РґСЂРµСЃ СЂР°Р±РѕС‹С‚ СЃ ROM
 	LSL YL
 	ROL YH
 	ORI YH,0x80
 	STD Z+_DRV_SUART_DATA_SRC_ADDR+0x00,YH
 	STD Z+_DRV_SUART_DATA_SRC_ADDR+0x01,YL
-	;Запоминаем DST
+	;Р—Р°РїРѕРјРёРЅР°РµРј DST
 	STD Z+_DRV_SUART_DATA_DST_ADDR+0x00,XH
 	STD Z+_DRV_SUART_DATA_DST_ADDR+0x01,XL
-	;Запминаем длину TX и RX
+	;Р—Р°РїРјРёРЅР°РµРј РґР»РёРЅСѓ TX Рё RX
 	STD Z+_DRV_SUART_DATA_TX_LEN,TEMP_EH
 	STD Z+_DRV_SUART_DATA_RX_LEN,TEMP_EL
 
-	;Блок передачи
+	;Р‘Р»РѕРє РїРµСЂРµРґР°С‡Рё
 	CPI TEMP_EH,0x00
 	BREQ _DRV_SUART_PROC__TX_SKIP
-	;Включаю индикатор передачи
+	;Р’РєР»СЋС‡Р°СЋ РёРЅРґРёРєР°С‚РѕСЂ РїРµСЂРµРґР°С‡Рё
 	LDD ACCUM,Z+_DRV_SUART_DATA_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
 	MCALL CORE5277_PORTS_SET_HI
-	;Сброс позиции в буфере
+	;РЎР±СЂРѕСЃ РїРѕР·РёС†РёРё РІ Р±СѓС„РµСЂРµ
 	CLR TEMP
 	STD Z+_DRV_SUART_DATA_BUFFER_POS,TEMP
-	;Запуск передачи
+	;Р—Р°РїСѓСЃРє РїРµСЂРµРґР°С‡Рё
 	LDI TEMP,DRV_SUART_ST_SENDING
 	STD Z+_DRV_SUART_DATA_STATE,TEMP
-	;Порт направления в HI
+	;РџРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РІ HI
 	LDD ACCUM,Z+_DRV_SUART_DATA_DR_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
 	MCALL CORE5277_PORTS_SET_HI
-	;Инициализирую и включаю таймер
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ Рё РІРєР»СЋС‡Р°СЋ С‚Р°Р№РјРµСЂ
 	LDI TEMP_H,high(_DRV_SUART_TX_EVENT)
 	LDI TEMP_L,low(_DRV_SUART_TX_EVENT)
 	LDD TEMP,Z+_DRV_SUART_DATA_TIMER_ID
 	LDD ACCUM,Z+_DRV_SUART_DATA_BAUDRATE
 	MCALL CORE5277_TIMER_SET
 	MCALL CORE5277_TIMER_START
-	;Жду окончания передачи
+	;Р–РґСѓ РѕРєРѕРЅС‡Р°РЅРёСЏ РїРµСЂРµРґР°С‡Рё
 _DRV_SUART_PROC__SENDING_WAIT:
 	MCALL CORE5277_WAIT
 	LDD TEMP,Z+_DRV_SUART_DATA_STATE
 	CPI TEMP,DRV_SUART_ST_READY
 	BRNE _DRV_SUART_PROC__SENDING_WAIT
-	;Выключаю индикатор
+	;Р’С‹РєР»СЋС‡Р°СЋ РёРЅРґРёРєР°С‚РѕСЂ
 	LDD ACCUM,Z+_DRV_SUART_DATA_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
 	MCALL CORE5277_PORTS_SET_LO
 _DRV_SUART_PROC__TX_SKIP:
 
-;	;Сброс позиции в буфере
+;	;РЎР±СЂРѕСЃ РїРѕР·РёС†РёРё РІ Р±СѓС„РµСЂРµ
 ;	CLR TEMP
 ;	STD Z+_DRV_SUART_DATA_BUFFER_POS,TEMP
 ;
-;	;Блок приема
+;	;Р‘Р»РѕРє РїСЂРёРµРјР°
 ;	CPI TEMP_EL,0x00
 ;	BREQ _DRV_SUART_PROC__RX_SKIP
-;	;Запуск приема
+;	;Р—Р°РїСѓСЃРє РїСЂРёРµРјР°
 ;	LDI TEMP,DRV_SUART_ST_WAIT_DATA
 ;	STD Z+_DRV_SUART_DATA_STATE,TEMP
 ;
-;;!!!TODO включаю PCINT и таймер?
+;;!!!TODO РІРєР»СЋС‡Р°СЋ PCINT Рё С‚Р°Р№РјРµСЂ?
 ;
-;	;Запоминаем метку времени для отсчета таймаута ожидания данных
+;	;Р—Р°РїРѕРјРёРЅР°РµРј РјРµС‚РєСѓ РІСЂРµРјРµРЅРё РґР»СЏ РѕС‚СЃС‡РµС‚Р° С‚Р°Р№РјР°СѓС‚Р° РѕР¶РёРґР°РЅРёСЏ РґР°РЅРЅС‹С…
 ;	LDS YH,_CORE5277_UPTIME+0x03
 ;	LDS YL,_CORE5277_UPTIME+0x04
 ;_DRV_SUART_PROC__RECEIVING_WAIT:
@@ -233,10 +233,10 @@ _DRV_SUART_PROC__TX_SKIP:
 ;	STD Z+_DRV_SUART_DATA_STATE,TEMP
 ;_DRV_SUART_PROC__RECEIVING_DONE:
 
-;!!! TODO запрещаю PCINT и таймер?
+;!!! TODO Р·Р°РїСЂРµС‰Р°СЋ PCINT Рё С‚Р°Р№РјРµСЂ?
 
 _DRV_SUART_PROC__RX_SKIP:
-	;Результат
+	;Р РµР·СѓР»СЊС‚Р°С‚
 	LDD TEMP_H,Z+_DRV_SUART_DATA_STATE
 	LDD TEMP_L,Z+_DRV_SUART_DATA_BUFFER_POS
 
@@ -249,31 +249,31 @@ _DRV_SUART_PROC__RX_SKIP:
 ;--------------------------------------------------------
 _DRV_SUART_TX_EVENT:
 ;--------------------------------------------------------
-;Обработчик таймера для передачи данных
+;РћР±СЂР°Р±РѕС‚С‡РёРє С‚Р°Р№РјРµСЂР° РґР»СЏ РїРµСЂРµРґР°С‡Рё РґР°РЅРЅС‹С…
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
 
-	;Получаю адрес выделенной памяти
+	;РџРѕР»СѓС‡Р°СЋ Р°РґСЂРµСЃ РІС‹РґРµР»РµРЅРЅРѕР№ РїР°РјСЏС‚Рё
 	MOV TEMP,DRIVER_ID
 	MCALL CORE5277_RAM_GET_OFFSET
 
-	;Считываю и инкрементирую номер текущего бита
+	;РЎС‡РёС‚С‹РІР°СЋ Рё РёРЅРєСЂРµРјРµРЅС‚РёСЂСѓСЋ РЅРѕРјРµСЂ С‚РµРєСѓС‰РµРіРѕ Р±РёС‚Р°
 	LDD TEMP,Z+_DRV_SUART_DATA_BIT_NUM
 	INC TEMP
 	STD Z+_DRV_SUART_DATA_BIT_NUM,TEMP
 	CPI ACCUM,0x01
 	BRNE _DRV_SUART_TX_EVENT__NOT_START
 ;START
-	;Считываю позицию в буфере
+	;РЎС‡РёС‚С‹РІР°СЋ РїРѕР·РёС†РёСЋ РІ Р±СѓС„РµСЂРµ
 	LDD ACCUM,Z+_DRV_SUART_DATA_BUFFER_POS
-	;Считываем размер передаваемых данных
+	;РЎС‡РёС‚С‹РІР°РµРј СЂР°Р·РјРµСЂ РїРµСЂРµРґР°РІР°РµРјС‹С… РґР°РЅРЅС‹С…
 	LDD TEMP,Z+_DRV_SUART_DATA_TX_LEN
-	;Если все данные переданы то завершаем работу TX
+	;Р•СЃР»Рё РІСЃРµ РґР°РЅРЅС‹Рµ РїРµСЂРµРґР°РЅС‹ С‚Рѕ Р·Р°РІРµСЂС€Р°РµРј СЂР°Р±РѕС‚Сѓ TX
 	CP TEMP,ACCUM
 	BREQ _DRV_SUART_TX_EVENT__TX_DISABLE
-	;Вычисляю смещение на нужный байт
+	;Р’С‹С‡РёСЃР»СЏСЋ СЃРјРµС‰РµРЅРёРµ РЅР° РЅСѓР¶РЅС‹Р№ Р±Р°Р№С‚
 	PUSH_Z
 	LDD TEMP,Z+_DRV_SUART_DATA_SRC_ADDR+0x00
 	LDD ZL,Z+_DRV_SUART_DATA_SRC_ADDR+0x01
@@ -283,7 +283,7 @@ _DRV_SUART_TX_EVENT:
 	ADD ZL,ACCUM
 	CLR TEMP
 	ADC ZH,TEMP
-	;Считываем с буфера байт и заносим в аккумулятор
+	;РЎС‡РёС‚С‹РІР°РµРј СЃ Р±СѓС„РµСЂР° Р±Р°Р№С‚ Рё Р·Р°РЅРѕСЃРёРј РІ Р°РєРєСѓРјСѓР»СЏС‚РѕСЂ
 	POP ACCUM
 	SBRC ACCUM,0x07
 	RJMP PC+0x03
@@ -292,7 +292,7 @@ _DRV_SUART_TX_EVENT:
 	LPM TEMP,Z+
 	POP_Z
 	STD Z+_DRV_SUART_DATA_ACCUM,TEMP
-	;Низкий уровень порта - start
+	;РќРёР·РєРёР№ СѓСЂРѕРІРµРЅСЊ РїРѕСЂС‚Р° - start
 	LDD ACCUM,Z+_DRV_SUART_DATA_TX_PORT
 	MCALL CORE5277_PORTS_SET_LO
 	RJMP _DRV_SUART_TX_EVENT__END
@@ -300,7 +300,7 @@ _DRV_SUART_TX_EVENT__NOT_START:
 	CPI ACCUM,0x0a
 	BRCC _DRV_SUART_TX_EVENT__STOP
 ;DATABITS
-	;Считываю передаваемый байт
+	;РЎС‡РёС‚С‹РІР°СЋ РїРµСЂРµРґР°РІР°РµРјС‹Р№ Р±Р°Р№С‚
 	LDD ACCUM,Z+_DRV_SUART_DATA_ACCUM
 	ROL ACCUM
 	STD Z+_DRV_SUART_DATA_ACCUM,ACCUM
@@ -310,27 +310,27 @@ _DRV_SUART_TX_EVENT__NOT_START:
 _DRV_SUART_TX_EVENT__STOP:
 	BRNE _DRV_SUART_TX_EVENT__TX_DISABLE
 ;STOP
-	;Инкрементирую позицию в буфере
+	;РРЅРєСЂРµРјРµРЅС‚РёСЂСѓСЋ РїРѕР·РёС†РёСЋ РІ Р±СѓС„РµСЂРµ
 	LDD TEMP,Z+_DRV_SUART_DATA_BUFFER_POS
 	INC TEMP
 	STD Z+_DRV_SUART_DATA_BUFFER_POS,TEMP
-	;Сбрасываю счетчик бит
+	;РЎР±СЂР°СЃС‹РІР°СЋ СЃС‡РµС‚С‡РёРє Р±РёС‚
 	LDI TEMP,0x00
 	STD Z+_DRV_SUART_DATA_BIT_NUM,TEMP
-	;Высокий уровень порта - stop
+	;Р’С‹СЃРѕРєРёР№ СѓСЂРѕРІРµРЅСЊ РїРѕСЂС‚Р° - stop
 	LDD ACCUM,Z+_DRV_SUART_DATA_TX_PORT
 	MCALL CORE5277_PORTS_SET_HI
 	RJMP _DRV_SUART_TX_EVENT__END
 _DRV_SUART_TX_EVENT__TX_DISABLE:
-	;Перевожу драйвер в режим приема
+	;РџРµСЂРµРІРѕР¶Сѓ РґСЂР°Р№РІРµСЂ РІ СЂРµР¶РёРј РїСЂРёРµРјР°
 	LDD ACCUM,Z+_DRV_SUART_DATA_DR_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
 	MCALL CORE5277_PORTS_SET_LO
-	;Останавливаю таймер
+	;РћСЃС‚Р°РЅР°РІР»РёРІР°СЋ С‚Р°Р№РјРµСЂ
 	LDD TEMP,Z+_DRV_SUART_DATA_TIMER_ID
 	MCALL CORE5277_TIMER_STOP
-	;Выставляю состояние завершенной передачи
+	;Р’С‹СЃС‚Р°РІР»СЏСЋ СЃРѕСЃС‚РѕСЏРЅРёРµ Р·Р°РІРµСЂС€РµРЅРЅРѕР№ РїРµСЂРµРґР°С‡Рё
 	LDI TEMP,DRV_SUART_ST_READY
 	STD Z+_DRV_SUART_DATA_STATE,TEMP
 	RJMP _DRV_SUART_TX_EVENT__END
@@ -344,6 +344,6 @@ _DRV_SUART_TX_EVENT__END:
 ;--------------------------------------------------------
 _DRV_SUART_RX_EVENT:
 ;--------------------------------------------------------
-;Обработчик таймера для получения данных
+;РћР±СЂР°Р±РѕС‚С‡РёРє С‚Р°Р№РјРµСЂР° РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РґР°РЅРЅС‹С…
 ;--------------------------------------------------------
 
