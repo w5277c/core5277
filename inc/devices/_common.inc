@@ -4,6 +4,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;26.10.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-	.EQU	TIMERS_SPEED_50NS				= 0x64
-	.EQU	TIMERS_SPEED_25NS				= 0x32
-	.SET	TIMERS_SPEED					= TIMERS_SPEED_50NS
+	.EQU	ATTINY25									= 0x00
+	.EQU	ATMEGA8									= 0x01
+	.EQU	ATMEGA16									= 0x02
+	.EQU	ATMEGA48									= 0x03
+
+	.EQU	TIMERS_SPEED_50NS						= 0x64
+	.EQU	TIMERS_SPEED_25NS						= 0x32
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS

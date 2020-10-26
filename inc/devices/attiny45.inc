@@ -7,18 +7,9 @@
 ;---DESCRIPTION------------------------------------------
 ;core5277 for ATtiny45 (4KB ROM, 256B EEPROM, 256B SRAM) at 16MHz (LITTLE ENDIAN)
 
-
-
-
-
 ;avrdude -p m8 -c avrispmkII -U flash:w:main.hex
 ;;;;;Ext crystal 8.0-..., 16K CK/14 CK + 4.1ms, CKDIV8 disabled, BOD disabled, SPI enabled:
 ;;;;;avrdude -p m8 -c avrispmkII -U lfuse:w:0xef:m -U hfuse:w:0xdc:m -U efuse:w:0xf9:m
-
-	.EQU	ATTINY25									= 0x01
-	.EQU	ATMEGA8									= 0x02
-	.EQU	ATMEGA16									= 0x03
-	.EQU	ATMEGA48									= 0x04
 
 	;---SPECIFY-DEVICE---
 	.DEVICE ATtiny45
@@ -257,7 +248,7 @@ _CORE5277_PCINT_TABLE:
 	STS TCCR0B,TEMP
 	CLR TEMP
 	STS TCNT0,TEMP
-	LDI TEMP,0x5a;;0x63														;0x64 - 100(16MHz)
+	LDI TEMP,TIMERS_SPEED-0x01										;0x64 - 100(16MHz)
 	STS OCR0A,TEMP
 	LDI TEMP,(1<<OCF0A)
 	STS TIFR,TEMP
@@ -272,9 +263,9 @@ _CORE5277_PCINT_TABLE:
 .MACRO _CORRE5277_TIMERA_CORRECTOR
 	LDS TEMP,TCNT0
 	SBRS _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
-	SUBI TEMP,low(0x100-0x62)										;Подобрано вручную, было 0x64
+	SUBI TEMP,low(0x100-(TIMERS_SPEED-0x02))					;Подобрано вручную, было 0x64
 	SBRC _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
-	SUBI TEMP,low(0x100-0x66)
+	SUBI TEMP,low(0x100-(TIMERS_SPEED+0x02))
 	STS OCR0A,TEMP
 .ENDMACRO
 

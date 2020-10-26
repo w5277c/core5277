@@ -11,11 +11,6 @@
 ;Ext crystal 8.0-..., 1K CK/14 CK + 4.1ms, CKDIV8 disabled, BOD 4.3V, SPI enabled:
 ;avrdude -p m328p -c avrispmkII -U lfuse:w:0xdf:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m
 
-	.EQU	ATTINY25									= 0x00
-	.EQU	ATMEGA8									= 0x01
-	.EQU	ATMEGA16									= 0x02
-	.EQU	ATMEGA48									= 0x03
-
 	;---SPECIFY-DEVICE---
 	.DEVICE ATmega328P
 
