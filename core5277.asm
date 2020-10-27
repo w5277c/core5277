@@ -64,8 +64,11 @@
 ;---CONSTANTS--------------------------------------------
 	.EQU	_CORE5277_DRIVER_HEADER_SIZE		= 0x06			;Размер заголовка драйвера
 	.EQU	_CORE5277_TASK_HEADER_SIZE			= 0x0b			;Размер заголовка задачи
-	.EQU	_CORE5277_TIMERS_MAX_QNT			= 0x04
+.if TIMERS_SPEED == TIMERS_SPEED_25NS
+	.EQU	_CORE5277_TIMER_PERIOD				= 0x50			;80, т.е. 0.000025*80=0.002=2мс
+.else
 	.EQU	_CORE5277_TIMER_PERIOD				= 0x28			;40, т.е. 0.000050*40=0.002=2мс
+.endif
 	.EQU	_CORE5277_TASK_STACK_DEF_SIZE		= 0x13			;Размер стека задачи при создании (16 регистров + SREG + точка возврата)
 	.EQU	_CORE5277_TASKS_ACTIVE_TIME		= 0x01			;Время работы задачи 1*2 = 2мс
 	.EQU	_CORE5277_IRV_TABLE_SIZE			= 0x4b			;Размер таблицы прерываний
@@ -102,6 +105,7 @@
 	.EQU	_CORE5277_STACK_END					= CORE5277_BUFFER	;XB - стек ядра, далее буфер, стек задач и выделяемая память
 														;TODO проверить что стек не перетирает первый байт буфера
 .IF AVRA == 0x01
+	.MESSAGE "########  MAIN TIMER SPEED:",TIMERS_SPEED
 	.IF BUFFER_SIZE > 0x00
 		.MESSAGE "######## BUFFER SIZE:",BUFFER_SIZE
 	.ENDIF

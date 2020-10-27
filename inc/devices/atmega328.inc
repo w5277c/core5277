@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Р’Р»Р°РґРµР»СЊС†РµРј РґР°РЅРЅРѕРіРѕ РёСЃС…РѕРґРЅРѕРіРѕ РєРѕРґР° СЏРІР»СЏРµС‚СЃСЏ РЈРґРѕРІРёС‡РµРЅРєРѕ РљРѕРЅСЃС‚Р°РЅС‚РёРЅ РђР»РµРєСЃР°РЅРґСЂРѕРІРёС‡, РµРјР°Р№Р»:w5277c@gmail.com, РїРѕ РІСЃРµРј
+;РїСЂР°РІРѕРІС‹Рј РІРѕРїСЂРѕСЃР°Рј РѕР±СЂР°С‰Р°Р№С‚РµСЃСЊ РЅР° email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.05.2020  w5277c@gmail.com        Начало
+;02.05.2020  w5277c@gmail.com        РќР°С‡Р°Р»Рѕ
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -10,11 +10,6 @@
 ;avrdude -p m328 -c avrispmkII -U flash:w:main.hex
 ;Ext crystal 8.0-..., 1K CK/14 CK + 4.1ms, CKDIV8 disabled, BOD 4.3V, SPI enabled:
 ;avrdude -p m328p -c avrispmkII -U lfuse:w:0xdf:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m
-
-	.EQU	ATTINY25									= 0x00
-	.EQU	ATMEGA8									= 0x01
-	.EQU	ATMEGA16									= 0x02
-	.EQU	ATMEGA48									= 0x03
 
 	;---SPECIFY-DEVICE---
 	.DEVICE ATmega328P
@@ -24,16 +19,18 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
 	#pragma AVRPART MEMORY EEPROM 1024
 
+	#include "/inc/devices/_common.inc"
+
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA48
 	.MESSAGE "######## DEVICE ATmega328 ########"
-	.EQU	_CORE5277_DRIVERS_MAX_QNT			= 0x10			;Максимальное количество драйверов
-	.EQU	_CORE5277_TASKS_MAX_QNT				= 0x10			;Максимальное количество задач
-	.EQU	_CORE5277_IR_QNT						= 0x1a			;Количество перырваний(без RESET)
-	.EQU	_CORE5277_RES_QUEUE_SIZE			= 0x20			;Размер очереди к ресурсам(16 элементов по 2 байта)
-	.EQU	_CORE5277_PCINT_PORTS_QNT			= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_CORE5277_RAM_BORDER_SIZE			= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_CORE5277_STACK_SIZE					= 0x40			;Стек ядра
+	.EQU	_CORE5277_DRIVERS_MAX_QNT			= 0x10			;РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РґСЂР°Р№РІРµСЂРѕРІ
+	.EQU	_CORE5277_TASKS_MAX_QNT				= 0x10			;РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ Р·Р°РґР°С‡
+	.EQU	_CORE5277_IR_QNT						= 0x1a			;РљРѕР»РёС‡РµСЃС‚РІРѕ РїРµСЂС‹СЂРІР°РЅРёР№(Р±РµР· RESET)
+	.EQU	_CORE5277_RES_QUEUE_SIZE			= 0x20			;Р Р°Р·РјРµСЂ РѕС‡РµСЂРµРґРё Рє СЂРµСЃСѓСЂСЃР°Рј(16 СЌР»РµРјРµРЅС‚РѕРІ РїРѕ 2 Р±Р°Р№С‚Р°)
+	.EQU	_CORE5277_PCINT_PORTS_QNT			= 0x03			;РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕСЂС‚РѕРІ РїРѕРґРґРµСЂР¶РёРІР°СЋС‰РёС… РІРЅРµС€РЅРёРµ РїСЂРµСЂС‹РІР°РЅРёСЏ(PCINT)
+	.EQU	_CORE5277_RAM_BORDER_SIZE			= 0x20			;РњРёРЅРёРјР°Р»СЊРЅРѕРµ РґРѕРїСѓСЃС‚РёРјРѕРµ СЂР°СЃСЃС‚РѕСЏРЅРёРµ РјРµР¶РґСѓ РІРµСЂС€РёРЅР°РјРё FREE_RAM Рё STACK
+	.EQU	_CORE5277_STACK_SIZE					= 0x40			;РЎС‚РµРє СЏРґСЂР°
 	.EQU	RAMEND									= 0x08ff
 
 	;---IR---
@@ -249,7 +246,7 @@
 	.EQU		UCSZ0									= 0x01
 	.EQU		UCPHA									= 0x01
 	.EQU		UCPOL									= 0x00
-	.EQU		URSEL									= 0x08			;Для совместимости
+	.EQU		URSEL									= 0x08			;Р”Р»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
 	.EQU	UBRRH										= 0xc5
 	.EQU	UBRRL										= 0xc4
 	;---
@@ -397,7 +394,7 @@
 	CALL	_CORE5277_IR												; 2-wire Serial Interface
 	CALL	_CORE5277_IR												; Store Program Memory Ready
 
-_CORE5277_PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB, и т.д.
+_CORE5277_PORTS_TABLE:												;РўР°Р±Р»РёС†Р° РёР· Р°РґСЂРµСЃРѕРІ IO СЂРµРіРёСЃС‚СЂРѕРІ (A,B,C,D), РїРѕРѕС‡РµСЂРµРґРЅРѕ DDRA,PORTA,PINA,DDRB,PORTB,PINB, Рё С‚.Рґ.
 	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
 _CORE5277_PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2
@@ -410,7 +407,7 @@ _CORE5277_PCINT_TABLE:
 
 .MACRO _CORE5277_TIMERA_INIT
 	LDS TEMP,PRR
-	ANDI TEMP,~(1<<PRTIM0)											;Подпитываю TIMER0
+	ANDI TEMP,~(1<<PRTIM0)											;РџРѕРґРїРёС‚С‹РІР°СЋ TIMER0
 	STS PRR,TEMP
 
 	LDI TEMP,(0<<WGM01)|(0<<WGM00)
@@ -419,7 +416,7 @@ _CORE5277_PCINT_TABLE:
 	STS TCCR0B,TEMP
 	CLR TEMP
 	STS TCNT0,TEMP
-	LDI TEMP,0x5a;;0x63														;0x64 - 100(16MHz)
+	LDI TEMP,TIMERS_SPEED-0x01										;0x64 - 100(16MHz) ;РїРѕС‡РµРјСѓ Р±С‹Р»Рѕ 5a?
 	STS OCR0A,TEMP
 	LDI TEMP,(1<<OCF0A)
 	STS TIFR0,TEMP
@@ -434,15 +431,15 @@ _CORE5277_PCINT_TABLE:
 .MACRO _CORRE5277_TIMERA_CORRECTOR
 	LDS TEMP,TCNT0
 	SBRS _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
-	SUBI TEMP,low(0x100-0x62)										;Подобрано вручную, было 0x64
+	SUBI TEMP,low(0x100-(TIMERS_SPEED-0x02))					;РџРѕРґРѕР±СЂР°РЅРѕ РІСЂСѓС‡РЅСѓСЋ, Р±С‹Р»Рѕ 0x64
 	SBRC _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
-	SUBI TEMP,low(0x100-0x66)
+	SUBI TEMP,low(0x100-(TIMERS_SPEED+0x02))
 	STS OCR0A,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_IR_OFFSET_CORRECTOR
 	LSR _CORE5277_TEMP_L
-	DEC _CORE5277_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
+	DEC _CORE5277_TEMP_L												;РџРѕР»СѓС‡РµРЅРѕ РЅР° Р±Р°Р·Рµ Р°РґСЂРµСЃР° РІС‹С…РѕРґР° РёР· РїСЂРѕС†РµРґСѓСЂС‹(РЅРµ РІС…РѕРґР°), С‚.Рµ. СѓРІРµР»РёС‡РµРЅ РЅР° 1
 .ENDMACRO
 
 .MACRO _CORE5277_TIMERB
@@ -452,16 +449,16 @@ _CORE5277_PCINT_TABLE:
 	LDS TEMP,TIFR0
 	ORI TEMP,(1<<OCF0B)
 	STS TIFR0,TEMP
-	;Установка флага
+	;РЈСЃС‚Р°РЅРѕРІРєР° С„Р»Р°РіР°
 	LDI TEMP,(1<<_CFL_TIMER_B_USE)
 	OR _CORE5277_COREFLAGS,TEMP
-	;Запуск таймера
+	;Р—Р°РїСѓСЃРє С‚Р°Р№РјРµСЂР°
 	LDS TEMP,TIMSK0
 	ORI TEMP,(1<<OCIE0B)
 	STS TIMSK0,TEMP
 	SBRC _CORE5277_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
-	;Останов таймера
+	;РћСЃС‚Р°РЅРѕРІ С‚Р°Р№РјРµСЂР°
 	LDS TEMP,TIMSK0
 	ANDI TEMP,~(1<<OCIE0B)
 	STS TIMSK0,TEMP
