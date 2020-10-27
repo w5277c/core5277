@@ -1,9 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;29.03.2020  w5277c@gmail.com        Начало
 ;13.09.2020  w5277c@gmail.com        Актуализирован
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./inc/mem/ram_offset.inc"
@@ -36,11 +36,11 @@ DRV_DS1990A_INIT:
 ;--------------------------------------------------------
 	PUSH ACCUM
 	LDI ACCUM,_DRV_DS1990A_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 	STD Z+_DRV_DS1990A_1W_DRV,ACCUM
 
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, опрос датчика
 ;OUT: Z - адрес на блок UID(6 байт)
@@ -52,7 +52,7 @@ DRV_DS1990A_INIT:
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 	LDD ACCUM,Z+_DRV_DS1990A_1W_DRV
 
 	CPI ACCUM,0xFF
@@ -67,14 +67,14 @@ DRV_DS1990A_INIT:
 	LDI TEMP_L,0x08
 	MOV XH,ZH
 	MOV XL,ZL
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 	CPI TEMP,0x00
 	BREQ PC+0x03
 	LDI TEMP,DRV_DS1990A_RESULT_ABSENT
 	RJMP _DRV_DS1990A_PROC__END
 
 	LDI LOOP_CNTR,0x07
-	MCALL CORE5277_CRC8_MAXIM_BLOCK
+	MCALL C5_CRC8_MAXIM_BLOCK
 	LDD TEMP,Z+DRV_DS1990A_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03

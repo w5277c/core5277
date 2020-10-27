@@ -1,12 +1,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;05.09.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_LOG_STACKDUMP
+.ifdef DEF_C5_LOG_STACKDUMP
 .else
-.set DEF_CORE5277_LOG_STACKDUMP = 1
+.set DEF_C5_LOG_STACKDUMP = 1
 .ifdef LOGGING_PORT
 
 .include	"./inc/io/log_char.inc"
@@ -16,7 +16,7 @@
 .include	"./inc/io/logstr_new_line.inc"
 
 ;--------------------------------------------------------
-CORE5277_LOG_STACKDUMP:
+C5_LOG_STACKDUMP:
 ;--------------------------------------------------------
 ;Логирование информации о задаче
 ;IN: Z - адрес на заголовок задачи
@@ -26,26 +26,26 @@ CORE5277_LOG_STACKDUMP:
 	PUSH ZH
 	PUSH ZL
 
-	LDD LOOP_CNTR,Z+_CORE5277_TASK_STACK_SIZE
-	LDD TEMP,Z+_CORE5277_TASK_STACK_OFFSET+0x01
-	LDD ZH,Z+_CORE5277_TASK_STACK_OFFSET+0x00
+	LDD LOOP_CNTR,Z+_C5_TASK_STACK_SIZE
+	LDD TEMP,Z+_C5_TASK_STACK_OFFSET+0x01
+	LDD ZH,Z+_C5_TASK_STACK_OFFSET+0x00
 	MOV ZL,TEMP
 
 	CPI LOOP_CNTR,0x00
-	BREQ CORE5277_LOG_STACKDUMP__END
+	BREQ C5_LOG_STACKDUMP__END
 
 	LDI TEMP,'['
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 	LD TEMP,Z+
-_CORE5277_LOG_STACKDUMP__LOOP:
+_C5_LOG_STACKDUMP__LOOP:
 	LD TEMP,-Z
-	MCALL CORE5277_LOG_BYTE
+	MCALL C5_LOG_BYTE
 	DEC LOOP_CNTR
-	BRNE _CORE5277_LOG_STACKDUMP__LOOP
+	BRNE _C5_LOG_STACKDUMP__LOOP
 
-CORE5277_LOG_STACKDUMP__END:
+C5_LOG_STACKDUMP__END:
 	LDI TEMP,']'
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 
 	POP ZL
 	POP ZH

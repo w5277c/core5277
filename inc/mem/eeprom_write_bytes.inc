@@ -1,17 +1,17 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;16.09.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_EEPROM_WRITE_BYTES
+.ifdef DEF_C5_EEPROM_WRITE_BYTES
 .else
-.set DEF_CORE5277_EEPROM_WRITE_BYTES = 1
+.set DEF_C5_EEPROM_WRITE_BYTES = 1
 
 .include	"./inc/mem/eeprom_write_byte.inc"
 
 ;--------------------------------------------------------
-CORE5277_EEPROM_WRITE_BYTES:
+C5_EEPROM_WRITE_BYTES:
 ;--------------------------------------------------------
 ;Записываем байт в EEPROM
 ;IN: X-SRC адрес, TEMP_H,TEMP_L - адрес в EEPROM,
@@ -20,19 +20,19 @@ CORE5277_EEPROM_WRITE_BYTES:
 	PUSH_X
 	PSUH LOOP_CNTR
 	PUSH TEMP
-	
-CORE5277_EEPROM_WRITE_BYTES__LOOP:
+
+C5_EEPROM_WRITE_BYTES__LOOP:
 	LDS TEMP,X+
-	
-	MCALL CORE5277_EEPROM_WRITE_BYTE
-	
+
+	MCALL C5_EEPROM_WRITE_BYTE
+
 	LDI TEMP,0x01
 	ADD TEMP_L,TEMP
 	LDI TEMP,0x00
 	ADC TEMP_H,TEMP
 	DEC LOOP_CNTR
-	BRNE CORE5277_EEPROM_WRITE_BYTES__LOOP
-	
+	BRNE C5_EEPROM_WRITE_BYTES__LOOP
+
 	POP TEMP
 	POP LOOP_CNTR
 	POP_X

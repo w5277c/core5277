@@ -1,18 +1,18 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.10.2019  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_BYTES_TO_HEX
+.ifdef DEF_C5_BYTES_TO_HEX
 .else
-.set DEF_CORE5277_BYTES_TO_HEX = 1
+.set DEF_C5_BYTES_TO_HEX = 1
 
 .include	"./inc/conv/byte_to_hex.inc"
 
 ;--------------------------------------------------------
-CORE5277_BYTES_TO_HEX:
+C5_BYTES_TO_HEX:
 ;--------------------------------------------------------
 ;Конвертирование блока данных в HEX(по два ASCII символа)
 ;IN: X-src адрес, TEMP-длина данных, Z-dst-адрес
@@ -24,20 +24,20 @@ CORE5277_BYTES_TO_HEX:
 	PUSH_Z
 
 	TST TEMP
-	BREQ _CORE5277_BYTES_TO_HEX__END
+	BREQ _C5_BYTES_TO_HEX__END
 
 	MOV LOOP_CNTR,TEMP
-_CORE5277_BYTES_TO_HEX__LOOP:
+_C5_BYTES_TO_HEX__LOOP:
 	LD TEMP,X+
-	MCALL CORE5277_BYTE_TO_HEX
+	MCALL C5_BYTE_TO_HEX
 	ST Z+,TEMP_H
 	ST Z+,TEMP_L
 	DEC LOOP_CNTR
-	BRNE _CORE5277_BYTES_TO_HEX__LOOP
+	BRNE _C5_BYTES_TO_HEX__LOOP
 	LDI TEMP,0x00
 	ST Z,TEMP
 
-_CORE5277_BYTES_TO_HEX__END:
+_C5_BYTES_TO_HEX__END:
 	POP_Z
 	POP_X
 	POP TEMP_L

@@ -1,9 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;29.03.2020  w5277c@gmail.com        Начало
 ;30.08.2020  w5277c@gmail.com        Адаптировано под изменения ядра
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./inc/mem/ram_offset.inc"
@@ -43,11 +43,11 @@ DRV_DS18B20_INIT:
 ;--------------------------------------------------------
 	PUSH ACCUM
 	LDI ACCUM,_DRV_DS18B20_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 	STD Z+_DRV_DS18B20_1W_DRV,ACCUM
 
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, опрос датчика
 ;OUT: TEMP_H,TEMP_L - значение температуры в SDNF формате
@@ -65,7 +65,7 @@ DRV_DS18B20_INIT:
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 	LDD ACCUM,Z+_DRV_DS18B20_1W_DRV
 
 	CPI ACCUM,0x00
@@ -78,7 +78,7 @@ DRV_DS18B20_INIT:
 	LDI YL,low(_DRV_1WIRE_SKIP_ROM_N_CONVERT_T)
 	LDI TEMP_H,0x02
 	LDI TEMP_L,0x00
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 
 	CPI TEMP,0x00
 	BREQ PC+0x03
@@ -88,7 +88,7 @@ DRV_DS18B20_INIT:
 	LDI TEMP_H,low(_DRV_DS18B20_DELAY/0x10000)
 	LDI TEMP_L,low(_DRV_DS18B20_DELAY/0x100)
 	LDI TEMP,low(_DRV_DS18B20_DELAY)
-	MCALL CORE5277_WAIT_2MS
+	MCALL C5_WAIT_2MS
 
 	MOV TEMP,ACCUM
 	LDI YH,high(_DRV_1WIRE_SKIP_ROM_N_READ_S)|0x80
@@ -97,14 +97,14 @@ DRV_DS18B20_INIT:
 	MOV XL,ZL
 	LDI TEMP_H,0x02
 	LDI TEMP_L,_DRV_DS18B20_BUFFER_SIZE
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 	CPI TEMP,0x00
 	BREQ PC+0x03
 	LDI TEMP,DRV_DS18B20_RESULT_ABSENT2
 	RJMP _DRV_DS18B20_PROC__ERROR
 
 	LDI LOOP_CNTR,0x08
-	MCALL CORE5277_CRC8_MAXIM_BLOCK
+	MCALL C5_CRC8_MAXIM_BLOCK
 	LDD TEMP,Z+_DRV_DS18B20_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03
@@ -126,9 +126,9 @@ DRV_DS18B20_INIT:
 	CLR TEMP_EL
 	LDI TEMP_H,0x02													;Умножаем на 625
 	LDI TEMP_L,0x71
-	MCALL CORE5277_MUL24x8
+	MCALL C5_MUL24x8
 	LDI TEMP,100														;Делим на 100
-	MCALL CORE5277_DIV16x8											;В TEMP_L - дробная часть в человеческом формате 0-99
+	MCALL C5_DIV16x8													;В TEMP_L - дробная часть в человеческом формате 0-99
 
 	POP TEMP_H
 	BRTC PC+0x02														;Переносим знак в новый формат

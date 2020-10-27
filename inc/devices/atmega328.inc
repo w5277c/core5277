@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.05.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -24,41 +24,41 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA48
 	.MESSAGE "######## DEVICE ATmega328 ########"
-	.EQU	_CORE5277_DRIVERS_MAX_QNT			= 0x10			;Максимальное количество драйверов
-	.EQU	_CORE5277_TASKS_MAX_QNT				= 0x10			;Максимальное количество задач
-	.EQU	_CORE5277_IR_QNT						= 0x1a			;Количество перырваний(без RESET)
-	.EQU	_CORE5277_RES_QUEUE_SIZE			= 0x20			;Размер очереди к ресурсам(16 элементов по 2 байта)
-	.EQU	_CORE5277_PCINT_PORTS_QNT			= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_CORE5277_RAM_BORDER_SIZE			= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_CORE5277_STACK_SIZE					= 0x40			;Стек ядра
+	.EQU	_C5_DRIVERS_MAX_QNT			= 0x10			;Максимальное количество драйверов
+	.EQU	_C5_TASKS_MAX_QNT				= 0x10			;Максимальное количество задач
+	.EQU	_C5_IR_QNT						= 0x1a			;Количество перырваний(без RESET)
+	.EQU	_C5_RES_QUEUE_SIZE			= 0x20			;Размер очереди к ресурсам(16 элементов по 2 байта)
+	.EQU	_C5_PCINT_PORTS_QNT			= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
+	.EQU	_C5_RAM_BORDER_SIZE			= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
+	.EQU	_C5_STACK_SIZE					= 0x40			;Стек ядра
 	.EQU	RAMEND									= 0x08ff
 
 	;---IR---
-	.EQU	CORE5277_IR_INT0						= 0x01
-	.EQU	CORE5277_IR_INT1						= 0x02
-	.EQU	CORE5277_IR_PCINT0					= 0x03
-	.EQU	CORE5277_IR_PCINT1					= 0x04
-	.EQU	CORE5277_IR_PCINT2					= 0x05
-	.EQU	CORE5277_IR_WDT						= 0x06
-	.EQU	CORE5277_IR_TIMER2_COMPA			= 0x07
-	.EQU	CORE5277_IR_TIMER2_COMPB			= 0x08
-	.EQU	CORE5277_IR_TIMER2_OVF				= 0x09
-	.EQU	CORE5277_IR_TIMER1_CAPT				= 0x0a
-	.EQU	CORE5277_IR_TIMER1_COMPA			= 0x0b
-	.EQU	CORE5277_IR_TIMER1_COMPB			= 0x0c
-	.EQU	CORE5277_IR_TIMER1_OVF				= 0x0d
-	.EQU	CORE5277_IR_RESERVED_CORE_TIMER	= 0x0e
-	.EQU	CORE5277_IR_TIMER0_COMPB			= 0x0f
-	.EQU	CORE5277_IR_TIMER0_OVF				= 0x10
-	.EQU	CORE5277_IR_SPI						= 0x11
-	.EQU	CORE5277_IR_UART_RX					= 0x12
-	.EQU	CORE5277_IR_UART_UDRE				= 0x13
-	.EQU	CORE5277_IR_UART_TX					= 0x14
-	.EQU	CORE5277_IR_ADC						= 0x15
-	.EQU	CORE5277_IR_EE_READY					= 0x16
-	.EQU	CORE5277_IR_ANALOG_COMP				= 0x17
-	.EQU	CORE5277_IR_TWI						= 0x18
-	.EQU	CORE5277_IR_SPM_READY				= 0x19
+	.EQU	C5_IR_INT0						= 0x01
+	.EQU	C5_IR_INT1						= 0x02
+	.EQU	C5_IR_PCINT0					= 0x03
+	.EQU	C5_IR_PCINT1					= 0x04
+	.EQU	C5_IR_PCINT2					= 0x05
+	.EQU	C5_IR_WDT						= 0x06
+	.EQU	C5_IR_TIMER2_COMPA			= 0x07
+	.EQU	C5_IR_TIMER2_COMPB			= 0x08
+	.EQU	C5_IR_TIMER2_OVF				= 0x09
+	.EQU	C5_IR_TIMER1_CAPT				= 0x0a
+	.EQU	C5_IR_TIMER1_COMPA			= 0x0b
+	.EQU	C5_IR_TIMER1_COMPB			= 0x0c
+	.EQU	C5_IR_TIMER1_OVF				= 0x0d
+	.EQU	C5_IR_RESERVED_CORE_TIMER	= 0x0e
+	.EQU	C5_IR_TIMER0_COMPB			= 0x0f
+	.EQU	C5_IR_TIMER0_OVF				= 0x10
+	.EQU	C5_IR_SPI						= 0x11
+	.EQU	C5_IR_UART_RX					= 0x12
+	.EQU	C5_IR_UART_UDRE				= 0x13
+	.EQU	C5_IR_UART_TX					= 0x14
+	.EQU	C5_IR_ADC						= 0x15
+	.EQU	C5_IR_EE_READY					= 0x16
+	.EQU	C5_IR_ANALOG_COMP				= 0x17
+	.EQU	C5_IR_TWI						= 0x18
+	.EQU	C5_IR_SPM_READY				= 0x19
 
 	.EQU	PA0										= (0x00<<4)|0x00
 	.EQU	PA1										= (0x00<<4)|0x01
@@ -368,35 +368,35 @@
 
 .ORG 0x0000
 	JMP	MAIN															; Reset Handler
-	CALL	_CORE5277_IR												; External Interrupt0 Handler
-	CALL	_CORE5277_IR												; External Interrupt1 Handler
-	CALL	_CORE5277_IR												; Pin Change Interrupt Request 0
-	CALL	_CORE5277_IR												; Pin Change Interrupt Request 1
-	CALL	_CORE5277_IR												; Pin Change Interrupt Request 2
-	CALL	_CORE5277_IR												; Watchdog Time-out Interrupt
-	CALL	_CORE5277_IR												; Timer/Counter2 Compare Match A
-	CALL	_CORE5277_IR												; Timer/Counter2 Compare Match B
-	CALL	_CORE5277_IR												; Timer/Counter2 Overflow
-	CALL	_CORE5277_IR												; Timer/Counter1 Capture Event
-	CALL	_CORE5277_IR												; Timer/Counter1 Compare Match A
-	CALL	_CORE5277_IR												; Timer/Counter1 Compare Match B
-	CALL	_CORE5277_IR												; Timer/Counter1 Overflow
-	JMP	_CORE5277_TIMER_A_IR										; Timer/Counter0 Compare Match A
-	CALL	_CORE5277_TIMER_B_IR										; Timer/Counter0 Compare Match B
-	CALL	_CORE5277_IR												; Timer/Counter0 Overflow
-	CALL	_CORE5277_IR												; SPI Serial Transfer Complete
-	CALL	_CORE5277_IR												; USART Rx Complete
-	CALL	_CORE5277_IR												; USART, Data Register Empty
-	CALL	_CORE5277_IR												; USART, Tx Complete
-	CALL	_CORE5277_IR												; ADC Conversion Complete
-	CALL	_CORE5277_IR												; EEPROM Ready
-	CALL	_CORE5277_IR												; Analog Comparator
-	CALL	_CORE5277_IR												; 2-wire Serial Interface
-	CALL	_CORE5277_IR												; Store Program Memory Ready
+	CALL	_C5_IR												; External Interrupt0 Handler
+	CALL	_C5_IR												; External Interrupt1 Handler
+	CALL	_C5_IR												; Pin Change Interrupt Request 0
+	CALL	_C5_IR												; Pin Change Interrupt Request 1
+	CALL	_C5_IR												; Pin Change Interrupt Request 2
+	CALL	_C5_IR												; Watchdog Time-out Interrupt
+	CALL	_C5_IR												; Timer/Counter2 Compare Match A
+	CALL	_C5_IR												; Timer/Counter2 Compare Match B
+	CALL	_C5_IR												; Timer/Counter2 Overflow
+	CALL	_C5_IR												; Timer/Counter1 Capture Event
+	CALL	_C5_IR												; Timer/Counter1 Compare Match A
+	CALL	_C5_IR												; Timer/Counter1 Compare Match B
+	CALL	_C5_IR												; Timer/Counter1 Overflow
+	JMP	_C5_TIMER_A_IR										; Timer/Counter0 Compare Match A
+	CALL	_C5_TIMER_B_IR										; Timer/Counter0 Compare Match B
+	CALL	_C5_IR												; Timer/Counter0 Overflow
+	CALL	_C5_IR												; SPI Serial Transfer Complete
+	CALL	_C5_IR												; USART Rx Complete
+	CALL	_C5_IR												; USART, Data Register Empty
+	CALL	_C5_IR												; USART, Tx Complete
+	CALL	_C5_IR												; ADC Conversion Complete
+	CALL	_C5_IR												; EEPROM Ready
+	CALL	_C5_IR												; Analog Comparator
+	CALL	_C5_IR												; 2-wire Serial Interface
+	CALL	_C5_IR												; Store Program Memory Ready
 
-_CORE5277_PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB, и т.д.
+_C5_PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB, и т.д.
 	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
-_CORE5277_PCINT_TABLE:
+_C5_PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2
 .MACRO MCALL
 	CALL @0
@@ -405,7 +405,7 @@ _CORE5277_PCINT_TABLE:
 	JMP @0
 .ENDMACRO
 
-.MACRO _CORE5277_TIMERA_INIT
+.MACRO _C5_TIMERA_INIT
 	LDS TEMP,PRR
 	ANDI TEMP,~(1<<PRTIM0)											;Подпитываю TIMER0
 	STS PRR,TEMP
@@ -430,19 +430,19 @@ _CORE5277_PCINT_TABLE:
 
 .MACRO _CORRE5277_TIMERA_CORRECTOR
 	LDS TEMP,TCNT0
-	SBRS _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
+	SBRS _C5_COREFLAGS,_CFL_TIMER_UART_CORRECTION
 	SUBI TEMP,low(0x100-(TIMERS_SPEED-0x02))					;Подобрано вручную, было 0x64
-	SBRC _CORE5277_COREFLAGS,_CFL_TIMER_UART_CORRECTION
+	SBRC _C5_COREFLAGS,_CFL_TIMER_UART_CORRECTION
 	SUBI TEMP,low(0x100-(TIMERS_SPEED+0x02))
 	STS OCR0A,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_IR_OFFSET_CORRECTOR
-	LSR _CORE5277_TEMP_L
-	DEC _CORE5277_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
+	LSR _C5_TEMP_L
+	DEC _C5_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
 .ENDMACRO
 
-.MACRO _CORE5277_TIMERB
+.MACRO _C5_TIMERB
 	LDS TEMP_L,TCNT0
 	ADD TEMP_L,TEMP
 	STS OCR0B,TEMP_L
@@ -451,12 +451,12 @@ _CORE5277_PCINT_TABLE:
 	STS TIFR0,TEMP
 	;Установка флага
 	LDI TEMP,(1<<_CFL_TIMER_B_USE)
-	OR _CORE5277_COREFLAGS,TEMP
+	OR _C5_COREFLAGS,TEMP
 	;Запуск таймера
 	LDS TEMP,TIMSK0
 	ORI TEMP,(1<<OCIE0B)
 	STS TIMSK0,TEMP
-	SBRC _CORE5277_COREFLAGS,_CFL_TIMER_B_USE
+	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
 	LDS TEMP,TIMSK0
@@ -464,7 +464,7 @@ _CORE5277_PCINT_TABLE:
 	STS TIMSK0,TEMP
 .ENDMACRO
 
-.MACRO _CORE5277_PRR_RESET
+.MACRO _C5_PRR_RESET
 	PUSH TEMP
 	LDS TEMP,PRR
 	ANDI TEMP,low(~(1<<@0))
@@ -472,6 +472,6 @@ _CORE5277_PCINT_TABLE:
 	POP TEMP
 .ENDMACRO
 
-.MACRO _CORE5277_TIMER_TCNT
+.MACRO _C5_TIMER_TCNT
 	LDS TEMP,TCNT0
 .ENDMACRO

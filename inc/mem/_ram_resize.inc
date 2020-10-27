@@ -1,20 +1,20 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;28.05.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277__RAM_RESIZE
+.ifdef DEF_C5__RAM_RESIZE
 .else
-.set DEF_CORE5277__RAM_RESIZE = 1
+.set DEF_C5__RAM_RESIZE = 1
 
 .include	"./inc/mem/_ram_find_used_block_mt.inc"
 .include	"./inc/mem/_ram_find_used_block_lt.inc"
 .include	"./inc/mem/_ram_find_free_block.inc"
 
 ;--------------------------------------------------------
-_CORE5277_RAM_RESIZE:
+_C5_RAM_RESIZE:
 ;--------------------------------------------------------
 ;Изменение размера выделенного блока
 ;IN:Y - адрес блока, TEMP - новый размер
@@ -29,13 +29,13 @@ _CORE5277_RAM_RESIZE:
 	MOV XL,YL
 
 	;Находим следующий блок
-	MCALL _CORE5277_RAM_FIND_USED_BLOCK_MT
+	MCALL _C5_RAM_FIND_USED_BLOCK_MT
 	;Z=true - блок найден, иначе находимся на вершине
 	BREQ PC+0x05
 	MOV YH,XH
 	MOV YL,XL
 	MOV ACCUM,TEMP
-	RJMP _CORE5277_RAM_RESIZE__HEADER_UPDATE_ON_TOP
+	RJMP _C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP
 
 	;Считаем дельту между блоками
 	SUB YL,XL
@@ -48,11 +48,11 @@ _CORE5277_RAM_RESIZE:
 	MOV YL,XL
 	MOV ACCUM,TEMP
 	;Свободной памяти между текущими блоками достаточно для расширения
-	BRNE _CORE5277_RAM_RESIZE__SUCCESS
+	BRNE _C5_RAM_RESIZE__SUCCESS
 
 	;Выполняем поиск свободного блока
 	MOV ACCUM,TEMP
-	MCALL _CORE5277_RAM_FIND_FREE_BLOCK
+	MCALL _C5_RAM_FIND_FREE_BLOCK
 	;Если даже блок не найден, то процедура возвращает адрес вершины блоков
 
 	;Копируем старый блок на новое место
@@ -60,41 +60,41 @@ _CORE5277_RAM_RESIZE:
 	MOV LOOP_CNTR,ACCUM
 	MOV ZH,YH
 	MOV ZL,YL
-	MCALL CORE5277_RAM_COPY8
+	MCALL C5_RAM_COPY8
 	POP LOOP_CNTR
 
-_CORE5277_RAM_RESIZE__HEADER_UPDATE_ON_TOP:
-	MCALL _CORE5277_RAM_CHECK_STACK
-	BRNE _CORE5277_RAM_RESIZE__ERROR
+_C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP:
+	MCALL _C5_RAM_CHECK_STACK
+	BRNE _C5_RAM_RESIZE__ERROR
 
 
 	;Проверяем на полное освобождение (нужно учесть, что перед текущим блоком может быть пустое пространство)
 	CPI ACCUM,0x00
-	BRNE _CORE5277_RAM_RESIZE__HEADER_UPDATE_ON_TOP2
-	MCALL _CORE5277_RAM_FIND_USED_BLOCK_LT
-	BREQ _CORE5277_RAM_RESIZE__HEADER_UPDATE_ON_TOP2
+	BRNE _C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP2
+	MCALL _C5_RAM_FIND_USED_BLOCK_LT
+	BREQ _C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP2
 	;Блок не найден, значит восстанавливаю изначальное состояние
-	LDI YH,high(_CORE5277_FREE_RAM)
-	LDI YL,low(_CORE5277_FREE_RAM)
-	RJMP _CORE5277_RAM_RESIZE__HEADER_UPDATE_ON_TOP2
-_CORE5277_RAM_RESIZE__HEADER_UPDATE_ON_TOP__HAVE_BLOCK:
+	LDI YH,high(_C5_FREE_RAM)
+	LDI YL,low(_C5_FREE_RAM)
+	RJMP _C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP2
+_C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP__HAVE_BLOCK:
 
-_CORE5277_RAM_RESIZE__HEADER_UPDATE_ON_TOP2:
+_C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP2:
 	;Обновляем вершину безусловно, так как мы на вершине
 	MOV XH,YH
 	MOV XL,YL
 	ADD XL,ACCUM
 	LDI ACCUM,0x00
 	ADC XH,ACCUM
-	STS _CORE5277_TOP_OF_FREE_RAM+0x00,XH
-	STS _CORE5277_TOP_OF_FREE_RAM+0x01,XL
+	STS _C5_TOP_OF_FREE_RAM+0x00,XH
+	STS _C5_TOP_OF_FREE_RAM+0x01,XL
 
-_CORE5277_RAM_RESIZE__SUCCESS:
+_C5_RAM_RESIZE__SUCCESS:
 	SEZ
-	RJMP _CORE5277_RAM_RESIZE__END
-_CORE5277_RAM_RESIZE__ERROR:
+	RJMP _C5_RAM_RESIZE__END
+_C5_RAM_RESIZE__ERROR:
 	CLZ
-_CORE5277_RAM_RESIZE__END:
+_C5_RAM_RESIZE__END:
 	POP ACCUM
 	POP TEMP
 	POP_Z

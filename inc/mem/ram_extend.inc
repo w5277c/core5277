@@ -1,19 +1,19 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;28.05.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_RAM_EXTEND
+.ifdef DEF_C5_RAM_EXTEND
 .else
-.set DEF_CORE5277_RAM_EXTEND = 1
+.set DEF_C5_RAM_EXTEND = 1
 
 .include	"./inc/mem/_ram_find_free_block.inc"
 .include	"./inc/mem/_ram_resize.inc"
 
 ;--------------------------------------------------------
-CORE5277_RAM_EXTEND:
+C5_RAM_EXTEND:
 ;--------------------------------------------------------
 ;Увеличиваем блок выделенной памяти
 ;IN: PID, ACCUM - размер, на который нужно увеличить
@@ -24,29 +24,29 @@ CORE5277_RAM_EXTEND:
 	PUSH_X
 	PUSH TEMP
 	PUSH ACCUM
-	MCALL CORE5277_DISPATCHER_LOCK
+	MCALL C5_DISPATCHER_LOCK
 
 	;Получаем заголовок
-	MCALL _CORE5277_PROC_HEADER_GET
+	MCALL _C5_PROC_HEADER_GET
 	;Получаем размер уже выделенной памяти
-	LDD TEMP,Z+_CORE5277_PROC_RAM_SIZE
+	LDD TEMP,Z+_C5_PROC_RAM_SIZE
 	ADD ACCUM,TEMP
-	BRCS _CORE5277_RAM_EXTEND__ERROR
+	BRCS _C5_RAM_EXTEND__ERROR
 
 	;Читаем адрес первой свободной ячейки выделяемой памяти
-	LDD YH,Z+_CORE5277_PROC_RAM_OFFSET+0x00
-	LDD YL,Z+_CORE5277_PROC_RAM_OFFSET+0x01
+	LDD YH,Z+_C5_PROC_RAM_OFFSET+0x00
+	LDD YL,Z+_C5_PROC_RAM_OFFSET+0x01
 	;Проверяем на уже выделенную память
 	CPI YH,0x00
-	BRNE _CORE5277_RAM_EXTEND__ALLOCATED
+	BRNE _C5_RAM_EXTEND__ALLOCATED
 	CPI YL,0x00
-	BRNE _CORE5277_RAM_EXTEND__ALLOCATED
+	BRNE _C5_RAM_EXTEND__ALLOCATED
 
 	PUSH TEMP
 	MOV TEMP,ACCUM
-	MCALL _CORE5277_RAM_FIND_FREE_BLOCK
+	MCALL _C5_RAM_FIND_FREE_BLOCK
 	POP TEMP
-	BRNE _CORE5277_RAM_EXTEND__ERROR
+	BRNE _C5_RAM_EXTEND__ERROR
 
 	;Проверяем, нужно ли обновлять вершину выделяемой памяти
 	MOV XH,YH
@@ -54,36 +54,36 @@ CORE5277_RAM_EXTEND:
 	ADD XL,ACCUM
 	LDI ACCUM,0x00
 	ADC XH,ACCUM
-	LDS ACCUM,_CORE5277_TOP_OF_FREE_RAM+0x00
+	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x00
 	CP ACCUM,XH
 	BRCS PC+0x05
-	LDS ACCUM,_CORE5277_TOP_OF_FREE_RAM+0x01
+	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x01
 	CP ACCUM,XL
-	BRCC _CORE5277_RAM_EXTEND__SUCCESS
+	BRCC _C5_RAM_EXTEND__SUCCESS
 	;Обновляем адрес вершины выделяемой памяти в ядре
-	STS _CORE5277_TOP_OF_FREE_RAM+0x00,XH
-	STS _CORE5277_TOP_OF_FREE_RAM+0x01,XL
-	RJMP _CORE5277_RAM_EXTEND__SUCCESS
+	STS _C5_TOP_OF_FREE_RAM+0x00,XH
+	STS _C5_TOP_OF_FREE_RAM+0x01,XL
+	RJMP _C5_RAM_EXTEND__SUCCESS
 
-_CORE5277_RAM_EXTEND__ALLOCATED:
+_C5_RAM_EXTEND__ALLOCATED:
 	PUSH TEMP
 	MOV TEMP,ACCUM
-	MCALL _CORE5277_RAM_RESIZE
+	MCALL _C5_RAM_RESIZE
 	POP TEMP
-	BRNE _CORE5277_RAM_EXTEND__ERROR
+	BRNE _C5_RAM_EXTEND__ERROR
 
-_CORE5277_RAM_EXTEND__SUCCESS:
+_C5_RAM_EXTEND__SUCCESS:
 	MOV ZH,YH
 	MOV ZL,YL
 	ADD YL,TEMP
 	CLR ACCUM
 	ADC YH,ACCUM
 	SEZ
-	RJMP _CORE5277_RAM_EXTEND__END
-_CORE5277_RAM_EXTEND__ERROR:
+	RJMP _C5_RAM_EXTEND__END
+_C5_RAM_EXTEND__ERROR:
 	CLZ
-_CORE5277_RAM_EXTEND__END:
-	MCALL CORE5277_DISPATCHER_UNLOCK
+_C5_RAM_EXTEND__END:
+	MCALL C5_DISPATCHER_UNLOCK
 	POP ACCUM
 	POP TEMP
 	POP_X

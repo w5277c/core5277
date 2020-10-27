@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;17.06.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./inc/mem/ram_offset.inc"
@@ -31,11 +31,11 @@ DRV_MLX90614_INIT:
 ;--------------------------------------------------------
 	PUSH ACCUM
 	LDI ACCUM,_DRV_MLX96014_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 	STD Z+_DRV_MLX90614_I2C_DRV,ACCUM
 
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, работа с датчиком
 ;OUT: Z - температура объекта,
@@ -50,7 +50,7 @@ DRV_MLX90614_INIT:
 	PUSH_X
 	PUSH_Y
 
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 
 	LDD TEMP,Z+_DRV_MLX90614_I2C_DRV
 	LDI YH,high(_DRV_MLX90614_DATAPCKET)|0x80
@@ -60,7 +60,7 @@ DRV_MLX90614_INIT:
 	LDI TEMP_H,_DRV_MLX90614_SEND_LEN
 	LDI TEMP_L,_DRV_MLX90614_RECV_LEN
 	LDI ACCUM,_DRV_MLX90614_I2C_ADDR
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 	CPI TEMP,DRV_I2C_STATE_OK
 	BRNE _DRV_MLX90614__ERROR
 
@@ -69,17 +69,17 @@ DRV_MLX90614_INIT:
 	LDD TEMP_H,Z+_DRV_MLX90614_RESULT+0x01
 	LDD TEMP_L,Z+_DRV_MLX90614_RESULT+0x00
 	LDI TEMP,0x02
-	MCALL CORE5277_MUL24X8
+	MCALL C5_MUL24X8
 	SUBI TEMP_L,low(_DRV_MLX90614_K)
 	SBCI TEMP_H,high(_DRV_MLX90614_K)
 	MOV ACCUM,TEMP_L
 	LDI TEMP,100
-	MCALL CORE5277_DIV16X8
+	MCALL C5_DIV16X8
 	MOV ZH,TEMP_L
 	CLR TEMP_EL
 	CLR TEMP_H
 	LDI TEMP,100
-	MCALL CORE5277_MUL24X8
+	MCALL C5_MUL24X8
 	MOV ZL,ACCUM
 	SUB ZL,TEMP_L
 	SEZ

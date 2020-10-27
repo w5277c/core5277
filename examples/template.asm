@@ -21,7 +21,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	;.EQU	PID_I2C_DRV								= 0|(1<<CORE5277_PROCID_OPT_DRV)
+	;.EQU	PID_I2C_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
@@ -37,19 +37,19 @@ MAIN:
 	STS SPL,TEMP
 
 	;Инициализация ядра
-	MCALL CORE5277_INIT
+	MCALL C5_INIT
 
 	;Инициализация задачи
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
-	MJMP CORE5277_START
+	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	;TODO

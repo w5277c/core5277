@@ -1,18 +1,18 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;05.03.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_PORT_OFFSETS
+.ifdef DEF_C5_PORT_OFFSETS
 .else
-.set DEF_CORE5277_PORT_OFFSETS = 1
+.set DEF_C5_PORT_OFFSETS = 1
 
 .include	"./inc/conv/bitnum_to_num.inc"
 
 ;--------------------------------------------------------
-CORE5277_PORT_OFFSETS:
+C5_PORT_OFFSETS:
 ;--------------------------------------------------------
 ;Возвращаем адреса для PORTx, DDRx и PINx,
 ;а также пин в виде числа(1,2,4,8,16,32,64,128)
@@ -24,8 +24,8 @@ CORE5277_PORT_OFFSETS:
 ;--------------------------------------------------------
 	PUSH_Z
 
-	LDI ZH,high(_CORE5277_PORTS_TABLE*2)
-	LDI ZL,low(_CORE5277_PORTS_TABLE*2)
+	LDI ZH,high(_C5_PORTS_TABLE*2)
+	LDI ZL,low(_C5_PORTS_TABLE*2)
 	MOV TEMP,ACCUM
 	SWAP ACCUM
 	ANDI ACCUM,0x0f
@@ -40,7 +40,7 @@ CORE5277_PORT_OFFSETS:
 	LPM ACCUM,Z
 	PUSH ACCUM
 	ANDI TEMP,0x0f
-	MCALL CORE5277_BITNUM_TO_NUM
+	MCALL C5_BITNUM_TO_NUM
 	MOV ACCUM,TEMP
 	POP TEMP
 

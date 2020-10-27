@@ -1,9 +1,8 @@
-
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;15.10.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./inc/mem/ram_offset.inc"
@@ -35,12 +34,13 @@
 	.EQU	_DRV_ADC_ITER_QNT									= 0x02;1B - количество итераций (64 максимум)
 	.EQU	_DRV_ADC_ITER_CNT									= 0x03;1B - счетчик итераций
 	.EQU	_DRV_ADC_PRESCALLER								= 0x04;1B - делитель
-	.EQU	_DRV_ADC_VREF										= 0x05;1B - делитель
+	.EQU	_DRV_ADC_VREF										= 0x05;1B - опорное напряжение
 	.EQU	_DRV_ADC_SUM										= 0x06;3B - сумма показаний
-	.EQU	_DRV_ADC_RESULT									= 0x09;2B - результат (0xffff - нет результата)
+	.EQU	_DRV_ADC_RESULT									= 0x09;2B - результат (0xffff - нет результата, 15-бит - свежий результат)
 	;---OPERATIONS---
 	.EQU	DRV_ADC_OP_ADD										= 0x00
 	.EQU	DRV_ADC_OP_GET										= 0x01
+	.EQU	DRV_ADC_OP_WAIT									= 0x02
 
 ;--------------------------------------------------------
 DRV_ADC_INIT:
@@ -51,11 +51,12 @@ DRV_ADC_INIT:
 	PUSH ACCUM
 	PUSH TEMP_H
 	PUSH TEMP_L
+	PUSH_Z
 
 	PUSH ACCUM
 	;Выделяем память
 	LDI ACCUM,_DRV_ADC_RAM_INIT_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 
 	STD Z+_DRV_ADC_TIMER_ID,ACCUM
@@ -69,21 +70,22 @@ DRV_ADC_INIT:
 	STS ADCSRA,ACCUM
 
 	;Подаю питание на ADC
-	_CORE5277_PRR_RESET PRSDC
+	_C5_PRR_RESET PRSDC
 
 	;Активируем прерывания
 	LDI TEMP_H,high(_DRV_ADC_EVENT)
 	LDI TEMP_L,low(_DRV_ADC_EVENT)
-	LDI ACCUM,CORE5277_IR_ADC
-	MCALL CORE5277_IR_VECTOR_SET
+	LDI ACCUM,C5_IR_ADC
+	MCALL C5_IR_VECTOR_SET
 
 	;Завершаем инициализацию
+	POP_Z
 	POP TEMP_L
 	POP TEMP_H
 	POP ACCUM
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
-;Основной код, анализируем тип операции.
+;Основной код, определяем тип операции.
 ;IN: FLAGS - код операции DRV_ADC_OP_GET...
 ;Остальные параметры см. в обработчике операций
 ;--------------------------------------------------------
@@ -96,6 +98,11 @@ DRV_ADC_INIT:
 	CPI FLAGS,DRV_ADC_OP_GET
 	BRNE PC+0x04
 	MCALL _DRV_ADC_OP_GET
+	RJMP _DRV_ADC_PROC_END
+	CPI FLAGS,DRV_ADC_OP_WAIT
+	BRNE PC+0x04
+	MCALL _DRV_ADC_OP_WAIT
+	RJMP _DRV_ADC_PROC_END
 
 _DRV_BUTTONS_PROC_END:
 	POP TEMP
@@ -110,21 +117,20 @@ _DRV_ADC_OP_ADD:
 ;TEMP_H - кол-во итераций для вычисления среднего,
 ;TEMP_L - период таймера для итераций
 ;--------------------------------------------------------
-	PUSH ACCUM
 	PUSH_Y
 	PUSH_Z
 
 	;Увеличиваем размер выделенной памяти на _DRV_ADC_STRUCT_SIZE
 	PUSH ACCUM
 	LDI ACCUM,_DRV_ADC_STRUCT_SIZE
-	MCALL CORE5277_RAM_EXTEND
+	MCALL C5_RAM_EXTEND
 	POP ACCUM
 
 	STD Y+_DRV_ADC_PORT,ACCUM
 	STD Y+_DRV_ADC_TIMER_PERIOD,TEMP_L
 	STD Y+_DRV_ADC_ITER_QNT,TEMP_H
 	STD Y+_DRV_ADC_PRESCALLER,LOOP_CNTR
-
+	STD Y+_DRV_ADC_VREF,FLAGS
 	LDI TEMP,0x00
 	STD Y+_DRV_ADC_ITER_CNTR,TEMP
 	LDI TEMP,0xff
@@ -132,7 +138,6 @@ _DRV_ADC_OP_ADD:
 	STD Y+_DRV_ADC_RESULT+0x01,TEMP
 
 	LDD TEMP,Z+_DRV_ADC_ITEMS_QNT
-
 	INC TEMP
 	STD Z+_DRV_ADC_ITEMS_QNT,TEMP
 	CPI TEMP,0x01
@@ -142,28 +147,39 @@ _DRV_ADC_OP_ADD__NOT_FIRST:
 
 	POP_Z
 	POP_Y
-	POP ACCUM
+	RET
+
+;--------------------------------------------------------
+_DRV_ADC_OP_WAIT:
+;--------------------------------------------------------
+;Считываем новое показание
+;IN: ACCUM - ADC порт(ADC0-ADC7)
+;OUT: TEMP_H, TEMP_L - показание(0xffff - нет показания)
+;--------------------------------------------------------
+_DRV_ADC_OP_WAIT__LOOP:
+	MCALL _DRV_ADC_OP_GET
+	BRCS _DRV_ADC_OP_WAIT__END
+	MCALL C5_WAIT
+	RJMP _DRV_ADC_OP_WAIT__LOOP
+_DRV_ADC_OP_WAIT__END:
 	RET
 
 ;--------------------------------------------------------
 _DRV_ADC_OP_GET:
 ;--------------------------------------------------------
 ;Считываем показание
+;IN: ACCUM - ADC порт(ADC0-ADC7)
 ;OUT: TEMP_H, TEMP_L - показание(0xffff - нет показания)
+;флаг C = HI - свежий результат
 ;--------------------------------------------------------
 	PUSH_Z
 
 	LDI TEMP_H,0xff
 	LDI TEMP_L,0xff
 
-	MCALL CORE5277_RAM_OFFSET
-
+	MCALL C5_RAM_OFFSET
 	LDD LOOP_CNTR,Z+_DRV_ADC_ITEMS_QNT
-
-	LDI TEMP,_DRV_ADC_DATA
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_DRV_ADC_DATA
 
 _DRV_ADC_OP_GET__LOOP:
 	LDD TEMP,Z+_DRV_ADC_PORT
@@ -175,6 +191,9 @@ _DRV_ADC_OP_GET__LOOP:
 	LDD TEMP_H,Z+_DRV_ADC_RESULT+0x00
 	LDD TEMP_L,Z+_DRV_ADC_RESULT+0x01
 	STS SREG,TEMP
+	MOV TEMP,TEMP_H
+	ANDI TEMP_H,0x7f
+	LSL TEMP
 	RJMP _DRV_ADC_OP_GET__END
 
 _DRV_ADC_OP_GET__NEXT:

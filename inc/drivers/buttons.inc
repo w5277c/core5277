@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.03.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO реализовать обработчики для переключаетеля и сенсора
 ;TODO реализовать очередь и процедуру ее чтения(с ожиданием нажатия кнопки и без ожидания)
@@ -65,7 +65,7 @@ DRV_BUTTONS_INIT:
 
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BUTTONS_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 
 	LDI TEMP,0x00
@@ -78,16 +78,16 @@ DRV_BUTTONS_INIT:
 	LDI XL,_DRV_BUTTONS_QUEUE
 	ADD XL,ZL
 	ADC XH,ZH
-	MCALL CORE5277_RAM_FILL8
+	MCALL C5_RAM_FILL8
 
 	;Инициализирую таймер с периодом в 10мс
 	MOV TEMP,ACCUM
 	LDI TEMP_H,high(DRV_BUTTONS_TIMER_EVENT)
 	LDI TEMP_L,low(DRV_BUTTONS_TIMER_EVENT)
 	LDI ACCUM,0x05|0x80
-	MCALL CORE5277_TIMER_SET
+	MCALL C5_TIMER_SET
 	;Запускаю таймер
-	MCALL CORE5277_TIMER_START
+	MCALL C5_TIMER_START
 
 	POP TEMP_L
 	POP TEMP_H
@@ -95,7 +95,7 @@ DRV_BUTTONS_INIT:
 	POP LOOP_CNTR
 	POP_X
 	POP_Z
-	MCALL CORE5277_READY
+	MCALL C5_READY
 
 ;--------------------------------------------------------
 ;Основной код
@@ -104,7 +104,7 @@ DRV_BUTTONS_INIT:
 	PUSH_Z
 	PUSH TEMP
 
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 
 	CPI FLAGS,DRV_BUTTONS_OP_ADD
 	BRNE PC+0x04
@@ -135,7 +135,7 @@ _DRV_BUTTONS_OP_ADD:
 	;Увеличиваем размер выделенной памяти на _DRV_BUTTONS_STRUCT_SIZE
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BUTTONS_STRUCT_SIZE
-	MCALL CORE5277_RAM_EXTEND
+	MCALL C5_RAM_EXTEND
 	POP ACCUM
 
 	LDD TEMP,Z+_DRV_BUTTONS_BUTTONS_QNT
@@ -147,11 +147,11 @@ _DRV_BUTTONS_OP_ADD:
 	ANDI ACCUM,0x7f
 	STD Y+_DRV_BUTTONS_PORT,ACCUM
 	;Порт на вход
-	MCALL CORE5277_PORT_MODE_IN
+	MCALL C5_PORT_MODE_IN
 	SBRS TEMP,0x07
 	RJMP PC+0x03
 	;Включаем подтяжку, если необходимо
-	MCALL CORE5277_PORT_SET_HI
+	MCALL C5_PORT_SET_HI
 
 	;Записываем данные кнопки
 	LDI TEMP,(1<<_DRV_BUTTONS_FL_INIT)
@@ -174,7 +174,7 @@ _DRV_BUTTONS_OP_WAIT__LOOP:
 	LDD TEMP,Z+_DRV_BUTTONS_QUEUE_SIZE
 	CPI TEMP,0x00
 	BRNE _DRV_BUTTONS_OP_GET
-	MCALL CORE5277_WAIT
+	MCALL C5_WAIT
 	RJMP _DRV_BUTTONS_OP_WAIT__LOOP
 
 ;--------------------------------------------------------
@@ -218,7 +218,7 @@ _DRV_BUTTONS_OP_GET:
 	ADD ZL,TEMP
 	LDI TEMP,0x00
 	ADC ZH,TEMP
-	MCALL CORE5277_RAM_COPY8
+	MCALL C5_RAM_COPY8
 	POP_Z
 _DRV_BUTTONS_PULL_QUEUE__END:
 	STS SREG,ACCUM
@@ -241,7 +241,7 @@ DRV_BUTTONS_TIMER_EVENT:
 	PUSH TEMP_H
 	PUSH TEMP_L
 
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 
 	LDD LOOP_CNTR,Z+_DRV_BUTTONS_BUTTONS_QNT
 
@@ -261,7 +261,7 @@ DRV_BUTTONS_TIMER_EVENT:
 	;Читаем состояние портов для каждой кнопки
 DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
 	LDD ACCUM,Z+_DRV_BUTTONS_PORT
-	MCALL CORE5277_PORT_GET
+	MCALL C5_PORT_GET
 	BRCS DRV_BUTTONS_TIMER_EVENT__LO_STATE
 	;Инкрементирую счетчик
 	LDD TEMP,Z+_DRV_BUTTONS_CNTR_N_FLAGS

@@ -1,18 +1,18 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;28.05.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_RAM_REDUCE
+.ifdef DEF_C5_RAM_REDUCE
 .else
-.set DEF_CORE5277_RAM_REDUCE = 1
+.set DEF_C5_RAM_REDUCE = 1
 
 .include	"./inc/mem/ram_realloc.inc"
 
 ;--------------------------------------------------------
-CORE5277_RAM_REDUCE:
+C5_RAM_REDUCE:
 ;--------------------------------------------------------
 ;Освобождаем часть памяти
 ;IN: TEMP - PID, ACCUM - размер, на который нужно
@@ -24,20 +24,20 @@ CORE5277_RAM_REDUCE:
 	PUSH_Y
 	PUSH ACCUM
 	PUSH TEMP
-	MCALL CORE5277_DISPATCHER_LOCK
+	MCALL C5_DISPATCHER_LOCK
 
 	;Получаем заголовок
-	MCALL _CORE5277_PROC_HEADER_GET
+	MCALL _C5_PROC_HEADER_GET
 	;Получаем размер уже выделенной памяти
-	LDD TEMP,Z+_CORE5277_PROC_RAM_SIZE
+	LDD TEMP,Z+_C5_PROC_RAM_SIZE
 	SUB TEMP,ACCUM
-	BRCS _CORE5277_RAM_REDUCE__ERROR
-	RJMP _CORE5277_RAM_REALLOC__EP2
-_CORE5277_RAM_REDUCE__ERROR:
+	BRCS _C5_RAM_REDUCE__ERROR
+	RJMP _C5_RAM_REALLOC__EP2
+_C5_RAM_REDUCE__ERROR:
 	CLZ
 	MOV ZH,YH
 	MOV ZL,YL
-	MCALL CORE5277_DISPATCHER_UNLOCK
+	MCALL C5_DISPATCHER_UNLOCK
 	POP TEMP
 	POP ACCUM
 	POP_Y

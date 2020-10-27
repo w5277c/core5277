@@ -1,19 +1,19 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;28.05.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_RAM_REALLOC
+.ifdef DEF_C5_RAM_REALLOC
 .else
-.set DEF_CORE5277_RAM_REALLOC = 1
+.set DEF_C5_RAM_REALLOC = 1
 
 .include	"./inc/mem/_ram_find_free_block.inc"
 .include	"./inc/mem/_ram_resize.inc"
 
 ;--------------------------------------------------------
-CORE5277_RAM_REALLOC:
+C5_RAM_REALLOC:
 ;--------------------------------------------------------
 ;Перевыделяем память(в том числе освобождаем)
 ;IN: PID, ACCUM - общий размер памяти
@@ -24,24 +24,24 @@ CORE5277_RAM_REALLOC:
 	PUSH_Y
 	PUSH ACCUM
 	PUSH TEMP
-	MCALL CORE5277_DISPATCHER_LOCK
+	MCALL C5_DISPATCHER_LOCK
 
 	;Получаем заголовок
-	MCALL _CORE5277_PROC_HEADER_GET
-	;Точка входа для CORE5277_RAM_EXTEND
-_CORE5277_RAM_REALLOC__EP2:
+	MCALL _C5_PROC_HEADER_GET
+	;Точка входа для C5_RAM_EXTEND
+_C5_RAM_REALLOC__EP2:
 	;Читаем адрес первой свободной ячейки выделяемой памяти
-	LDD YH,Z+_CORE5277_PROC_RAM_OFFSET+0x00
-	LDD YL,Z+_CORE5277_PROC_RAM_OFFSET+0x01
+	LDD YH,Z+_C5_PROC_RAM_OFFSET+0x00
+	LDD YL,Z+_C5_PROC_RAM_OFFSET+0x01
 	;Проверяем на уже выделенную память
 	CPI YH,0x00
-	BRNE _CORE5277_RAM_REALLOC__ALLOCATED
+	BRNE _C5_RAM_REALLOC__ALLOCATED
 	CPI YL,0x00
-	BRNE _CORE5277_RAM_REALLOC__ALLOCATED
+	BRNE _C5_RAM_REALLOC__ALLOCATED
 
 	MOV TEMP,ACCUM
-	MCALL _CORE5277_RAM_FIND_FREE_BLOCK
-	BRNE _CORE5277_RAM_REALLOC__ERROR
+	MCALL _C5_RAM_FIND_FREE_BLOCK
+	BRNE _C5_RAM_REALLOC__ERROR
 
 	;Проверяем, нужно ли обновлять вершину выделяемой памяти
 	MOV XH,YH
@@ -49,39 +49,39 @@ _CORE5277_RAM_REALLOC__EP2:
 	ADD XL,ACCUM
 	LDI ACCUM,0x00
 	ADC XH,ACCUM
-	LDS ACCUM,_CORE5277_TOP_OF_FREE_RAM+0x00
+	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x00
 	CP ACCUM,XH
 	BRCS PC+0x05
-	LDS ACCUM,_CORE5277_TOP_OF_FREE_RAM+0x01
+	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x01
 	CP ACCUM,XL
-	BRCC _CORE5277_RAM_REALLOC__SUCCESS
+	BRCC _C5_RAM_REALLOC__SUCCESS
 	;Обновляем адрес вершины выделяемой памяти в ядре
-	STS _CORE5277_TOP_OF_FREE_RAM+0x00,XH
-	STS _CORE5277_TOP_OF_FREE_RAM+0x01,XL
-	RJMP _CORE5277_RAM_REALLOC__SUCCESS
+	STS _C5_TOP_OF_FREE_RAM+0x00,XH
+	STS _C5_TOP_OF_FREE_RAM+0x01,XL
+	RJMP _C5_RAM_REALLOC__SUCCESS
 
-_CORE5277_RAM_REALLOC__ALLOCATED:
+_C5_RAM_REALLOC__ALLOCATED:
 	MOV TEMP,ACCUM
-	MCALL _CORE5277_RAM_RESIZE
-	BRNE _CORE5277_RAM_REALLOC__ERROR
-_CORE5277_RAM_REALLOC__SUCCESS:
+	MCALL _C5_RAM_RESIZE
+	BRNE _C5_RAM_REALLOC__ERROR
+_C5_RAM_REALLOC__SUCCESS:
 	;Обновляем заголовок
 	;Если длина нулевая, то и адрес блока нулевой
 	CPI TEMP,0x00
 	BRNE PC+0x03
 	CLR YH
 	CLR YL
-	STD Z+_CORE5277_PROC_RAM_OFFSET+0x00,YH
-	STD Z+_CORE5277_PROC_RAM_OFFSET+0x01,YL
-	STD Z+_CORE5277_PROC_RAM_SIZE,TEMP
+	STD Z+_C5_PROC_RAM_OFFSET+0x00,YH
+	STD Z+_C5_PROC_RAM_OFFSET+0x01,YL
+	STD Z+_C5_PROC_RAM_SIZE,TEMP
 	SEZ
-	RJMP _CORE5277_RAM_REALLOC__END
-_CORE5277_RAM_REALLOC__ERROR:
+	RJMP _C5_RAM_REALLOC__END
+_C5_RAM_REALLOC__ERROR:
 	CLZ
-_CORE5277_RAM_REALLOC__END:
+_C5_RAM_REALLOC__END:
 	MOV ZH,YH
 	MOV ZL,YL
-	MCALL CORE5277_DISPATCHER_UNLOCK
+	MCALL C5_DISPATCHER_UNLOCK
 	POP TEMP
 	POP ACCUM
 	POP_Y

@@ -1,16 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.10.2019  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_SDNF_ADD
+.ifdef DEF_C5_SDNF_ADD
 .else
-.set DEF_CORE5277_SDNF_ADD = 1
+.set DEF_C5_SDNF_ADD = 1
 
 ;--------------------------------------------------------
-CORE5277_SDNF_ADD:													;Signed Digital aNd Fractional
+C5_SDNF_ADD:													;Signed Digital aNd Fractional
 ;--------------------------------------------------------
 ;Сумма знаковых целых с дробной частью (X + Y)
 ;IN: X, Y
@@ -25,11 +25,11 @@ CORE5277_SDNF_ADD:													;Signed Digital aNd Fractional
 	CPI XH,0xff
 	BRNE PC+0x03
 	CPI XL,0xff
-	BREQ _CORE5277_SDNF_ADD__ERROR
+	BREQ _C5_SDNF_ADD__ERROR
 	CPI YH,0xff
 	BRNE PC+0x03
 	CPI YL,0xff
-	BREQ _CORE5277_SDNF_ADD__ERROR
+	BREQ _C5_SDNF_ADD__ERROR
 	;Выношу знаки в отдельные регистры
 	MOV TEMP_H,XL
 	ANDI TEMP_H,0x80
@@ -38,17 +38,17 @@ CORE5277_SDNF_ADD:													;Signed Digital aNd Fractional
 	ANDI XL,0x7f
 	ANDI YL,0x7f
 	CPI XL,100
-	BRCC _CORE5277_SDNF_ADD__ERROR
+	BRCC _C5_SDNF_ADD__ERROR
 	CPI YL,100
-	BRCC _CORE5277_SDNF_ADD__ERROR
+	BRCC _C5_SDNF_ADD__ERROR
 
 	;Проверяю знаки, выполняю сложение, если знаки одинаковые
 	MOV TEMP,TEMP_H
 	EOR TEMP,TEMP_L
-	BREQ _CORE5277_SDNF_ADD__ADD
+	BREQ _C5_SDNF_ADD__ADD
 	;Иначе вычитание, но сначала нужно перенести большее по модулю в X
 	CP XH,YH
-	BRCC _CORE5277_SDNF_ADD_L1
+	BRCC _C5_SDNF_ADD_L1
 	MOV TEMP,XH
 	MOV XH,YH
 	MOV YH,TEMP
@@ -58,8 +58,8 @@ CORE5277_SDNF_ADD:													;Signed Digital aNd Fractional
 	MOV TEMP,TEMP_H
 	MOV TEMP_H,TEMP_L
 	MOV TEMP_L,TEMP
-	RJMP _CORE5277_SDNF_ADD__SUB
-_CORE5277_SDNF_ADD_L1:
+	RJMP _C5_SDNF_ADD__SUB
+_C5_SDNF_ADD_L1:
 	CP XL,YL
 	BRCC PC+0x0a
 	MOV TEMP,XH
@@ -71,7 +71,7 @@ _CORE5277_SDNF_ADD_L1:
 	MOV TEMP,TEMP_H
 	MOV TEMP_H,TEMP_L
 	MOV TEMP_L,TEMP
-_CORE5277_SDNF_ADD__SUB:
+_C5_SDNF_ADD__SUB:
 	;Вычитаю
 	SUB XL,YL
 	BRCC PC+0x04
@@ -80,8 +80,8 @@ _CORE5277_SDNF_ADD__SUB:
 	SEC
 	SBC XH,YH
 	OR XL,TEMP_H														;Восстанавливаю знак
-	RJMP _CORE5277_SDNF_ADD__END
-_CORE5277_SDNF_ADD__ADD:
+	RJMP _C5_SDNF_ADD__END
+_C5_SDNF_ADD__ADD:
 	LDI TEMP,99
 	ADD XL,YL
 	CP TEMP,XL
@@ -90,11 +90,11 @@ _CORE5277_SDNF_ADD__ADD:
 	SEC
 	ADC XH,YH
 	OR XL,TEMP_H														;Восстанавливаю знак
-	RJMP _CORE5277_SDNF_ADD__END
-_CORE5277_SDNF_ADD__ERROR:
+	RJMP _C5_SDNF_ADD__END
+_C5_SDNF_ADD__ERROR:
 	LDI XH,0xff
 	LDI XL,0xff
-_CORE5277_SDNF_ADD__END:
+_C5_SDNF_ADD__END:
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H

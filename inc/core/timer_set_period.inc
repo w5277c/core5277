@@ -1,15 +1,15 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;20.10.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_TIMER_SET_PERIOD
+.ifdef DEF_C5_TIMER_SET_PERIOD
 .else
-.set DEF_CORE5277_TIMER_SET_PERIOD = 1
+.set DEF_C5_TIMER_SET_PERIOD = 1
 
 ;--------------------------------------------------------
-CORE5277_TIMER_SET_PERIOD:
+C5_TIMER_SET_PERIOD:
 ;--------------------------------------------------------
 ;переназначение периода таймера
 ;IN: TEMP - номер таймера(0-...),
@@ -26,16 +26,16 @@ CORE5277_TIMER_SET_PERIOD:
 	LSL TEMP
 	ADD TEMP,ZL
 
-	LDI ZH,high(_CORE5277_TIMERS)
-	LDI ZL,low(_CORE5277_TIMERS)
+	LDI ZH,high(_C5_TIMERS)
+	LDI ZL,low(_C5_TIMERS)
 	ADD ZL,TEMP
 	CLR TEMP
 	ADC ZH,TEMP
 
-	STD Z+_CORE5277_TIMER_PROC_ID,PID
-	STD Z+_CORE5277_TIMER_DEFAULT,ACCUM
+	STD Z+_C5_TIMER_PROC_ID,PID
+	STD Z+_C5_TIMER_DEFAULT,ACCUM
 	ANDI ACCUM,0x7f
-	STD Z+_CORE5277_TIMER_CNTR,ACCUM
+	STD Z+_C5_TIMER_CNTR,ACCUM
 
 	POP ACCUM
 	POP TEMP

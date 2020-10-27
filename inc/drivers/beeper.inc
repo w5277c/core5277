@@ -1,13 +1,13 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;09.03.2020  w5277c@gmail.com        Начало
 ;26.10.2020  w5277c@gmail.com        Переход на программный таймер
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_DRIVER_BEEPER
+.ifdef DEF_C5_DRIVER_BEEPER
 .else
-.set DEF_CORE5277_DRIVER_BEEPER = 1
+.set DEF_C5_DRIVER_BEEPER = 1
 
 .include	"./inc/mem/ram_offset.inc"
 .include	"./inc/mem/ram_realloc.inc"
@@ -22,7 +22,7 @@
 	.EQU	_DRV_BEEPER_TIMER_CNTR				= 0x02;2b - Счетчик для таймера
 	.EQU	_DRV_BEEPER_TIMER_TH					= 0x04;2b - Порог для счетчика таймера
 
-	.EQU	_DRV_BEEPER_RAM_SIZE					= 0x05;
+	.EQU	_DRV_BEEPER_RAM_SIZE					= 0x06;
 
 	.EQU	P											= 0x00
 	.EQU	S											= 0xfe
@@ -151,7 +151,7 @@ DRV_BEEPER_INIT:
 
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BEEPER_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 	STD Z+_DRV_BEEPER_PORT,ACCUM
 
@@ -161,14 +161,14 @@ DRV_BEEPER_INIT:
 	LDI TEMP_H,high(_DRV_BEEPER_TIMER_EVENT)
 	LDI TEMP_L,low(_DRV_BEEPER_TIMER_EVENT)
 	LDI ACCUM,0x01|(0<<0x07)
-	MCALL CORE5277_TIMER_SET
+	MCALL C5_TIMER_SET
 
 	POP_Z
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
 	POP ACCUM
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, проигрывание звука
 ;IN: Y - адрес на данные
@@ -185,12 +185,12 @@ DRV_BEEPER_INIT:
 	PUSH FLAGS
 
 	;Считываем информацию о пине
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 	LDD ACCUM,Z+_DRV_BEEPER_PORT
 	LDD FLAGS,Z+_DRV_BEEPER_TIMER_ID
 	;Инициализация порта
-	MCALL CORE5277_PORT_SET_LO
-	MCALL CORE5277_PORT_MODE_OUT
+	MCALL C5_PORT_SET_LO
+	MCALL C5_PORT_MODE_OUT
 
 	PUSH_Z
 	MOV ZH,YH
@@ -235,8 +235,8 @@ _DRV_BEEPER_PROC__END:
 	POP_Z
 	LDD ACCUM,Z+_DRV_BEEPER_PORT
 	;Отключаем порт переводя его как вход без подтяжки
-	MCALL CORE5277_PORT_MODE_IN
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_IN
+	MCALL C5_PORT_SET_LO
 
 	POP FLAGS
 	POP LOOP_CNTR
@@ -288,7 +288,7 @@ _DRV_BEEPER_PLAY_BYTE:
 	ADD TEMP_L,TEMP
 	ADC TEMP_H,ACCUM
 _DRV_BEEPER_PLAY_BYTE__HALF_OCTAVE_SKIP:
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 	STD Z+_DRV_BEEPER_TIMER_TH+0x00,TEMP_H
 	STD Z+_DRV_BEEPER_TIMER_TH+0x01,TEMP_L
 	STD Z+_DRV_BEEPER_TIMER_CNTR+0x00,TEMP_H
@@ -296,7 +296,7 @@ _DRV_BEEPER_PLAY_BYTE__HALF_OCTAVE_SKIP:
 
 _DRV_BEEPER_PLAY_BYTE__SKIP:
 	MOV TEMP,FLAGS
-	MCALL CORE5277_TIMER_START
+	MCALL C5_TIMER_START
 _DRV_BEEPER_PLAY_BYTE__SILENT:
 	;Умножаем на 10
 	CLR TEMP_L
@@ -314,10 +314,10 @@ _DRV_BEEPER_PLAY_BYTE__SILENT:
 	POP TEMP_H
 	ADC TEMP_L,TEMP_H
 	CLR TEMP_H
-	MCALL CORE5277_WAIT_2MS
+	MCALL C5_WAIT_2MS
 
 	MOV TEMP,FLAGS
-	MCALL CORE5277_TIMER_STOP
+	MCALL C5_TIMER_STOP
 
 	POP ACCUM
 	POP TEMP
@@ -338,7 +338,7 @@ _DRV_BEEPER_TIMER_EVENT:
 	PUSH ACCUM
 
 	;Сичтываем информацию о пине
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 	LDD TEMP_H,Z+_DRV_BEEPER_TIMER_CNTR+0x00
 	LDD TEMP_L,Z+_DRV_BEEPER_TIMER_CNTR+0x01
 	SUBI TEMP_L,0x01
@@ -349,7 +349,7 @@ _DRV_BEEPER_TIMER_EVENT:
 	BRNE _DRV_BEEPER_TIMER_EVENT__NO_TH
 
 	LDD ACCUM,Z+_DRV_BEEPER_PORT
-	MCALL CORE5277_PORT_INVERT
+	MCALL C5_PORT_INVERT
 
 	LDD TEMP_H,Z+_DRV_BEEPER_TIMER_TH+0x00
 	LDD TEMP_L,Z+_DRV_BEEPER_TIMER_TH+0x01

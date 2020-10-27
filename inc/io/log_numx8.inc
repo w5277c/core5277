@@ -1,12 +1,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;08.10.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_LOG_NUMx8
+.ifdef DEF_C5_LOG_NUMx8
 .else
-.set DEF_CORE5277_LOG_NUMx8 = 1
+.set DEF_C5_LOG_NUMx8 = 1
 .ifdef LOGGING_PORT
 
 .include	"./inc/math/div16x8.inc"
@@ -16,7 +16,7 @@
 .include	"./inc/io/log_char.inc"
 
 ;--------------------------------------------------------
-CORE5277_LOG_NUMx8:
+C5_LOG_NUMx8:
 ;--------------------------------------------------------
 ;Логирование десятиричного числа(1байт)
 ;IN: TEMP - байт
@@ -32,26 +32,26 @@ CORE5277_LOG_NUMx8:
 	LDI TEMP_H,0x00
 	MOV TEMP_L,ACCUM
 	LDI TEMP,0x64
-	MCALL CORE5277_DIV16x8
+	MCALL C5_DIV16x8
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 
 	MOV TEMP,TEMP_L
-	MCALL CORE5277_MUL100
+	MCALL C5_MUL100
 	SUB ACCUM,TEMP_L
 	MOV TEMP,ACCUM
-	MCALL CORE5277_DIV10
+	MCALL C5_DIV10
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 
 	MOV TEMP,TEMP_L
-	MCALL CORE5277_MUL10
+	MCALL C5_MUL10
 	SUB ACCUM,TEMP_L
 	SUBI ACCUM,(0x100-0x30)										;+0x30
 	MOV TEMP,ACCUM
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 
 	POP TEMP
 	POP TEMP_L

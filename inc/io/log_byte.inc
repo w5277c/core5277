@@ -1,20 +1,20 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;12.06.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_LOG_BYTE
+.ifdef DEF_C5_LOG_BYTE
 .else
-.set DEF_CORE5277_LOG_BYTE = 1
+.set DEF_C5_LOG_BYTE = 1
 .ifdef LOGGING_PORT
 
 .include	"./inc/conv/byte_to_hex.inc"
 .include	"./inc/io/log_char.inc"
 
 ;--------------------------------------------------------
-CORE5277_LOG_BYTE:
+C5_LOG_BYTE:
 ;--------------------------------------------------------
 ;Логирование байта
 ;IN: TEMP - байт
@@ -23,11 +23,11 @@ CORE5277_LOG_BYTE:
 	PUSH TEMP_H
 	PUSH TEMP_L
 
-	MCALL CORE5277_BYTE_TO_HEX
+	MCALL C5_BYTE_TO_HEX
 	MOV TEMP,TEMP_H
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 	MOV TEMP,TEMP_L
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 
 	POP TEMP_L
 	POP TEMP_H

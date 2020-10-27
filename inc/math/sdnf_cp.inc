@@ -1,16 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.10.2019  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_SDNF_CP
+.ifdef DEF_C5_SDNF_CP
 .else
-.set DEF_CORE5277_SDNF_CP = 1
+.set DEF_C5_SDNF_CP = 1
 
 ;--------------------------------------------------------
-CORE5277_SDNF_CP:														;Signed Digital aNd Fractional
+C5_SDNF_CP:														;Signed Digital aNd Fractional
 ;--------------------------------------------------------
 ;Сравнение двух знаковых целых с дробной частью (X < Y)
 ;IN: X, Y
@@ -24,11 +24,11 @@ CORE5277_SDNF_CP:														;Signed Digital aNd Fractional
 	CPI XH,0xff
 	BRNE PC+0x03
 	CPI XL,0xff
-	BREQ _CORE5277_SDNF_CP__ERROR
+	BREQ _C5_SDNF_CP__ERROR
 	CPI YH,0xff
 	BRNE PC+0x03
 	CPI YL,0xff
-	BREQ _CORE5277_SDNF_CP__ERROR
+	BREQ _C5_SDNF_CP__ERROR
 	;Выношу знаки в отдельные регистры
 	MOV TEMP_H,XL
 	ANDI TEMP_H,0x80
@@ -37,46 +37,46 @@ CORE5277_SDNF_CP:														;Signed Digital aNd Fractional
 	ANDI XL,0x7f
 	ANDI YL,0x7f
 	CPI XL,100
-	BRCC _CORE5277_SDNF_CP__ERROR
+	BRCC _C5_SDNF_CP__ERROR
 	CPI YL,100
-	BRCC _CORE5277_SDNF_CP__ERROR
+	BRCC _C5_SDNF_CP__ERROR
 
 	;Проверяю целую часть
 	CP XH,YH
-	BREQ _CORE5277_SDNF_CP__H_EQUAL
+	BREQ _C5_SDNF_CP__H_EQUAL
 	BRCS PC+0x04
 	SBRC TEMP_H,0x07													;Включаю флаг C, если |X|>|Y| и X<0
 	SEC
-	RJMP _CORE5277_SDNF_CP__END
+	RJMP _C5_SDNF_CP__END
 	SBRC TEMP_L,0x07													;Выключаю флаг C, если |X|<|Y| и Y<0
 	CLC
-	RJMP _CORE5277_SDNF_CP__END
-_CORE5277_SDNF_CP__H_EQUAL:
+	RJMP _C5_SDNF_CP__END
+_C5_SDNF_CP__H_EQUAL:
 	;проверяю дробную часть
 	CP XL,YL
-	BREQ _CORE5277_SDNF_CP__L_EQUAL
+	BREQ _C5_SDNF_CP__L_EQUAL
 	BRCS PC+0x04
 	SBRC TEMP_H,0x07													;Включаю флаг C, если |X|>|Y| и X<0
 	SEC
-	RJMP _CORE5277_SDNF_CP__END
+	RJMP _C5_SDNF_CP__END
 	SBRC TEMP_L,0x07													;Выключаю флаг C, если |X|<|Y| и Y<0
 	CLC
-	RJMP _CORE5277_SDNF_CP__END
-_CORE5277_SDNF_CP__L_EQUAL:
+	RJMP _C5_SDNF_CP__END
+_C5_SDNF_CP__L_EQUAL:
 	EOR TEMP_L,TEMP_H
-	BREQ _CORE5277_SDNF_CP__EQUAL
+	BREQ _C5_SDNF_CP__EQUAL
 	ROL TEMP_H															;Определяю флаг C, если |X|=|Y| и X<0
 	CLZ
-	RJMP _CORE5277_SDNF_CP__END
-_CORE5277_SDNF_CP__ERROR:
+	RJMP _C5_SDNF_CP__END
+_C5_SDNF_CP__ERROR:
 	SEC
 	SEZ
-	RJMP _CORE5277_SDNF_CP__END
-_CORE5277_SDNF_CP__EQUAL:
+	RJMP _C5_SDNF_CP__END
+_C5_SDNF_CP__EQUAL:
 	CLC
 	SEZ
-	RJMP _CORE5277_SDNF_CP__END
-_CORE5277_SDNF_CP__END:
+	RJMP _C5_SDNF_CP__END
+_C5_SDNF_CP__END:
 	POP TEMP_L
 	POP TEMP_H
 	POP YL

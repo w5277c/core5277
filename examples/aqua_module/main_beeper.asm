@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;26.10.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
@@ -24,7 +24,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_BEEPER_DRV							= 0|(1<<CORE5277_PROCID_OPT_DRV)
+	.EQU	PID_BEEPER_DRV							= 0|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
@@ -41,7 +41,7 @@ MAIN:
 	STS SPL,TEMP
 
 	;Инициализация ядра
-	MCALL CORE5277_INIT
+	MCALL C5_INIT
 
 	;Инициализация BEEPER
 	LDI PID,PID_BEEPER_DRV
@@ -49,15 +49,15 @@ MAIN:
 	LDI ZL,low(DRV_BEEPER_INIT)
 	LDI ACCUM,PD7
 	LDI FLAGS,TID_BEEPER
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
-	MJMP CORE5277_START
+	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
 	TASK__DATA:
@@ -66,15 +66,15 @@ MAIN:
 	;.db N8,C4,C4d,D4,D4d,E4,E4d,F4,F4d,G4,G4d,A4,A4d,H4,H4d,C5,C5d,D5,D5d,E5,E5d,F5,F5d,G5,G5d,A5,A5d,H5,H5d,E
 
 TASK__INIT:
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI YH,high(TASK__DATA)|0x80									;Вызываем процедуру драйвера (данные мелодии берем из ROM)
 	LDI YL,low(TASK__DATA)
 	LDI TEMP,PID_BEEPER_DRV
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 
 	LDI TEMP,0x05														;Пауза в 5 сеунд
-	MCALL CORE5277_WAIT_1S
+	MCALL C5_WAIT_1S
 	RJMP TASK__INFINITE_LOOP
 

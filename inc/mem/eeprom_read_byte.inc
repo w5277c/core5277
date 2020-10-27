@@ -1,31 +1,31 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;14.09.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_EEPROM_READ_BYTE
+.ifdef DEF_C5_EEPROM_READ_BYTE
 .else
-.set DEF_CORE5277_EEPROM_READ_BYTE = 1
+.set DEF_C5_EEPROM_READ_BYTE = 1
 
 ;--------------------------------------------------------
-CORE5277_EEPROM_READ_BYTE:
+C5_EEPROM_READ_BYTE:
 ;--------------------------------------------------------
 ;Считываем байт из EEPROM
 ;IN: TEMP_H,TEMP_L - адрес в EEPROM
 ;OUT: TEMP - значение
 ;--------------------------------------------------------
-CORE5277_EEPROM_READ_BYTE__LOOP:
+C5_EEPROM_READ_BYTE__LOOP:
 	LDS TEMP,EECR
 	ANDI TEMP,(1<<EEPE)
-	BRNE CORE5277_EEPROM_READ_BYTE__LOOP
+	BRNE C5_EEPROM_READ_BYTE__LOOP
 	STS EEARH,TEMP_H
 	STS EEARL,TEMP_L
-	MCALL CORE5277_DISPATCHER_LOCK								;TODO заменить за блокировку ресурса
+	MCALL C5_DISPATCHER_LOCK								;TODO заменить за блокировку ресурса
 	LDS TEMP,EECR
 	ORI TEMP,(1<<EERE)
 	STS EECR,TEMP
 	LDS TEMP,EEDR
-	MCALL CORE5277_DISPATCHER_UNLOCK
+	MCALL C5_DISPATCHER_UNLOCK
 	RET
 .endif
