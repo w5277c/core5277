@@ -7,20 +7,12 @@
 
 .include	"./inc/mem/ram_offset.inc"
 .include	"./inc/mem/ram_realloc.inc"
+.include	"./inc/mem/ram_extend.inc"
+.include	"./inc/core/wait.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_ADC_RAM_INIT_SIZE							= 0x03;Размер изначально используемой памяти
 	.EQU	_DRV_ADC_STRUCT_SIZE								= 0x0b;Размер структуры данных для каждого элемента
-
-	;---PRESCALLER---
-	.EQU	DRV_ADC_PRESC_X1									= 0x00
-	.EQU	DRV_ADC_PRESC_X2									= 0x01
-	.EQU	DRV_ADC_PRESC_X4									= 0x02
-	.EQU	DRV_ADC_PRESC_X8									= 0x03
-	.EQU	DRV_ADC_PRESC_X16									= 0x04
-	.EQU	DRV_ADC_PRESC_X32									= 0x05
-	.EQU	DRV_ADC_PRESC_X64									= 0x06
-	.EQU	DRV_ADC_PRESC_X128								= 0x07
 
 	;---DATA---
 	.EQU	_DRV_ADC_TIMER_ID									= 0x00;1B - ид таймера
@@ -32,7 +24,7 @@
 	.EQU	_DRV_ADC_PORT										= 0x00;1B - ADC порт
 	.EQU	_DRV_ADC_TIMER_PERIOD							= 0x01;1B - период таймера
 	.EQU	_DRV_ADC_ITER_QNT									= 0x02;1B - количество итераций (64 максимум)
-	.EQU	_DRV_ADC_ITER_CNT									= 0x03;1B - счетчик итераций
+	.EQU	_DRV_ADC_ITER_CNTR								= 0x03;1B - счетчик итераций
 	.EQU	_DRV_ADC_PRESCALLER								= 0x04;1B - делитель
 	.EQU	_DRV_ADC_VREF										= 0x05;1B - опорное напряжение
 	.EQU	_DRV_ADC_SUM										= 0x06;3B - сумма показаний
@@ -70,7 +62,7 @@ DRV_ADC_INIT:
 	STS ADCSRA,ACCUM
 
 	;Подаю питание на ADC
-	_C5_PRR_RESET PRSDC
+	_C5_PRR_RESET PRADC
 
 	;Активируем прерывания
 	LDI TEMP_H,high(_DRV_ADC_EVENT)
@@ -104,7 +96,7 @@ DRV_ADC_INIT:
 	MCALL _DRV_ADC_OP_WAIT
 	RJMP _DRV_ADC_PROC_END
 
-_DRV_BUTTONS_PROC_END:
+_DRV_ADC_PROC_END:
 	POP TEMP
 	RET
 
@@ -113,7 +105,7 @@ _DRV_ADC_OP_ADD:
 ;--------------------------------------------------------
 ;Добавляем порт
 ;IN: ACCUM - ADC порт(ADC0-ADC7)
-;FLAGS - опорное напряжение(VREF), LOOP_CNTR - PRESCALLER,
+;TEMP_EH - опорное напряжение(VREF), TEMP_EL - PRESCALLER,
 ;TEMP_H - кол-во итераций для вычисления среднего,
 ;TEMP_L - период таймера для итераций
 ;--------------------------------------------------------
@@ -129,8 +121,8 @@ _DRV_ADC_OP_ADD:
 	STD Y+_DRV_ADC_PORT,ACCUM
 	STD Y+_DRV_ADC_TIMER_PERIOD,TEMP_L
 	STD Y+_DRV_ADC_ITER_QNT,TEMP_H
-	STD Y+_DRV_ADC_PRESCALLER,LOOP_CNTR
-	STD Y+_DRV_ADC_VREF,FLAGS
+	STD Y+_DRV_ADC_PRESCALLER,TEMP_EL
+	STD Y+_DRV_ADC_VREF,TEMP_EH
 	LDI TEMP,0x00
 	STD Y+_DRV_ADC_ITER_CNTR,TEMP
 	LDI TEMP,0xff
@@ -142,7 +134,8 @@ _DRV_ADC_OP_ADD:
 	STD Z+_DRV_ADC_ITEMS_QNT,TEMP
 	CPI TEMP,0x01
 	BRNE _DRV_ADC_OP_ADD__NOT_FIRST
-	_MCALL _DRV_ADC_START
+	LDD ACCUM,Z+_DRV_ADC_TIMER_ID
+	MCALL _DRV_ADC_START
 _DRV_ADC_OP_ADD__NOT_FIRST:
 
 	POP_Z
@@ -210,8 +203,21 @@ _DRV_ADC_OP_GET__END:
 _DRV_ADC_START:
 ;--------------------------------------------------------
 ;Запускаем ADC
-;IN: Y - адрес на блок данных элемента
+;IN: ACCUM - ид таймера
+;Y - адрес на блок данных элемента
 ;--------------------------------------------------------
+
+
+
+;	.EQU	_DRV_ADC_PORT										= 0x00;1B - ADC порт
+;	.EQU	_DRV_ADC_TIMER_PERIOD							= 0x01;1B - период таймера
+;	.EQU	_DRV_ADC_ITER_QNT									= 0x02;1B - количество итераций (64 максимум)
+;	.EQU	_DRV_ADC_ITER_CNT									= 0x03;1B - счетчик итераций
+;	.EQU	_DRV_ADC_PRESCALLER								= 0x04;1B - делитель
+;	.EQU	_DRV_ADC_VREF										= 0x05;1B - опорное напряжение
+;	.EQU	_DRV_ADC_SUM										= 0x06;3B - сумма показаний
+;	.EQU	_DRV_ADC_RESULT									= 0x09;2B - результат (0xffff - нет результата, 15-бит - свежий результат)
+
 
 ;TODO
 

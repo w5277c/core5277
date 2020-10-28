@@ -6,7 +6,7 @@
 ;28.10.2020  w5277c@gmail.com        Корректировка таймингов
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO реализовать обработчики для переключаетеля и сенсора
-;TODO реализовать очередь и процедуру ее чтения(с ожиданием нажатия кнопки и без ожидания)
+;TODO Фиксируется 5-ое длинное нажатие (вероятно с потерей первого значения) из 4 допустимых
 
 .include	"./inc/mem/ram_offset.inc"
 .include	"./inc/mem/ram_realloc.inc"
@@ -38,9 +38,9 @@
 	.EQU	_DRV_BUTTONS_TIMER_PERIOD						= 0x02;Период таймера (x*0.002) (анализ 32мс)
 	.EQU	_DRV_BUTTONS_MAX_CNTR							= 0x08;Количество необходимых итераций перед анализом
 	;---
-	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME			= 480/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
-	.EQU	_DRV_BUTTONS_HOLD_TIME							= 960/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
-	.EQU	_DRV_BUTTONS_TIMEOUT								= 360/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME			= 300/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_HOLD_TIME							= 1000/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_TIMEOUT								= 400/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
 	;---Флаги---
 	.EQU	_DRV_BUTTONS_FL_INIT								= 0x04;Только что добавлено(ожидание начала цикла опроса)
 	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN						= 0x05;Первый опрос(нет предыдущего занчения)
@@ -427,7 +427,7 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
 	BREQ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	;Увеличиваем счетчик нажатий
 	INC TEMP
-	;Добавяем навое нажатие в результат
+	;Добавяем новое нажатие в результат
 	PUSH TEMP
 	LDI TEMP,_DRV_BUTTONS_SHORT_PRESS_MAX_TIME
 	CP TEMP,TEMP_L

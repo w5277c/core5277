@@ -365,6 +365,15 @@
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
 	.EQU	ADC_VREF_AVCC							= (0<<REFS1)|(1<<REFS0)
 	.EQU	ADC_VREF_1_1_CAP						= (1<<REFS1)|(1<<REFS0)
+	;---ADC-PRESCALLER---
+	.EQU	ADC_PRESC_X1							= 0x00
+	.EQU	ADC_PRESC_X2							= 0x01
+	.EQU	ADC_PRESC_X4							= 0x02
+	.EQU	ADC_PRESC_X8							= 0x03
+	.EQU	ADC_PRESC_X16							= 0x04
+	.EQU	ADC_PRESC_X32							= 0x05
+	.EQU	ADC_PRESC_X64							= 0x06
+	.EQU	ADC_PRESC_X128							= 0x07
 
 .ORG 0x0000
 	JMP	MAIN															; Reset Handler
