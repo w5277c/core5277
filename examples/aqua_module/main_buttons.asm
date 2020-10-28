@@ -1,14 +1,15 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;19.09.2020  w5277c@gmail.com        Начало
+;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
 	.INCLUDE "./inc/devices/atmega328.inc"
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 1	;0-4
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
@@ -19,18 +20,8 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_bytes.inc"
-	.include	"./inc/io/logstr_new_line.inc"
-	.include	"./inc/mem/eeprom_write_byte.inc"
-	.include	"./inc/mem/eeprom_read_byte.inc"
-	.include	"./inc/core/wait_1s.inc"
-	.include	"./inc/mem/ram_fill8.inc"
-	;---
-
-.include	"./inc/io/log_char.inc"
-.include	"./inc/io/log_byte.inc"
-.include	"./inc/io/log_ramdump.inc"
-.include	"./inc/io/log_ramdump.inc"
+	.include	"./inc/io/log_word.inc"
+;	;---
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
@@ -70,11 +61,6 @@ MAIN:
 TASK__INIT:
 	LDI TEMP,PID_BUTTONS_DRV
 	LDI ACCUM,PC1|(0x80)												;Включаем подтяжку к 5в
-	LDI FLAGS,DRV_BUTTONS_OP_ADD
-	MCALL C5_EXEC
-
-	LDI TEMP,PID_BUTTONS_DRV
-	LDI ACCUM,PC2|(0x80)												;Включаем подтяжку к 5в
 	LDI FLAGS,DRV_BUTTONS_OP_ADD
 	MCALL C5_EXEC
 
