@@ -5,8 +5,7 @@
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_RAM_REALLOC
-.else
+.ifndef DEF_C5_RAM_REALLOC
 .set DEF_C5_RAM_REALLOC = 1
 
 .include	"./inc/mem/_ram_find_free_block.inc"

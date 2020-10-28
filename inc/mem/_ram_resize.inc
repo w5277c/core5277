@@ -5,8 +5,7 @@
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5__RAM_RESIZE
-.else
+.ifndef DEF_C5__RAM_RESIZE
 .set DEF_C5__RAM_RESIZE = 1
 
 .include	"./inc/mem/_ram_find_used_block_mt.inc"

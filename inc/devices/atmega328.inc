@@ -24,41 +24,41 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA48
 	.MESSAGE "######## DEVICE ATmega328 ########"
-	.EQU	_C5_DRIVERS_MAX_QNT			= 0x10			;Максимальное количество драйверов
-	.EQU	_C5_TASKS_MAX_QNT				= 0x10			;Максимальное количество задач
-	.EQU	_C5_IR_QNT						= 0x1a			;Количество перырваний(без RESET)
-	.EQU	_C5_RES_QUEUE_SIZE			= 0x20			;Размер очереди к ресурсам(16 элементов по 2 байта)
-	.EQU	_C5_PCINT_PORTS_QNT			= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_C5_RAM_BORDER_SIZE			= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_C5_STACK_SIZE					= 0x40			;Стек ядра
+	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
+	.EQU	_C5_TASKS_MAX_QNT						= 0x10			;Максимальное количество задач
+	.EQU	_C5_IR_QNT								= 0x1a			;Количество перырваний(без RESET)
+	.EQU	_C5_RES_QUEUE_SIZE					= 0x20			;Размер очереди к ресурсам(16 элементов по 2 байта)
+	.EQU	_C5_PCINT_PORTS_QNT					= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
+	.EQU	_C5_RAM_BORDER_SIZE					= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
+	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMEND									= 0x08ff
 
 	;---IR---
-	.EQU	C5_IR_INT0						= 0x01
-	.EQU	C5_IR_INT1						= 0x02
-	.EQU	C5_IR_PCINT0					= 0x03
-	.EQU	C5_IR_PCINT1					= 0x04
-	.EQU	C5_IR_PCINT2					= 0x05
-	.EQU	C5_IR_WDT						= 0x06
-	.EQU	C5_IR_TIMER2_COMPA			= 0x07
-	.EQU	C5_IR_TIMER2_COMPB			= 0x08
-	.EQU	C5_IR_TIMER2_OVF				= 0x09
-	.EQU	C5_IR_TIMER1_CAPT				= 0x0a
-	.EQU	C5_IR_TIMER1_COMPA			= 0x0b
-	.EQU	C5_IR_TIMER1_COMPB			= 0x0c
-	.EQU	C5_IR_TIMER1_OVF				= 0x0d
-	.EQU	C5_IR_RESERVED_CORE_TIMER	= 0x0e
-	.EQU	C5_IR_TIMER0_COMPB			= 0x0f
-	.EQU	C5_IR_TIMER0_OVF				= 0x10
-	.EQU	C5_IR_SPI						= 0x11
-	.EQU	C5_IR_UART_RX					= 0x12
-	.EQU	C5_IR_UART_UDRE				= 0x13
-	.EQU	C5_IR_UART_TX					= 0x14
-	.EQU	C5_IR_ADC						= 0x15
-	.EQU	C5_IR_EE_READY					= 0x16
-	.EQU	C5_IR_ANALOG_COMP				= 0x17
-	.EQU	C5_IR_TWI						= 0x18
-	.EQU	C5_IR_SPM_READY				= 0x19
+	.EQU	C5_IR_INT0								= 0x01
+	.EQU	C5_IR_INT1								= 0x02
+	.EQU	C5_IR_PCINT0							= 0x03
+	.EQU	C5_IR_PCINT1							= 0x04
+	.EQU	C5_IR_PCINT2							= 0x05
+	.EQU	C5_IR_WDT								= 0x06
+	.EQU	C5_IR_TIMER2_COMPA					= 0x07
+	.EQU	C5_IR_TIMER2_COMPB					= 0x08
+	.EQU	C5_IR_TIMER2_OVF						= 0x09
+	.EQU	C5_IR_TIMER1_CAPT						= 0x0a
+	.EQU	C5_IR_TIMER1_COMPA					= 0x0b
+	.EQU	C5_IR_TIMER1_COMPB					= 0x0c
+	.EQU	C5_IR_TIMER1_OVF						= 0x0d
+	.EQU	C5_IR_RESERVED_CORE_TIMER			= 0x0e
+	.EQU	C5_IR_TIMER0_COMPB					= 0x0f
+	.EQU	C5_IR_TIMER0_OVF						= 0x10
+	.EQU	C5_IR_SPI								= 0x11
+	.EQU	C5_IR_UART_RX							= 0x12
+	.EQU	C5_IR_UART_UDRE						= 0x13
+	.EQU	C5_IR_UART_TX							= 0x14
+	.EQU	C5_IR_ADC								= 0x15
+	.EQU	C5_IR_EE_READY							= 0x16
+	.EQU	C5_IR_ANALOG_COMP						= 0x17
+	.EQU	C5_IR_TWI								= 0x18
+	.EQU	C5_IR_SPM_READY						= 0x19
 
 	.EQU	PA0										= (0x00<<4)|0x00
 	.EQU	PA1										= (0x00<<4)|0x01
@@ -362,39 +362,39 @@
 	.EQU	ADC6										= 0x06
 	.EQU	ADC7										= 0x07
 	;---ADC-VOLTAGE-REFERENCE---
-	.EQU	ADC_VREF_AREF						= (0<<REFS1)|(0<<REFS0)
-	.EQU	ADC_VREF_AVCC						= (0<<REFS1)|(1<<REFS0)
-	.EQU	ADC_VREF_1_1_CAP					= (1<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
+	.EQU	ADC_VREF_AVCC							= (0<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_1_1_CAP						= (1<<REFS1)|(1<<REFS0)
 
 .ORG 0x0000
 	JMP	MAIN															; Reset Handler
-	CALL	_C5_IR												; External Interrupt0 Handler
-	CALL	_C5_IR												; External Interrupt1 Handler
-	CALL	_C5_IR												; Pin Change Interrupt Request 0
-	CALL	_C5_IR												; Pin Change Interrupt Request 1
-	CALL	_C5_IR												; Pin Change Interrupt Request 2
-	CALL	_C5_IR												; Watchdog Time-out Interrupt
-	CALL	_C5_IR												; Timer/Counter2 Compare Match A
-	CALL	_C5_IR												; Timer/Counter2 Compare Match B
-	CALL	_C5_IR												; Timer/Counter2 Overflow
-	CALL	_C5_IR												; Timer/Counter1 Capture Event
-	CALL	_C5_IR												; Timer/Counter1 Compare Match A
-	CALL	_C5_IR												; Timer/Counter1 Compare Match B
-	CALL	_C5_IR												; Timer/Counter1 Overflow
-	JMP	_C5_TIMER_A_IR										; Timer/Counter0 Compare Match A
-	CALL	_C5_TIMER_B_IR										; Timer/Counter0 Compare Match B
-	CALL	_C5_IR												; Timer/Counter0 Overflow
-	CALL	_C5_IR												; SPI Serial Transfer Complete
-	CALL	_C5_IR												; USART Rx Complete
-	CALL	_C5_IR												; USART, Data Register Empty
-	CALL	_C5_IR												; USART, Tx Complete
-	CALL	_C5_IR												; ADC Conversion Complete
-	CALL	_C5_IR												; EEPROM Ready
-	CALL	_C5_IR												; Analog Comparator
-	CALL	_C5_IR												; 2-wire Serial Interface
-	CALL	_C5_IR												; Store Program Memory Ready
+	CALL	_C5_IR														; External Interrupt0 Handler
+	CALL	_C5_IR														; External Interrupt1 Handler
+	CALL	_C5_IR														; Pin Change Interrupt Request 0
+	CALL	_C5_IR														; Pin Change Interrupt Request 1
+	CALL	_C5_IR														; Pin Change Interrupt Request 2
+	CALL	_C5_IR														; Watchdog Time-out Interrupt
+	CALL	_C5_IR														; Timer/Counter2 Compare Match A
+	CALL	_C5_IR														; Timer/Counter2 Compare Match B
+	CALL	_C5_IR														; Timer/Counter2 Overflow
+	CALL	_C5_IR														; Timer/Counter1 Capture Event
+	CALL	_C5_IR														; Timer/Counter1 Compare Match A
+	CALL	_C5_IR														; Timer/Counter1 Compare Match B
+	CALL	_C5_IR														; Timer/Counter1 Overflow
+	JMP	_C5_TIMER_A_IR												; Timer/Counter0 Compare Match A
+	CALL	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
+	CALL	_C5_IR														; Timer/Counter0 Overflow
+	CALL	_C5_IR														; SPI Serial Transfer Complete
+	CALL	_C5_IR														; USART Rx Complete
+	CALL	_C5_IR														; USART, Data Register Empty
+	CALL	_C5_IR														; USART, Tx Complete
+	CALL	_C5_IR														; ADC Conversion Complete
+	CALL	_C5_IR														; EEPROM Ready
+	CALL	_C5_IR														; Analog Comparator
+	CALL	_C5_IR														; 2-wire Serial Interface
+	CALL	_C5_IR														; Store Program Memory Ready
 
-_C5_PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB, и т.д.
+_C5_PORTS_TABLE:														;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB, и т.д.
 	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
 _C5_PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2

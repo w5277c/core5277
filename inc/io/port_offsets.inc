@@ -5,8 +5,7 @@
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_PORT_OFFSETS
-.else
+.ifndef DEF_C5_PORT_OFFSETS
 .set DEF_C5_PORT_OFFSETS = 1
 
 .include	"./inc/conv/bitnum_to_num.inc"
