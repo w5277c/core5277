@@ -20,6 +20,7 @@
 	;---
 	;Дополнительно
 	.include	"./inc/core/wait_1s.inc"
+	.include	"./inc/core/wait_1s.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------

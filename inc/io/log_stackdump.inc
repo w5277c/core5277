@@ -4,7 +4,8 @@
 ;05.09.2020  w5277c@gmail.com        Начало
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifndef DEF_C5_LOG_STACKDUMP
+.ifdef DEF_C5_LOG_STACKDUMP
+.else
 .set DEF_C5_LOG_STACKDUMP = 1
 .ifdef LOGGING_PORT
 

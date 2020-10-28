@@ -6,7 +6,8 @@
 ;03.10.2020  w5277c@gmail.com        Атомарность
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifndef DEF_C5_PORT_MODE_IN
+.ifdef DEF_C5_PORT_MODE_IN
+.else
 .set DEF_C5_PORT_MODE_IN = 1
 
 .include	"./inc/io/port_offsets.inc"
