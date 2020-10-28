@@ -6,6 +6,7 @@
 ;09.08.2020  w5277c@gmail.com        Тут просто дохрена изменений
 ;06.09.2020  w5277c@gmail.com        Восстановлены механизмы многопоточности
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;28.10.2020  w5277c@gmail.com        Багфикс программных таймеров
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -339,12 +340,13 @@ _C5_TIMER_A_IR__HF_LOOP:
 	RJMP _C5_TIMER_A_IR__HF_NEXT
 	LDD TEMP,Y+_C5_TIMER_CNTR
 	DEC TEMP
-	BRNE PC+0x09
+	BRNE _C5_TIMER_IR__DISPATCHER__TIMER_HF_SKIP
 	LDD ZH,Y+_C5_TIMER_HANDLER+0x00
 	LDD ZL,Y+_C5_TIMER_HANDLER+0x01
 	ICALL
 	MOV TEMP,ACCUM
 	ANDI TEMP,0x7f
+_C5_TIMER_IR__DISPATCHER__TIMER_HF_SKIP:
 	STD Y+_C5_TIMER_CNTR,TEMP
 _C5_TIMER_A_IR__HF_NEXT:
 	ADIW YL,0x05
@@ -392,12 +394,13 @@ _C5_TIMER_A_IR__LF_LOOP:
 	RJMP _C5_TIMER_A_IR__LF_NEXT
 	LDD TEMP,Y+_C5_TIMER_CNTR
 	DEC TEMP
-	BRNE PC+0x09
+	BRNE _C5_TIMER_IR__DISPATCHER__TIMER_LF_SKIP
 	LDD ZH,Y+_C5_TIMER_HANDLER+0x00
 	LDD ZL,Y+_C5_TIMER_HANDLER+0x01
 	ICALL
 	MOV TEMP,ACCUM
 	ANDI TEMP,0x7f
+_C5_TIMER_IR__DISPATCHER__TIMER_LF_SKIP:
 	STD Y+_C5_TIMER_CNTR,TEMP
 _C5_TIMER_A_IR__LF_NEXT:
 	ADIW YL,0x05

@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.03.2020  w5277c@gmail.com        Начало
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;28.10.2020  w5277c@gmail.com        Корректировка таймингов
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO реализовать обработчики для переключаетеля и сенсора
 ;TODO реализовать очередь и процедуру ее чтения(с ожиданием нажатия кнопки и без ожидания)
@@ -23,7 +24,7 @@
 	.EQU	_DRV_BUTTONS_QUEUE_MAX_SIZE					= 0x05;Количество кнопок очереди для событий
 	;---
 	.EQU	_DRV_BUTTONS_BUTTONS_QNT						= 0x00;1B - Количество кнопок
-	.EQU	_DRV_BUTTONS_CNTR									= 0x01;1B - Счетчик опроса(1ед = 10мс)
+	.EQU	_DRV_BUTTONS_CNTR									= 0x01;1B - Счетчик опроса
 	.EQU	_DRV_BUTTONS_QUEUE_SIZE							= 0x02;1B - Кол-во элементов в очереди
 	.EQU	_DRV_BUTTONS_QUEUE								= 0x03;_DRV_BUTTONS_QUEUE_MAX_SIZE*2 - очередь событий [PORT,RESULT]
 	.EQU	_DRV_BUTTONS_DATA									= _DRV_BUTTONS_QUEUE+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2);x4B - Данные кнопок
@@ -34,11 +35,12 @@
 	.EQU	_DRV_BUTTONS_TIME									= 0x02;Время отсчета
 	.EQU	_DRV_BUTTONS_RESULT								= 0x03;Результат |rqqqssss|, r - повтор, q-кол-во нажатий(1-4), s-состояния(история 0-короткое/1-длинное)
 	;---Тайминги---
-	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME			= 0x30;0.480сек
-	.EQU	_DRV_BUTTONS_HOLD_TIME							= 0x60;0.960сек
-	.EQU	_DRV_BUTTONS_TIMEOUT								= 0x24;0.360сек
-	;---
+	.EQU	_DRV_BUTTONS_TIMER_PERIOD						= 0x02;Период таймера (x*0.002) (анализ 32мс)
 	.EQU	_DRV_BUTTONS_MAX_CNTR							= 0x08;Количество необходимых итераций перед анализом
+	;---
+	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME			= 480/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_HOLD_TIME							= 960/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_TIMEOUT								= 360/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
 	;---Флаги---
 	.EQU	_DRV_BUTTONS_FL_INIT								= 0x04;Только что добавлено(ожидание начала цикла опроса)
 	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN						= 0x05;Первый опрос(нет предыдущего занчения)
@@ -80,11 +82,11 @@ DRV_BUTTONS_INIT:
 	ADC XH,ZH
 	MCALL C5_RAM_FILL8
 
-	;Инициализирую таймер с периодом в 10мс
+	;Инициализирую таймер с периодом в 0.002*_DRV_BUTTONS_TIMER_PERIOD
 	MOV TEMP,ACCUM
 	LDI TEMP_H,high(DRV_BUTTONS_TIMER_EVENT)
 	LDI TEMP_L,low(DRV_BUTTONS_TIMER_EVENT)
-	LDI ACCUM,0x05|0x80
+	LDI ACCUM,_DRV_BUTTONS_TIMER_PERIOD|0x80
 	MCALL C5_TIMER_SET
 	;Запускаю таймер
 	MCALL C5_TIMER_START
@@ -222,6 +224,7 @@ _DRV_BUTTONS_OP_GET:
 	POP_Z
 _DRV_BUTTONS_PULL_QUEUE__END:
 	STS SREG,ACCUM
+
 	POP_X
 	POP LOOP_CNTR
 	POP ACCUM
@@ -242,7 +245,6 @@ DRV_BUTTONS_TIMER_EVENT:
 	PUSH TEMP_L
 
 	MCALL C5_RAM_OFFSET
-
 	LDD LOOP_CNTR,Z+_DRV_BUTTONS_BUTTONS_QNT
 
 	;Инкрементирую счетчик опроса
@@ -465,6 +467,7 @@ _DRV_BUTTONS__QUEUE_ADD:
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
+
 	;Достигнут таймаут, добавляем событие в очередь
 	LDD TEMP,Y+_DRV_BUTTONS_QUEUE_SIZE
 	CPI TEMP,_DRV_BUTTONS_QUEUE_MAX_SIZE

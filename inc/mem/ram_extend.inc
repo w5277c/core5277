@@ -4,6 +4,7 @@
 ;28.05.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;28.10.2020  w5277c@gmail.com        Обновляю размер выделенной памяти в заголовке задачи
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_RAM_EXTEND
 .else
@@ -54,12 +55,15 @@ C5_RAM_EXTEND:
 	ADD XL,ACCUM
 	LDI ACCUM,0x00
 	ADC XH,ACCUM
+	PUSH ACCUM
 	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x00
 	CP ACCUM,XH
-	BRCS PC+0x05
+	BRCS PC+0x06
 	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x01
 	CP ACCUM,XL
+	POP ACCUM
 	BRCC _C5_RAM_EXTEND__SUCCESS
+	POP ACCUM
 	;Обновляем адрес вершины выделяемой памяти в ядре
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
@@ -69,10 +73,12 @@ _C5_RAM_EXTEND__ALLOCATED:
 	PUSH TEMP
 	MOV TEMP,ACCUM
 	MCALL _C5_RAM_RESIZE
+	MOV ACCUM,TEMP
 	POP TEMP
 	BRNE _C5_RAM_EXTEND__ERROR
 
 _C5_RAM_EXTEND__SUCCESS:
+	STD Z+_C5_PROC_RAM_SIZE,ACCUM
 	MOV ZH,YH
 	MOV ZL,YL
 	ADD YL,TEMP

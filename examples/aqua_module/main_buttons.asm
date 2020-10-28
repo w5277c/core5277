@@ -27,6 +27,11 @@
 	.include	"./inc/mem/ram_fill8.inc"
 	;---
 
+.include	"./inc/io/log_char.inc"
+.include	"./inc/io/log_byte.inc"
+.include	"./inc/io/log_ramdump.inc"
+.include	"./inc/io/log_ramdump.inc"
+
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
 	.EQU	PID_BUTTONS_DRV						= 0|(1<<C5_PROCID_OPT_DRV)
@@ -68,12 +73,17 @@ TASK__INIT:
 	LDI FLAGS,DRV_BUTTONS_OP_ADD
 	MCALL C5_EXEC
 
+	LDI TEMP,PID_BUTTONS_DRV
+	LDI ACCUM,PC2|(0x80)												;Включаем подтяжку к 5в
+	LDI FLAGS,DRV_BUTTONS_OP_ADD
+	MCALL C5_EXEC
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI TEMP,PID_BUTTONS_DRV
 	LDI FLAGS,DRV_BUTTONS_OP_WAIT
 	MCALL C5_EXEC
-	MCALL C5_LOG_BYTE
+	MCALL C5_LOG_WORD
 	RJMP TASK__INFINITE_LOOP
 
