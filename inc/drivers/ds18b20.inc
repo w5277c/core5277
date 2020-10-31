@@ -52,7 +52,6 @@ DRV_DS18B20_INIT:
 ;Основной код, опрос датчика
 ;OUT: TEMP_H,TEMP_L - значение температуры в SDNF формате
 ;TEMP_L = 0xff - ошибка, код в TEMP_H:
-;0x00 - не указан ид драйвера
 ;0x01,0x02 - датчик не обнаружен
 ;0x03 - ошибка CRC
 ;--------------------------------------------------------
@@ -67,11 +66,6 @@ DRV_DS18B20_INIT:
 
 	MCALL C5_RAM_OFFSET
 	LDD ACCUM,Z+_DRV_DS18B20_1W_DRV
-
-	CPI ACCUM,0x00
-	BRNE PC+0x03
-	LDI TEMP,DRV_DS18B20_RESULT_NO_DRIVER_ID
-	RJMP _DRV_DS18B20_PROC__ERROR
 
 	MOV TEMP,ACCUM
 	LDI YH,high(_DRV_1WIRE_SKIP_ROM_N_CONVERT_T)|0x80

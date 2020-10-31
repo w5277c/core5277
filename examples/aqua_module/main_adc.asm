@@ -6,6 +6,7 @@
 ;BUILD: avra  -I ../../ main.asm
 
 	.INCLUDE "./inc/devices/atmega328.inc"
+	.SET	AVRA										= 1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 1	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
@@ -68,7 +69,7 @@ TASK__INFINITE_LOOP:
 	LDI TEMP_H,0x64													;Кол-во итераций для подсчета среднего
 	LDI TEMP_L,0x08|(0<<0x07)										;Периодичность итераций 1/50/50/0.000050=8 (~50Гц с 50-ю выборками)*2
 	LDI XH,0x00
-	LDI XH,0x00
+	LDI XL,0x00
 	MCALL C5_EXEC
 
 	;Находим среднее амплитуды

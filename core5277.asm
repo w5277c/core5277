@@ -25,7 +25,10 @@
 ;find -type f -name \*.asm -exec sed -i -r 's/C5/C5/g' {} \;
 
 ;-----------------------------------------------------------------------------------------------------------------------
+.IFDEF AVRA
+.ELSE
 	.SET AVRA										= 0x00			;0x01 - выводит при сборке размеры блоков и некоторые смещения
+.ENDIF
 
 ;---PRCO-STATES------------------------------------------;Состояния задачи (PROC-STATES-младший ниббл, PROC-MODE-старший ниббл)
 	.EQU	_C5_PROC_STATE_ABSENT				= 0x00			;Нет задачи
@@ -107,14 +110,21 @@
 	.EQU	_C5_STACK_END							= C5_BUFFER	;XB - стек ядра, далее буфер, стек задач и выделяемая память
 														;TODO проверить что стек не перетирает первый байт буфера
 .IF AVRA == 0x01
-	.MESSAGE "########  MAIN TIMER SPEED:",TIMERS_SPEED
 	.IF BUFFER_SIZE > 0x00
 		.MESSAGE "######## BUFFER SIZE:",BUFFER_SIZE
 	.ENDIF
-	.MESSAGE "######## AVAILABLE RAM:",_C5_STACK_END-(_C5_FREE_RAM+_C5_RAM_BORDER_SIZE)
+	.MESSAGE "######## AVAILABLE RAM:",C5_BUFFER-(_C5_FREE_RAM+_C5_RAM_BORDER_SIZE)
 	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
 	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
+.ENDIF
+
+.IF TIMERS_SPEED == TIMERS_SPEED_50NS
+	.MESSAGE "######## TIMERS NORMAL SPEED  ########"
+.ELSEIF TIMERS_SPEED == TIMERS_SPEED_25NS
+	.MESSAGE "######## TIMERS HIGH SPEED  ########"
+.ELSE
+	.MESSAGE "######## TIMERS WRONG SPEED  ########"
 .ENDIF
 
 ;---REGISTERS--------------------------------------------;r0-r14 выделено под нужды ядра
@@ -322,13 +332,13 @@ _C5_TIMER_A_IR:
 	PUSH TEMP
 	_CORRE5277_TIMERA_CORRECTOR
 	PUSH_Z
+
 .IF TIMERS > 0x00
+	PUSH ACCUM
 	PUSH LOOP_CNTR
 	PUSH PID
 	PUSH_Y
-.ENDIF
 
-.IF TIMERS > 0x00
 	LDI YH,high(_C5_TIMERS)
 	LDI YL,low(_C5_TIMERS)
 	LDI LOOP_CNTR,TIMERS
@@ -353,16 +363,23 @@ _C5_TIMER_A_IR__HF_NEXT:
 	ADIW YL,0x05
 	DEC LOOP_CNTR
 	BRNE _C5_TIMER_A_IR__HF_LOOP
+
+	POP_Y
+	POP PID
+	POP LOOP_CNTR
+	POP ACCUM
 .ENDIF
 _C5_TIMER_IR__DISPATCHER:
 
 	;14t max
-	LDS TEMP,_C5_MAIN_TIMER_CNTR									;2
-	DEC TEMP																;1
-	STS _C5_MAIN_TIMER_CNTR,TEMP									;2
-	BRNE _C5_TIMER_A_IR__END								;1/2 + 1
-	LDI TEMP,_C5_TIMER_PERIOD										;1
-	STS _C5_MAIN_TIMER_CNTR,TEMP									;2
+	LDS TEMP,_C5_MAIN_TIMER_CNTR
+	DEC TEMP
+	STS _C5_MAIN_TIMER_CNTR,TEMP
+	BREQ PC+0x04
+	POP_Z
+	RJMP _C5_TIMER_A_IR__END
+	LDI TEMP,_C5_TIMER_PERIOD
+	STS _C5_MAIN_TIMER_CNTR,TEMP
 	;Тик 1 кванта
 	LDI ZL,0x01
 	LDS ZH,_C5_UPTIME+0x04
@@ -383,6 +400,11 @@ _C5_TIMER_IR__DISPATCHER:
 	STS _C5_UPTIME+0x00,ZH
 
 .IF TIMERS > 0x00
+	PUSH ACCUM
+	PUSH LOOP_CNTR
+	PUSH PID
+	PUSH_Y
+
 	LDI YH,high(_C5_TIMERS)
 	LDI YL,low(_C5_TIMERS)
 	LDI LOOP_CNTR,TIMERS
@@ -407,18 +429,18 @@ _C5_TIMER_A_IR__LF_NEXT:
 	ADIW YL,0x05
 	DEC LOOP_CNTR
 	BRNE _C5_TIMER_A_IR__LF_LOOP
+
+	POP_Y
+	POP PID
+	POP LOOP_CNTR
+	POP ACCUM
 .ENDIF
 
+	POP_Z
 .IF REALTIME == 1
 	MCALL _C5_DISPATCHER_EVENT										;3+4
 .ENDIF
 _C5_TIMER_A_IR__END:
-.IF TIMERS > 0x00
-	POP_Y
-	POP PID
-	POP LOOP_CNTR
-.ENDIF
-	POP_Z
 	POP TEMP
 	STS SREG,TEMP
 	POP TEMP
@@ -628,6 +650,41 @@ C5_UPTIME_GET:
 	LDS TEMP,_C5_UPTIME+0x04
 	STS SREG,ACCUM
 	POP ACCUM
+	RET
+
+
+;--------------------------------------------------------
+C5_FREEMEM_WRITE:
+;--------------------------------------------------------
+;Записываем в память 4 байта:
+;2Б - кол-во свободной памяти
+;2Б - всего доступной памяти
+;IN: Y - адрес для записи
+;--------------------------------------------------------
+	PUSH TEMP
+	PUSH_Z
+	PUSH_X
+
+	LDS TEMP,SREG
+	CLI
+	LDS ZH,_C5_TOP_OF_FREE_RAM+0x00
+	LDS ZL,_C5_TOP_OF_FREE_RAM+0x01
+	LDS XH,_C5_TOP_OF_STACK+0x00
+	LDS XL,_C5_TOP_OF_STACK+0x01
+	STS SREG,TEMP
+
+	SUB XL,ZL
+	STD Y+0x01,XL
+	SBC XH,ZH
+	STD Y+0x00,XH
+	LDI TEMP,low(C5_BUFFER-(_C5_FREE_RAM+_C5_RAM_BORDER_SIZE))
+	STD Y+0x03,TEMP
+	LDI TEMP,high(C5_BUFFER-(_C5_FREE_RAM+_C5_RAM_BORDER_SIZE))
+	STD Y+0x02,TEMP
+
+	POP_X
+	POP_Z
+	POP TEMP
 	RET
 
 ;========================================================================

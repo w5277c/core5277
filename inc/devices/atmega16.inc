@@ -31,7 +31,7 @@
 	.EQU	_C5_PCINT_PORTS_QNT			= 0x00			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE			= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.EQU	_C5_STACK_SIZE					= 0x40			;Стек ядра
-	.EQU	RAMEND									= 0x045f
+	.EQU	RAMEND							= 0x045f
 
 	;---IR---
 	.EQU	C5_IR_INT0						= 0x01
@@ -209,8 +209,6 @@
 	.EQU	ADC_VREF_AVCC						= (0<<REFS1)|(1<<REFS0)
 	.EQU	ADC_VREF_2_56_CAP					= (1<<REFS1)|(1<<REFS0)
 
-
-.CSEG
 .ORG 0x0000
 	JMP	MAIN															; Reset
 	CALL	_C5_IR												; External Interrupt0
@@ -238,8 +236,6 @@ _C5_PORTS_TABLE:												;Таблица из адресов IO регист�
 	.db	0x3b,0x3a,0x39,0x38,0x37,0x36,0x35,0x34,0x33,0x32,0x31,0x30
 _C5_PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00
-
-
 .MACRO MCALL
 	CALL @0
 .ENDMACRO
