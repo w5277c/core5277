@@ -19,7 +19,7 @@
 	;---DATA---
 	.EQU	_DRV_ADC_TIMER_ID									= 0x00;1B - ид таймера
 	.EQU	_DRV_ADC_TIMER_PERIOD							= 0x01;1B - период таймера
-	.EQU	_DRV_ADC_ITER_QNT									= 0x02;1B - количество итераций (64 максимум)
+	.EQU	_DRV_ADC_ITER_QNT									= 0x02;1B - количество итераций
 	.EQU	_DRV_ADC_ITER_CNTR								= 0x03;1B - счетчик итераций
 	.EQU	_DRV_ADC_ZERO_VAL									= 0x04;2B - значение нуля (15-й бит - суммировать по модулю)
 	.EQU	_DRV_ADC_STATE										= 0x06;1B - состояние драйвера
@@ -86,12 +86,23 @@ DRV_ADC_INIT:
 
 	;Блокируем ресурс ADC
 	PUSH ACCUM
-	LDI ACCUM,C5_RES_ADC
-	MCALL C5_RES_LOCK
+;	LDI ACCUM,C5_RES_ADC
+;	MCALL C5_RES_LOCK
 	POP ACCUM
 
 	;Увеличиваем размер выделенной памяти на _DRV_ADC_STRUCT_SIZE
 	MCALL C5_RAM_OFFSET
+
+	STD Z+_DRV_ADC_ZERO_VAL+0x00,XH
+	STD Z+_DRV_ADC_ZERO_VAL+0x01,XL
+
+	LDI TEMP,0x00
+	STD Z+_DRV_ADC_SUM+0x00,TEMP
+	STD Z+_DRV_ADC_SUM+0x01,TEMP
+	STD Z+_DRV_ADC_SUM+0x02,TEMP
+	STD Z+_DRV_ADC_ITER_QNT,TEMP_H
+	STD Z+_DRV_ADC_ITER_CNTR,TEMP
+
 	;Выставляем состояние - занято
 	LDI TEMP,_DRV_ADC_ST_BUSY
 	STD Z+_DRV_ADC_STATE,TEMP
@@ -103,9 +114,11 @@ DRV_ADC_INIT:
 	ORI TEMP_EL,(0<<ADEN)|(1<<ADSC)|(1<<ADIE)|(1<<ADATE)	;ADIE=1 - Разрешаем прерывание по окончанию кнвертирования
 	STS ADCSRA,TEMP_EL												;ADATE=0 - Выключен режим AutoTriggering
 
+
 	;Есть вообще что делать?
 	CPI TEMP_H,0x00
 	BREQ DRV_ADC__WAIT_END
+
 	;Необходимо использвать таймер?
 	CPI TEMP_H,0x02
 	BRCS DRV_ADC__NO_TIMER
@@ -137,8 +150,8 @@ DRV_ADC__WAIT_RESULT:
 	MCALL C5_DIV32X16
 
 	;Разблокируем ресурс ADC
-	LDI ACCUM,C5_RES_ADC
-	MCALL C5_RES_UNLOCK
+;	LDI ACCUM,C5_RES_ADC
+;	MCALL C5_RES_UNLOCK
 
 DRV_ADC__WAIT_END:
 	POP ACCUM
