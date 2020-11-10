@@ -7,6 +7,7 @@
 ;06.09.2020  w5277c@gmail.com        Восстановлены механизмы многопоточности
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;28.10.2020  w5277c@gmail.com        Багфикс программных таймеров
+;10.11.2020  w5277c@gmail.com        Исправлена критическая ошибка в _C5_STACK_TO_TOP
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -117,6 +118,7 @@
 	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
 	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
+	.MESSAGE "######## TASK ENDPOINT OFFSET:",_C5_TASK_ENDPOINT
 .ENDIF
 
 .IF TIMERS_SPEED == TIMERS_SPEED_50NS
@@ -1199,7 +1201,7 @@ _C5_STACK_TO_TOP:
 _C5_STACK_TO_TOP__LOOP:
 	MCALL _C5_PROC_HEADER_GET
 
-	;Ели задачи нет, пропускаем
+	;Если задачи нет, пропускаем
 	LDD TEMP,Z+_C5_PROC_STATE
 	ANDI TEMP,0x0f
 	CPI TEMP,_C5_PROC_STATE_ABSENT
@@ -1207,12 +1209,14 @@ _C5_STACK_TO_TOP__LOOP:
 
 	;Проверка, если адрес стека задачи в цикле больше чем адрес стека основной задачи(X), то пропускаем(равенство исключено)
 	LDD TEMP_H,Z+_C5_TASK_STACK_OFFSET+0x00
+	LDD TEMP_L,Z+_C5_TASK_STACK_OFFSET+0x01
 	CP XH,TEMP_H
 	BRCS _C5_STACK_TO_TOP__NEXT_TASK
-	LDD TEMP_L,Z+_C5_TASK_STACK_OFFSET+0x01
+	BRNE _C5_STACK_TO_TOP__CHANGE_OFFSET
 	CP XL,TEMP_L
 	BRCS _C5_STACK_TO_TOP__NEXT_TASK
 
+_C5_STACK_TO_TOP__CHANGE_OFFSET:
 	;Изменяем смещение на длину стека основной задачи
 	ADD TEMP_L,TEMP_EL
 	CLR TEMP

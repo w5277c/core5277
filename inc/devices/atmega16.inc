@@ -232,7 +232,7 @@
 	CALL	_C5_IR												; Timer/Counter0 Compare
 	CALL	_C5_IR												; Store Program Memory Ready
 
-_C5_PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,DDRB,PORTB, и т.д.
+_C5_PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB и т.д.
 	.db	0x3b,0x3a,0x39,0x38,0x37,0x36,0x35,0x34,0x33,0x32,0x31,0x30
 _C5_PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00
