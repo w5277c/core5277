@@ -18,11 +18,11 @@ C5_EEPROM_WRITE_BYTES:
 ;LOOP_CNTR - длина данных
 ;--------------------------------------------------------
 	PUSH_X
-	PSUH LOOP_CNTR
+	PUSH LOOP_CNTR
 	PUSH TEMP
 
 C5_EEPROM_WRITE_BYTES__LOOP:
-	LDS TEMP,X+
+	LD TEMP,X+
 
 	MCALL C5_EEPROM_WRITE_BYTE
 
