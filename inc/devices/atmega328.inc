@@ -405,7 +405,7 @@
 	CALL	_C5_IR														; 2-wire Serial Interface
 	CALL	_C5_IR														; Store Program Memory Ready
 
-_C5_PORTS_TABLE:														;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB, и т.д.
+_C5_PORTS_TABLE:														;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB и т.д.
 	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
 _C5_PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2
