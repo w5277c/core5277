@@ -34,11 +34,11 @@
 	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x29;1B - адрес устройства на шине
 	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x2a;1B - ид драйвера UART
 	;---OPERATIONS---
-	.EQU	DRV_BUS5277_MODE_MASTER							= 0x00;Режим ведущего (запрос-ожидание ответа)
-	.EQU	DRV_BUS5277_MODE_SLAVE_RECV					= 0x01;Режим ведомого ожидание запроса
-	.EQU	DRV_BUS5277_MODE_SLAVE_SEND					= 0x02;Режим ведомого ответ на запрос
-	.EQU	DRV_BUS5277_MODE_EXTRASCAN						= 0x03;Режим EXTRASCAN - опрос адресов на наличие новых данных
-	.EQU	DRV_BUS5277_MODE_EXTRASCAN_T					= 0x04;Режим TIMING EXTRASCAN
+	.EQU	DRV_BUS5277_OP_MASTER							= 0x00;Режим ведущего (запрос-ожидание ответа)
+	.EQU	DRV_BUS5277_OP_SLAVE_RECV						= 0x01;Режим ведомого ожидание запроса
+	.EQU	DRV_BUS5277_OP_SLAVE_SEND						= 0x02;Режим ведомого ответ на запрос
+	.EQU	DRV_BUS5277_OP_EXTRASCAN						= 0x03;Режим EXTRASCAN - опрос адресов на наличие новых данных
+	.EQU	DRV_BUS5277_OP_EXTRASCAN_T						= 0x04;Режим TIMING EXTRASCAN
 	;---REQUEST-CODES---
 	.EQU	BUS5277_FUNC_READ_DATA							= 0x01;Чтение блока данных
 	.EQU	BUS5277_FUNC_WRITE_DATA							= 0x02;Запись блока данных
@@ -97,22 +97,22 @@ DRV_BUS5277_INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация по 5277 шине
-;IN: ACCUM - режим (0x00 - master, 0x01 - slave)
+;IN: FLAGS - тип операции
 ;OUT: ACCUM - код функции/ответа(0xff - сбой)
 ;--------------------------------------------------------
-	CPI ACCUM,DRV_BUS5277_MODE_MASTER
+	CPI FLAGS,DRV_BUS5277_OP_MASTER
 	BRNE PC+0x03
 	MJMP  _DRV_BUS5277_PROC_MASTER
-	CPI ACCUM,DRV_BUS5277_MODE_SLAVE_RECV
+	CPI FLAGS,DRV_BUS5277_OP_SLAVE_RECV
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_SLAVE_RECV
-	CPI ACCUM,DRV_BUS5277_MODE_SLAVE_SEND
+	CPI FLAGS,DRV_BUS5277_OP_SLAVE_SEND
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_SLAVE_SEND
-	CPI ACCUM,DRV_BUS5277_MODE_EXTRASCAN
+	CPI FLAGS,DRV_BUS5277_OP_EXTRASCAN
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_EXTRASCAN
-	CPI ACCUM,DRV_BUS5277_MODE_EXTRASCAN_T
+	CPI FLAGS,DRV_BUS5277_OP_EXTRASCAN_T
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_EXTRASCAN_T
 	LDI ACCUM,BUS5277_FAULT

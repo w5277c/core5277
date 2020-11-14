@@ -12,3 +12,9 @@
 	.EQU	TIMERS_SPEED_50NS						= 0x64
 	.EQU	TIMERS_SPEED_25NS						= 0x32
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+
+;---PROC-ID-OPTIONS--------------------------------------;Не изменяемые опции процесса размещаемые в идентификаторе процесса
+	.EQU	C5_PROCID_OPT_NOSUSP					= 0x04			;Запрещено диспетчеру прерывать выполнение
+	.EQU	C5_PROCID_OPT_RESERV1				= 0x05			;Зарезервировано
+	.EQU	C5_PROCID_OPT_RESERV2				= 0x06			;Зарезервировано
+	.EQU	C5_PROCID_OPT_DRV						= 0x07			;Драйвер
