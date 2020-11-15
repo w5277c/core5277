@@ -40,13 +40,15 @@
 	.EQU	DRV_BUS5277_OP_EXTRASCAN						= 0x03;Режим EXTRASCAN - опрос адресов на наличие новых данных
 	.EQU	DRV_BUS5277_OP_EXTRASCAN_T						= 0x04;Режим TIMING EXTRASCAN
 	;---REQUEST-CODES---
-	.EQU	BUS5277_FUNC_READ_DATA							= 0x01;Чтение блока данных
-	.EQU	BUS5277_FUNC_WRITE_DATA							= 0x02;Запись блока данных
-	.EQU	BUS5277_FUNC_READ_SETTINGS						= 0x03;Чтение блока настроек
-	.EQU	BUS5277_FUNC_WRITE_SETTINGS					= 0x04;Запись блока настроек
-	.EQU	BUS5277_FUNC_EXECUTE_COMMAND					= 0x05;Выполнение команды (таких как вкл/выкл/инвертировать)
-	.EQU	BUS5277_FUNC_HISTORY_GET						= 0x06;Чтение первой записи истории
-	.EQU	BUS5277_FUNC_HISTORY_CLEAR						= 0x07;Удаление первой записи истории
+	.EQU	BUS5277_FUNC_INFO									= 0x00;Чтение исномации об устройстве (тип, версия, uptime)
+	.EQU	BUS5277_FUNC_DATA									= 0x01;Чтение данных
+	.EQU	BUS5277_FUNC_READ_SETTINGS						= 0x02;Чтение блока настроек
+	.EQU	BUS5277_FUNC_WRITE_SETTINGS					= 0x03;Запись блока настроек
+	.EQU	BUS5277_FUNC_EXECUTE_COMMAND					= 0x04;Выполнение команды (таких как вкл/выкл/инвертировать)
+	.EQU	BUS5277_FUNC_HISTORY_GET						= 0x05;Чтение первой записи истории
+	.EQU	BUS5277_FUNC_HISTORY_CLEAR						= 0x06;Удаление первой записи истории
+
+	.EQU	BUS5277_FUNC_RESET								= 0x7f;Сброс устройства к первоначальным настройкам
 	;---RESPONSE-CODES---
 	.EQU	BUS5277_RESP_OK									= 0x80;Все в порядке
 	.EQU	BUS5277_RESP_NO_ANSWER							= 0x81;Нет ответа
@@ -59,6 +61,26 @@
 	.EQU	BUS5277_RESP_RELAY_LOCK							= 0x88;Реле заблокировано тригерром
 	.EQU	BUS5277_RESP_ILLEGAL_CHANNEL					= 0x89;Некорректный номер канала
 	.EQU	BUS5277_RESP_ILLEGAL_COMMAND					= 0x8a;Некорректная комманда
+	;---COMMAND-CODES---
+	.EQU	BUS5277_CMD_CANCEL								= 0x00;Отмена текущей команды (не используется)
+	.EQU	BUS5277_CMD_TURN_ON								= 0x01;Включить
+	.EQU	BUS5277_CMD_TURN_OFF								= 0x02;Выключить
+	.EQU	BUS5277_CMD_SWITCH								= 0x03;Переключить
+	.EQU	BUS5277_CMD_INC_POWER							= 0x04;Увеличить мощность
+	.EQU	BUS5277_CMD_DEC_POWER							= 0x05;Уменьшить мощность
+	.EQU	BUS5277_CMD_SET_POWER							= 0x06;Установить мощность в процентах
+	.EQU	BUS5277_CMD_SET_MODE								= 0x07;Установить режим управления
+	.EQU	BUS5277_CMD_EXECUTE								= 0x08;Выполнить
+	.EQU	BUS5277_CMD_SET_VALUE							= 0x09;Задать значение
+	.EQU	BUS5277_CMD_SET_TIMER							= 0x0a;Запустить таймер
+	.EQU	BUS5277_CMD_CONNECT								= 0x0b;Подключиться
+	.EQU	BUS5277_CMD_DISCONNECT							= 0x0c;Отключиться
+	;---COMMAND-SOURCE-CODES---
+	.EQU	BUS5277_CMD_SRC_MANUAL							= 0x01;Вручную
+	.EQU	BUS5277_CMD_SRC_BUS								= 0x02;Шина
+	.EQU	BUS5277_CMD_SRC_TIMER							= 0x04;Таймер
+	.EQU	BUS5277_CMD_SRC_TRIGGER							= 0x08;Триггер
+	.EQU	BUS5277_CMD_SRC_TRIGGER_ERR					= 0x0C;Триггер(ошибка датчика)
 	;---REQUEST/RESPONSE-INTERNAL-ERROR-CODE
 	.EQU	BUS5277_FAULT										= 0xff;Сбой в логике
 	;---

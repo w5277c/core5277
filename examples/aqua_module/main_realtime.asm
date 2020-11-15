@@ -26,6 +26,8 @@
 	.include	"./inc/io/log_bytes.inc"
 	.include	"./inc/io/log_romstr.inc"
 	.include	"./inc/io/logstr_new_line.inc"
+	.include	"./inc/core/uptime_copy.inc"
+	.include	"./inc/core/meminfo_copy.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -36,6 +38,7 @@
 	.EQU	PID_LED_TASK							= 1
 	.EQU	PID_UPTIME_TASK						= 2
 	.EQU	PID_FREEMEM_TASK						= 3
+	.EQU	PID_TIMER_TASK							= 4|(1<<C5_PROCID_OPT_TIMER)
 	;Идентификаторы таймеров
 	.EQU	TID_BEEPER								= 0
 	;---
@@ -64,21 +67,29 @@ MAIN:
 	LDI PID,PID_BEEPER_TASK
 	LDI ZH,high(BEEPER_TASK__INIT)
 	LDI ZL,low(BEEPER_TASK__INIT)
-	MCALL C5_CREATE
+;	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_LED_TASK
 	LDI ZH,high(LED_TASK__INIT)
 	LDI ZL,low(LED_TASK__INIT)
-	MCALL C5_CREATE
+;	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_UPTIME_TASK
 	LDI ZH,high(UPTIME_TASK__INIT)
 	LDI ZL,low(UPTIME_TASK__INIT)
-	MCALL C5_CREATE
+;	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_FREEMEM_TASK
 	LDI ZH,high(FREEMEM_TASK__INIT)
 	LDI ZL,low(FREEMEM_TASK__INIT)
+;	MCALL C5_CREATE
+
+	LDI PID,PID_TIMER_TASK
+	LDI ZH,high(TIMER_TASK__INIT)
+	LDI ZL,low(TIMER_TASK__INIT)
+	LDI TEMP_H,BYTE3(3000/2)
+	LDI TEMP_L,BYTE2(3000/2)
+	LDI TEMP,BYTE1(3000/2)
 	MCALL C5_CREATE
 
 	MJMP C5_START
@@ -136,7 +147,7 @@ UPTIME_TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 UPTIME_TASK__INFINITE_LOOP:
-	MCALL C5_UPTIME_WRITE
+	MCALL C5_UPTIME_COPY
 	LDI TEMP,0x05
 	MCALL C5_LOG_BYTES
 	C5_LOG_ROMSTR LOGSTR_NEW_LINE
@@ -155,7 +166,7 @@ FREEMEM_TASK__INIT:
 FREEMEM_TASK__INFINITE_LOOP:
 	MOV YH,ZH
 	MOV YL,ZL
-	MCALL C5_FREEMEM_WRITE
+	MCALL C5_MEMINFO_COPY
 	LDI TEMP,0x02
 	MCALL C5_LOG_BYTES
 	LDI TEMP,'/'
@@ -169,3 +180,12 @@ FREEMEM_TASK__INFINITE_LOOP:
 	MCALL C5_WAIT_1S
 
 	RJMP FREEMEM_TASK__INFINITE_LOOP
+
+;--------------------------------------------------------;Задача
+TIMER_TASK__INIT:
+	LDI ACCUM,PD4
+	MCALL C5_PORT_MODE_OUT
+	MCALL C5_READY
+;--------------------------------------------------------
+	MCALL C5_PORT_INVERT
+	RET

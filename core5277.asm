@@ -36,7 +36,8 @@
 	.EQU	_C5_PROC_STATE_BUSY					= 0x02			;Выполняется
 	.EQU	_C5_PROC_STATE_TIME_WAIT			= 0x03			;Ждет истечения времени(только для задач)
 	.EQU	_C5_PROC_STATE_RES_WAIT				= 0x04			;Ждет освобождения ресурса(только для задач)
-	.EQU	_C5_PROC_STATE_READY					= 0x05			;Готова к выполнению
+	.EQU	_C5_PROC_STATE_TIMER_WAIT			= 0x05			;Ждет истечения времени для нового запуска
+	.EQU	_C5_PROC_STATE_READY					= 0x06			;Готова к выполнению
 ;---PROC-STATE-OPTIONS-----------------------------------;Опции процесса, размещаемые в статусе процесса(старшйи ниббл)
 	.EQU	_C5_PROCST_OPT_NOSUSP				= 0x04			;Запрещено диспетчеру прерывать выполнение
 	.EQU	_C5_PROCST_OPT_RESERV1				= 0x05			;Зарезервировано
@@ -610,84 +611,6 @@ C5_SOFT_UART_MODE_RESET:
 	POP TEMP
 	RET
 
-;--------------------------------------------------------
-C5_UPTIME_WRITE:
-;--------------------------------------------------------
-;Записываем в память 5 байт UPTIME
-;IN: Y - адрес для записи
-;--------------------------------------------------------
-	PUSH TEMP
-	LDS TEMP,SREG
-	PUSH TEMP
-	CLI
-	LDS TEMP,_C5_UPTIME+0x00
-	STD Y+0x00,TEMP
-	LDS TEMP,_C5_UPTIME+0x01
-	STD Y+0x01,TEMP
-	LDS TEMP,_C5_UPTIME+0x02
-	STD Y+0x02,TEMP
-	LDS TEMP,_C5_UPTIME+0x03
-	STD Y+0x03,TEMP
-	LDS TEMP,_C5_UPTIME+0x04
-	STD Y+0x04,TEMP
-	POP TEMP
-	STS SREG,TEMP
-	POP TEMP
-	RET
-
-;--------------------------------------------------------
-C5_UPTIME_GET:
-;--------------------------------------------------------
-;Помещаем в регистры 5 байт UPTIME
-;OUT: TEMP_EH,TEMP_EL,TEMP_H,TEMP_L,TEMP - UPTIME
-;--------------------------------------------------------
-	PUSH ACCUM
-	LDS ACCUM,SREG
-	CLI
-	LDS TEMP_EH,_C5_UPTIME+0x00
-	LDS TEMP_EL,_C5_UPTIME+0x01
-	LDS TEMP_H,_C5_UPTIME+0x02
-	LDS TEMP_L,_C5_UPTIME+0x03
-	LDS TEMP,_C5_UPTIME+0x04
-	STS SREG,ACCUM
-	POP ACCUM
-	RET
-
-
-;--------------------------------------------------------
-C5_FREEMEM_WRITE:
-;--------------------------------------------------------
-;Записываем в память 4 байта:
-;2Б - кол-во свободной памяти
-;2Б - всего доступной памяти
-;IN: Y - адрес для записи
-;--------------------------------------------------------
-	PUSH TEMP
-	PUSH_Z
-	PUSH_X
-
-	LDS TEMP,SREG
-	CLI
-	LDS ZH,_C5_TOP_OF_FREE_RAM+0x00
-	LDS ZL,_C5_TOP_OF_FREE_RAM+0x01
-	LDS XH,_C5_TOP_OF_STACK+0x00
-	LDS XL,_C5_TOP_OF_STACK+0x01
-	STS SREG,TEMP
-
-	SUB XL,ZL
-	STD Y+0x01,XL
-	SBC XH,ZH
-	STD Y+0x00,XH
-	LDI TEMP,low(C5_BUFFER-(_C5_FREE_RAM+_C5_RAM_BORDER_SIZE))
-	STD Y+0x03,TEMP
-	LDI TEMP,high(C5_BUFFER-(_C5_FREE_RAM+_C5_RAM_BORDER_SIZE))
-	STD Y+0x02,TEMP
-
-	POP_X
-	POP_Z
-	POP TEMP
-	RET
-
 ;========================================================================
 ;===Процедуры работы с таймерами=========================================
 ;========================================================================
@@ -778,12 +701,14 @@ C5_CREATE:
 ;После создания будет выполнен переход на процесс
 ;для инициализации. После инициализации процесса
 ;необходимо вызвать процедуру C5_READY
-;IN: PID, Z-точка входа
+;IN: PID, Z-точка входа, TEMP_H,TEMP_L,TEMP - время в 2мс
+;для опции задачи C5_PROCID_OPT_TIMER
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
 
 	MCALL _C5_PROC_HEADER_GET
+
 	;Записываем состояние и опции задачи
 	MOV TEMP,PID
 	ANDI TEMP,0x70														;Исключаем флаг драйвера
@@ -798,6 +723,7 @@ C5_CREATE:
 	;Проверяем на признак драйвера, пропускаем блок кода для задачи, если признак есть
 	SBRC PID,C5_PROCID_OPT_DRV
 	RJMP C5_CREATE__TASK_CODE_SKIP
+
 	;Записываем начало стека на базе вершины стека задач
 	LDS r0,_C5_TOP_OF_STACK+0x00
 	STD Z+_C5_TASK_STACK_OFFSET+0x00,r0
@@ -808,6 +734,13 @@ C5_CREATE:
 	STD Z+_C5_TASK_STACK_SIZE,TEMP
 	;Восстанавливаем все регистры из стека
 	POP TEMP
+
+	SBRS PID,C5_PROCID_OPT_TIMER
+	RJMP C5_CREATE__TIMER_CODE_SKIP1
+	STD Z+_C5_TASK_TIMEOUT+0x00,TEMP_H
+	STD Z+_C5_TASK_TIMEOUT+0x01,TEMP_L
+	STD Z+_C5_TASK_TIMEOUT+0x02,TEMP
+C5_CREATE__TIMER_CODE_SKIP1:
 	POP_Z
 	;Запоминаем текущее положение стека
 	LDS r2,SPH
@@ -818,6 +751,14 @@ C5_CREATE:
 	STS SPH,r0
 	STS SPL,r1
 
+	;Если таймер - записываем таймаут в заголовок и в стек для восстановления
+	SBRS PID,C5_PROCID_OPT_TIMER
+	RJMP C5_CREATE__TIMER_CODE_SKIP2
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH TEMP
+
+C5_CREATE__TIMER_CODE_SKIP2:
 	;Помещаем точку возврата
 	MOV r0,TEMP
 	LDI TEMP,low(_C5_TASK_ENDPOINT)
@@ -848,7 +789,11 @@ C5_READY:
 ;этом, после CALL должно быть размещено тело процесса.
 ;--------------------------------------------------------
 	LDS r0,SREG
-	SBRC _PID,C5_PROCID_OPT_DRV
+
+	;Могли затереть PID, восстанавливаем
+	MOV PID,_PID
+
+	SBRC PID,C5_PROCID_OPT_DRV
 	RJMP C5_READY__IS_DRIVER
 
 	;Записываем в стек 16 старших регистров(могут быть проинициализированы при вызове процедуры)
@@ -862,8 +807,7 @@ C5_READY:
 	STS _C5_TOP_OF_STACK+0x00,r0
 	STS _C5_TOP_OF_STACK+0x01,r1
 
-	;Могли затереть PID, восстанавливаем
-	MOV PID,_PID
+
 	MCALL _C5_PROC_HEADER_GET
 
 	;Обновляем размер стека
@@ -893,7 +837,6 @@ C5_READY__IS_DRIVER:
 	POP r0
 	POP r1
 	;Извлекаем точку входа на сновной код драйвера
-	MOV PID,_PID
 	MCALL _C5_PROC_HEADER_GET
 
 	;Записываем адрес основной процедуры драйвера
@@ -904,7 +847,12 @@ C5_READY__END:
 	;Записываем состояние не меняя опций
 	LDD TEMP,Z+_C5_PROC_STATE
 	ANDI TEMP,0xf0
+	;READY для задачи или драйвера, TIMER_WAIT - для задачи-таймера
+	SBRS TEMP,C5_PROCID_OPT_TIMER
 	ORI TEMP,_C5_PROC_STATE_READY
+	SBRC TEMP,C5_PROCID_OPT_TIMER
+	ORI TEMP,_C5_PROC_STATE_TIMER_WAIT
+
 	STD Z+_C5_PROC_STATE,TEMP
 	;Выхожу из процедуры C5_CREATE
 	RET
@@ -1004,14 +952,35 @@ _C5_TASK_ENDPOINT:
 	LDI TEMP,0x00
 	STD Z+_C5_TASK_STACK_SIZE,TEMP
 	MCALL _C5_STACK_TO_TOP
+	LDD ACCUM,Z+_C5_PROC_STATE
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	STD Z+_C5_PROC_STATE,TEMP
+
+	;Создаем таймер-задачу заново
+	SBRS ACCUM,C5_PROCID_OPT_TIMER
+	RJMP __C5_TASK_ENDPOINT_NO_TIMER
+	POP TEMP
+	STD Z+_C5_TASK_TIMEOUT+0x02,TEMP
+	POP TEMP_L
+	STD Z+_C5_TASK_TIMEOUT+0x01,TEMP_L
+	POP TEMP_H
+	STD Z+_C5_TASK_TIMEOUT+0x00,TEMP_H
+	LDS TEMP,_C5_CORE_STACK+0x00
+	STS SPH,TEMP
+	LDS TEMP,_C5_CORE_STACK+0x01
+	STS SPL,TEMP
+	;TODO MCALL C5_CREATE
+	;Не могу, нет точки входа, она нигде не хранится, стек тоже потерян
+
+	MCALL C5_DISPATCHER_UNLOCK
+	RET
+
+__C5_TASK_ENDPOINT_NO_TIMER:
 
 	LDS TEMP,_C5_CORE_STACK+0x00
 	STS SPH,TEMP
 	LDS TEMP,_C5_CORE_STACK+0x01
 	STS SPL,TEMP
-
 	MCALL C5_DISPATCHER_UNLOCK
 	RET
 
