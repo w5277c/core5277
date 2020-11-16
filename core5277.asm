@@ -790,9 +790,6 @@ C5_READY:
 ;--------------------------------------------------------
 	LDS r0,SREG
 
-	;Могли затереть PID, восстанавливаем
-	MOV PID,_PID
-
 	SBRC PID,C5_PROCID_OPT_DRV
 	RJMP C5_READY__IS_DRIVER
 
@@ -807,7 +804,8 @@ C5_READY:
 	STS _C5_TOP_OF_STACK+0x00,r0
 	STS _C5_TOP_OF_STACK+0x01,r1
 
-
+	;Могли затереть PID, восстанавливаем
+	MOV PID,_PID
 	MCALL _C5_PROC_HEADER_GET
 
 	;Обновляем размер стека
@@ -837,6 +835,7 @@ C5_READY__IS_DRIVER:
 	POP r0
 	POP r1
 	;Извлекаем точку входа на сновной код драйвера
+	MOV PID,_PID														;TODO!!! разве в _PID не хранится ид задачи?
 	MCALL _C5_PROC_HEADER_GET
 
 	;Записываем адрес основной процедуры драйвера
@@ -952,30 +951,8 @@ _C5_TASK_ENDPOINT:
 	LDI TEMP,0x00
 	STD Z+_C5_TASK_STACK_SIZE,TEMP
 	MCALL _C5_STACK_TO_TOP
-	LDD ACCUM,Z+_C5_PROC_STATE
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	STD Z+_C5_PROC_STATE,TEMP
-
-	;Создаем таймер-задачу заново
-	SBRS ACCUM,C5_PROCID_OPT_TIMER
-	RJMP __C5_TASK_ENDPOINT_NO_TIMER
-	POP TEMP
-	STD Z+_C5_TASK_TIMEOUT+0x02,TEMP
-	POP TEMP_L
-	STD Z+_C5_TASK_TIMEOUT+0x01,TEMP_L
-	POP TEMP_H
-	STD Z+_C5_TASK_TIMEOUT+0x00,TEMP_H
-	LDS TEMP,_C5_CORE_STACK+0x00
-	STS SPH,TEMP
-	LDS TEMP,_C5_CORE_STACK+0x01
-	STS SPL,TEMP
-	;TODO MCALL C5_CREATE
-	;Не могу, нет точки входа, она нигде не хранится, стек тоже потерян
-
-	MCALL C5_DISPATCHER_UNLOCK
-	RET
-
-__C5_TASK_ENDPOINT_NO_TIMER:
 
 	LDS TEMP,_C5_CORE_STACK+0x00
 	STS SPH,TEMP
@@ -996,7 +973,25 @@ C5_SUSPEND:
 	;Записываем SREG
 	PUSH r0
 
+	MOV PID,_PID														;Затираю PID, так как он уже записан в стек
+	MCALL _C5_PROC_HEADER_GET
+
+	LDD TEMP,Z+_C5_PROC_STATE
+	SBRS TEMP,C5_PROCID_OPT_TIMER
+	RJMP __C5_SUSPEND_NO_TIMER
+	LDD YH,Z+_C5_TASK_STACK_OFFSET+0x00
+	LDD YL,Z+_C5_TASK_STACK_OFFSET+0x01
+	LD TEMP,Y
+	STD Z+_C5_TASK_TIMEOUT+0x00,TEMP
+	LD TEMP,-Y
+	STD Z+_C5_TASK_TIMEOUT+0x01,TEMP
+	LD TEMP,-Y
+	STD Z+_C5_TASK_TIMEOUT+0x02,TEMP
+	LDI TEMP,_C5_PROC_STATE_TIMER_WAIT
+	RJMP __C5_SUSPEND_TIMER
+__C5_SUSPEND_NO_TIMER:
 	LDI TEMP,_C5_PROC_STATE_READY
+__C5_SUSPEND_TIMER:
 	MCALL _C5_SUSPEND__BODY
 	RET
 ;--------------------------------------------------------
