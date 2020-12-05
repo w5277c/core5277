@@ -1,16 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.10.2019  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_RAM_COPY16_DESC
+.ifdef DEF_C5_RAM_COPY16_DESC
 .else
-.set DEF_CORE5277_RAM_COPY16_DESC = 1
+.set DEF_C5_RAM_COPY16_DESC = 1
 
 ;--------------------------------------------------------
-CORE5277_RAM_COPY16_DESC:
+C5_RAM_COPY16_DESC:
 ;--------------------------------------------------------
 ;Копирование блока памяти(с декременом смещений)
 ;IN: X-SRC адрес, Z-DST адрес,
@@ -23,7 +23,8 @@ CORE5277_RAM_COPY16_DESC:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
-_CORE5277_RAM_COPY16_DESC__LOOP:
+
+_C5_RAM_COPY16_DESC__LOOP:
 	LD TEMP,X
 	ST Z,TEMP
 	SUBI XL,0x01
@@ -33,9 +34,10 @@ _CORE5277_RAM_COPY16_DESC__LOOP:
 	SUBI TEMP_L,0x01
 	SBCI TEMP_H,0x00
 	TST TEMP_H
-	BRNE _CORE5277_RAM_COPY16_DESC__LOOP
+	BRNE _C5_RAM_COPY16_DESC__LOOP
 	TST TEMP_L
-	BRNE _CORE5277_RAM_COPY16_DESC__LOOP
+	BRNE _C5_RAM_COPY16_DESC__LOOP
+
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H

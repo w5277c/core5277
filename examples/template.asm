@@ -1,31 +1,45 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;18.09.2020  w5277c@gmail.com        Первая версия шаблона
+;11.11.2020  w5277c@gmail.com        Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
 	.INCLUDE "./inc/devices/atmega328.inc"
-	.SET	REALTIME									= 1	;0-1
-	.SET	TIMERS									= 4	;0-4
-	.SET	BUFFER_SIZE								= 0x10;Размер общего буфера
-	.SET	LOGGING_PORT							= PC0	;PA0-PC7
-;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
-	;Блок драйверов
-	;.INCLUDE "./inc/drivers/i2c_h.inc"
-	;---
-	;Блок задач
-	;---
-	;Дополнительно
-	;---
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	;.EQU	PID_I2C_DRV								= 0|(1<<CORE5277_PROCID_OPT_DRV)
+	.EQU	PID_XXX_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
+	.EQU	TID_XXX									= 0
 	;---
+
+;---CORE-SETTINGS----------------------------------------
+	.SET	AVRA										= 1	;0-1
+	.SET	REALTIME									= 1	;0-1
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS	;25/50ns
+	.SET	TIMERS									= 2	;0-...
+	.SET	BUFFER_SIZE								= 0x10;Размер общего буфера
+	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
+;---INCLUDES---------------------------------------------
+	.INCLUDE "core5277.asm"
+	;Блок драйверов
+	;.INCLUDE "./inc/drivers/xxx.inc"
+	;---
+	;Блок задач
+	;---
+	;Дополнительно (по мере использования)
+	.include "./inc/io/port_mode_out.inc"
+	.include "./inc/io/port_set_hi.inc"
+	.include "./inc/io/port_set_lo.inc"
+	.include	"./inc/core/wait_1s.inc"
+	.include	"./inc/io/log_bytes.inc"
+	.include	"./inc/io/log_romstr.inc"
+	.include	"./inc/io/logstr_new_line.inc"
+	;---
+
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
@@ -37,21 +51,32 @@ MAIN:
 	STS SPL,TEMP
 
 	;Инициализация ядра
-	MCALL CORE5277_INIT
+	MCALL C5_INIT
+
+	;Инициализация драйвера
+	LDI PID,PID_XXX_DRV
+	LDI ZH,high(DRV_XXX_INIT)
+	LDI ZL,low(DRV_XXX_INIT)
+	MCALL C5_CREATE
+
 
 	;Инициализация задачи
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
-	MJMP CORE5277_START
+	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	;TODO
-	RET
+
+
+	LDI TEMP,0x01														;Пауза в 1 сеунду
+	MCALL C5_WAIT_1S
+	RJMP TASK__INFINITE_LOOP
 

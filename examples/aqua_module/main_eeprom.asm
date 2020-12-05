@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;14.09.2020  w5277c@gmail.com        Начало
+;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
@@ -41,44 +41,44 @@ MAIN:
 	STS SPL,TEMP
 
 	;Инициализация ядра
-	MCALL CORE5277_INIT
+	MCALL C5_INIT
 
 	;Инициализация задачи тестирования EEPROM
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
-	MJMP CORE5277_START
+	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	LDI TEMP,0x56
-	MCALL CORE5277_EEPROM_WRITE_BYTE
+	MCALL C5_EEPROM_WRITE_BYTE
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x01
 	LDI TEMP,0x67
-	MCALL CORE5277_EEPROM_WRITE_BYTE
+	MCALL C5_EEPROM_WRITE_BYTE
 
 
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
-	MCALL CORE5277_EEPROM_READ_BYTE
+	MCALL C5_EEPROM_READ_BYTE
 	PUSH TEMP
 
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x01
-	MCALL CORE5277_EEPROM_READ_BYTE
+	MCALL C5_EEPROM_READ_BYTE
 	MOV TEMP_L,TEMP
 	POP TEMP_H
 
-	MCALL CORE5277_LOG_WORD
-	CORE5277_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_WORD
+	C5_LOG_ROMSTR LOGSTR_NEW_LINE
 
 	RET
 

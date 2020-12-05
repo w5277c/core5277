@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;13.09.2020  w5277c@gmail.com        Начало
+;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
@@ -26,8 +26,8 @@
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_I2C_DRV								= 0|(1<<CORE5277_PROCID_OPT_DRV)
-	.EQU	PID_MLX90614_DRV						= 1|(1<<CORE5277_PROCID_OPT_DRV)
+	.EQU	PID_I2C_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_MLX90614_DRV						= 1|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
@@ -43,7 +43,7 @@ MAIN:
 	STS SPL,TEMP
 
 	;Инициализация ядра
-	MCALL CORE5277_INIT
+	MCALL C5_INIT
 
 	;Инициализация 1WIRE
 	LDI PID,PID_I2C_DRV
@@ -52,40 +52,40 @@ MAIN:
 	LDI XH,0x00
 	LDI XL,DRV_I2C_FREQ_100KHZ
 	LDI YH,PB4
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
 	;Инициализация MLX90614
 	LDI PID,PID_MLX90614_DRV
 	LDI ZH,high(DRV_MLX90614_INIT)
 	LDI ZL,low(DRV_MLX90614_INIT)
 	LDI ACCUM,PID_I2C_DRV
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования MLX90614
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
-	MJMP CORE5277_START
+	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI TEMP_H,0x00
 	LDI TEMP_L,high(500/2)
 	LDI TEMP,low(500/2)
-	MCALL CORE5277_WAIT_2MS											;Ждем 500мс
+	MCALL C5_WAIT_2MS											;Ждем 500мс
 
 	LDI TEMP,PID_MLX90614_DRV
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 	BRNE TASK__INFINITE_LOOP
 
 	MOV TEMP_H,ZH
 	MOV TEMP_L,ZL
-	MCALL CORE5277_LOG_SDNF
-	CORE5277_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_SDNF
+	C5_LOG_ROMSTR LOGSTR_NEW_LINE
 	RJMP TASK__INFINITE_LOOP
 

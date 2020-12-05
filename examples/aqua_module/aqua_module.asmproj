@@ -15,7 +15,7 @@
     <Name>aqua_module</Name>
     <RootNamespace>aqua_module</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
-    <EntryFile>$(MSBuildProjectDirectory)\main_eeprom.asm</EntryFile>
+    <EntryFile>$(MSBuildProjectDirectory)\main_buttons.asm</EntryFile>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
     <CacheFlash>true</CacheFlash>
@@ -72,6 +72,9 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="main_buttons.asm">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="main_eeprom.asm">
       <SubType>Code</SubType>
     </Compile>

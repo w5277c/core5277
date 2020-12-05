@@ -1,10 +1,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;24.03.2020  w5277c@gmail.com        Начало
 ;30.08.2020  w5277c@gmail.com        Адаптировано под изменения ядра
 ;13.09.2020  w5277c@gmail.com        Добавлена дополнительная проверка на присутствие датчика
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./inc/io/port_mode_in.inc"
@@ -26,15 +26,15 @@ DRV_1WIRE_INIT:
 ;--------------------------------------------------------
 	PUSH ACCUM
 	LDI ACCUM,_DRV_1WIRE_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 	STD Z+_DRV_1WIRE_PORT,ACCUM
 
 	;Инициализация порта (IN, WO_PULL)
-	MCALL CORE5277_PORT_MODE_IN
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_IN
+	MCALL C5_PORT_SET_LO
 
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;IN: Y - адрес на блок данных на запись
@@ -51,7 +51,7 @@ DRV_1WIRE_INIT:
 	PUSH ACCUM
 
 	;Сичтываем информацию о пине
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 	LDD ACCUM,Z+_DRV_1WIRE_PORT
 
 	MOV ZH,YH
@@ -66,33 +66,33 @@ DRV_1WIRE_INIT:
 	;Занимаем ресурс(TIMER_B)
 ;	PUSH ACCUM
 ;_DRV_1WIRE_PROC__WAIT_RES:
-;	LDI ACCUM,CORE5277_RES_TIMER_B
-;	MCALL CORE5277_RES_LOCK
+;	LDI ACCUM,C5_RES_TIMER_B
+;	MCALL C5_RES_LOCK
 ;	BRNE _DRV_1WIRE_PROC__WAIT_RES
 ;	POP ACCUM
 
-	MCALL CORE5277_DISPATCHER_LOCK
+	MCALL C5_DISPATCHER_LOCK
 	;Проверка на присутствие
-	MCALL CORE5277_PORT_SET_LO
-	MCALL CORE5277_PORT_MODE_OUT
+	MCALL C5_PORT_SET_LO
+	MCALL C5_PORT_MODE_OUT
 	LDI TEMP,(540*2)/6												;500us(480-960)
-	MCALL CORE5277_WAIT_500NS										;TODO по факту получл 489мс
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_PORT_MODE_IN
+	MCALL C5_WAIT_500NS												;TODO по факту получл 489мс
+	MCALL C5_WAIT_500NS
+	MCALL C5_WAIT_500NS
+	MCALL C5_WAIT_500NS
+	MCALL C5_WAIT_500NS
+	MCALL C5_WAIT_500NS
+	MCALL C5_PORT_MODE_IN
 	LDI TEMP,60*2														;60us
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_PORT_GET											;Читаем состояние порта
+	MCALL C5_WAIT_500NS
+	MCALL C5_PORT_GET													;Читаем состояние порта
 	BRCS _DRV_1WIRE_PROC__ERROR
 	LDI TEMP,(440*2)/4												;440us(420 min)
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_PORT_GET											;Читаем состояние порта
+	MCALL C5_WAIT_500NS
+	MCALL C5_WAIT_500NS
+	MCALL C5_WAIT_500NS
+	MCALL C5_WAIT_500NS
+	MCALL C5_PORT_GET													;Читаем состояние порта
 	BRCC _DRV_1WIRE_PROC__ERROR
 	CPI TEMP_H,0x00
 	BREQ _DRV_1WIRE_PROC__WRITE_SKIP
@@ -123,10 +123,10 @@ _DRV_1WIRE_PROC__READ_SKIP:
 _DRV_1WIRE_PROC__ERROR:
 	LDI TEMP,0x01
 _DRV_1WIRE_PROC__END:
-	MCALL CORE5277_DISPATCHER_UNLOCK
+	MCALL C5_DISPATCHER_UNLOCK
 	;Освобождаем ресурс
-;	LDI ACCUM,CORE5277_RES_TIMER_B
-;	MCALL CORE5277_RES_UNLOCK
+;	LDI ACCUM,C5_RES_TIMER_B
+;	MCALL C5_RES_UNLOCK
 
 	POP ACCUM
 	POP TEMP_L
@@ -147,15 +147,15 @@ _DRV_1WIRE_READ_BYTE:
 	LDI LOOP_CNTR,0x08
 _DRV_1WIRE_READ_BYTE__LOOP:
    CLI																	;(old 14us)
-	MCALL CORE5277_PORT_MODE_OUT
+	MCALL C5_PORT_MODE_OUT
 	MCALL _DRV_1WIRE_DELAY_1US
-	MCALL CORE5277_PORT_MODE_IN
+	MCALL C5_PORT_MODE_IN
    MCALL _DRV_1WIRE_DELAY_4US
-	MCALL CORE5277_PORT_GET											;Читаем состояние порта
+	MCALL C5_PORT_GET													;Читаем состояние порта
 	SEI
 	ROR TEMP_L
    LDI TEMP,45*2														;45us
-   MCALL CORE5277_WAIT_500NS
+   MCALL C5_WAIT_500NS
 	DEC LOOP_CNTR
 	BRNE _DRV_1WIRE_READ_BYTE__LOOP
 	MOV TEMP,TEMP_L
@@ -176,15 +176,15 @@ _DRV_1WIRE_WRITE_BYTE:
 	MOV TEMP_L,TEMP
 	LDI LOOP_CNTR,0x08
 _DRV_1WIRE_WRITE_BYTE__LOOP:
-	MCALL CORE5277_PORT_MODE_OUT
+	MCALL C5_PORT_MODE_OUT
 	MCALL _DRV_1WIRE_DELAY_1US
 	LSR TEMP_L
 	BRCC _DRV_1WIRE_WRITE_BYTE__LO
-	MCALL CORE5277_PORT_MODE_IN
+	MCALL C5_PORT_MODE_IN
 _DRV_1WIRE_WRITE_BYTE__LO:
    LDI TEMP,60*2														;60us
-   MCALL CORE5277_WAIT_500NS
-	MCALL CORE5277_PORT_MODE_IN
+   MCALL C5_WAIT_500NS
+	MCALL C5_PORT_MODE_IN
 	DEC LOOP_CNTR
 	BRNE _DRV_1WIRE_WRITE_BYTE__LOOP
 
@@ -214,6 +214,6 @@ _DRV_1WIRE_DELAY_4US:
 	PUSH TEMP
 	LDI TEMP,14
 	DEC TEMP
-   BRNE PC-0x01
+	BRNE PC-0x01
 	POP TEMP
    RET

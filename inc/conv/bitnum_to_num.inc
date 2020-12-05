@@ -1,16 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.10.2019  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_BITNUM_TO_NUM
+.ifdef DEF_C5_BITNUM_TO_NUM
 .else
-.set DEF_CORE5277_BITNUM_TO_NUM = 1
+.set DEF_C5_BITNUM_TO_NUM = 1
 
 ;--------------------------------------------------------
-CORE5277_BITNUM_TO_NUM:
+C5_BITNUM_TO_NUM:
 ;--------------------------------------------------------
 ;Конвертирование байта в HEX(два ASCII символа)
 ;IN: TEMP - номер бита(0-7)
@@ -19,12 +19,12 @@ CORE5277_BITNUM_TO_NUM:
 	PUSH TEMP_L
 	LDI TEMP_L,0x01
 	TST TEMP
-	BREQ _CORE5277_BITNUM_TO_NUM__END
-_CORE5277_BITNUM_TO_NUM__LOOP:
+	BREQ _C5_BITNUM_TO_NUM__END
+_C5_BITNUM_TO_NUM__LOOP:
 	LSL TEMP_L
 	DEC TEMP
-	BRNE _CORE5277_BITNUM_TO_NUM__LOOP
-_CORE5277_BITNUM_TO_NUM__END:
+	BRNE _C5_BITNUM_TO_NUM__LOOP
+_C5_BITNUM_TO_NUM__END:
 	MOV TEMP,TEMP_L
 	POP TEMP_L
 	RET

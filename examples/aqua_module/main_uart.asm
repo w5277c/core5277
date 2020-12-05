@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;19.09.2020  w5277c@gmail.com        Начало
+;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
@@ -29,7 +29,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_UART_DRV							= 0|(1<<CORE5277_PROCID_OPT_DRV)
+	.EQU	PID_UART_DRV							= 0|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
@@ -44,7 +44,7 @@ MAIN:
 	STS SPL,TEMP
 
 	;Инициализация ядра
-	MCALL CORE5277_INIT
+	MCALL C5_INIT
 
 	;Инициализация UART
 	LDI PID,PID_UART_DRV
@@ -55,15 +55,15 @@ MAIN:
 	LDI ACCUM,TID_UART
 	LDI FLAGS,(1<<DRV_HUART_OPT_BREAK)
 	LDI YH,DRV_HUART_BAUDRATE_9600
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
-	MJMP CORE5277_START
+	MJMP C5_START
 
 	TASK_DATA:
 	.db	"Hello world!",0x0d,0x0a,0x00
@@ -71,16 +71,16 @@ MAIN:
 ;--------------------------------------------------------;Задача
 TASK__INIT:
 	LDI ACCUM,0x21
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI LOOP_CNTR,0x21
 	LDI TEMP,0x00
 	MOV XH,ZH
 	MOV XL,ZL
-	MCALL CORE5277_RAM_FILL8
+	MCALL C5_RAM_FILL8
 
 	LDI TEMP,PID_UART_DRV
 	LDI YH,high(TASK_DATA)|0x80
@@ -89,12 +89,12 @@ TASK__INFINITE_LOOP:
 	LDI TEMP_EL,0x20
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 	CPI TEMP_H,DRV_HUART_ST_READY
 	BRNE TASK__INFINITE_LOOP
 
 	MOV YH,ZH
 	MOV YL,ZL
-	MCALL CORE5277_LOG_STR
+	MCALL C5_LOG_STR
 	RJMP TASK__INFINITE_LOOP
 

@@ -1,18 +1,18 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.10.2019  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_CRC8_MAXIM_BLOCK
+.ifdef DEF_C5_CRC8_MAXIM_BLOCK
 .else
-.set DEF_CORE5277_CRC8_MAXIM_BLOCK = 1
+.set DEF_C5_CRC8_MAXIM_BLOCK = 1
 
 .include	"./inc/conv/crc8_maxim.inc"
 
 ;--------------------------------------------------------
-CORE5277_CRC8_MAXIM_BLOCK:
+C5_CRC8_MAXIM_BLOCK:
 ;--------------------------------------------------------
 ;Подсчет блока CRC
 ;IN: X - адрес начала блока, LOOP_CNTR - длина
@@ -22,11 +22,11 @@ CORE5277_CRC8_MAXIM_BLOCK:
 	PUSH LOOP_CNTR
 	CLR ACCUM
 
-_CORE5277_CRC8_MAXIM_BLOCK__LOOP:
+_C5_CRC8_MAXIM_BLOCK__LOOP:
 	LD TEMP,X+
-	MCALL CORE5277_CRC8_MAXIM
+	MCALL C5_CRC8_MAXIM
 	DEC LOOP_CNTR
-	BRNE _CORE5277_CRC8_MAXIM_BLOCK__LOOP
+	BRNE _C5_CRC8_MAXIM_BLOCK__LOOP
 
 	POP LOOP_CNTR
 	POP_X

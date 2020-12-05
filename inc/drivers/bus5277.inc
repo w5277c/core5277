@@ -1,114 +1,140 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Р Р°Р·СЂР°Р±РѕС‚С‡РёРєРѕРј Рё РїРѕР»РЅРѕРїСЂР°РІРЅС‹Рј РІР»Р°РґРµР»СЊС†РµРј РґР°РЅРЅРѕРіРѕ РёСЃС…РѕРґРЅРѕРіРѕ РєРѕРґР° СЏРІР»СЏРµС‚СЃСЏ РЈРґРѕРІРёС‡РµРЅРєРѕ РљРѕРЅСЃС‚Р°РЅС‚РёРЅ РђР»РµРєСЃР°РЅРґСЂРѕРІРёС‡,
+;РµРјР°Р№Р»:w5277c@gmail.com, РїРѕ РІСЃРµРј РїСЂР°РІРѕРІС‹Рј РІРѕРїСЂРѕСЃР°Рј РѕР±СЂР°С‰Р°Р№С‚РµСЃСЊ РЅР° email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.05.2020  w5277c@gmail.com        Начало
+;03.05.2020  w5277c@gmail.com        РќР°С‡Р°Р»Рѕ
 ;-----------------------------------------------------------------------------------------------------------------------
-;Шина на базе serial(19200-8N1+BREAK)
+;РЁРёРЅР° РЅР° Р±Р°Р·Рµ serial(19200-8N1+BREAK)
 ;  addr     size     code     data0        dataN     crc
 ; |eaaaaaaa|rrssssss|qccccccc|dddddddd|...|dddddddd|wwwwwwww|
-; где:
-; e - бит extrascan, если включен, то пакет состоит из 2 байт(addr+crc)(если а=0 - режим таймингов)
-; a - адрес устройства (0-127)
-; r - заразервировано
-; s - размер всего пакета(40B максимум, длина данных = s-4)
-; q - бит 0-запрос, 1-ответ
-; с - код функции или ответа
-; d - данные функции
+; РіРґРµ:
+; e - Р±РёС‚ extrascan, РµСЃР»Рё РІРєР»СЋС‡РµРЅ, С‚Рѕ РїР°РєРµС‚ СЃРѕСЃС‚РѕРёС‚ РёР· 2 Р±Р°Р№С‚(addr+crc)(РµСЃР»Рё Р°=0 - СЂРµР¶РёРј С‚Р°Р№РјРёРЅРіРѕРІ)
+; a - Р°РґСЂРµСЃ СѓСЃС‚СЂРѕР№СЃС‚РІР° (0-127)
+; r - Р·Р°СЂР°Р·РµСЂРІРёСЂРѕРІР°РЅРѕ
+; s - СЂР°Р·РјРµСЂ РІСЃРµРіРѕ РїР°РєРµС‚Р°(40B РјР°РєСЃРёРјСѓРј, РґР»РёРЅР° РґР°РЅРЅС‹С… = s-4)
+; q - Р±РёС‚ 0-Р·Р°РїСЂРѕСЃ, 1-РѕС‚РІРµС‚
+; СЃ - РєРѕРґ С„СѓРЅРєС†РёРё РёР»Рё РѕС‚РІРµС‚Р°
+; d - РґР°РЅРЅС‹Рµ С„СѓРЅРєС†РёРё
 ; w - crc8(1wire)
+
+	.include	"./inc/mem/ram_offset.inc"
+	.include	"./inc/mem/ram_realloc.inc"
+	.include	"./inc/conv/crc8_maxim_block.inc"
+	.include	"./inc/mem/ram_copy8.inc"
+	.include	"./inc/mem/rom_read_bytes.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VAR-OFFSETS---
 	;---DATA-OFFSETS---
-	.EQU	_DRV_BUS5277_PACKET_HEADER						= 0x00;3B - заголовок пакета
+	.EQU	_DRV_BUS5277_PACKET_HEADER						= 0x00;3B - Р·Р°РіРѕР»РѕРІРѕРє РїР°РєРµС‚Р°
 	.EQU		_DRV_BUS5277_PACKET_HEADER_ADDR			= 0x00;
 	.EQU		_DRV_BUS5277_PACKET_HEADER_SIZE			= 0x01;
 	.EQU		_DRV_BUS5277_PACKET_HEADER_CODE			= 0x02;
-	.EQU	DRV_BUS5277_PACKET_DATA							= 0x03;37B - тело пакета
-	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x29;1B - адрес устройства на шине
-	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x2a;1B - ид драйвера UART
+	.EQU	DRV_BUS5277_PACKET_DATA							= 0x03;37B - С‚РµР»Рѕ РїР°РєРµС‚Р°
+	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x29;1B - Р°РґСЂРµСЃ СѓСЃС‚СЂРѕР№СЃС‚РІР° РЅР° С€РёРЅРµ
+	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x2a;1B - РёРґ РґСЂР°Р№РІРµСЂР° UART
 	;---OPERATIONS---
-	.EQU	DRV_BUS5277_MODE_MASTER							= 0x00;Режим ведущего (запрос-ожидание ответа)
-	.EQU	DRV_BUS5277_MODE_SLAVE_RECV					= 0x01;Режим ведомого ожидание запроса
-	.EQU	DRV_BUS5277_MODE_SLAVE_SEND					= 0x02;Режим ведомого ответ на запрос
-	.EQU	DRV_BUS5277_MODE_EXTRASCAN						= 0x03;Режим EXTRASCAN - опрос адресов на наличие новых данных
-	.EQU	DRV_BUS5277_MODE_EXTRASCAN_T					= 0x04;Режим TIMING EXTRASCAN
+	.EQU	DRV_BUS5277_OP_MASTER							= 0x00;Р РµР¶РёРј РІРµРґСѓС‰РµРіРѕ (Р·Р°РїСЂРѕСЃ-РѕР¶РёРґР°РЅРёРµ РѕС‚РІРµС‚Р°)
+	.EQU	DRV_BUS5277_OP_SLAVE_RECV						= 0x01;Р РµР¶РёРј РІРµРґРѕРјРѕРіРѕ РѕР¶РёРґР°РЅРёРµ Р·Р°РїСЂРѕСЃР°
+	.EQU	DRV_BUS5277_OP_SLAVE_SEND						= 0x02;Р РµР¶РёРј РІРµРґРѕРјРѕРіРѕ РѕС‚РІРµС‚ РЅР° Р·Р°РїСЂРѕСЃ
+	.EQU	DRV_BUS5277_OP_EXTRASCAN						= 0x03;Р РµР¶РёРј EXTRASCAN - РѕРїСЂРѕСЃ Р°РґСЂРµСЃРѕРІ РЅР° РЅР°Р»РёС‡РёРµ РЅРѕРІС‹С… РґР°РЅРЅС‹С…
+	.EQU	DRV_BUS5277_OP_EXTRASCAN_T						= 0x04;Р РµР¶РёРј TIMING EXTRASCAN
 	;---REQUEST-CODES---
-	.EQU	BUS5277_FUNC_READ_DATA							= 0x01;Чтение блока данных
-	.EQU	BUS5277_FUNC_WRITE_DATA							= 0x02;Запись блока данных
-	.EQU	BUS5277_FUNC_READ_SETTINGS						= 0x03;Чтение блока настроек
-	.EQU	BUS5277_FUNC_WRITE_SETTINGS					= 0x04;Запись блока настроек
-	.EQU	BUS5277_FUNC_EXECUTE_COMMAND					= 0x05;Выполнение команды (таких как вкл/выкл/инвертировать)
-	.EQU	BUS5277_FUNC_HISTORY_GET						= 0x06;Чтение первой записи истории
-	.EQU	BUS5277_FUNC_HISTORY_CLEAR						= 0x07;Удаление первой записи истории
+	.EQU	BUS5277_FUNC_INFO									= 0x00;Р§С‚РµРЅРёРµ РёСЃРЅРѕРјР°С†РёРё РѕР± СѓСЃС‚СЂРѕР№СЃС‚РІРµ (С‚РёРї, РІРµСЂСЃРёСЏ, uptime)
+	.EQU	BUS5277_FUNC_DATA									= 0x01;Р§С‚РµРЅРёРµ РґР°РЅРЅС‹С…
+	.EQU	BUS5277_FUNC_READ_SETTINGS						= 0x02;Р§С‚РµРЅРёРµ Р±Р»РѕРєР° РЅР°СЃС‚СЂРѕРµРє
+	.EQU	BUS5277_FUNC_WRITE_SETTINGS					= 0x03;Р—Р°РїРёСЃСЊ Р±Р»РѕРєР° РЅР°СЃС‚СЂРѕРµРє
+	.EQU	BUS5277_FUNC_EXECUTE_COMMAND					= 0x04;Р’С‹РїРѕР»РЅРµРЅРёРµ РєРѕРјР°РЅРґС‹ (С‚Р°РєРёС… РєР°Рє РІРєР»/РІС‹РєР»/РёРЅРІРµСЂС‚РёСЂРѕРІР°С‚СЊ)
+	.EQU	BUS5277_FUNC_HISTORY_GET						= 0x05;Р§С‚РµРЅРёРµ РїРµСЂРІРѕР№ Р·Р°РїРёСЃРё РёСЃС‚РѕСЂРёРё
+	.EQU	BUS5277_FUNC_HISTORY_CLEAR						= 0x06;РЈРґР°Р»РµРЅРёРµ РїРµСЂРІРѕР№ Р·Р°РїРёСЃРё РёСЃС‚РѕСЂРёРё
+
+	.EQU	BUS5277_FUNC_RESET								= 0x7f;РЎР±СЂРѕСЃ СѓСЃС‚СЂРѕР№СЃС‚РІР° Рє РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅС‹Рј РЅР°СЃС‚СЂРѕР№РєР°Рј
 	;---RESPONSE-CODES---
-	.EQU	BUS5277_RESP_OK									= 0x80;Все в порядке
-	.EQU	BUS5277_RESP_NO_ANSWER							= 0x81;Нет ответа
-	.EQU	BUS5277_RESP_INVALID_PACKET					= 0x82;Битый пакет, несоответствие ADDR, бит запрос/ответ или CRC
-	.EQU	BUS5277_RESP_ILLEGAL_FUNCTION					= 0x83;Неизвестная функция
-	.EQU	BUS5277_RESP_ILLEGAL_DATA_ADDR				= 0x84;Не корректно указан начальный адрес либо запрошенный блок выходит за рамки блока данных
-	.EQU	BUS5277_RESP_INVALIDATE							= 0x85;Не корректный формат данных
-	.EQU  BUS5277_RESP_REJECT								= 0x86;Отклонено, например из-за SOURCE_MODE запрещающего управление по MODBUS
-	.EQU	BUS5277_RESP_NO_DATA								= 0x87;Нечего возвращать
-	.EQU	BUS5277_RESP_RELAY_LOCK							= 0x88;Реле заблокировано тригерром
-	.EQU	BUS5277_RESP_ILLEGAL_CHANNEL					= 0x89;Некорректный номер канала
-	.EQU	BUS5277_RESP_ILLEGAL_COMMAND					= 0x8a;Некорректная комманда
+	.EQU	BUS5277_RESP_OK									= 0x80;Р’СЃРµ РІ РїРѕСЂСЏРґРєРµ
+	.EQU	BUS5277_RESP_NO_ANSWER							= 0x81;РќРµС‚ РѕС‚РІРµС‚Р°
+	.EQU	BUS5277_RESP_INVALID_PACKET					= 0x82;Р‘РёС‚С‹Р№ РїР°РєРµС‚, РЅРµСЃРѕРѕС‚РІРµС‚СЃС‚РІРёРµ ADDR, Р±РёС‚ Р·Р°РїСЂРѕСЃ/РѕС‚РІРµС‚ РёР»Рё CRC
+	.EQU	BUS5277_RESP_ILLEGAL_FUNCTION					= 0x83;РќРµРёР·РІРµСЃС‚РЅР°СЏ С„СѓРЅРєС†РёСЏ
+	.EQU	BUS5277_RESP_ILLEGAL_DATA_ADDR				= 0x84;РќРµ РєРѕСЂСЂРµРєС‚РЅРѕ СѓРєР°Р·Р°РЅ РЅР°С‡Р°Р»СЊРЅС‹Р№ Р°РґСЂРµСЃ Р»РёР±Рѕ Р·Р°РїСЂРѕС€РµРЅРЅС‹Р№ Р±Р»РѕРє РІС‹С…РѕРґРёС‚ Р·Р° СЂР°РјРєРё Р±Р»РѕРєР° РґР°РЅРЅС‹С…
+	.EQU	BUS5277_RESP_INVALIDATE							= 0x85;РќРµ РєРѕСЂСЂРµРєС‚РЅС‹Р№ С„РѕСЂРјР°С‚ РґР°РЅРЅС‹С…
+	.EQU  BUS5277_RESP_REJECT								= 0x86;РћС‚РєР»РѕРЅРµРЅРѕ, РЅР°РїСЂРёРјРµСЂ РёР·-Р·Р° SOURCE_MODE Р·Р°РїСЂРµС‰Р°СЋС‰РµРіРѕ СѓРїСЂР°РІР»РµРЅРёРµ РїРѕ MODBUS
+	.EQU	BUS5277_RESP_NO_DATA								= 0x87;РќРµС‡РµРіРѕ РІРѕР·РІСЂР°С‰Р°С‚СЊ
+	.EQU	BUS5277_RESP_RELAY_LOCK							= 0x88;Р РµР»Рµ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРѕ С‚СЂРёРіРµСЂСЂРѕРј
+	.EQU	BUS5277_RESP_ILLEGAL_CHANNEL					= 0x89;РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РЅРѕРјРµСЂ РєР°РЅР°Р»Р°
+	.EQU	BUS5277_RESP_ILLEGAL_COMMAND					= 0x8a;РќРµРєРѕСЂСЂРµРєС‚РЅР°СЏ РєРѕРјРјР°РЅРґР°
+	;---COMMAND-CODES---
+	.EQU	BUS5277_CMD_CANCEL								= 0x00;РћС‚РјРµРЅР° С‚РµРєСѓС‰РµР№ РєРѕРјР°РЅРґС‹ (РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ)
+	.EQU	BUS5277_CMD_TURN_ON								= 0x01;Р’РєР»СЋС‡РёС‚СЊ
+	.EQU	BUS5277_CMD_TURN_OFF								= 0x02;Р’С‹РєР»СЋС‡РёС‚СЊ
+	.EQU	BUS5277_CMD_SWITCH								= 0x03;РџРµСЂРµРєР»СЋС‡РёС‚СЊ
+	.EQU	BUS5277_CMD_INC_POWER							= 0x04;РЈРІРµР»РёС‡РёС‚СЊ РјРѕС‰РЅРѕСЃС‚СЊ
+	.EQU	BUS5277_CMD_DEC_POWER							= 0x05;РЈРјРµРЅСЊС€РёС‚СЊ РјРѕС‰РЅРѕСЃС‚СЊ
+	.EQU	BUS5277_CMD_SET_POWER							= 0x06;РЈСЃС‚Р°РЅРѕРІРёС‚СЊ РјРѕС‰РЅРѕСЃС‚СЊ РІ РїСЂРѕС†РµРЅС‚Р°С…
+	.EQU	BUS5277_CMD_SET_MODE								= 0x07;РЈСЃС‚Р°РЅРѕРІРёС‚СЊ СЂРµР¶РёРј СѓРїСЂР°РІР»РµРЅРёСЏ
+	.EQU	BUS5277_CMD_EXECUTE								= 0x08;Р’С‹РїРѕР»РЅРёС‚СЊ
+	.EQU	BUS5277_CMD_SET_VALUE							= 0x09;Р—Р°РґР°С‚СЊ Р·РЅР°С‡РµРЅРёРµ
+	.EQU	BUS5277_CMD_SET_TIMER							= 0x0a;Р—Р°РїСѓСЃС‚РёС‚СЊ С‚Р°Р№РјРµСЂ
+	.EQU	BUS5277_CMD_CONNECT								= 0x0b;РџРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ
+	.EQU	BUS5277_CMD_DISCONNECT							= 0x0c;РћС‚РєР»СЋС‡РёС‚СЊСЃСЏ
+	;---COMMAND-SOURCE-CODES---
+	.EQU	BUS5277_CMD_SRC_MANUAL							= 0x01;Р’СЂСѓС‡РЅСѓСЋ
+	.EQU	BUS5277_CMD_SRC_BUS								= 0x02;РЁРёРЅР°
+	.EQU	BUS5277_CMD_SRC_TIMER							= 0x04;РўР°Р№РјРµСЂ
+	.EQU	BUS5277_CMD_SRC_TRIGGER							= 0x08;РўСЂРёРіРіРµСЂ
+	.EQU	BUS5277_CMD_SRC_TRIGGER_ERR					= 0x0C;РўСЂРёРіРіРµСЂ(РѕС€РёР±РєР° РґР°С‚С‡РёРєР°)
 	;---REQUEST/RESPONSE-INTERNAL-ERROR-CODE
-	.EQU	BUS5277_FAULT								= 0xff;Сбой в логике
+	.EQU	BUS5277_FAULT										= 0xff;РЎР±РѕР№ РІ Р»РѕРіРёРєРµ
 	;---
-	.EQU	DRV_BUS5277_MAX_PACKET_SIZE					= 0x28;Максимальный размер пакета 40B
-	.EQU	DRV_BUS5277_MIN_PACKET_SIZE					= 0x04;Минимальный размер пакета 4B
-	.EQU	_DRV_BUS5277_LISTEN_TIMEOUT					= 0x32;100 мс - таймаут для приема ответа
-	.EQU	_DRV_BUS5277_MASTER_ADDR						= 0x00;Адрес мастера
+	.EQU	DRV_BUS5277_MAX_PACKET_SIZE					= 0x28;РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїР°РєРµС‚Р° 40B
+	.EQU	DRV_BUS5277_MIN_PACKET_SIZE					= 0x04;РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїР°РєРµС‚Р° 4B
+	.EQU	_DRV_BUS5277_LISTEN_TIMEOUT					= 0x32;100 РјСЃ - С‚Р°Р№РјР°СѓС‚ РґР»СЏ РїСЂРёРµРјР° РѕС‚РІРµС‚Р°
+	.EQU	_DRV_BUS5277_MASTER_ADDR						= 0x00;РђРґСЂРµСЃ РјР°СЃС‚РµСЂР°
 	;---
-	.EQU	_DRV_BUS5277_RAM_USAGE_SIZE					= 0x29;41B - буфер шины(40B) + переменные(1B)
+	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x29;41B - Р±СѓС„РµСЂ С€РёРЅС‹(40B) + РїРµСЂРµРјРµРЅРЅС‹Рµ(1B)
 
 ;--------------------------------------------------------
 DRV_BUS5277_INIT:
 ;--------------------------------------------------------
-;Инициализация
-;TEMP_H - адрес устройства на шине
-;TEMP_L - номер флага EXTRASCAN_HAVE_DATA
-;ACCUM - ид UART драйвера
+;РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ
+;TEMP_H - Р°РґСЂРµСЃ СѓСЃС‚СЂРѕР№СЃС‚РІР° РЅР° С€РёРЅРµ
+;TEMP_L - РЅРѕРјРµСЂ С„Р»Р°РіР° EXTRASCAN_HAVE_DATA
+;ACCUM - РёРґ UART РґСЂР°Р№РІРµСЂР°
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
 
-	;Выделяем память
+	;Р’С‹РґРµР»СЏРµРј РїР°РјСЏС‚СЊ
 	PUSH ACCUM
-	MOV TEMP,DRIVER_ID
-	LDI ACCUM,_DRV_BUS5277_RAM_USAGE_SIZE
-	MCALL CORE5277_RAM_REALLOC
-	;Записываем адрес на шине и флаг HAVE_DATA
+	LDI ACCUM,_DRV_BUS5277_RAM_SIZE
+	MCALL C5_RAM_REALLOC
+	;Р—Р°РїРёСЃС‹РІР°РµРј Р°РґСЂРµСЃ РЅР° С€РёРЅРµ Рё С„Р»Р°Рі HAVE_DATA
 	STD Z+_DRV_BUS5277_BUS_ADDR,TEMP_H
 ;;;TODO	STD Z+DRV_BUS5277_FLAG_HAVE_DATA,TEMP_L
-	;Записываем ид UART'а
+	;Р—Р°РїРёСЃС‹РІР°РµРј РёРґ UART'Р°
 	POP ACCUM
 	STD Z+_DRV_BUS5277_UART_DRV_ID,ACCUM
 
 	POP TEMP
 	POP_Z
 
-	LDI ACCUM,(1<<CORE5277_MODEBITS_DRV_BSEM)
-	MCALL CORE5277_DRIVER_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
-;Основной код, коммуникация по 5277 шине
-;IN: ACCUM - режим (0x00 - master, 0x01 - slave)
-;OUT: ACCUM - код функции/ответа(0xff - сбой)
+;РћСЃРЅРѕРІРЅРѕР№ РєРѕРґ, РєРѕРјРјСѓРЅРёРєР°С†РёСЏ РїРѕ 5277 С€РёРЅРµ
+;IN: FLAGS - С‚РёРї РѕРїРµСЂР°С†РёРё
+;OUT: ACCUM - РєРѕРґ С„СѓРЅРєС†РёРё/РѕС‚РІРµС‚Р°(0xff - СЃР±РѕР№)
 ;--------------------------------------------------------
-	CPI ACCUM,DRV_BUS5277_MODE_MASTER
+	CPI FLAGS,DRV_BUS5277_OP_MASTER
 	BRNE PC+0x03
 	MJMP  _DRV_BUS5277_PROC_MASTER
-	CPI ACCUM,DRV_BUS5277_MODE_SLAVE_RECV
+	CPI FLAGS,DRV_BUS5277_OP_SLAVE_RECV
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_SLAVE_RECV
-	CPI ACCUM,DRV_BUS5277_MODE_SLAVE_SEND
+	CPI FLAGS,DRV_BUS5277_OP_SLAVE_SEND
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_SLAVE_SEND
-	CPI ACCUM,DRV_BUS5277_MODE_EXTRASCAN
+	CPI FLAGS,DRV_BUS5277_OP_EXTRASCAN
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_EXTRASCAN
-	CPI ACCUM,DRV_BUS5277_MODE_EXTRASCAN_T
+	CPI FLAGS,DRV_BUS5277_OP_EXTRASCAN_T
 	BRNE PC+0x03
 	MJMP _DRV_BUS5277_PROC_EXTRASCAN_T
 	LDI ACCUM,BUS5277_FAULT
@@ -117,11 +143,11 @@ DRV_BUS5277_INIT:
 ;--------------------------------------------------------
 _DRV_BUS5277_PROC_MASTER:
 ;--------------------------------------------------------
-;Режим MASTER
-;IN: Y - адрес на данные, TEMP_H - код функции,
-;TEMP_L - длина данных, LOOP_CNTR - адрес устройства
-;OUT: ACCUM - код ответа,
-;Z - адрес на блок данных, TEMP - длина данных
+;Р РµР¶РёРј MASTER
+;IN: Y - Р°РґСЂРµСЃ РЅР° РґР°РЅРЅС‹Рµ, TEMP_H - РєРѕРґ С„СѓРЅРєС†РёРё,
+;TEMP_L - РґР»РёРЅР° РґР°РЅРЅС‹С…, LOOP_CNTR - Р°РґСЂРµСЃ СѓСЃС‚СЂРѕР№СЃС‚РІР°
+;OUT: ACCUM - РєРѕРґ РѕС‚РІРµС‚Р°,
+;Z - Р°РґСЂРµСЃ РЅР° Р±Р»РѕРє РґР°РЅРЅС‹С…, TEMP - РґР»РёРЅР° РґР°РЅРЅС‹С…
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -129,23 +155,22 @@ _DRV_BUS5277_PROC_MASTER:
 	PUSH TEMP_L
 	PUSH LOOP_CNTR
 
-	;Проверяю на максимальный размер пакета
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР° РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїР°РєРµС‚Р°
 	CPI TEMP_L,0x24+0x01
 	BRCS PC+0x03
 	LDI ACCUM,BUS5277_FAULT
 	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
-	;Получаю адрес выделенной памяти
-	MOV TEMP,DRIVER_ID
-	MCALL CORE5277_RAM_GET_OFFSET
-	;Формирую пакет
+	;РџРѕР»СѓС‡Р°СЋ Р°РґСЂРµСЃ РІС‹РґРµР»РµРЅРЅРѕР№ РїР°РјСЏС‚Рё
+	MCALL C5_RAM_OFFSET
+	;Р¤РѕСЂРјРёСЂСѓСЋ РїР°РєРµС‚
 	PUSH_Z
 	MOV ACCUM,TEMP_L
 	SUBI ACCUM,(0x100-0x04)											;+0x04
-	ST Z+,LOOP_CNTR													;Адрес устройства на шине
-	ST Z+,ACCUM															;Длина данных всего пакета
-	ST Z+,TEMP_H														;Код функции или ответа
+	ST Z+,LOOP_CNTR													;РђРґСЂРµСЃ СѓСЃС‚СЂРѕР№СЃС‚РІР° РЅР° С€РёРЅРµ
+	ST Z+,ACCUM															;Р”Р»РёРЅР° РґР°РЅРЅС‹С… РІСЃРµРіРѕ РїР°РєРµС‚Р°
+	ST Z+,TEMP_H														;РљРѕРґ С„СѓРЅРєС†РёРё РёР»Рё РѕС‚РІРµС‚Р°
 	MOV LOOP_CNTR,TEMP_L
-	;Проверяю наличие данных и копирую их
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР°Р»РёС‡РёРµ РґР°РЅРЅС‹С… Рё РєРѕРїРёСЂСѓСЋ РёС…
 	CPI TEMP_L,0x00
 	BREQ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE
 	SBRC YH,0x07
@@ -153,7 +178,7 @@ _DRV_BUS5277_PROC_MASTER:
 _DRV_BUS5277_PROC_MASTER__RAM_DATA_COPY:
 	MOV XH,YH
 	MOV XL,YL
-	MCALL CORE5277_RAM__COPY8
+	MCALL C5_RAM_COPY8
 	RJMP _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE
 _DRV_BUS5277_PROC_MASTER__ROM_DATA_COPY:
 	ANDI YH,0b01111111
@@ -166,7 +191,7 @@ _DRV_BUS5277_PROC_MASTER__ROM_DATA_COPY:
 	MOV YL,ZL
 	MOV ZH,XH
 	MOV ZL,XL
-	MCALL CORE5277_ROM_TO_RAM__COPY8
+	MCALL C5_ROM_READ_BYTES
 	POP_Z
 _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	ADD ZL,LOOP_CNTR
@@ -175,60 +200,60 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	POP_X
 	PUSH LOOP_CNTR
 	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL CORE5277_CRC8_BLOCK__MAXIM
+	MCALL C5_CRC8_MAXIM_BLOCK
 	POP LOOP_CNTR
 	ST Z,ACCUM
-	;Формирование пакета завершено
-	;Восстанавливаем начальный адрес выделенной памяти
+	;Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РїР°РєРµС‚Р° Р·Р°РІРµСЂС€РµРЅРѕ
+	;Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РЅР°С‡Р°Р»СЊРЅС‹Р№ Р°РґСЂРµСЃ РІС‹РґРµР»РµРЅРЅРѕР№ РїР°РјСЏС‚Рё
 	MOV ZH,XH
 	MOV ZL,XL
-	;Запускаем драйвер UART
+	;Р—Р°РїСѓСЃРєР°РµРј РґСЂР°Р№РІРµСЂ UART
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV YH,ZH															;Адрес блока данных для передачи
+	MOV YH,ZH															;РђРґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
 	MOV YL,ZL
-	MOV XH,ZH															;Адрес блока данных для приема
+	MOV XH,ZH															;РђРґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
 	MOV XL,ZL
-	LDI TEMP_EH,0x04													;Длина данных для передачи
+	LDI TEMP_EH,0x04													;Р”Р»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
 	ADD TEMP_EH,LOOP_CNTR
-	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
-	LDI TEMP_H,high(100/2)											;Максимальное время ожидания данных
+	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
+	LDI TEMP_H,high(100/2)											;РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ РґР°РЅРЅС‹С…
 	LDI TEMP_L,low(100/2)
-	MCALL CORE5277_DRIVER_EXEC
-	;Проверка ответа на ошибку
+	MCALL C5_EXEC
+	;РџСЂРѕРІРµСЂРєР° РѕС‚РІРµС‚Р° РЅР° РѕС€РёР±РєСѓ
 	CPI TEMP_H,DRV_HUART_ST_READY
 	LDI ACCUM,BUS5277_RESP_NO_ANSWER
 	BRNE _DRV_BUS5277_PROC_MASTER__ERROR
-	;Проверка на наличие данных
+	;РџСЂРѕРІРµСЂРєР° РЅР° РЅР°Р»РёС‡РёРµ РґР°РЅРЅС‹С…
 	MOV LOOP_CNTR,TEMP_H
 	CPI LOOP_CNTR,0x00
 	LDI ACCUM,BUS5277_RESP_NO_DATA
 	BREQ _DRV_BUS5277_PROC_MASTER__ERROR
-	;Считываю адрес
+	;РЎС‡РёС‚С‹РІР°СЋ Р°РґСЂРµСЃ
 	LDD TEMP,Z+_DRV_BUS5277_PACKET_HEADER_ADDR
 	MOV TEMP_H,TEMP
 	ANDI TEMP_H,0x7f
 	LDD TEMP_L,Z+_DRV_BUS5277_BUS_ADDR
-	;Проверяю адрес на совпадение
+	;РџСЂРѕРІРµСЂСЏСЋ Р°РґСЂРµСЃ РЅР° СЃРѕРІРїР°РґРµРЅРёРµ
 	CP TEMP_H,TEMP_L
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 	BRNE _DRV_BUS5277_PROC_MASTER__ERROR
-	;Проверяю бит extrascan
+	;РџСЂРѕРІРµСЂСЏСЋ Р±РёС‚ extrascan
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 	SBRC TEMP,0x07
 	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
-	;Блок обычного режима(не EXTRASCAN)
-	;Проверяем бит ответа
+	;Р‘Р»РѕРє РѕР±С‹С‡РЅРѕРіРѕ СЂРµР¶РёРјР°(РЅРµ EXTRASCAN)
+	;РџСЂРѕРІРµСЂСЏРµРј Р±РёС‚ РѕС‚РІРµС‚Р°
 	LDD TEMP_H,Z+_DRV_BUS5277_PACKET_HEADER_CODE
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 	SBRS TEMP_H,0x07
 	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
-	;Получаю длину пакета
+	;РџРѕР»СѓС‡Р°СЋ РґР»РёРЅСѓ РїР°РєРµС‚Р°
 	LDD LOOP_CNTR,Z+_DRV_BUS5277_PACKET_HEADER_SIZE
 	ANDI LOOP_CNTR,0x3f
-	;Вычисляю CRC
+	;Р’С‹С‡РёСЃР»СЏСЋ CRC
 	MOV XH,ZH
 	MOV XL,ZH
-	MCALL CORE5277_CRC8_BLOCK__MAXIM
+	MCALL C5_CRC8_MAXIM_BLOCK
 	DEC LOOP_CNTR
 	ADD XL,LOOP_CNTR
 	CLR TEMP
@@ -237,15 +262,15 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	CP TEMP,ACCUM
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 	BREQ _DRV_BUS5277_PROC_MASTER__ERROR
-	;Помещаю в ACCUM код ответа
+	;РџРѕРјРµС‰Р°СЋ РІ ACCUM РєРѕРґ РѕС‚РІРµС‚Р°
 	MOV ACCUM,TEMP_H
 	ANDI ACCUM,0x7f
-	;Помещаю в Z адрес на блок данных
+	;РџРѕРјРµС‰Р°СЋ РІ Z Р°РґСЂРµСЃ РЅР° Р±Р»РѕРє РґР°РЅРЅС‹С…
 	LDI TEMP_L,DRV_BUS5277_PACKET_DATA
 	ADD ZL,TEMP_L
 	LDI TEMP_L,0x00
 	ADC ZH,TEMP_L
-	;Вычисляю длину данных
+	;Р’С‹С‡РёСЃР»СЏСЋ РґР»РёРЅСѓ РґР°РЅРЅС‹С…
 	SUBI LOOP_CNTR,0x03
 	MOV TEMP,LOOP_CNTR
 	RJMP _DRV_BUS5277_PROC_MASTER__END
@@ -261,9 +286,9 @@ _DRV_BUS5277_PROC_MASTER__END:
 ;--------------------------------------------------------
 _DRV_BUS5277_PROC_SLAVE_RECV:
 ;--------------------------------------------------------
-;Режим SLAVE, прием
-;OUT: ACCUM - код ответа(0xff - сбой),
-;Z - адрес на блок данных, TEMP - длина данных
+;Р РµР¶РёРј SLAVE, РїСЂРёРµРј
+;OUT: ACCUM - РєРѕРґ РѕС‚РІРµС‚Р°(0xff - СЃР±РѕР№),
+;Z - Р°РґСЂРµСЃ РЅР° Р±Р»РѕРє РґР°РЅРЅС‹С…, TEMP - РґР»РёРЅР° РґР°РЅРЅС‹С…
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -272,51 +297,50 @@ _DRV_BUS5277_PROC_SLAVE_RECV:
 	PUSH LOOP_CNTR
 
 _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
-	;Получаю адрес выделенной памяти
-	MOV TEMP,DRIVER_ID
-	MCALL CORE5277_RAM_GET_OFFSET
+	;РџРѕР»СѓС‡Р°СЋ Р°РґСЂРµСЃ РІС‹РґРµР»РµРЅРЅРѕР№ РїР°РјСЏС‚Рё
+	MCALL C5_RAM_OFFSET
 
-	;Запускаем драйвер UART
+	;Р—Р°РїСѓСЃРєР°РµРј РґСЂР°Р№РІРµСЂ UART
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV YH,ZH															;Адрес блока данных для передачи
+	MOV YH,ZH															;РђРґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
 	MOV YL,ZL
-	MOV XH,ZH															;Адрес блока данных для приема
+	MOV XH,ZH															;РђРґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
 	MOV XL,ZL
-	LDI TEMP_EH,0x00													;Длина данных для передачи
-	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
-	LDI TEMP_H,0x00													;Максимальное время ожидания данных(0 - ждать постоянно)
+	LDI TEMP_EH,0x00													;Р”Р»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
+	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
+	LDI TEMP_H,0x00													;РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ РґР°РЅРЅС‹С…(0 - Р¶РґР°С‚СЊ РїРѕСЃС‚РѕСЏРЅРЅРѕ)
 	LDI TEMP_L,0x00
-	MCALL CORE5277_DRIVER_EXEC
+	MCALL C5_EXEC
 	CPI TEMP_H,DRV_HUART_ST_READY
 	LDI ACCUM,BUS5277_FAULT
 	BRNE _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
 	CPI TEMP_L,0x00
 	LDI ACCUM,BUS5277_FAULT
 	BREQ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
-	;Считываю адрес
+	;РЎС‡РёС‚С‹РІР°СЋ Р°РґСЂРµСЃ
 	LDD TEMP_H,Z+_DRV_BUS5277_PACKET_HEADER_ADDR
 	LDD TEMP,Z+_DRV_BUS5277_BUS_ADDR
 	MOV TEMP_L,TEMP_H
 	ANDI TEMP_H,0x7f
-	;Проверяю адрес на совпадение
+	;РџСЂРѕРІРµСЂСЏСЋ Р°РґСЂРµСЃ РЅР° СЃРѕРІРїР°РґРµРЅРёРµ
 	CP TEMP_H,TEMP
 	BRNE _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
-	;Проверяю бит extrascan
+	;РџСЂРѕРІРµСЂСЏСЋ Р±РёС‚ extrascan
 	SBRC TEMP,0x07
 	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__EXTRASCAN
-	;Блок обычного режима(не EXTRASCAN)
-	;Проверяем бит ответа
+	;Р‘Р»РѕРє РѕР±С‹С‡РЅРѕРіРѕ СЂРµР¶РёРјР°(РЅРµ EXTRASCAN)
+	;РџСЂРѕРІРµСЂСЏРµРј Р±РёС‚ РѕС‚РІРµС‚Р°
 	LDD TEMP_H,Z+_DRV_BUS5277_PACKET_HEADER_CODE
 	SBRC TEMP_H,0x07
 	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
-	;Получаю длину пакета
+	;РџРѕР»СѓС‡Р°СЋ РґР»РёРЅСѓ РїР°РєРµС‚Р°
 	LDD LOOP_CNTR,Z+_DRV_BUS5277_PACKET_HEADER_SIZE
 	ANDI LOOP_CNTR,0x3f
 	DEC LOOP_CNTR
-	;Вычисляю CRC
+	;Р’С‹С‡РёСЃР»СЏСЋ CRC
 	MOV XH,ZH
 	MOV XL,ZL
-	MCALL CORE5277_CRC8_BLOCK__MAXIM
+	MCALL C5_CRC8_MAXIM_BLOCK
 	ADD XL,LOOP_CNTR
 	CLR TEMP
 	ADC XH,TEMP
@@ -324,22 +348,22 @@ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	CP TEMP,ACCUM
 	BREQ PC+0x02
 	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
-	;Помещаю в ACCUM код запроса
+	;РџРѕРјРµС‰Р°СЋ РІ ACCUM РєРѕРґ Р·Р°РїСЂРѕСЃР°
 	MOV ACCUM,TEMP_H
 	ANDI ACCUM,0x7f
 
-	;Помещаю в Z адрес на блок данных
+	;РџРѕРјРµС‰Р°СЋ РІ Z Р°РґСЂРµСЃ РЅР° Р±Р»РѕРє РґР°РЅРЅС‹С…
 	LDI TEMP_L,DRV_BUS5277_PACKET_DATA
 	ADD ZL,TEMP_L
 	LDI TEMP_L,0x00
 	ADC ZH,TEMP_L
-	;Вычисляю длину данных
+	;Р’С‹С‡РёСЃР»СЏСЋ РґР»РёРЅСѓ РґР°РЅРЅС‹С…
 	SUBI LOOP_CNTR,0x03
 	MOV TEMP,LOOP_CNTR
 	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__END
 _DRV_BUS5277_PROC_SLAVE_RECV__EXTRASCAN:
-	;TODO проверяем тип EXTRASCAN
-	;TODO считываем флаг HAVE_DATA, сбрасываем его, передаем ответ и начинаем процедуру заново
+	;TODO РїСЂРѕРІРµСЂСЏРµРј С‚РёРї EXTRASCAN
+	;TODO СЃС‡РёС‚С‹РІР°РµРј С„Р»Р°Рі HAVE_DATA, СЃР±СЂР°СЃС‹РІР°РµРј РµРіРѕ, РїРµСЂРµРґР°РµРј РѕС‚РІРµС‚ Рё РЅР°С‡РёРЅР°РµРј РїСЂРѕС†РµРґСѓСЂСѓ Р·Р°РЅРѕРІРѕ
 
 _DRV_BUS5277_PROC_SLAVE_RECV__END:
 	POP LOOP_CNTR
@@ -352,10 +376,10 @@ _DRV_BUS5277_PROC_SLAVE_RECV__END:
 ;--------------------------------------------------------
 _DRV_BUS5277_PROC_SLAVE_SEND:
 ;--------------------------------------------------------
-;Режим SLAVE, передача
-;IN: Y - адрес на данные, TEMP_H - код функции,
-;TEMP_L - длина данных
-;OUT: ACCUM - код ответа
+;Р РµР¶РёРј SLAVE, РїРµСЂРµРґР°С‡Р°
+;IN: Y - Р°РґСЂРµСЃ РЅР° РґР°РЅРЅС‹Рµ, TEMP_H - РєРѕРґ С„СѓРЅРєС†РёРё,
+;TEMP_L - РґР»РёРЅР° РґР°РЅРЅС‹С…
+;OUT: ACCUM - РєРѕРґ РѕС‚РІРµС‚Р°
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -363,38 +387,37 @@ _DRV_BUS5277_PROC_SLAVE_SEND:
 	PUSH TEMP_L
 	PUSH LOOP_CNTR
 
-	;Проверяю на максимальный размер пакета
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР° РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїР°РєРµС‚Р°
 	CPI TEMP_L,0x24+0x01
 	BRCS PC+0x03
 	LDI ACCUM,BUS5277_FAULT
 	RJMP _DRV_BUS5277_PROC_SLAVE_SEND__ERROR
-	;Получаю адрес выделенной памяти
-	MOV TEMP,DRIVER_ID
-	MCALL CORE5277_RAM_GET_OFFSET
-	;Формирую пакет
+	;РџРѕР»СѓС‡Р°СЋ Р°РґСЂРµСЃ РІС‹РґРµР»РµРЅРЅРѕР№ РїР°РјСЏС‚Рё
+	MCALL C5_RAM_OFFSET
+	;Р¤РѕСЂРјРёСЂСѓСЋ РїР°РєРµС‚
 	PUSH_Z
 	MOV ACCUM,TEMP_L
 	SUBI ACCUM,(0x100-0x04)											;+0x04
 	LDI TEMP,_DRV_BUS5277_MASTER_ADDR
-	ST Z+,TEMP															;Адрес ведущего на шине
-	ST Z+,ACCUM															;Длина данных всего пакета
-	ST Z+,TEMP_H														;Код функции или ответа
+	ST Z+,TEMP															;РђРґСЂРµСЃ РІРµРґСѓС‰РµРіРѕ РЅР° С€РёРЅРµ
+	ST Z+,ACCUM															;Р”Р»РёРЅР° РґР°РЅРЅС‹С… РІСЃРµРіРѕ РїР°РєРµС‚Р°
+	ST Z+,TEMP_H														;РљРѕРґ С„СѓРЅРєС†РёРё РёР»Рё РѕС‚РІРµС‚Р°
 	MOV LOOP_CNTR,TEMP_L
-	;Проверяю наличие данных и копирую их
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР°Р»РёС‡РёРµ РґР°РЅРЅС‹С… Рё РєРѕРїРёСЂСѓСЋ РёС…
 	CPI TEMP_L,0x00
 	BREQ _DRV_BUS5277_PROC_SLAVE_SEND__DATA_COPY_DONE
 	SBRC YH,0x07
 	RJMP _DRV_BUS5277_PROC_SLAVE_SEND__ROM_DATA_COPY
 _DRV_BUS5277_PROC_SLAVE_SEND__RAM_DATA_COPY:
-	;Проверяю на адрес буфера
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР° Р°РґСЂРµСЃ Р±СѓС„РµСЂР°
 	CP YH,ZH
 	BRNE PC+0x03
 	CP YL,ZL
 	BREQ _DRV_BUS5277_PROC_SLAVE_SEND__DATA_COPY_DONE
-	;Копирую данные в буфер
+	;РљРѕРїРёСЂСѓСЋ РґР°РЅРЅС‹Рµ РІ Р±СѓС„РµСЂ
 	MOV XH,YH
 	MOV XL,YL
-	MCALL CORE5277_RAM__COPY8
+	MCALL C5_RAM_COPY8
 	RJMP _DRV_BUS5277_PROC_SLAVE_SEND__DATA_COPY_DONE
 _DRV_BUS5277_PROC_SLAVE_SEND__ROM_DATA_COPY:
 	ANDI YH,0b01111111
@@ -407,7 +430,7 @@ _DRV_BUS5277_PROC_SLAVE_SEND__ROM_DATA_COPY:
 	MOV YL,ZL
 	MOV ZH,XH
 	MOV ZL,XL
-	MCALL CORE5277_ROM_TO_RAM__COPY8
+	MCALL C5_ROM_READ_BYTES
 	POP_Z
 _DRV_BUS5277_PROC_SLAVE_SEND__DATA_COPY_DONE:
 	ADD ZL,LOOP_CNTR
@@ -416,22 +439,22 @@ _DRV_BUS5277_PROC_SLAVE_SEND__DATA_COPY_DONE:
 	POP_X
 	PUSH LOOP_CNTR
 	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL CORE5277_CRC8_BLOCK__MAXIM
+	MCALL C5_CRC8_MAXIM_BLOCK
 	POP LOOP_CNTR
 	ST Z,ACCUM
-	;Формирование пакета завершено
-	;Восстанавливаем начальный адрес выделенной памяти
+	;Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РїР°РєРµС‚Р° Р·Р°РІРµСЂС€РµРЅРѕ
+	;Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РЅР°С‡Р°Р»СЊРЅС‹Р№ Р°РґСЂРµСЃ РІС‹РґРµР»РµРЅРЅРѕР№ РїР°РјСЏС‚Рё
 	MOV ZH,XH
 	MOV ZL,XL
-	;Запускаем драйвер UART
+	;Р—Р°РїСѓСЃРєР°РµРј РґСЂР°Р№РІРµСЂ UART
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV YH,ZH															;Адрес блока данных для передачи
+	MOV YH,ZH															;РђРґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
 	MOV YL,ZL
-	LDI TEMP_EH,0x04													;Длина данных для передачи
+	LDI TEMP_EH,0x04													;Р”Р»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
 	ADD TEMP_EH,LOOP_CNTR
-	LDI TEMP_EL,0x00													;Максимальная длина данных для приема(только передача)
-	MCALL CORE5277_DRIVER_EXEC
-	;Проверка ответа на ошибку
+	LDI TEMP_EL,0x00													;РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°(С‚РѕР»СЊРєРѕ РїРµСЂРµРґР°С‡Р°)
+	MCALL C5_EXEC
+	;РџСЂРѕРІРµСЂРєР° РѕС‚РІРµС‚Р° РЅР° РѕС€РёР±РєСѓ
 	CPI TEMP_H,DRV_HUART_ST_READY
 	LDI ACCUM,BUS5277_RESP_NO_ANSWER
 	BRNE _DRV_BUS5277_PROC_SLAVE_SEND__ERROR

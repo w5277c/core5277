@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;31.05.2020  w5277c@gmail.com        Начало
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO судя по дампу шины, TWI читает на один байт больше, хотя по коду все ок.
 ;Как будто данные в TWDR появляются с опозданием в 1 байт
@@ -62,42 +62,42 @@ DRV_I2C_INIT:
 ;YH - порт инд. передачи(0xff-не исп)
 ;--------------------------------------------------------
 	;Подаем питание на TWI
-	_CORE5277_PRR_RESET PRTWI
+	_C5_POWER_ON PRTWI
 
 	;Записываем в TWAR I2C адрес (в режиме ведомого !=0)
 	LSL XH
 	STS TWAR,XH
 
 	LDI ACCUM,_DRV_I2C_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 
 	;Инициализируем порт LED
 	STD Z+_DRV_I2C_LED_PORT,YH
 	MOV ACCUM,YH
 	CPI ACCUM,0xff
 	BREQ PC+0x07
-	MCALL CORE5277_PORT_MODE_OUT
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_OUT
+	MCALL C5_PORT_SET_LO
 
 	;Настройка порта SDA
 	LDI ACCUM,SDA
-	MCALL CORE5277_PORT_MODE_IN
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_IN
+	MCALL C5_PORT_SET_LO
 
 	CPI XH,0x00
 	BRNE _DRV_I2C_INIT__SLAVE_MODE
 
 	;Настройка порта SCL(master mode)
 	LDI ACCUM,SCL
-	MCALL CORE5277_PORT_MODE_OUT
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_OUT
+	MCALL C5_PORT_SET_LO
 	RJMP _DRV_I2C_INIT__DONE
 
 _DRV_I2C_INIT__SLAVE_MODE:
 	;Настройка порта SCL(slave mode)
 	LDI ACCUM,SCL
-	MCALL CORE5277_PORT_MODE_IN
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_IN
+	MCALL C5_PORT_SET_LO
 
 _DRV_I2C_INIT__DONE:
 	;Задаем частоту
@@ -108,10 +108,10 @@ _DRV_I2C_INIT__DONE:
 
 	LDI TEMP_H,high(_DRV_I2C_EVENT)
 	LDI TEMP_L,low(_DRV_I2C_EVENT)
-	LDI ACCUM,CORE5277_IR_TWI
-	MCALL CORE5277_IR_VECTOR_SET
+	LDI ACCUM,C5_IR_TWI
+	MCALL C5_IR_VECTOR_SET
 
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;IN: Y - адрес на блок данных на запись
@@ -127,7 +127,7 @@ _DRV_I2C_INIT__DONE:
 	PUSH TEMP_L
 	PUSH ACCUM
 
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 
 	;Записываем адрес устройства(режим ведущего)
 	LSL ACCUM
@@ -162,7 +162,7 @@ _DRV_I2C_INIT__DONE:
 	LDD ACCUM,Z+_DRV_I2C_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x05
-	MCALL CORE5277_PORT_SET_HI
+	MCALL C5_PORT_SET_HI
 	;Смотрим режим по ACCUM
 	LDS TEMP,TWAR
 	CPI TEMP,0x00
@@ -176,7 +176,7 @@ _DRV_I2C_PROC_END:
 	LDD ACCUM,Z+_DRV_I2C_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x05
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_SET_LO
 	;Получаю результат операции
 	LDD TEMP,Z+_DRV_I2C_STATE
 
@@ -203,7 +203,7 @@ _DRV_I2C_MASTER_PROC__WAIT_LOOP:
 	LDD TEMP,Z+_DRV_I2C_STATE
 	SBRC TEMP,0x07
 	RJMP _DRV_I2C_MASTER_PROC__DONE
-	MCALL CORE5277_WAIT
+	MCALL C5_WAIT
 	RJMP _DRV_I2C_MASTER_PROC__WAIT_LOOP
 _DRV_I2C_MASTER_PROC__DONE:
 	LDI TEMP,(0<<TWEN)
@@ -236,7 +236,7 @@ _DRV_I2C_EVENT:
 	PUSH TEMP_L
 
 	;;CLI
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 
 	;Читаем состояние
 	LDD TEMP,Z+_DRV_I2C_STATE

@@ -1,35 +1,35 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.10.2019  w5277c@gmail.com        Начало
 ;09.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_WAIT
+.ifdef DEF_C5_WAIT
 .else
-.set DEF_CORE5277_WAIT = 1
+.set DEF_C5_WAIT = 1
 
 .include "./inc/core/wait_2ms.inc"
 
 ;--------------------------------------------------------
-CORE5277_WAIT:
+C5_WAIT:
 ;--------------------------------------------------------
 ;Ждем 3 кванта времени
 ;--------------------------------------------------------
 	PUSH TEMP_H
 	;Не делаем WAIT если диспетчер заблокирован
 	LDI TEMP_H,0x00
-	CP _CORE5277_DISPATCHER_LOCK_CNTR,TEMP_H
-	BRNE _CORE5277_WAIT__DISPATCHER_LOCKED
+	CP _C5_DISPATCHER_LOCK_CNTR,TEMP_H
+	BRNE _C5_WAIT__DISPATCHER_LOCKED
 	PUSH TEMP_L
 	PUSH TEMP
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	LDI TEMP,0x03
-	MCALL CORE5277_WAIT_2MS
+	MCALL C5_WAIT_2MS
 	POP TEMP
 	POP TEMP_L
-_CORE5277_WAIT__DISPATCHER_LOCKED:
+_C5_WAIT__DISPATCHER_LOCKED:
 	POP TEMP_H
 	RET
 .endif

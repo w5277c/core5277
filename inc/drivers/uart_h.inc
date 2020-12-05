@@ -1,9 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Р¤Р°Р№Р» СЂР°СЃРїСЂРѕСЃС‚СЂР°РЅСЏРµС‚СЃСЏ РїРѕРґ Р»РёС†РµРЅР·РёРµР№ GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.04.2020  w5277c@gmail.com        Начало
-;19.04.2020  w5277c@gmail.com        Адаптировано под изменения ядра
+;03.04.2020  w5277c@gmail.com        РќР°С‡Р°Р»Рѕ
+;19.04.2020  w5277c@gmail.com        РђРґР°РїС‚РёСЂРѕРІР°РЅРѕ РїРѕРґ РёР·РјРµРЅРµРЅРёСЏ СЏРґСЂР°
+;27.10.2020  w5277c@gmail.com        РћР±РЅРѕРІР»РµРЅР° РёРЅС„РѕСЂРјР°С†РёСЏ РѕР± Р°РІС‚РѕСЂСЃРєРёС… РїСЂР°РІР°С…
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./inc/mem/ram_offset.inc"
@@ -13,29 +13,32 @@
 .include	"./inc/io/port_set_lo.inc"
 .include	"./inc/io/port_set_hi.inc"
 .include	"./inc/core/wait.inc"
+.include	"./inc/core/timer_set.inc"
+.include	"./inc/core/timer_start.inc"
+.include	"./inc/core/timer_stop.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
-	.EQU	_DRV_HUART_DR_PORT					= 0x00			;1B - Порт для задания направления прием/передача
-	.EQU	_DRV_HUART_LED_PORT					= 0x01			;1B - Порт индикации
-	.EQU	_DRV_HUART_STATE						= 0x02			;1B - Статус драйвера
-	.EQU	_DRV_HUART_TIMER_ID					= 0x03			;1B - ИД программного таймера
-	.EQU	_DRV_HUART_OPTIONS					= 0x04			;1B - опции
+	.EQU	_DRV_HUART_DR_PORT					= 0x00			;1B - РџРѕСЂС‚ РґР»СЏ Р·Р°РґР°РЅРёСЏ РЅР°РїСЂР°РІР»РµРЅРёСЏ РїСЂРёРµРј/РїРµСЂРµРґР°С‡Р°
+	.EQU	_DRV_HUART_LED_PORT					= 0x01			;1B - РџРѕСЂС‚ РёРЅРґРёРєР°С†РёРё
+	.EQU	_DRV_HUART_STATE						= 0x02			;1B - РЎС‚Р°С‚СѓСЃ РґСЂР°Р№РІРµСЂР°
+	.EQU	_DRV_HUART_TIMER_ID					= 0x03			;1B - РР” РїСЂРѕРіСЂР°РјРјРЅРѕРіРѕ С‚Р°Р№РјРµСЂР°
+	.EQU	_DRV_HUART_OPTIONS					= 0x04			;1B - РѕРїС†РёРё
 	;---
-	.EQU	_DRV_HUART_SRC_ADDR					= 0x05			;2B - адрес блока данных для передачи
-	.EQU	_DRV_HUART_DST_ADDR					= 0x07			;2B - адрес блока данных для приема
+	.EQU	_DRV_HUART_SRC_ADDR					= 0x05			;2B - Р°РґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
+	.EQU	_DRV_HUART_DST_ADDR					= 0x07			;2B - Р°РґСЂРµСЃ Р±Р»РѕРєР° РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
 	;---
-	.EQU	_DRV_HUART_BUFFER_POS				= 0x09			;1B - Позиция в буфере при передаче
-	.EQU	_DRV_HUART_TX_LEN						= 0x0a			;1B - Длина данных для передачи
-	.EQU	_DRV_HUART_RX_LEN						= 0x0b			;1B - Максимальный размер данных для приема
+	.EQU	_DRV_HUART_BUFFER_POS				= 0x09			;1B - РџРѕР·РёС†РёСЏ РІ Р±СѓС„РµСЂРµ РїСЂРё РїРµСЂРµРґР°С‡Рµ
+	.EQU	_DRV_HUART_TX_LEN						= 0x0a			;1B - Р”Р»РёРЅР° РґР°РЅРЅС‹С… РґР»СЏ РїРµСЂРµРґР°С‡Рё
+	.EQU	_DRV_HUART_RX_LEN						= 0x0b			;1B - РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РґР°РЅРЅС‹С… РґР»СЏ РїСЂРёРµРјР°
 	;---
-	.EQU	_DRV_HUART_FIRST_TIMEOUT			= 0x0c			;2B - Таймаут ожидания первого байта (2ms)
-	.EQU	_DRV_HUART_NEXT_TIMEOUT				= 0x0e			;1B - Таймаут ожидания последующего байта(0.050ms)
+	.EQU	_DRV_HUART_FIRST_TIMEOUT			= 0x0c			;2B - РўР°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РїРµСЂРІРѕРіРѕ Р±Р°Р№С‚Р° (2ms)
+	.EQU	_DRV_HUART_NEXT_TIMEOUT				= 0x0e			;1B - РўР°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РїРѕСЃР»РµРґСѓСЋС‰РµРіРѕ Р±Р°Р№С‚Р°(0.050ms)
 
-	.EQU	_DRV_HUART_RAM_SIZE					= 0x0f			;15 байт необходимо выделить
+	.EQU	_DRV_HUART_RAM_SIZE					= 0x0f			;15 Р±Р°Р№С‚ РЅРµРѕР±С…РѕРґРёРјРѕ РІС‹РґРµР»РёС‚СЊ
 
 	;---OPTIONS---
-	.EQU	DRV_HUART_OPT_BREAK					= 0x00;			;Использовать посылку BREAK(1.5 октета с низким уровнем на шине)
+	.EQU	DRV_HUART_OPT_BREAK					= 0x00;			;РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РїРѕСЃС‹Р»РєСѓ BREAK(1.5 РѕРєС‚РµС‚Р° СЃ РЅРёР·РєРёРј СѓСЂРѕРІРЅРµРј РЅР° С€РёРЅРµ)
 
 	;---STATES_IDS---
 	.EQU	DRV_HUART_ST_READY					= 0x00;
@@ -58,14 +61,14 @@
 ;--------------------------------------------------------
 DRV_HUART_INIT:
 ;--------------------------------------------------------
-;Инициализация
-;IN: TEMP_H - порт направления передача/прием
-;(0xff-не используется),
-;TEMP_L - порт индикации передачи
-;(0xff-не используется)
-;ACCUM - ид таймера
-;FLAGS - опции
-;YH - скорость передачи данных
+;РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ
+;IN: TEMP_H - РїРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РїРµСЂРµРґР°С‡Р°/РїСЂРёРµРј
+;(0xff-РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ),
+;TEMP_L - РїРѕСЂС‚ РёРЅРґРёРєР°С†РёРё РїРµСЂРµРґР°С‡Рё
+;(0xff-РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ)
+;ACCUM - РёРґ С‚Р°Р№РјРµСЂР°
+;FLAGS - РѕРїС†РёРё
+;YH - СЃРєРѕСЂРѕСЃС‚СЊ РїРµСЂРµРґР°С‡Рё РґР°РЅРЅС‹С…
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP_H
@@ -76,72 +79,72 @@ DRV_HUART_INIT:
 
 	PUSH ACCUM
 	LDI ACCUM,_DRV_HUART_RAM_SIZE
-	MCALL CORE5277_RAM_REALLOC
+	MCALL C5_RAM_REALLOC
 	POP ACCUM
 
-	;Задаем скорость передачи данных
+	;Р—Р°РґР°РµРј СЃРєРѕСЂРѕСЃС‚СЊ РїРµСЂРµРґР°С‡Рё РґР°РЅРЅС‹С…
 	STS UBRR0L,YH
 	CLR TEMP
 	STS UBRR0H,TEMP
-	;Инициализирую и записываю программный таймер
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ Рё Р·Р°РїРёСЃС‹РІР°СЋ РїСЂРѕРіСЂР°РјРјРЅС‹Р№ С‚Р°Р№РјРµСЂ
 	PUSH TEMP_L
 	PUSH TEMP_H
 	LDI TEMP_H,high(_DRV_HUART_TIMER_EVENT)
 	LDI TEMP_L,low(_DRV_HUART_TIMER_EVENT)
 	MOV TEMP,ACCUM
-	MCALL CORE5277_TIMER_SET
+	MCALL C5_TIMER_SET
 	STD Z+_DRV_HUART_TIMER_ID,ACCUM
-	;Записываю опции
+	;Р—Р°РїРёСЃС‹РІР°СЋ РѕРїС†РёРё
 	STD Z+_DRV_HUART_OPTIONS,FLAGS
-	;Инициализирую порт направления данных
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РґР°РЅРЅС‹С…
 	POP ACCUM
 	CPI ACCUM,0xff
 	BREQ _DRV_HUART_INIT__NO_DR_PORT
-	MCALL CORE5277_PORT_MODE_OUT
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_OUT
+	MCALL C5_PORT_SET_LO
 _DRV_HUART_INIT__NO_DR_PORT:
 	STD Z+_DRV_HUART_DR_PORT,ACCUM
-	;Инициализирую порт индикации
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ РёРЅРґРёРєР°С†РёРё
 	POP ACCUM
 	CPI ACCUM,0xff
 	BREQ _DRV_HUART_INIT__NO_LED_PORT
-	MCALL CORE5277_PORT_MODE_OUT
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_MODE_OUT
+	MCALL C5_PORT_SET_LO
 _DRV_HUART_INIT__NO_LED_PORT:
 	STD Z+_DRV_HUART_LED_PORT,ACCUM
-	;Инициализирую порт RX
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ RX
 	LDI ACCUM,RXD
-	MCALL CORE5277_PORT_MODE_IN
-	MCALL CORE5277_PORT_SET_HI
-	;Инициализирую порт TX
+	MCALL C5_PORT_MODE_IN
+	MCALL C5_PORT_SET_HI
+	;РРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РїРѕСЂС‚ TX
 	LDI ACCUM,TXD
-	MCALL CORE5277_PORT_MODE_OUT
-	MCALL CORE5277_PORT_SET_HI
-	;Расчитываю NEXT TIMEOUT										;Для 4800 таймаут составит 2.6ms(~13бит), для 115200 составит 0.150ms(~17бит)
-	LSR YH																;Таймаут будет базироваться на _CORE5277_MAIN_TIMER_CNTR(отсчет каждые 0.050ms)
+	MCALL C5_PORT_MODE_OUT
+	MCALL C5_PORT_SET_HI
+	;Р Р°СЃС‡РёС‚С‹РІР°СЋ NEXT TIMEOUT										;Р”Р»СЏ 4800 С‚Р°Р№РјР°СѓС‚ СЃРѕСЃС‚Р°РІРёС‚ 2.6ms(~13Р±РёС‚), РґР»СЏ 115200 СЃРѕСЃС‚Р°РІРёС‚ 0.150ms(~17Р±РёС‚)
+	LSR YH																;РўР°Р№РјР°СѓС‚ Р±СѓРґРµС‚ Р±Р°Р·РёСЂРѕРІР°С‚СЊСЃСЏ РЅР° _C5_MAIN_TIMER_CNTR(РѕС‚СЃС‡РµС‚ РєР°Р¶РґС‹Рµ 0.050ms)
 	LSR YH
 	INC YH
 	STD Z+_DRV_HUART_NEXT_TIMEOUT,YH
-	;Отключаю прием и передачу
+	;РћС‚РєР»СЋС‡Р°СЋ РїСЂРёРµРј Рё РїРµСЂРµРґР°С‡Сѓ
 	LDI TEMP,0x00
 	STS UCSRB,TEMP
-	;Сбрасываю флаги
+	;РЎР±СЂР°СЃС‹РІР°СЋ С„Р»Р°РіРё
 	LDI TEMP,(1<<RXC)|(1<<TXC)
 	STS UCSRA,TEMP
 	;Async, no parity, 1 stop bits, 8 data bits
-	LDI TEMP,low((1<<URSEL)|(1<<UCSZ01)|(1<<UCSZ00))		;URSEL необходим для ATmega16, в остальных должен быть равен 0
+	LDI TEMP,low((1<<URSEL)|(1<<UCSZ01)|(1<<UCSZ00))		;URSEL РЅРµРѕР±С…РѕРґРёРј РґР»СЏ ATmega16, РІ РѕСЃС‚Р°Р»СЊРЅС‹С… РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ СЂР°РІРµРЅ 0
 	STS UCSRC,TEMP
-	;Устанавливаю векторы прерывания TX и RX
-	LDI ACCUM,CORE5277_IR_UART_RX
+	;РЈСЃС‚Р°РЅР°РІР»РёРІР°СЋ РІРµРєС‚РѕСЂС‹ РїСЂРµСЂС‹РІР°РЅРёСЏ TX Рё RX
+	LDI ACCUM,C5_IR_UART_RX
 	LDI TEMP_H,high(_DRV_HUART_RX_EVENT)
 	LDI TEMP_L,low(_DRV_HUART_RX_EVENT)
-	MCALL CORE5277_IR_VECTOR_SET
-	LDI ACCUM,CORE5277_IR_UART_TX
+	MCALL C5_IR_VECTOR_SET
+	LDI ACCUM,C5_IR_UART_TX
 	LDI TEMP_H,high(_DRV_HUART_TX_EVENT)
 	LDI TEMP_L,low(_DRV_HUART_TX_EVENT)
-	MCALL CORE5277_IR_VECTOR_SET
-	;Подпитываю UART
-	_CORE5277_PRR_RESET PRUSART0
+	MCALL C5_IR_VECTOR_SET
+	;РџРѕРґРїРёС‚С‹РІР°СЋ UART
+	_C5_POWER_ON PRUSART0
 
 	POP YH
 	POP ACCUM
@@ -149,101 +152,100 @@ _DRV_HUART_INIT__NO_LED_PORT:
 	POP TEMP_L
 	POP TEMP_H
 	POP_Z
-
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
-;Основной код, коммуникация
-;IN: Y - src адрес, X - dst адрес,
-;TEMP_EH - TX длина, TEMP_EL - RX максимальная длина
-;TEMP_H,TEMP_L - таймаут ожидания данных(2ms)
-;OUT: TEMP_H - результат(состояние UART'а),
-;TEMP_L - длина полученных данных
+;РћСЃРЅРѕРІРЅРѕР№ РєРѕРґ, РєРѕРјРјСѓРЅРёРєР°С†РёСЏ
+;IN: Y - src Р°РґСЂРµСЃ, X - dst Р°РґСЂРµСЃ,
+;TEMP_EH - TX РґР»РёРЅР°, TEMP_EL - RX РјР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР°
+;TEMP_H,TEMP_L - С‚Р°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РґР°РЅРЅС‹С…(2ms)
+;OUT: TEMP_H - СЂРµР·СѓР»СЊС‚Р°С‚(СЃРѕСЃС‚РѕСЏРЅРёРµ UART'Р°),
+;TEMP_L - РґР»РёРЅР° РїРѕР»СѓС‡РµРЅРЅС‹С… РґР°РЅРЅС‹С…
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
 
-	MCALL CORE5277_RAM_OFFSET
-	;Запоминаем таймаут ожидания первого байта
+	MCALL C5_RAM_OFFSET
+	;Р—Р°РїРѕРјРёРЅР°РµРј С‚Р°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РїРµСЂРІРѕРіРѕ Р±Р°Р№С‚Р°
 	STD Z+_DRV_HUART_FIRST_TIMEOUT+0x00,TEMP_H
 	STD Z+_DRV_HUART_FIRST_TIMEOUT+0x01,TEMP_L
-	;Запоминаем SRC
+	;Р—Р°РїРѕРјРёРЅР°РµРј SRC
 	SBRS YH,0x07
 	RJMP PC+0x04
-	;Умножаем на 2 адрес рабоыт с ROM
+	;РЈРјРЅРѕР¶Р°РµРј РЅР° 2 Р°РґСЂРµСЃ СЂР°Р±РѕС‹С‚ СЃ ROM
 	LSL YL
 	ROL YH
 	ORI YH,0x80
 	STD Z+_DRV_HUART_SRC_ADDR+0x00,YH
 	STD Z+_DRV_HUART_SRC_ADDR+0x01,YL
-	;Запоминаем DST
+	;Р—Р°РїРѕРјРёРЅР°РµРј DST
 	STD Z+_DRV_HUART_DST_ADDR+0x00,XH
 	STD Z+_DRV_HUART_DST_ADDR+0x01,XL
-	;Запминаем длину TX и RX
+	;Р—Р°РїРјРёРЅР°РµРј РґР»РёРЅСѓ TX Рё RX
 	STD Z+_DRV_HUART_TX_LEN,TEMP_EH
 	STD Z+_DRV_HUART_RX_LEN,TEMP_EL
-	;Блок передачи
+	;Р‘Р»РѕРє РїРµСЂРµРґР°С‡Рё
 	CPI TEMP_EH,0x00
 	BREQ _DRV_HUART_PROC__TX_SKIP
-	;Включаю индикатор передачи
+	;Р’РєР»СЋС‡Р°СЋ РёРЅРґРёРєР°С‚РѕСЂ РїРµСЂРµРґР°С‡Рё
 	LDD ACCUM,Z+_DRV_HUART_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
-	MCALL CORE5277_PORT_SET_HI
-	;Сброс позиции в буфере
+	MCALL C5_PORT_SET_HI
+	;РЎР±СЂРѕСЃ РїРѕР·РёС†РёРё РІ Р±СѓС„РµСЂРµ
 	CLR TEMP
 	STD Z+_DRV_HUART_BUFFER_POS,TEMP
-	;Запуск передачи
+	;Р—Р°РїСѓСЃРє РїРµСЂРµРґР°С‡Рё
 	LDI TEMP,DRV_HUART_ST_SENDING
 	STD Z+_DRV_HUART_STATE,TEMP
-	;Разрешаю UART(передача)
+	;Р Р°Р·СЂРµС€Р°СЋ UART(РїРµСЂРµРґР°С‡Р°)
 	LDS TEMP,UCSRB
-	ANDI TEMP,~((1<<RXCIE0)|(1<<RXEN0))
+	ANDI TEMP,low(~((1<<RXCIE0)|(1<<RXEN0)))
 	ORI TEMP,(1<<TXCIE0)|(1<<TXEN0)
 	STS UCSRB,TEMP
-	;Отправляю первый байт
+	;РћС‚РїСЂР°РІР»СЏСЋ РїРµСЂРІС‹Р№ Р±Р°Р№С‚
 	MCALL _DRV_HUART_TX_EVENT
-	;Жду окончания передачи
+	;Р–РґСѓ РѕРєРѕРЅС‡Р°РЅРёСЏ РїРµСЂРµРґР°С‡Рё
 _DRV_HUART_PROC__SENDING_WAIT:
-	MCALL CORE5277_WAIT
+	MCALL C5_WAIT
 	LDD TEMP,Z+_DRV_HUART_STATE
 	CPI TEMP,DRV_HUART_ST_READY
 	BRNE _DRV_HUART_PROC__SENDING_WAIT
-	;Выключаю индикатор
+	;Р’С‹РєР»СЋС‡Р°СЋ РёРЅРґРёРєР°С‚РѕСЂ
 	LDD ACCUM,Z+_DRV_HUART_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
-	MCALL CORE5277_PORT_SET_LO
+	MCALL C5_PORT_SET_LO
 _DRV_HUART_PROC__TX_SKIP:
 
-	;Сброс позиции в буфере
+	;РЎР±СЂРѕСЃ РїРѕР·РёС†РёРё РІ Р±СѓС„РµСЂРµ
 	CLR TEMP
 	STD Z+_DRV_HUART_BUFFER_POS,TEMP
 
-	;Блок приема
+	;Р‘Р»РѕРє РїСЂРёРµРјР°
 	CPI TEMP_EL,0x00
 	BREQ _DRV_HUART_PROC__RX_SKIP
 
-	;Запуск приема
+	;Р—Р°РїСѓСЃРє РїСЂРёРµРјР°
 	LDI TEMP,DRV_HUART_ST_WAIT_DATA
 	STD Z+_DRV_HUART_STATE,TEMP
-	;Разрешаю UART(прием)
+	;Р Р°Р·СЂРµС€Р°СЋ UART(РїСЂРёРµРј)
 	LDS TEMP,UCSRB
 	ANDI TEMP,~((1<<TXCIE0)|(1<<TXEN0))
 	ORI TEMP,(1<<RXCIE)|(1<<RXEN)
 	STS UCSRB,TEMP
-	;Запоминаем метку времени для отсчета таймаута ожидания данных
-	LDS YH,_CORE5277_UPTIME+0x03
-	LDS YL,_CORE5277_UPTIME+0x04
+	;Р—Р°РїРѕРјРёРЅР°РµРј РјРµС‚РєСѓ РІСЂРµРјРµРЅРё РґР»СЏ РѕС‚СЃС‡РµС‚Р° С‚Р°Р№РјР°СѓС‚Р° РѕР¶РёРґР°РЅРёСЏ РґР°РЅРЅС‹С…
+	LDS YH,_C5_UPTIME+0x03
+	LDS YL,_C5_UPTIME+0x04
 _DRV_HUART_PROC__RECEIVING_WAIT:
-	MCALL CORE5277_WAIT
+	MCALL C5_WAIT
 	LDD TEMP,Z+_DRV_HUART_STATE
 	CPI TEMP,DRV_HUART_ST_WAIT_DATA
 	BRNE _DRV_HUART_PROC__RECEIVING_NOT_WAIT_DATA
-	LDS TEMP_L,_CORE5277_UPTIME+0x04
+	LDS TEMP_L,_C5_UPTIME+0x04
 	SUB TEMP_L,YL
-	LDS TEMP_H,_CORE5277_UPTIME+0x03
+	LDS TEMP_H,_C5_UPTIME+0x03
 	SBC TEMP_H,YH
 	LDD TEMP,Z+_DRV_HUART_FIRST_TIMEOUT+0x00
 	LDD ACCUM,Z+_DRV_HUART_FIRST_TIMEOUT+0x01
@@ -267,12 +269,12 @@ _DRV_HUART_PROC__RECEIVING_TIMEOUT:
 	STD Z+_DRV_HUART_STATE,TEMP
 _DRV_HUART_PROC__RECEIVING_DONE:
 _DRV_HUART_PROC__RX_SKIP:
-	;Запрещаю UART
+	;Р—Р°РїСЂРµС‰Р°СЋ UART
 	LDS TEMP,UCSRB
-	ANDI TEMP,~((1<<TXCIE0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<RXEN0))
+	ANDI TEMP,low(~((1<<TXCIE0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<RXEN0)))
 	STS UCSRB,TEMP
 
-	;Результат
+	;Р РµР·СѓР»СЊС‚Р°С‚
 	LDD TEMP_H,Z+_DRV_HUART_STATE
 	LDD TEMP_L,Z+_DRV_HUART_BUFFER_POS
 	POP ACCUM
@@ -284,7 +286,7 @@ _DRV_HUART_PROC__RX_SKIP:
 ;--------------------------------------------------------
 _DRV_HUART_TX_EVENT:
 ;--------------------------------------------------------
-;Обработчик прерывания TX
+;РћР±СЂР°Р±РѕС‚С‡РёРє РїСЂРµСЂС‹РІР°РЅРёСЏ TX
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
@@ -293,28 +295,28 @@ _DRV_HUART_TX_EVENT:
 	PUSH TEMP
 	PUSH ACCUM
 
-	MCALL CORE5277_RAM_OFFSET
-	;Считываю позицию в буфере
+	MCALL C5_RAM_OFFSET
+	;РЎС‡РёС‚С‹РІР°СЋ РїРѕР·РёС†РёСЋ РІ Р±СѓС„РµСЂРµ
 	LDD TEMP_L,Z+_DRV_HUART_BUFFER_POS
-	;Считываем размер передаваемых данных
+	;РЎС‡РёС‚С‹РІР°РµРј СЂР°Р·РјРµСЂ РїРµСЂРµРґР°РІР°РµРјС‹С… РґР°РЅРЅС‹С…
 	LDD TEMP_H,Z+_DRV_HUART_TX_LEN
-	;Проверяем на первый байт
+	;РџСЂРѕРІРµСЂСЏРµРј РЅР° РїРµСЂРІС‹Р№ Р±Р°Р№С‚
 	CPI TEMP_L,0x00
 	BRNE _DRV_HUART_TX_EVENT__SKIP_DR
-	;Порт направления в HI
+	;РџРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РІ HI
 	LDD ACCUM,Z+_DRV_HUART_DR_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
-	MCALL CORE5277_PORT_SET_HI
+	MCALL C5_PORT_SET_HI
 _DRV_HUART_TX_EVENT__SKIP_DR:
-	;Если все данные переданы то завершаем работу TX
+	;Р•СЃР»Рё РІСЃРµ РґР°РЅРЅС‹Рµ РїРµСЂРµРґР°РЅС‹ С‚Рѕ Р·Р°РІРµСЂС€Р°РµРј СЂР°Р±РѕС‚Сѓ TX
 	CP TEMP_H,TEMP_L
 	BREQ _DRV_HUART_TX_EVENT__DONE
-	;Инкрементируем и записываепм позицию в буфере
+	;РРЅРєСЂРµРјРµРЅС‚РёСЂСѓРµРј Рё Р·Р°РїРёСЃС‹РІР°РµРїРј РїРѕР·РёС†РёСЋ РІ Р±СѓС„РµСЂРµ
 	MOV TEMP,TEMP_L
 	INC TEMP
 	STD Z+_DRV_HUART_BUFFER_POS,TEMP
-	;Вычисляю смещение на нужный байт
+	;Р’С‹С‡РёСЃР»СЏСЋ СЃРјРµС‰РµРЅРёРµ РЅР° РЅСѓР¶РЅС‹Р№ Р±Р°Р№С‚
 	PUSH_Z
 	LDD TEMP,Z+_DRV_HUART_SRC_ADDR+0x00
 	LDD ZL,Z+_DRV_HUART_SRC_ADDR+0x01
@@ -324,7 +326,7 @@ _DRV_HUART_TX_EVENT__SKIP_DR:
 	ADD ZL,TEMP_L
 	CLR TEMP
 	ADC ZH,TEMP
-	;Считываем с буфера байт и передаем
+	;РЎС‡РёС‚С‹РІР°РµРј СЃ Р±СѓС„РµСЂР° Р±Р°Р№С‚ Рё РїРµСЂРµРґР°РµРј
 	SBRC ACCUM,0x07
 	RJMP PC+0x03
 	LD TEMP,Z
@@ -334,37 +336,38 @@ _DRV_HUART_TX_EVENT__SKIP_DR:
 	POP_Z
 	RJMP _DRV_HUART_TX_EVENT__END
 _DRV_HUART_TX_EVENT__DONE:
-	;Отключаем передатчик
+	;РћС‚РєР»СЋС‡Р°РµРј РїРµСЂРµРґР°С‚С‡РёРє
 	LDS TEMP,UCSRB
 	ANDI TEMP,~((1<<TXCIE0)|(1<<TXEN0))
 	STS UCSRB,TEMP
-	;Выставляем TX в низкий уровень
+	;Р’С‹СЃС‚Р°РІР»СЏРµРј TX РІ РЅРёР·РєРёР№ СѓСЂРѕРІРµРЅСЊ
 	LDI ACCUM,TXD
-	MCALL CORE5277_PORT_SET_LO
-	;Проверяем на опцию BREAK
+	MCALL C5_PORT_SET_LO
+	;РџСЂРѕРІРµСЂСЏРµРј РЅР° РѕРїС†РёСЋ BREAK
 	LDD TEMP,Z+_DRV_HUART_OPTIONS
 	SBRS TEMP,DRV_HUART_OPT_BREAK
 	RJMP _DRV_HUART_TX_EVENT__NO_BREAK
 	LDI TEMP,DRV_HUART_ST_BREAK
 	STD Z+_DRV_HUART_STATE,TEMP
-	;Обновляю таймер на отсчет таймаута для посылки BREAK
+	;РћР±РЅРѕРІР»СЏСЋ С‚Р°Р№РјРµСЂ РЅР° РѕС‚СЃС‡РµС‚ С‚Р°Р№РјР°СѓС‚Р° РґР»СЏ РїРѕСЃС‹Р»РєРё BREAK
 	LDD ACCUM,Z+_DRV_HUART_NEXT_TIMEOUT
 	MOV TEMP,ACCUM
 	LSR TEMP
 	ADD ACCUM,TEMP
 	LDD TEMP,Z+_DRV_HUART_TIMER_ID
-	MCALL CORE5277_TIMER_START
+	MCALL C5_TIMER_SET_PERIOD	;TODO РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ
+	MCALL C5_TIMER_START
 	RJMP _DRV_HUART_TX_EVENT__END
 _DRV_HUART_TX_EVENT__NO_BREAK:
-	;Порт направления в LO
+	;РџРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РІ LO
 	LDD ACCUM,Z+_DRV_HUART_DR_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
-	MCALL CORE5277_PORT_SET_LO
-	;Останавливаю таймер
+	MCALL C5_PORT_SET_LO
+	;РћСЃС‚Р°РЅР°РІР»РёРІР°СЋ С‚Р°Р№РјРµСЂ
 	LDD TEMP,Z+_DRV_HUART_TIMER_ID
-	MCALL CORE5277_TIMER_STOP
-	;Устанавливаю состояние READY
+	MCALL C5_TIMER_STOP
+	;РЈСЃС‚Р°РЅР°РІР»РёРІР°СЋ СЃРѕСЃС‚РѕСЏРЅРёРµ READY
 	LDI TEMP,DRV_HUART_ST_READY
 	STD Z+_DRV_HUART_STATE,TEMP
 
@@ -380,27 +383,27 @@ _DRV_HUART_TX_EVENT__END:
 ;--------------------------------------------------------
 _DRV_HUART_RX_EVENT:
 ;--------------------------------------------------------
-;Обработчик прерывания RX
+;РћР±СЂР°Р±РѕС‚С‡РёРє РїСЂРµСЂС‹РІР°РЅРёСЏ RX
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
 
-	MCALL CORE5277_RAM_OFFSET
-	;Считываю позицию в буфере
+	MCALL C5_RAM_OFFSET
+	;РЎС‡РёС‚С‹РІР°СЋ РїРѕР·РёС†РёСЋ РІ Р±СѓС„РµСЂРµ
 	LDD ACCUM,Z+_DRV_HUART_BUFFER_POS
-	;Проверяю на первый байт
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР° РїРµСЂРІС‹Р№ Р±Р°Р№С‚
 	CPI ACCUM,0x00
 	BRNE _DRV_HUART_RX_EVENT__NOT_FIRST_BYTE
 	LDI TEMP,DRV_HUART_ST_RECEIVING
 	STD Z+_DRV_HUART_STATE,TEMP
 _DRV_HUART_RX_EVENT__NOT_FIRST_BYTE:
-	;Проверяю на корректное состояние
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР° РєРѕСЂСЂРµРєС‚РЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ
 	LDD TEMP,Z+_DRV_HUART_STATE
 	CPI TEMP,DRV_HUART_ST_RECEIVING
 	BRNE _DRV_HUART_RX_EVENT__END
-	;Проверяю на максимальный размер
+	;РџСЂРѕРІРµСЂСЏСЋ РЅР° РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ
 	LDD TEMP,Z+_DRV_HUART_RX_LEN
 	CP ACCUM,TEMP
 	BRCS _DRV_HUART_RX_EVENT__NO_OVERSIZE
@@ -415,7 +418,7 @@ _DRV_HUART_RX_EVENT__NO_OVERSIZE:
 	STD Z+_DRV_HUART_STATE,TEMP
 	RJMP _DRV_HUART_RX_EVENT__END
 _DRV_HUART_RX_EVENT__NO_BREAK:
-	;Записываю байт
+	;Р—Р°РїРёСЃС‹РІР°СЋ Р±Р°Р№С‚
 	LDD YH,Z+_DRV_HUART_DST_ADDR+0x00
 	LDD YL,Z+_DRV_HUART_DST_ADDR+0x01
 	ADD YL,ACCUM
@@ -423,14 +426,15 @@ _DRV_HUART_RX_EVENT__NO_BREAK:
 	ADC YH,TEMP
 	LDS TEMP,UDR
 	ST Y,TEMP
-	;Инкрементирую и записываю позицию в буфере
+	;РРЅРєСЂРµРјРµРЅС‚РёСЂСѓСЋ Рё Р·Р°РїРёСЃС‹РІР°СЋ РїРѕР·РёС†РёСЋ РІ Р±СѓС„РµСЂРµ
 	INC ACCUM
 	STD Z+_DRV_HUART_BUFFER_POS,ACCUM
 _DRV_HUART_RX_EVENT__TIMER_UPDATE:
-	;Обновляю таймер на отсчет таймаута ожидания следоующего байта
+	;РћР±РЅРѕРІР»СЏСЋ С‚Р°Р№РјРµСЂ РЅР° РѕС‚СЃС‡РµС‚ С‚Р°Р№РјР°СѓС‚Р° РѕР¶РёРґР°РЅРёСЏ СЃР»РµРґРѕСѓСЋС‰РµРіРѕ Р±Р°Р№С‚Р°
 	LDD TEMP,Z+_DRV_HUART_TIMER_ID
 	LDD ACCUM,Z+_DRV_HUART_NEXT_TIMEOUT
-	MCALL CORE5277_TIMER_START
+	MCALL C5_TIMER_SET_PERIOD		;TODO РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ
+	MCALL C5_TIMER_START
 _DRV_HUART_RX_EVENT__END:
 	POP ACCUM
 	POP TEMP
@@ -441,13 +445,13 @@ _DRV_HUART_RX_EVENT__END:
 ;--------------------------------------------------------
 _DRV_HUART_TIMER_EVENT:
 ;--------------------------------------------------------
-;Событие от таймера
+;РЎРѕР±С‹С‚РёРµ РѕС‚ С‚Р°Р№РјРµСЂР°
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
 
-	MCALL CORE5277_RAM_OFFSET
+	MCALL C5_RAM_OFFSET
 	LDD TEMP,Z+_DRV_HUART_STATE
 	CPI TEMP,DRV_HUART_ST_RECEIVING
 	BRNE _DRV_HUART_TIMER_EVENT__NOT_RECEIVING
@@ -462,15 +466,15 @@ _DRV_HUART_TIMER_EVENT:
 _DRV_HUART_TIMER_EVENT__NOT_RECEIVING:
 	CPI TEMP,DRV_HUART_ST_BREAK
 	BRNE _DRV_HUART_TIMER_EVENT__END
-	;Останавливаю таймер
+	;РћСЃС‚Р°РЅР°РІР»РёРІР°СЋ С‚Р°Р№РјРµСЂ
 	LDD TEMP,Z+_DRV_HUART_TIMER_ID
-	MCALL CORE5277_TIMER_STOP
-	;Порт направления в LO
+	MCALL C5_TIMER_STOP
+	;РџРѕСЂС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РІ LO
 	LDD ACCUM,Z+_DRV_HUART_DR_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
-	MCALL CORE5277_PORT_SET_LO
-	;Устанавливаю состояние READY
+	MCALL C5_PORT_SET_LO
+	;РЈСЃС‚Р°РЅР°РІР»РёРІР°СЋ СЃРѕСЃС‚РѕСЏРЅРёРµ READY
 	LDI TEMP,DRV_HUART_ST_READY
 	STD Z+_DRV_HUART_STATE,TEMP
 

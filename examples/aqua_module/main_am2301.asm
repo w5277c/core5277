@@ -1,6 +1,5 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
-;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;03.10.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -27,8 +26,8 @@
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_PCINT_DRV							= 0|(1<<CORE5277_PROCID_OPT_DRV)
-	.EQU	PID_AM2301_DRV							= 1|(1<<CORE5277_PROCID_OPT_DRV)
+	.EQU	PID_PCINT_DRV							= 0|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_AM2301_DRV							= 1|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
@@ -44,13 +43,13 @@ MAIN:
 	STS SPL,TEMP
 
 	;Инициализация ядра
-	MCALL CORE5277_INIT
+	MCALL C5_INIT
 
 	;Инициализация PCINT
 	LDI PID,PID_PCINT_DRV
 	LDI ZH,high(DRV_HPCINT_INIT)
 	LDI ZL,low(DRV_HPCINT_INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
 	;Инициализация AM2301
 	LDI PID,PID_AM2301_DRV
@@ -58,43 +57,43 @@ MAIN:
 	LDI ZL,low(DRV_AM2301_INIT)
 	LDI TEMP_H,PID_PCINT_DRV
 	LDI TEMP_L,PC1
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования AM2301
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
 	LDI ZL,low(TASK__INIT)
-	MCALL CORE5277_CREATE
+	MCALL C5_CREATE
 
-	MJMP CORE5277_START
+	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
 	TASK__LOGSTR_ERROR:
 	.db   "error",0x0d,0x0a,0x00
 
 TASK__INIT:
-	MCALL CORE5277_READY
+	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI TEMP_H,0x00
 	LDI TEMP_L,high(1000/2)
 	LDI TEMP,low(1000/2)
-	MCALL CORE5277_WAIT_2MS											;Ждем 1000мс
+	MCALL C5_WAIT_2MS											;Ждем 1000мс
 
 	LDI TEMP,PID_AM2301_DRV
-	MCALL CORE5277_EXEC
+	MCALL C5_EXEC
 	CPI TEMP,DRV_AM2301_RESULT_OK
 	BRNE TASK__ERROR
 
-	MCALL CORE5277_LOG_SDNF
+	MCALL C5_LOG_SDNF
 	LDI TEMP,'/'
-	MCALL CORE5277_LOG_CHAR
+	MCALL C5_LOG_CHAR
 	MOV TEMP_H,TEMP_EH
 	MOV TEMP_L,TEMP_EL
-	MCALL CORE5277_LOG_SDNF
-	CORE5277_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_SDNF
+	C5_LOG_ROMSTR LOGSTR_NEW_LINE
 	RJMP TASK__INFINITE_LOOP
 
 TASK__ERROR:
-	CORE5277_LOG_ROMSTR TASK__LOGSTR_ERROR
+	C5_LOG_ROMSTR TASK__LOGSTR_ERROR
 	RJMP TASK__INFINITE_LOOP

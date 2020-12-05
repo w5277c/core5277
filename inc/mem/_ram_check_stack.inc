@@ -1,16 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;28.05.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CORE5277_RAM_CHECK_STACK
+.ifdef DEF_C5_RAM_CHECK_STACK
 .else
-.set DEF_CORE5277_RAM_CHECK_STACK = 1
+.set DEF_C5_RAM_CHECK_STACK = 1
 
 ;--------------------------------------------------------
-_CORE5277_RAM_CHECK_STACK:
+_C5_RAM_CHECK_STACK:
 ;--------------------------------------------------------
 ;Проверяем на влияние на стек
 ;IN: Y - адрес блока, ACCUM - длина
@@ -25,21 +25,21 @@ _CORE5277_RAM_CHECK_STACK:
 	CLR ACCUM
 	ADC YH,ACCUM
 	;Получаем адрес вершины стека
-	LDS XH,_CORE5277_TOP_OF_STACK+0x00
-	LDS XL,_CORE5277_TOP_OF_STACK+0x01
+	LDS XH,_C5_TOP_OF_STACK+0x00
+	LDS XL,_C5_TOP_OF_STACK+0x01
 	;Находим разницу
 	SUB XL,YL
 	SBC XH,YH
-	BRCS _CORE5277_RAM_CHECK_STACK__FAIL
+	BRCS _C5_RAM_CHECK_STACK__FAIL
 	;Учитываем минимально допустимый размер
-	SUBI XL,_CORE5277_RAM_BORDER_SIZE
+	SUBI XL,_C5_RAM_BORDER_SIZE
 	SBCI XH,0x00
-	BRCS _CORE5277_RAM_CHECK_STACK__FAIL
+	BRCS _C5_RAM_CHECK_STACK__FAIL
 	SEZ
-	RJMP _CORE5277_RAM_CHECK_STACK__END
-_CORE5277_RAM_CHECK_STACK__FAIL:
+	RJMP _C5_RAM_CHECK_STACK__END
+_C5_RAM_CHECK_STACK__FAIL:
 	CLZ
-_CORE5277_RAM_CHECK_STACK__END:
+_C5_RAM_CHECK_STACK__END:
 	POP ACCUM
 	POP_Y
 	POP_X

@@ -1,9 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
-;Владельцем данного исходного кода является Удовиченко Константин Александрович, емайл:w5277c@gmail.com, по всем
-;правовым вопросам обращайтесь на email.
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;12.06.2020  w5277c@gmail.com        Начало
 ;02.08.2020  w5277c@gmail.com        Разбиение на файлы
+;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 	;Ссылаются в никуда, толкьо чтобы были метки
 	LOGSTR_CORE:
@@ -12,26 +12,26 @@
 	LOGSTR_ERROR:
 	.db	"?",0x00
 
-	.MACRO CORE5277_LOG_ROMSTR
+	.MACRO C5_LOG_ROMSTR
 	.ENDMACRO
-	.MACRO CORE5277_LOG_MARK_S
+	.MACRO C5_LOG_MARK_S
 	.ENDMACRO
-	.MACRO CORE5277_LOG_MARK_R
+	.MACRO C5_LOG_MARK_R
 	.ENDMACRO
 
-	CORE5277_LOG_INIT:
-	CORE5277_LOG_COREFAULT:
-	CORE5277_LOG_TASKSDUMP:
-	CORE5277_LOG_TASKDUMP:
-	CORE5277_LOG_STACKDUMP:
-	CORE5277_LOG_RAMDUMP:
-	CORE5277_LOG_ROMDUMP:
-	CORE5277_LOG_EEPROMDUMP:
-	CORE5277_LOG_MARK:
-	CORE5277_LOG_SDNF:
-	CORE5277_LOG_STR:
-	CORE5277_LOG_BYTES:
-	CORE5277_LOG_WORD:
-	CORE5277_LOG_BYTE:
-	CORE5277_LOG_CHAR:
+	C5_LOG_INIT:
+	C5_LOG_COREFAULT:
+	C5_LOG_TASKSDUMP:
+	C5_LOG_TASKDUMP:
+	C5_LOG_STACKDUMP:
+	C5_LOG_RAMDUMP:
+	C5_LOG_ROMDUMP:
+	C5_LOG_EEPROMDUMP:
+	C5_LOG_MARK:
+	C5_LOG_SDNF:
+	C5_LOG_STR:
+	C5_LOG_BYTES:
+	C5_LOG_WORD:
+	C5_LOG_BYTE:
+	C5_LOG_CHAR:
 		RET
