@@ -1,14 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019  w5277c@gmail.com        Начало
-;02.08.2020  w5277c@gmail.com        Тут просто дохрена изменений
-;09.08.2020  w5277c@gmail.com        Тут просто дохрена изменений
-;06.09.2020  w5277c@gmail.com        Восстановлены механизмы многопоточности
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
-;28.10.2020  w5277c@gmail.com        Багфикс программных таймеров
-;10.11.2020  w5277c@gmail.com        Исправлена критическая ошибка в _C5_STACK_TO_TOP
-;11.11.2020  w5277c@gmail.com        Добавлена метка реинициализации (не влияет на UPTIME)
+;07.10.2019	w5277c@gmail.com			Начало
+;02.08.2020	w5277c@gmail.com			Тут просто дохрена изменений
+;09.08.2020	w5277c@gmail.com			Тут просто дохрена изменений
+;06.09.2020	w5277c@gmail.com			Восстановлены механизмы многопоточности
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;28.10.2020	w5277c@gmail.com			Багфикс программных таймеров
+;10.11.2020	w5277c@gmail.com			Исправлена критическая ошибка в _C5_STACK_TO_TOP
+;11.11.2020	w5277c@gmail.com			Добавлена метка реинициализации (не влияет на UPTIME)
+;22.11.2020	w5277c@gmail.com			v0.2.8	Механизм выдерживания паузы использует время запуска задачи вместо дельты
+;															времени
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -24,11 +26,19 @@
 ;Острожно с записями типа 'BRTC PC+0x03' макрос MJMP и MCALL занимает 3 слова(смещение +0x03)
 ;Программные UART'ы есть смысл сделать только два, где RX'ы подключаются к INT0 и INT1
 
+
+;TODO выделить ядро в отдельный код, дабы была
+;возможность использовать процедуры без ядра для особо слабых мк.
+;Ну и соответственно убрать из процедур приставку C5, которые не имеют прямого отношения к ядру - точно?
+;И наоборот, четко выделить в именах файлов зависимость от ядра
+;TODO TIMER-TASK отрабатывает немного чаще, почему?
 ;-----------------------------------------------------------------------------------------------------------------------
 .IFDEF AVRA
 .ELSE
 	.SET AVRA										= 0x00			;0x01 - выводит при сборке размеры блоков и некоторые смещения
 .ENDIF
+
+;	.SET	C5_VERSION								= "0.2.8"		;Версия ядра
 
 ;---PRCO-STATES------------------------------------------;Состояния задачи (PROC-STATES-младший ниббл, PROC-MODE-старший ниббл)
 	.EQU	_C5_PROC_STATE_ABSENT				= 0x00			;Нет задачи
@@ -59,7 +69,7 @@
 	.EQU	_C5_TASK_STACK_OFFSET				= 0x04			;2B - адрес начала стека задачи
 	.EQU	_C5_TASK_STACK_SIZE					= 0x06			;1B - размер стека задачи
 	.EQU	_C5_TASK_TIMESTAMP					= 0x07			;1B - мекта времени переключения на задачу
-	.EQU	_C5_TASK_TIMEOUT						= 0x08			;3B - время ожидания задачи(~9 часов максимум, тик в 2мс)
+	.EQU	_C5_TASK_EXECTIME						= 0x08			;3B - время запуска задачи(~9 часов максимум, тик в 2мс)
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_C5_DRIVER_HEADER_SIZE				= 0x06			;Размер заголовка драйвера
@@ -136,47 +146,6 @@
 	.DEF	_C5_COREFLAGS							= r14				;флаги ядра
 	.DEF	_PID										= r15				;ид корневого процесса(обычно задачи)
 
-	.DEF	TEMP_L									= r16				;Младший регистр общего назначения
-	.DEF	TEMP_H									= r17				;Старший регистр общего назначения
-	.DEF	TEMP										= r18				;Регистр общего назначения
-	.DEF	TEMP_EL									= r19				;Младший расширенный регистр общего назначения
-	.DEF	TEMP_EH									= r20				;Старший расширенный регистр общего назначения
-	.DEF	LOOP_CNTR								= r21				;Регистр счета циклов
-	.DEF	FLAGS										= r22				;Регистр флагов
-	.DEF	TRY_CNTR									= r23				;Счетчик ошибок
-	.DEF	ACCUM										= r24				;Аккумулятор
-	.DEF	PID										= r25				;ид процедуры
-	.DEF	XL											= r26
-	.DEF	XH											= r27
-	.DEF	YL											= r28
-	.DEF	YH											= r29
-	.DEF	ZL											= r30
-	.DEF	ZH											= r31
-
-.MACRO PUSH_X
-	PUSH XH
-	PUSH XL
-.ENDMACRO
-.MACRO POP_X
-	POP XL
-	POP XH
-.ENDMACRO
-.MACRO PUSH_Y
-	PUSH YH
-	PUSH YL
-.ENDMACRO
-.MACRO POP_Y
-	POP YL
-	POP YH
-.ENDMACRO
-.MACRO PUSH_Z
-	PUSH ZH
-	PUSH ZL
-.ENDMACRO
-.MACRO POP_Z
-	POP ZL
-	POP ZH
-.ENDMACRO
 
 .INCLUDE	"./inc/io/log_init.inc"
 .INCLUDE	"./inc/io/log_romstr.inc"
@@ -231,7 +200,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED ########"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"core5277_v0.2.7",0x0d,0x0a,0x00
+	.db   0x0d,0x0a,"core5277_v0.2.8",0x0d,0x0a,0x00
 	.INCLUDE "./inc/io/log_init.inc"
 .ELSE
 	.MESSAGE "######## LOGGING DISABLED ########"
@@ -737,10 +706,25 @@ C5_CREATE:
 
 	SBRS PID,C5_PROCID_OPT_TIMER
 	RJMP C5_CREATE__TIMER_CODE_SKIP1
-	STD Z+_C5_TASK_TIMEOUT+0x00,TEMP_H
-	STD Z+_C5_TASK_TIMEOUT+0x01,TEMP_L
-	STD Z+_C5_TASK_TIMEOUT+0x02,TEMP
+	;Записываем время окончания паузы
+	PUSH ACCUM
+	LDS ACCUM,SREG
+	PUSH ACCUM
+	CLI
+	LDS ACCUM,_C5_UPTIME+0x04
+	ADD ACCUM,TEMP
+	STD Z+_C5_TASK_EXECTIME+0x02,ACCUM
+	LDS ACCUM,_C5_UPTIME+0x03
+	ADC ACCUM,TEMP_L
+	STD Z+_C5_TASK_EXECTIME+0x01,ACCUM
+	LDS ACCUM,_C5_UPTIME+0x02
+	ADC ACCUM,TEMP_H
+	STD Z+_C5_TASK_EXECTIME+0x00,ACCUM
+	POP ACCUM
+	STS SREG,ACCUM
+	POP ACCUM
 C5_CREATE__TIMER_CODE_SKIP1:
+
 	POP_Z
 	;Запоминаем текущее положение стека
 	LDS r2,SPH
@@ -751,14 +735,23 @@ C5_CREATE__TIMER_CODE_SKIP1:
 	STS SPH,r0
 	STS SPL,r1
 
-	;Если таймер - записываем таймаут в заголовок и в стек для восстановления
+	;Если таймер - записываем таймаут в стек для восстановления
 	SBRS PID,C5_PROCID_OPT_TIMER
 	RJMP C5_CREATE__TIMER_CODE_SKIP2
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
-
+	LDS r1,SREG
+	CLI
+	LDS TEMP,_C5_UPTIME+0x04
+	PUSH TEMP															;Выделяем дополнительно 3 байта для хранения временной метки,
+	LDS TEMP,_C5_UPTIME+0x03
+	PUSH TEMP															;используется при вызове процедуры RESUME,
+	LDS TEMP,_C5_UPTIME+0x02
+	PUSH TEMP															;т.к. EXECTIME может быть перезаписан процедурами WAIT
+	STS SREG,r1
 C5_CREATE__TIMER_CODE_SKIP2:
+
 	;Помещаем точку возврата
 	MOV r0,TEMP
 	LDI TEMP,low(_C5_TASK_ENDPOINT)
@@ -979,14 +972,23 @@ C5_SUSPEND:
 	LDD TEMP,Z+_C5_PROC_STATE
 	SBRS TEMP,C5_PROCID_OPT_TIMER
 	RJMP __C5_SUSPEND_NO_TIMER
+	;Записываю новую временную метку запуска задачи на базе времени текущего запуска и времени ожидания
 	LDD YH,Z+_C5_TASK_STACK_OFFSET+0x00
 	LDD YL,Z+_C5_TASK_STACK_OFFSET+0x01
-	LD TEMP,Y
-	STD Z+_C5_TASK_TIMEOUT+0x00,TEMP
-	LD TEMP,-Y
-	STD Z+_C5_TASK_TIMEOUT+0x01,TEMP
-	LD TEMP,-Y
-	STD Z+_C5_TASK_TIMEOUT+0x02,TEMP
+	SBIW YL,0x05
+	LDD TEMP,Y+0x00
+	LDD ACCUM,Y+0x3
+	ADD TEMP,ACCUM
+	STD Z+_C5_TASK_EXECTIME+0x02,TEMP
+	LDD TEMP,Y+0x01
+	LDD ACCUM,Y+0x4
+	ADC TEMP,ACCUM
+	STD Z+_C5_TASK_EXECTIME+0x01,TEMP
+	LDD TEMP,Y+0x02
+	LDD ACCUM,Y+0x05
+	ADC TEMP,ACCUM
+	STD Z+_C5_TASK_EXECTIME+0x00,TEMP
+
 	LDI TEMP,_C5_PROC_STATE_TIMER_WAIT
 	RJMP __C5_SUSPEND_TIMER
 __C5_SUSPEND_NO_TIMER:

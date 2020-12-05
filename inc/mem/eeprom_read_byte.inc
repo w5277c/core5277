@@ -3,22 +3,23 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;14.09.2020  w5277c@gmail.com        Начало
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;21.11.2020  w5277c@gmail.com        -с5
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_EEPROM_READ_BYTE
+.ifdef DEF_EEPROM_READ_BYTE
 .else
-.set DEF_C5_EEPROM_READ_BYTE = 1
+.set DEF_EEPROM_READ_BYTE = 1
 
 ;--------------------------------------------------------
-C5_EEPROM_READ_BYTE:
+EEPROM_READ_BYTE:
 ;--------------------------------------------------------
 ;Считываем байт из EEPROM
 ;IN: TEMP_H,TEMP_L - адрес в EEPROM
 ;OUT: TEMP - значение
 ;--------------------------------------------------------
-C5_EEPROM_READ_BYTE__LOOP:
+__EEPROM_READ_BYTE__LOOP:
 	LDS TEMP,EECR
 	ANDI TEMP,(1<<EEPE)
-	BRNE C5_EEPROM_READ_BYTE__LOOP
+	BRNE __EEPROM_READ_BYTE__LOOP
 	STS EEARH,TEMP_H
 	STS EEARL,TEMP_L
 	MCALL C5_DISPATCHER_LOCK								;TODO заменить за блокировку ресурса

@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;16.09.2020  w5277c@gmail.com        Начало
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;21.11.2020  w5277c@gmail.com        -с5
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_EEPROM_WRITE_BYTES
 .else
@@ -11,7 +12,7 @@
 .include	"./inc/mem/eeprom_write_byte.inc"
 
 ;--------------------------------------------------------
-C5_EEPROM_WRITE_BYTES:
+EEPROM_WRITE_BYTES:
 ;--------------------------------------------------------
 ;Записываем байт в EEPROM
 ;IN: X-SRC адрес, TEMP_H,TEMP_L - адрес в EEPROM,
@@ -21,17 +22,17 @@ C5_EEPROM_WRITE_BYTES:
 	PUSH LOOP_CNTR
 	PUSH TEMP
 
-C5_EEPROM_WRITE_BYTES__LOOP:
+__EEPROM_WRITE_BYTES__LOOP:
 	LD TEMP,X+
 
-	MCALL C5_EEPROM_WRITE_BYTE
+	MCALL EEPROM_WRITE_BYTE
 
 	LDI TEMP,0x01
 	ADD TEMP_L,TEMP
 	LDI TEMP,0x00
 	ADC TEMP_H,TEMP
 	DEC LOOP_CNTR
-	BRNE C5_EEPROM_WRITE_BYTES__LOOP
+	BRNE __EEPROM_WRITE_BYTES__LOOP
 
 	POP TEMP
 	POP LOOP_CNTR
