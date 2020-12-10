@@ -5,12 +5,12 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/core/wait.inc"
-.include	"./inc/core/res_lock.inc"
-.include	"./inc/core/res_unlock.inc"
-.include	"./inc/math/div32x16.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./core/wait.inc"
+.include	"./core/res_lock.inc"
+.include	"./core/res_unlock.inc"
+.include	"./math/div32x16.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_ADC_RAM_SIZE									= 0x0a;Размер используемой памяти
@@ -147,7 +147,7 @@ DRV_ADC__WAIT_RESULT:
 	LDD TEMP_EL,Z+_DRV_ADC_SUM+0x00
 	LDD TEMP_H,Z+_DRV_ADC_SUM+0x01
 	LDD TEMP_L,Z+_DRV_ADC_SUM+0x02
-	MCALL C5_DIV32X16
+	MCALL DIV32X16
 
 	;Разблокируем ресурс ADC
 ;	LDI ACCUM,C5_RES_ADC

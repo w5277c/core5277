@@ -5,10 +5,10 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/math/mul24x8.inc"
-.include	"./inc/math/div16x8.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./math/mul24x8.inc"
+.include	"./math/div16x8.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_MLX90614_K						= 27315			;1С=273.15К
@@ -69,17 +69,17 @@ DRV_MLX90614_INIT:
 	LDD TEMP_H,Z+_DRV_MLX90614_RESULT+0x01
 	LDD TEMP_L,Z+_DRV_MLX90614_RESULT+0x00
 	LDI TEMP,0x02
-	MCALL C5_MUL24X8
+	MCALL MUL24X8
 	SUBI TEMP_L,low(_DRV_MLX90614_K)
 	SBCI TEMP_H,high(_DRV_MLX90614_K)
 	MOV ACCUM,TEMP_L
 	LDI TEMP,100
-	MCALL C5_DIV16X8
+	MCALL DIV16X8
 	MOV ZH,TEMP_L
 	CLR TEMP_EL
 	CLR TEMP_H
 	LDI TEMP,100
-	MCALL C5_MUL24X8
+	MCALL MUL24X8
 	MOV ZL,ACCUM
 	SUB ZL,TEMP_L
 	SEZ

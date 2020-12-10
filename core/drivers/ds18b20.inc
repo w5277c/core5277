@@ -6,11 +6,11 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/conv/crc8_maxim_block.inc"
-.include	"./inc/math/mul24x8.inc"
-.include	"./inc/math/div16x8.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./conv/crc8_maxim_block.inc"
+.include	"./math/mul24x8.inc"
+.include	"./math/div16x8.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_DS18B20_BUFFER					= 0x00			;9b - буффер для чтения с шины 1w
@@ -98,7 +98,7 @@ DRV_DS18B20_INIT:
 	RJMP _DRV_DS18B20_PROC__ERROR
 
 	LDI LOOP_CNTR,0x08
-	MCALL C5_CRC8_MAXIM_BLOCK
+	MCALL CRC8_MAXIM_BLOCK
 	LDD TEMP,Z+_DRV_DS18B20_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03
@@ -120,9 +120,9 @@ DRV_DS18B20_INIT:
 	CLR TEMP_EL
 	LDI TEMP_H,0x02													;Умножаем на 625
 	LDI TEMP_L,0x71
-	MCALL C5_MUL24x8
+	MCALL MUL24x8
 	LDI TEMP,100														;Делим на 100
-	MCALL C5_DIV16x8													;В TEMP_L - дробная часть в человеческом формате 0-99
+	MCALL DIV16x8														;В TEMP_L - дробная часть в человеческом формате 0-99
 
 	POP TEMP_H
 	BRTC PC+0x02														;Переносим знак в новый формат

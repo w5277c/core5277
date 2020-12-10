@@ -8,13 +8,13 @@
 ;Как будто данные в TWDR появляются с опозданием в 1 байт
 ;Возможно причина в TWI_MR_SLA_R_ACK я его пропускаю, если не пропускать то в TWDR получаю 0xd1
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/io/port_mode_in.inc"
-.include	"./inc/io/port_mode_out.inc"
-.include	"./inc/io/port_set_lo.inc"
-.include	"./inc/io/port_set_hi.inc"
-.include	"./inc/core/wait.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./io/port_mode_in.inc"
+.include	"./io/port_mode_out.inc"
+.include	"./io/port_set_lo.inc"
+.include	"./io/port_set_hi.inc"
+.include	"./core/wait.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---FREQ---

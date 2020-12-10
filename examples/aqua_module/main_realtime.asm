@@ -13,7 +13,7 @@
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-;	.INCLUDE "./core/core5277.inc"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
 	.INCLUDE "./core/drivers/beeper.inc"
 	;Блок задач

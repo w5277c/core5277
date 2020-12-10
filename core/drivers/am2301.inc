@@ -5,15 +5,15 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/io/port_mode_in.inc"
-.include	"./inc/io/port_mode_out.inc"
-.include	"./inc/io/port_set_lo.inc"
-.include	"./inc/io/port_set_hi.inc"
-.include	"./inc/io/port_get.inc"
-.include	"./inc/math/mul8x8.inc"
-.include	"./inc/math/div16x8.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./io/port_mode_in.inc"
+.include	"./io/port_mode_out.inc"
+.include	"./io/port_set_lo.inc"
+.include	"./io/port_set_hi.inc"
+.include	"./io/port_get.inc"
+.include	"./math/mul8x8.inc"
+.include	"./math/div16x8.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_AM2301_BUFFER					= 0x00			;5B - буффер для чтения данных
@@ -122,15 +122,15 @@ DRV_AM2301_INIT:
 	LDD TEMP_H,Z+_DRV_AM2301_BUFFER_HH
 	LDD TEMP_L,Z+_DRV_AM2301_BUFFER_HL
 	LDI TEMP,0x0a
-	MCALL C5_DIV16x8
+	MCALL DIV16x8
 	MOV TEMP_EH,TEMP_L
 	LDI TEMP,0x0a
-	MCALL C5_MUL8x8
+	MCALL MUL8x8
 	LDD TEMP,Z+_DRV_AM2301_BUFFER_HL
 	SUB TEMP,TEMP_L
 	MOV TEMP_L,TEMP
 	LDI TEMP,0x0a
-	MCALL C5_MUL8x8
+	MCALL MUL8x8
 	MOV TEMP_EL,TEMP_L
 
 	LDD TEMP_H,Z+_DRV_AM2301_BUFFER_TH
@@ -138,15 +138,15 @@ DRV_AM2301_INIT:
 	ANDI TEMP_H,0x7f
 	LDD TEMP_L,Z+_DRV_AM2301_BUFFER_TL
 	LDI TEMP,0x0a
-	MCALL C5_DIV16x8
+	MCALL DIV16x8
 	PUSH TEMP_L
 	LDI TEMP,0x0a
-	MCALL C5_MUL8x8
+	MCALL MUL8x8
 	LDD TEMP,Z+_DRV_AM2301_BUFFER_TL
 	SUB TEMP,TEMP_L
 	MOV TEMP_L,TEMP
 	LDI TEMP,0x0a
-	MCALL C5_MUL8x8
+	MCALL MUL8x8
 	SBRC ACCUM,0x07
 	ORI TEMP_L,0x80
 	POP TEMP_H

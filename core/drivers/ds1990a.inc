@@ -6,9 +6,9 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/conv/crc8_maxim_block.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./conv/crc8_maxim_block.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_DS1990A_BUFFER					= 0x00			;7b - буффер для чтения с шины 1w
@@ -74,7 +74,7 @@ DRV_DS1990A_INIT:
 	RJMP _DRV_DS1990A_PROC__END
 
 	LDI LOOP_CNTR,0x07
-	MCALL C5_CRC8_MAXIM_BLOCK
+	MCALL CRC8_MAXIM_BLOCK
 	LDD TEMP,Z+DRV_DS1990A_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03

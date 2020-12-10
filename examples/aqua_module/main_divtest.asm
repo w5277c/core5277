@@ -6,23 +6,23 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 0	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_numx8.inc"
-	.include	"./inc/io/log_romstr.inc"
-	.include	"./inc/io/logstr_new_line.inc"
-	.include	"./inc/math/div10.inc"
-	.include	"./inc/math/div100.inc"
+	.include	"./core/log/log_numx8.inc"
+	.include	"./core/log/log_romstr.inc"
+	.include	"./core/log/logstr_new_line.inc"
+	.include	"./math/div10.inc"
+	.include	"./math/div100.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -68,7 +68,7 @@ TASK__INIT:
 ;	MOV TEMP,LOOP_CNTR
 ;	MCALL C5_LOG_NUMx8
 ;	C5_LOG_ROMSTR TASK__LOGSTR1
-;	MCALL C5_DIV10
+;	MCALL DIV10
 ;	MOV TEMP,TEMP_L
 ;	MCALL C5_LOG_NUMx8
 ;	C5_LOG_ROMSTR TASK__LOGSTR2
@@ -80,7 +80,7 @@ TASK__INIT:
 
 	LDI TEMP_H,high(59942);=600
 	LDI TEMP_L,low(59942);=600
-	MCALL C5_DIV100
+	MCALL DIV100
 	MCALL C5_LOG_WORD
 
 	RET

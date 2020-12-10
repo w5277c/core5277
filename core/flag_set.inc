@@ -9,8 +9,8 @@
 .else
 .set DEF_C5_FLAG_SET = 1
 
-.include	"./inc/core/_flag_offset.inc"
-.include	"./inc/conv/bitnum_to_num.inc"
+.include	"./core/_flag_offset.inc"
+.include	"./conv/bitnum_to_num.inc"
 
 ;--------------------------------------------------------
 C5_FLAG_SET:
@@ -24,7 +24,7 @@ C5_FLAG_SET:
 
 	MCALL _C5_FLAG_OFFSET
 	ANDI TEMP,0x07
-	MCALL C5_BITNUM_TO_NUM
+	MCALL BITNUM_TO_NUM
 	LD ACCUM,Z
 	OR ACCUM,TEMP
 	ST Z,ACCUM

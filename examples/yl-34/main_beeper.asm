@@ -5,21 +5,21 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega16.inc"
+	.INCLUDE "./devices/atmega16.inc"
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
 	.SET	TIMERS									= 1	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.INCLUDE "./inc/drivers/beeper.inc"
+	.INCLUDE "./core/drivers/beeper.inc"
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/core/wait_1s.inc"
-	.include	"./inc/core/wait_1s.inc"
+	.include	"./core/wait_1s.inc"
+	.include	"./core/wait_1s.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------

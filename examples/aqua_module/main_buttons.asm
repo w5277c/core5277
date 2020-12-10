@@ -6,21 +6,21 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 1	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.include	"./inc/drivers/buttons.inc"
+	.include	"./core/drivers/buttons.inc"
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_word.inc"
+	.include	"./core/log/log_word.inc"
 ;	;---
 
 ;---CONSTANTS--------------------------------------------

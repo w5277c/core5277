@@ -10,8 +10,8 @@
 .else
 .set DEF_C5_RAM_EXTEND = 1
 
-.include	"./inc/mem/_ram_find_free_block.inc"
-.include	"./inc/mem/_ram_resize.inc"
+.include	"./core/ram/_ram_find_free_block.inc"
+.include	"./core/ram/_ram_resize.inc"
 
 ;--------------------------------------------------------
 C5_RAM_EXTEND:

@@ -6,22 +6,22 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega16.inc"
+	.INCLUDE "./devices/atmega16.inc"
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.INCLUDE "./inc/drivers/i2c_h.inc"
-	.INCLUDE "./inc/drivers/mlx90614.inc"
+	.INCLUDE "./core/drivers/i2c_h.inc"
+	.INCLUDE "./core/drivers/mlx90614.inc"
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_sdnf.inc"
-	.include	"./inc/io/log_romstr.inc"
-	.include	"./inc/io/logstr_new_line.inc"
+	.include	"./core/log/log_sdnf.inc"
+	.include	"./core/log/log_romstr.inc"
+	.include	"./core/log/logstr_new_line.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------

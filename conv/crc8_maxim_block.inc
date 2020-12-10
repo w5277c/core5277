@@ -1,18 +1,19 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019  w5277c@gmail.com        Начало
-;01.08.2020  w5277c@gmail.com        Разбиение на файлы
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;07.10.2019  w5277c@gmail.com			Начало
+;01.08.2020  w5277c@gmail.com			Разбиение на файлы
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;10.12.2020  w5277c@gmail.com			-с5
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_CRC8_MAXIM_BLOCK
+.ifdef DEF_CRC8_MAXIM_BLOCK
 .else
-.set DEF_C5_CRC8_MAXIM_BLOCK = 1
+.set DEF_CRC8_MAXIM_BLOCK = 1
 
-.include	"./inc/conv/crc8_maxim.inc"
+.include	"./conv/crc8_maxim.inc"
 
 ;--------------------------------------------------------
-C5_CRC8_MAXIM_BLOCK:
+CRC8_MAXIM_BLOCK:
 ;--------------------------------------------------------
 ;Подсчет блока CRC
 ;IN: X - адрес начала блока, LOOP_CNTR - длина
@@ -22,11 +23,11 @@ C5_CRC8_MAXIM_BLOCK:
 	PUSH LOOP_CNTR
 	CLR ACCUM
 
-_C5_CRC8_MAXIM_BLOCK__LOOP:
+_CRC8_MAXIM_BLOCK__LOOP:
 	LD TEMP,X+
-	MCALL C5_CRC8_MAXIM
+	MCALL CRC8_MAXIM
 	DEC LOOP_CNTR
-	BRNE _C5_CRC8_MAXIM_BLOCK__LOOP
+	BRNE _CRC8_MAXIM_BLOCK__LOOP
 
 	POP LOOP_CNTR
 	POP_X

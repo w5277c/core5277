@@ -5,10 +5,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO реализовать прием данных
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/math/mul8x8.inc"
-.include	"./inc/mem/ram_fill8.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./math/mul8x8.inc"
+.include	"./mem/ram_fill8.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_MAX7219_SPI_ID								= 0x00;1b - ид драйвера SPI
@@ -39,7 +39,7 @@ DRV_MAX7219_INIT:
 	INC TEMP_L
 	INC FLAGS
 	MOV TEMP,FLAGS
-	MCALL C5_MUL8X8
+	MCALL MUL8X8
 	;Прибавляю остальные данные
 	LDI ACCUM,_DRV_MAX7219_RAM_SIZE
 	ADD ACCUM,TEMP_L

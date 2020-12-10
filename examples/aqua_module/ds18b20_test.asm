@@ -5,10 +5,10 @@
 ;30.08.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/core/wait_1s.inc"
-.include	"./inc/io/log_byte.inc"
-.include	"./inc/io/log_char.inc"
-.include	"./inc/io/log_sdnf.inc"
+.include	"./core/wait_1s.inc"
+.include	"./core/log/log_byte.inc"
+.include	"./core/log/log_char.inc"
+.include	"./core/log/log_sdnf.inc"
 
 DS18B20_TEST_INIT:
 	MCALL C5_READY

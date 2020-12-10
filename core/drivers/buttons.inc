@@ -8,16 +8,16 @@
 ;TODO реализовать обработчики для переключаетеля и сенсора
 ;TODO Фиксируется 5-ое длинное нажатие (вероятно с потерей первого значения) из 4 допустимых
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/mem/ram_extend.inc"
-.include	"./inc/mem/ram_fill8.inc"
-.include	"./inc/core/wait.inc"
-.include	"./inc/core/timer_set.inc"
-.include	"./inc/core/timer_start.inc"
-.include	"./inc/io/port_mode_in.inc"
-.include	"./inc/io/port_set_hi.inc"
-.include	"./inc/io/port_get.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./core/ram/ram_extend.inc"
+.include	"./mem/ram_fill8.inc"
+.include	"./core/wait.inc"
+.include	"./core/timer_set.inc"
+.include	"./core/timer_start.inc"
+.include	"./io/port_mode_in.inc"
+.include	"./io/port_set_hi.inc"
+.include	"./io/port_get.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_BUTTONS_STRUCT_SIZE						= 0x04;Размер структуры данных для каждой кнопки

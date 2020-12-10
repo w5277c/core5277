@@ -6,16 +6,16 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/io/port_mode_in.inc"
-.include	"./inc/io/port_mode_out.inc"
-.include	"./inc/io/port_set_lo.inc"
-.include	"./inc/io/port_set_hi.inc"
-.include	"./inc/core/wait.inc"
-.include	"./inc/core/timer_set.inc"
-.include	"./inc/core/timer_start.inc"
-.include	"./inc/core/timer_stop.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./io/port_mode_in.inc"
+.include	"./io/port_mode_out.inc"
+.include	"./io/port_set_lo.inc"
+.include	"./io/port_set_hi.inc"
+.include	"./core/wait.inc"
+.include	"./core/timer_set.inc"
+.include	"./core/timer_start.inc"
+.include	"./core/timer_stop.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---

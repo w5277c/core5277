@@ -17,11 +17,11 @@
 ; d - данные функции
 ; w - crc8(1wire)
 
-	.include	"./inc/mem/ram_offset.inc"
-	.include	"./inc/mem/ram_realloc.inc"
-	.include	"./inc/conv/crc8_maxim_block.inc"
-	.include	"./inc/mem/ram_copy8.inc"
-	.include	"./inc/mem/rom_read_bytes.inc"
+	.include	"./core/ram/ram_offset.inc"
+	.include	"./core/ram/ram_realloc.inc"
+	.include	"./conv/crc8_maxim_block.inc"
+	.include	"./mem/ram_copy8.inc"
+	.include	"./mem/rom_read_bytes.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VAR-OFFSETS---
@@ -200,7 +200,7 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	POP_X
 	PUSH LOOP_CNTR
 	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL C5_CRC8_MAXIM_BLOCK
+	MCALL CRC8_MAXIM_BLOCK
 	POP LOOP_CNTR
 	ST Z,ACCUM
 	;Формирование пакета завершено
@@ -253,7 +253,7 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	;Вычисляю CRC
 	MOV XH,ZH
 	MOV XL,ZH
-	MCALL C5_CRC8_MAXIM_BLOCK
+	MCALL CRC8_MAXIM_BLOCK
 	DEC LOOP_CNTR
 	ADD XL,LOOP_CNTR
 	CLR TEMP
@@ -340,7 +340,7 @@ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	;Вычисляю CRC
 	MOV XH,ZH
 	MOV XL,ZL
-	MCALL C5_CRC8_MAXIM_BLOCK
+	MCALL CRC8_MAXIM_BLOCK
 	ADD XL,LOOP_CNTR
 	CLR TEMP
 	ADC XH,TEMP
@@ -439,7 +439,7 @@ _DRV_BUS5277_PROC_SLAVE_SEND__DATA_COPY_DONE:
 	POP_X
 	PUSH LOOP_CNTR
 	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL C5_CRC8_MAXIM_BLOCK
+	MCALL CRC8_MAXIM_BLOCK
 	POP LOOP_CNTR
 	ST Z,ACCUM
 	;Формирование пакета завершено

@@ -5,15 +5,15 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/mem/ram_offset.inc"
-.include	"./inc/mem/ram_realloc.inc"
-.include	"./inc/mem/ram_fill8.inc"
-.include	"./inc/io/port_mode_in.inc"
-.include	"./inc/io/port_set_lo.inc"
-.include	"./inc/io/port_set_hi.inc"
-.include	"./inc/io/port_get.inc"
-.include	"./inc/io/port_get_byte.inc"
-.include	"./inc/conv/bitnum_to_num.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
+.include	"./mem/ram_fill8.inc"
+.include	"./io/port_mode_in.inc"
+.include	"./io/port_set_lo.inc"
+.include	"./io/port_set_hi.inc"
+.include	"./io/port_get.inc"
+.include	"./io/port_get_byte.inc"
+.include	"./conv/bitnum_to_num.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_HPCINT_RAM_PREV_STATES					= 0x00;?B - блок предыдущих состояний каждого пина(1 бит на пин)
@@ -59,8 +59,8 @@ DRV_HPCINT_INIT:
 	PUSH TEMP_L
 	PUSH ACCUM
 
-	LDI ZH,high(_C5_PCINT_TABLE*2)
-	LDI ZL,low(_C5_PCINT_TABLE*2)
+	LDI ZH,high(PCINT_TABLE*2)
+	LDI ZL,low(PCINT_TABLE*2)
 	MOV TEMP,ACCUM
 	SWAP TEMP
 	ANDI TEMP,0x07
@@ -78,7 +78,7 @@ DRV_HPCINT_INIT:
 	PUSH ACCUM
 	MOV TEMP,ACCUM
 	ANDI TEMP,0x07
-	MCALL C5_BITNUM_TO_NUM
+	MCALL BITNUM_TO_NUM
 	MOV TEMP_L,TEMP													;Бит пина(число)
 	LD ACCUM,Z
 	;Проверка на освобождение пина
@@ -165,7 +165,7 @@ _DRV_HPCINT_PROC__CONTINUE:
 	SWAP TEMP
 	ANDI TEMP,0x07
 	DEC TEMP
-	MCALL C5_BITNUM_TO_NUM
+	MCALL BITNUM_TO_NUM
 	LDS ACCUM,PCICR
 	OR ACCUM,TEMP
 	STS PCICR,ACCUM

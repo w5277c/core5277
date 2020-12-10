@@ -7,12 +7,12 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/io/port_mode_in.inc"
-.include	"./inc/io/port_mode_out.inc"
-.include	"./inc/io/port_set_lo.inc"
-.include	"./inc/io/port_get.inc"
-.include	"./inc/core/res_lock.inc"
-.include	"./inc/core/res_unlock.inc"
+.include	"./io/port_mode_in.inc"
+.include	"./io/port_mode_out.inc"
+.include	"./io/port_set_lo.inc"
+.include	"./io/port_get.inc"
+.include	"./core/res_lock.inc"
+.include	"./core/res_unlock.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_1WIRE_PORT						= 0x00			;1b - Порт шины

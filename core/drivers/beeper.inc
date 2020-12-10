@@ -5,9 +5,9 @@
 ;26.10.2020  w5277c@gmail.com        Переход на программный таймер
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_DRIVER_BEEPER
+.ifdef DEF_DRIVER_BEEPER
 .else
-.set DEF_C5_DRIVER_BEEPER = 1
+.set DEF_DRIVER_BEEPER = 1
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"

@@ -1,18 +1,19 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019  w5277c@gmail.com        Начало
-;01.08.2020  w5277c@gmail.com        Разбиение на файлы
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;07.10.2019  w5277c@gmail.com			Начало
+;01.08.2020  w5277c@gmail.com			Разбиение на файлы
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;10.12.2020  w5277c@gmail.com			-с5
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_SDNF_SUB
+.ifdef DEF_SDNF_SUB
 .else
-.set DEF_C5_SDNF_SUB = 1
+.set DEF_SDNF_SUB = 1
 
-.include	"./inc/math/sdnf_add.inc"
+.include	"./math/sdnf_add.inc"
 
 ;--------------------------------------------------------
-C5_SDNF_SUB:													;Signed Digital aNd Fractional
+SDNF_SUB:																;Signed Digital aNd Fractional
 ;--------------------------------------------------------
 ;Разница знаковых целых с дробной частью (X - Y)
 ;IN: X, Y
@@ -23,7 +24,7 @@ C5_SDNF_SUB:													;Signed Digital aNd Fractional
 	BRNE PC+0x04
 	CPI YL,0xff
 	BRNE PC+0x02
-	RJMP _C5_SDNF_ADD__ERROR
+	RJMP _SDNF_ADD__ERROR
 
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -35,5 +36,5 @@ C5_SDNF_SUB:													;Signed Digital aNd Fractional
 	ROR YL
 	POP TEMP_L
 	POP TEMP_H
-	RJMP C5_SDNF_ADD
+	RJMP SDNF_ADD
 .endif

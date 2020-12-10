@@ -5,7 +5,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega16.inc"
+	.INCLUDE "./devices/atmega16.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
@@ -13,19 +13,21 @@
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.INCLUDE "./inc/drivers/beeper.inc"
+	.INCLUDE "./core/drivers/beeper.inc"
 	;Блок задач
 	;---
 	;Дополнительно
-	.include "./inc/io/port_mode_out.inc"
-	.include "./inc/io/port_set_hi.inc"
-	.include "./inc/io/port_set_lo.inc"
-	.include	"./inc/core/wait_1s.inc"
-	.include	"./inc/io/log_bytes.inc"
-	.include	"./inc/io/log_romstr.inc"
-	.include	"./inc/io/logstr_new_line.inc"
+	.include "./io/port_mode_out.inc"
+	.include "./io/port_set_hi.inc"
+	.include "./io/port_set_lo.inc"
+	.include	"./core/wait_1s.inc"
+	.include	"./core/log/log_bytes.inc"
+	.include	"./core/log/log_romstr.inc"
+	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/uptime_copy.inc"
+	.include	"./core/meminfo_copy.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -136,7 +138,7 @@ UPTIME_TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 UPTIME_TASK__INFINITE_LOOP:
-	MCALL C5_UPTIME_WRITE
+	MCALL C5_UPTIME_COPY
 	LDI TEMP,0x05
 	MCALL C5_LOG_BYTES
 	C5_LOG_ROMSTR LOGSTR_NEW_LINE
@@ -155,7 +157,7 @@ FREEMEM_TASK__INIT:
 FREEMEM_TASK__INFINITE_LOOP:
 	MOV YH,ZH
 	MOV YL,ZL
-	MCALL C5_FREEMEM_WRITE
+	MCALL C5_MEMINFO_COPY
 	LDI TEMP,0x02
 	MCALL C5_LOG_BYTES
 	LDI TEMP,'/'

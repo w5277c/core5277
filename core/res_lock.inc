@@ -9,7 +9,7 @@
 .else
 .set DEF_C5_RES_LOCK = 1
 
-.include	"./inc/core/res_wait_n_lock.inc"
+.include	"./core/res_wait_n_lock.inc"
 
 ;--------------------------------------------------------
 C5_RES_LOCK:

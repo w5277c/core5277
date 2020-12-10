@@ -5,24 +5,24 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	AVRA										= 1	;компилируем через avra
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 0	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.INCLUDE "./inc/drivers/1wire_s.inc"
-	.INCLUDE "./inc/drivers/ds18b20.inc"
+	.INCLUDE "./core/drivers/1wire_s.inc"
+	.INCLUDE "./core/drivers/ds18b20.inc"
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_char.inc"
-	.include	"./inc/io/log_sdnf.inc"
-	.include	"./inc/io/log_romstr.inc"
-	.include	"./inc/io/logstr_new_line.inc"
+	.include	"./core/log/log_char.inc"
+	.include	"./core/log/log_sdnf.inc"
+	.include	"./core/log/log_romstr.inc"
+	.include	"./core/log/logstr_new_line.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------

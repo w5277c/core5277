@@ -6,22 +6,22 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 0	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_bytes.inc"
-	.include	"./inc/io/logstr_new_line.inc"
-	.include	"./inc/mem/eeprom_write_byte.inc"
-	.include	"./inc/mem/eeprom_read_byte.inc"
+	.include	"./core/log/log_bytes.inc"
+	.include	"./core/log/logstr_new_line.inc"
+	.include	"./mem/eeprom_write_byte.inc"
+	.include	"./mem/eeprom_read_byte.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
