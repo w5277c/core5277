@@ -5,6 +5,7 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
+.include "./core/drivers/_uart.inc"
 .include	"./inc/core/wait.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -28,17 +29,6 @@
 	;---
 	.EQU	_DRV_SUART_DATA_SIZE					= 0x14			;Размер выделяемого блока под данные(20 байт)
 	;---
-	.EQU	DRV_SUART_BAUDRATE_19200			= 0x81			;Скоростной режим 19200
-	.EQU	DRV_SUART_BAUDRATE_9600				= 0x82			;Скоростной режим 9600
-
-	;---STATES_IDS---
-	.EQU	DRV_SUART_ST_READY					= 0x00;
-	.EQU	DRV_SUART_ST_SENDING					= 0x01;
-	.EQU	DRV_SUART_ST_BREAK					= 0x02;
-	.EQU	DRV_SUART_ST_WAIT_DATA				= 0x03;
-	.EQU	DRV_SUART_ST_RECEIVING				= 0x04;
-	.EQU	DRV_SUART_ST_FAIL						= 0x05;
-
 
 DRV_SUART_INIT:
 ;--------------------------------------------------------

@@ -9,7 +9,7 @@
 .else
 .set DEF_EEPROM_READ_BYTES = 1
 
-.include	"./inc/mem/eeprom_read_byte.inc"
+.include	"./mem/eeprom_read_byte.inc"
 
 ;--------------------------------------------------------
 EEPROM_READ_BYTES:

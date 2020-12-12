@@ -16,17 +16,17 @@
 .include	"./conv/bitnum_to_num.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_HPCINT_RAM_PREV_STATES					= 0x00;?B - блок предыдущих состояний каждого пина(1 бит на пин)
-	.EQU	_DRV_HPCINT_RAM_ADDRS							= _DRV_HPCINT_RAM_PREV_STATES + _C5_PCINT_PORTS_QNT
+	.EQU	_DRV_PCINT_H_RAM_PREV_STATES					= 0x00;?B - блок предыдущих состояний каждого пина(1 бит на пин)
+	.EQU	_DRV_PCINT_H_RAM_ADDRS							= _DRV_PCINT_H_RAM_PREV_STATES + _C5_PCINT_PORTS_QNT
 																			;?B - блок ид драйвера и адресов для каждого порта по 3 байта на пин(0x00 - не задано)
-	.EQU	_DRV_HPCINT_RAM_SIZE								= _C5_PCINT_PORTS_QNT + (_C5_PCINT_PORTS_QNT*8*3)
+	.EQU	_DRV_PCINT_H_RAM_SIZE							= _C5_PCINT_PORTS_QNT + (_C5_PCINT_PORTS_QNT*8*3)
 ;--------------------------------------------------------
-DRV_HPCINT_INIT:
+DRV_PCINT_H_INIT:
 ;--------------------------------------------------------
 ;Инициализация
 ;--------------------------------------------------------
 	;Выделяем память
-	LDI ACCUM,_DRV_HPCINT_RAM_SIZE
+	LDI ACCUM,_DRV_PCINT_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	;Заполняем нулями
 	MOV XH,ZH
@@ -35,8 +35,8 @@ DRV_HPCINT_INIT:
 	LDI TEMP,0xff
 	MCALL RAM_FILL8
 	;Активируем прерывания
-	LDI TEMP_H,high(_DRV_HPCINT_EVENT)
-	LDI TEMP_L,low(_DRV_HPCINT_EVENT)
+	LDI TEMP_H,high(_DRV_PCINT_H_EVENT)
+	LDI TEMP_L,low(_DRV_PCINT_H_EVENT)
 	LDI ACCUM,C5_IR_PCINT0
 	MCALL C5_IR_VECTOR_SET
 	LDI ACCUM,C5_IR_PCINT1
@@ -73,7 +73,7 @@ DRV_HPCINT_INIT:
 	;Проверка на не заданный порт регистра
 	CPI ZL,0x00
 	BRNE PC+0x02
-	RJMP _DRV_HPCINT_PROC__END
+	RJMP _DRV_PCINT_H_PROC__END
 	LDI ZH,0x00
 	PUSH ACCUM
 	MOV TEMP,ACCUM
@@ -83,13 +83,13 @@ DRV_HPCINT_INIT:
 	LD ACCUM,Z
 	;Проверка на освобождение пина
 	CPI FLAGS,0xff
-	BREQ _DRV_HPCINT_PROC__RESET_PIN
+	BREQ _DRV_PCINT_H_PROC__RESET_PIN
 	OR ACCUM,TEMP
-	RJMP _DRV_HPCINT_PROC__CONTINUE
-_DRV_HPCINT_PROC__RESET_PIN:
+	RJMP _DRV_PCINT_H_PROC__CONTINUE
+_DRV_PCINT_H_PROC__RESET_PIN:
 	COM TEMP
 	AND ACCUM,TEMP
-_DRV_HPCINT_PROC__CONTINUE:
+_DRV_PCINT_H_PROC__CONTINUE:
 	ST Z,ACCUM
 	POP ACCUM
 	MOV TEMP,ACCUM
@@ -108,7 +108,7 @@ _DRV_HPCINT_PROC__CONTINUE:
 	;Прлучаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 	PUSH_Z
-	LDI TEMP,low(_DRV_HPCINT_RAM_PREV_STATES)
+	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
 	ADD ZL,TEMP
 	CLR TEMP
 	ADC ZH,TEMP
@@ -132,7 +132,7 @@ _DRV_HPCINT_PROC__CONTINUE:
 	POP_Z
 
 	;Прибавляем смещение на адреса
-	LDI TEMP,low(_DRV_HPCINT_RAM_ADDRS)
+	LDI TEMP,low(_DRV_PCINT_H_RAM_ADDRS)
 	ADD ZL,TEMP
 	CLR TEMP
 	ADC ZH,TEMP
@@ -170,7 +170,7 @@ _DRV_HPCINT_PROC__CONTINUE:
 	OR ACCUM,TEMP
 	STS PCICR,ACCUM
 
-_DRV_HPCINT_PROC__END:
+_DRV_PCINT_H_PROC__END:
 	POP ACCUM
 	POP TEMP_L
 	POP TEMP_H
@@ -179,7 +179,7 @@ _DRV_HPCINT_PROC__END:
 	RET
 
 ;--------------------------------------------------------
-_DRV_HPCINT_EVENT:
+_DRV_PCINT_H_EVENT:
 ;--------------------------------------------------------
 ;Обработчик изменения состояния пина
 ;IN: ACCUM - номер строки в таблице прерываний
@@ -206,7 +206,7 @@ _DRV_HPCINT_EVENT:
 	MOV XH,ZH
 	MOV XL,ZL
 	;Получаем адрес предидущих состояний
-	LDI TEMP,low(_DRV_HPCINT_RAM_PREV_STATES)
+	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
 	ADD TEMP,LOOP_CNTR
 	ADD ZL,TEMP
 	CLR TEMP
@@ -216,7 +216,7 @@ _DRV_HPCINT_EVENT:
 	MOV FLAGS,ACCUM
 	EOR ACCUM,TEMP														;XOR
 
-	LDI TEMP,low(_DRV_HPCINT_RAM_ADDRS)
+	LDI TEMP,low(_DRV_PCINT_H_RAM_ADDRS)
 	SWAP LOOP_CNTR
 	ADD TEMP,LOOP_CNTR
 	LSR LOOP_CNTR
@@ -226,24 +226,24 @@ _DRV_HPCINT_EVENT:
 	ADC XH,TEMP
 
 	LDI LOOP_CNTR,0x08
-_DRV_HPCINT_EVENT__LOOP:
+_DRV_PCINT_H_EVENT__LOOP:
 	LD TEMP,X+
 	LD ZH,X+
 	LD ZL,X+
 
 	LSR ACCUM
-	BRCC _DRV_HPCINT_EVENT__NEXT
+	BRCC _DRV_PCINT_H_EVENT__NEXT
 	CPI TEMP,0xff
-	BREQ _DRV_HPCINT_EVENT__NEXT
+	BREQ _DRV_PCINT_H_EVENT__NEXT
 	PUSH PID
 	MOV PID,TEMP
 	ICALL
 	POP PID
 
-_DRV_HPCINT_EVENT__NEXT:
+_DRV_PCINT_H_EVENT__NEXT:
 	LSR FLAGS
 	DEC LOOP_CNTR
-	BRNE _DRV_HPCINT_EVENT__LOOP
+	BRNE _DRV_PCINT_H_EVENT__LOOP
 
 	POP FLAGS
 	POP TEMP

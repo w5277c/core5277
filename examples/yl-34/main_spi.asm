@@ -1,39 +1,34 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;19.09.2020  w5277c@gmail.com        Начало
-;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;11.12.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
-	.SET	REALTIME									= 0	;0-1
-	.SET	TIMERS									= 1	;0-4
+	.INCLUDE "./devices/atmega16.inc"
+	.SET	AVRA										= 1	;0-1
+	.SET	REALTIME									= 1	;0-1
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.SET	TIMERS									= 0	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
-	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.include	"./core/drivers/uart_h.inc"
-	;---
+	.INCLUDE "./core/drivers/spi_ms.inc"
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/logstr_new_line.inc"
-	.include	"./mem/eeprom_write_byte.inc"
-	.include	"./mem/eeprom_read_byte.inc"
-	.include	"./core/wait_1s.inc"
-	.include	"./mem/ram_fill8.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_UART_DRV							= 0|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_SPI_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
-	.EQU	PID_TASK									= 0
+	.EQU	PID_SPI_TASK							= 0
 	;Идентификаторы таймеров
-	.EQU	TID_UART									= 0
+	;---
+
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
 	CLI
@@ -46,55 +41,40 @@ MAIN:
 	;Инициализация ядра
 	MCALL C5_INIT
 
-	;Инициализация UART
-	LDI PID,PID_UART_DRV
-	LDI ZH,high(DRV_UART_H_INIT)
-	LDI ZL,low(DRV_UART_H_INIT)
-	LDI TEMP_H,PD4
-	LDI TEMP_L,0xff
-	LDI ACCUM,TID_UART
-	LDI FLAGS,(1<<DRV_UART_OPT_BREAK)
-	LDI YH,DRV_UART_BAUDRATE_9600
+	;Инициализация SPI
+	LDI PID,PID_SPI_DRV
+	LDI ZH,high(DRV_SPI_MS_INIT)
+	LDI ZL,low(DRV_SPI_MS_INIT)
+	LDI TEMP_EH,PB1													;SCK
+	LDI TEMP_EL,PB2													;MISO
+	LDI TEMP_H,PB3														;MOSI
+	LDI TEMP_L,PB4														;SS
+	LDI FLAGS,0x00														;PAUSE
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
-	LDI PID,PID_TASK
-	LDI ZH,high(TASK__INIT)
-	LDI ZL,low(TASK__INIT)
+	LDI PID,PID_SPI_TASK
+	LDI ZH,high(SPI_TASK__INIT)
+	LDI ZL,low(SPI_TASK__INIT)
 	MCALL C5_CREATE
 
 	MJMP C5_START
 
-	TASK_DATA:
-	.db	"Hello world!",0x0d,0x0a,0x00
-
 ;--------------------------------------------------------;Задача
-TASK__INIT:
-	LDI ACCUM,0x21
-	MCALL C5_RAM_REALLOC
+	SPI_TASK__DATA:
+	.db 0x00,0x01,0x02,0x03,0x04
 
+SPI_TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
-TASK__INFINITE_LOOP:
-	LDI LOOP_CNTR,0x21
-	LDI TEMP,0x00
-	MOV XH,ZH
-	MOV XL,ZL
-	MCALL RAM_FILL8
-
-	LDI TEMP,PID_UART_DRV
-	LDI YH,high(TASK_DATA)|0x80
-	LDI YL,low(TASK_DATA)
-	LDI TEMP_EH,14
-	LDI TEMP_EL,0x20
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+SPI_TASK__INFINITE_LOOP:
+	LDI YH,high(SPI_TASK__DATA)|0x80								;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YL,low(SPI_TASK__DATA)
+	LDI TEMP_L,0x05
+	LDI TEMP,PID_SPI_DRV
 	MCALL C5_EXEC
-	CPI TEMP_H,DRV_UART_ST_READY
-	BRNE TASK__INFINITE_LOOP
 
-	MOV YH,ZH
-	MOV YL,ZL
-	MCALL C5_LOG_STR
-	RJMP TASK__INFINITE_LOOP
+	LDI TEMP,0x01														;Пауза в 5 сеунд
+	MCALL C5_WAIT_1S
+	RJMP SPI_TASK__INFINITE_LOOP
 
