@@ -49,7 +49,8 @@ MAIN:
 	LDI TEMP_EL,PB2													;MISO
 	LDI TEMP_H,PB3														;MOSI
 	LDI TEMP_L,PB4														;SS
-	LDI FLAGS,0x00														;PAUSE
+	LDI ACCUM,0x02														;Размер пакета (в байтах)
+	LDI FLAGS,0x80														;PAUSE
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
@@ -61,20 +62,45 @@ MAIN:
 	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
-	SPI_TASK__DATA:
-	.db 0x00,0x01,0x02,0x03,0x04
-
-SPI_TASK__INIT:
+	SPI_TASK__DATA_INIT:
+	.db 0x0f,0x00,0x0c,0x01,0x0b,0x07,0x09,0x00,0x0a,0x01,0x01,0xff,0x02,0xff,0x03,0xff,0x04,0xff,0x05,0x00,0x06,0x00,0x07,0x00,0x08,0x00
+	SPI_TASK__DATA1:
+	.db 0x0a,0x0f,0x01,0x00,0x02,0x00,0x03,0x00,0x04,0x00,0x05,0xff,0x06,0xff,0x07,0xff,0x08,0xff
+	SPI_TASK__DATA2:
+	.db 0x0a,0x01,0x01,0xff,0x02,0xff,0x03,0xff,0x04,0xff,0x05,0x00,0x06,0x00,0x07,0x00,0x08,0x00
+SPI_TASK__INIT:														;MAX7219 8x8 led matrix
 	MCALL C5_READY
 ;--------------------------------------------------------
-SPI_TASK__INFINITE_LOOP:
-	LDI YH,high(SPI_TASK__DATA)|0x80								;Вызываем процедуру драйвера (данные мелодии берем из ROM)
-	LDI YL,low(SPI_TASK__DATA)
-	LDI TEMP_L,0x05
+	LDI TEMP,0x01														;Пауза в 5 сеунд
+	MCALL C5_WAIT_1S
+
+	LDI YH,high(SPI_TASK__DATA_INIT)|0x80						;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YL,low(SPI_TASK__DATA_INIT)
+	LDI TEMP_L,13
 	LDI TEMP,PID_SPI_DRV
 	MCALL C5_EXEC
 
 	LDI TEMP,0x01														;Пауза в 5 сеунд
 	MCALL C5_WAIT_1S
+
+SPI_TASK__INFINITE_LOOP:
+	LDI YH,high(SPI_TASK__DATA1)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YL,low(SPI_TASK__DATA1)
+	LDI TEMP_L,9
+	LDI TEMP,PID_SPI_DRV
+	MCALL C5_EXEC
+
+	LDI TEMP,0x01														;Пауза в 5 сеунд
+	MCALL C5_WAIT_1S
+
+	LDI YH,high(SPI_TASK__DATA2)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YL,low(SPI_TASK__DATA2)
+	LDI TEMP_L,9
+	LDI TEMP,PID_SPI_DRV
+	MCALL C5_EXEC
+
+	LDI TEMP,0x01														;Пауза в 5 сеунд
+	MCALL C5_WAIT_1S
+
 	RJMP SPI_TASK__INFINITE_LOOP
 
