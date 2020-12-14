@@ -53,7 +53,7 @@ MAIN:
 	LDI YL,PB4															;SS
 	LDI TEMP_H,0x02													;Кол-во устройств на шине
 	LDI TEMP_L,0x02													;Размер пакета (в байтах)
-	LDI ACCUM,0x80;40														;PAUSE
+	LDI ACCUM,0x80;40													;PAUSE
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
@@ -66,7 +66,7 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 	SPI_TASK__DATA_INIT:
-	.db 0x0f,0x00,0x0c,0x01,0x0b,0x07,0x09,0x00,0x0a,0x01, 0x01,0x00,0x02,0x00,0x03,0x00,0x04,0x00,0x05,0x00,0x06,0x00,0x07,0x00,0x08,0x01
+	.db 0x0f,0x00,0x0c,0x01,0x0b,0x07,0x09,0x00,0x0a,0x01, 0x01,0x00,0x02,0x00,0x03,0x00,0x04,0x00,0x05,0x00,0x06,0x00,0x07,0x00,0x08,0x00
 	SPI_TASK__DATA1_CHIP1:
 	.db 0x08,0xff
 	SPI_TASK__DATA2_CHIP1:
@@ -79,10 +79,7 @@ MAIN:
 SPI_TASK__INIT:														;MAX7219 8x8 led matrix
 	MCALL C5_READY
 ;--------------------------------------------------------
-	LDI TEMP,0x01														;Пауза в 5 сеунд
-	MCALL C5_WAIT_1S
-
-	LDI YH,high(SPI_TASK__DATA_INIT)|0x80						;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YH,high(SPI_TASK__DATA_INIT)|0x80
 	LDI YL,low(SPI_TASK__DATA_INIT)
 	LDI TEMP_L,0x0d
 	LDI TEMP_H,0x00
@@ -92,17 +89,14 @@ SPI_TASK__INIT:														;MAX7219 8x8 led matrix
 	LDI TEMP,PID_SPI_DRV
 	MCALL C5_EXEC
 
-	LDI TEMP,0x01														;Пауза в 5 сеунд
-	MCALL C5_WAIT_1S
-
 SPI_TASK__INFINITE_LOOP:
-	LDI YH,high(SPI_TASK__DATA1_CHIP1)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YH,high(SPI_TASK__DATA1_CHIP1)|0x80
 	LDI YL,low(SPI_TASK__DATA1_CHIP1)
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x01
 	LDI TEMP,PID_SPI_DRV
 	MCALL C5_EXEC
-	LDI YH,high(SPI_TASK__DATA1_CHIP2)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YH,high(SPI_TASK__DATA1_CHIP2)|0x80
 	LDI YL,low(SPI_TASK__DATA1_CHIP2)
 	LDI TEMP_H,0x01
 	LDI TEMP_L,0x01
@@ -114,13 +108,13 @@ SPI_TASK__INFINITE_LOOP:
 	LDI TEMP,0x64
 	MCALL C5_WAIT_2MS
 
-	LDI YH,high(SPI_TASK__DATA2_CHIP1)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YH,high(SPI_TASK__DATA2_CHIP1)|0x80
 	LDI YL,low(SPI_TASK__DATA2_CHIP1)
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x01
 	LDI TEMP,PID_SPI_DRV
 	MCALL C5_EXEC
-	LDI YH,high(SPI_TASK__DATA2_CHIP2)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
+	LDI YH,high(SPI_TASK__DATA2_CHIP2)|0x80
 	LDI YL,low(SPI_TASK__DATA2_CHIP2)
 	LDI TEMP_H,0x01
 	LDI TEMP_L,0x01
