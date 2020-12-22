@@ -1,8 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;15.02.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;15.02.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;22.12.2020	w5277c@gmail.com			Исправлена работа TIMER-TASK
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_WAIT_2MS
 .else
@@ -63,18 +64,18 @@ _C5_DISPATCHER_EVENT__CHECK_WAITTIME:
 	LDD YL,Z+_C5_TASK_STACK_OFFSET+0x01
 	SBIW YL,0x05
 	PUSH ACCUM
-	LDD TEMP,Y+0x02
-	LDD ACCUM,Y+0x05
+	LDD TEMP,Y+0x00
+	LDD ACCUM,Y+0x03
 	ADD TEMP,ACCUM
-	STD Y+0x02,TEMP
+	STD Y+0x00,TEMP
 	LDD TEMP,Y+0x01
 	LDD ACCUM,Y+0x04
 	ADC TEMP,ACCUM
 	STD Y+0x01,TEMP
-	LDD TEMP,Y+0x00
-	LDD ACCUM,Y+0x03
+	LDD TEMP,Y+0x02
+	LDD ACCUM,Y+0x05
 	ADC TEMP,ACCUM
-	STD Y+0x00,TEMP
+	STD Y+0x02,TEMP
 	POP ACCUM
 	POP_Y
 _C5_DISPATCHER_EVENT__NO_TIMER:

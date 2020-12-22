@@ -11,6 +11,7 @@
 ;11.11.2020	w5277c@gmail.com			Добавлена метка реинициализации (не влияет на UPTIME)
 ;22.11.2020	w5277c@gmail.com			v0.2.8	Механизм выдерживания паузы использует время запуска задачи вместо дельты
 ;															времени
+;22.12.2020	w5277c@gmail.com        Исправлена работа TIMER-TASK
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -74,11 +75,11 @@
 ;---CONSTANTS--------------------------------------------
 	.EQU	_C5_DRIVER_HEADER_SIZE				= 0x06			;Размер заголовка драйвера
 	.EQU	_C5_TASK_HEADER_SIZE					= 0x0b			;Размер заголовка задачи
-.if TIMERS_SPEED == TIMERS_SPEED_25NS
+.IF TIMERS_SPEED == TIMERS_SPEED_25NS
 	.EQU	_C5_TIMER_PERIOD						= 0x50			;80, т.е. 0.000025*80=0.002=2мс
-.else
+.ELSE
 	.EQU	_C5_TIMER_PERIOD						= 0x28			;40, т.е. 0.000050*40=0.002=2мс
-.endif
+.ENDIF
 	.EQU	_C5_TASK_STACK_DEF_SIZE				= 0x13			;Размер стека задачи при создании (16 регистров + SREG + точка возврата)
 	.EQU	_C5_TASKS_ACTIVE_TIME				= 0x01			;Время работы задачи 1*2 = 2мс
 	.EQU	_C5_IRV_TABLE_SIZE					= 0x4b			;Размер таблицы прерываний
@@ -147,54 +148,49 @@
 	.DEF	_PID										= r15				;ид корневого процесса(обычно задачи)
 
 
-.INCLUDE	"./core/log/log_init.inc"
-.INCLUDE	"./core/log/log_romstr.inc"
-.INCLUDE	"./core/log/log_tasksdump.inc"
-.INCLUDE "./core/log/log_corefault.inc"
-.INCLUDE	"./mem/ram_copy8.inc"
-.INCLUDE	"./mem/ram_fill16.inc"
-.INCLUDE	"./mem/ram_fill8.inc"
-.INCLUDE "./mem/ram_copy8_desc.inc"
-.INCLUDE "./mem/ram_copy16_desc.inc"
-.INCLUDE "./conv/bitnum_to_num.inc"
+	.INCLUDE	"./mem/ram_copy8.inc"
+	.INCLUDE	"./mem/ram_fill16.inc"
+	.INCLUDE "./mem/ram_copy8_desc.inc"
+	.INCLUDE "./mem/ram_copy16_desc.inc"
+	.INCLUDE "./conv/bitnum_to_num.inc"
 
-.MACRO _C5_MACRO__PUSH_RDS
-	PUSH r16
-	PUSH r17
-	PUSH r18
-	PUSH r19
-	PUSH r20
-	PUSH r21
-	PUSH r22
-	PUSH r23
-	PUSH r24
-	PUSH r25
-	PUSH r26
-	PUSH r27
-	PUSH r28
-	PUSH r29
-	PUSH r30
-	PUSH r31
-.ENDMACRO
+	.MACRO _C5_MACRO__PUSH_RDS
+		PUSH r16
+		PUSH r17
+		PUSH r18
+		PUSH r19
+		PUSH r20
+		PUSH r21
+		PUSH r22
+		PUSH r23
+		PUSH r24
+		PUSH r25
+		PUSH r26
+		PUSH r27
+		PUSH r28
+		PUSH r29
+		PUSH r30
+		PUSH r31
+	.ENDMACRO
 
-.MACRO _C5_MACRO__POP_RDS
-	POP r31
-	POP r30
-	POP r29
-	POP r28
-	POP r27
-	POP r26
-	POP r25
-	POP r24
-	POP r23
-	POP r22
-	POP r21
-	POP r20
-	POP r19
-	POP r18
-	POP r17
-	POP r16
-.ENDMACRO
+	.MACRO _C5_MACRO__POP_RDS
+		POP r31
+		POP r30
+		POP r29
+		POP r28
+		POP r27
+		POP r26
+		POP r25
+		POP r24
+		POP r23
+		POP r22
+		POP r21
+		POP r20
+		POP r19
+		POP r18
+		POP r17
+		POP r16
+	.ENDMACRO
 
 ;---OPTIONS-ANALYZE--------------------------------------
 .IFDEF LOGGING_PORT
@@ -202,6 +198,9 @@
 	LOGSTR_CORE:
 	.db   0x0d,0x0a,"core5277_v0.2.8",0x0d,0x0a,0x00
 	.INCLUDE "./core/log/log_init.inc"
+	.INCLUDE	"./core/log/log_romstr.inc"
+	.INCLUDE	"./core/log/log_tasksdump.inc"
+	.INCLUDE "./core/log/log_corefault.inc"
 .ELSE
 	.MESSAGE "######## LOGGING DISABLED ########"
 	.INCLUDE "./core/log/log_fake.inc"
@@ -440,28 +439,31 @@ C5_INIT:
 	MCALL RAM_FILL16
 
 	;Сброс счетчика времени
+	LDI TEMP,0x00
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x05
 	LDI XH,high(_C5_UPTIME)
 	LDI XL,low(_C5_UPTIME)
-	LDI LOOP_CNTR,0x05
-	LDI TEMP,0x00
-	MCALL RAM_FILL8
+	MCALL RAM_FILL16
 ;--------------------------------------------------------
 C5_REINIT:
 ;--------------------------------------------------------
 ;Повторная инициализация ядра
 ;--------------------------------------------------------
 	;Чистка таблицы прерываний
+	LDI TEMP,0xff
+	LDI TEMP_H,0x00
+	LDI TEMP_L,_C5_IRV_TABLE_SIZE									;IV_VECTORS_TABLE
 	LDI XL,low(_C5_IR_VECTORS_TABLE)
 	LDI XH,high(_C5_IR_VECTORS_TABLE)
-	LDI TEMP,0xff
-	LDI LOOP_CNTR,_C5_IRV_TABLE_SIZE								;IV_VECTORS_TABLE
-	MCALL RAM_FILL8
+	MCALL RAM_FILL16
 	;Чистка очереди
+	LDI TEMP,0xff
+	LDI TEMP_H,0x00
+	LDI TEMP_L,_C5_RES_QUEUE_SIZE
 	LDI XH,high(_C5_RESOURCE_QUEUE)
 	LDI XL,low(_C5_RESOURCE_QUEUE)
-	LDI LOOP_CNTR,_C5_RES_QUEUE_SIZE
-	LDI TEMP,0xff
-	MCALL RAM_FILL8
+	MCALL RAM_FILL16
 
 	;Чистка переменных в памяти
 	CLR _C5_COREFLAGS
@@ -493,11 +495,12 @@ C5_REINIT:
 	STS _C5_MAIN_TIMER_CNTR,TEMP
 .IF TIMERS > 0x00
 	;Установка таймеров как не используемых
+	LDI TEMP_H,high(TIMERS*0x05)
+	LDI TEMP_L,low(TIMERS*0x05)
+	LDI TEMP,0xff
 	LDI XH,high(_C5_TIMERS)
 	LDI XL,low(_C5_TIMERS)
-	LDI LOOP_CNTR,TIMERS*0x05
-	LDI TEMP,0xff
-	MCALL RAM_FILL8
+	MCALL RAM_FILL16
 .ENDIF
 
 	;Чистка заголовков драйверов
@@ -743,11 +746,11 @@ C5_CREATE__TIMER_CODE_SKIP1:
 	PUSH TEMP
 	LDS r1,SREG
 	CLI
-	LDS TEMP,_C5_UPTIME+0x04
+	LDS TEMP,_C5_UPTIME+0x02
 	PUSH TEMP															;Выделяем дополнительно 3 байта для хранения временной метки,
 	LDS TEMP,_C5_UPTIME+0x03
 	PUSH TEMP															;используется при вызове процедуры RESUME,
-	LDS TEMP,_C5_UPTIME+0x02
+	LDS TEMP,_C5_UPTIME+0x04
 	PUSH TEMP															;т.к. EXECTIME может быть перезаписан процедурами WAIT
 	STS SREG,r1
 C5_CREATE__TIMER_CODE_SKIP2:
