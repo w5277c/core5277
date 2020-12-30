@@ -79,4 +79,3 @@ TASK__INFINITE_LOOP:
 	LDI TEMP,0x01														;Пауза в 1 сеунду
 	MCALL C5_WAIT_1S
 	RJMP TASK__INFINITE_LOOP
-

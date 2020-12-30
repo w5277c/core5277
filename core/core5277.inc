@@ -41,6 +41,14 @@
 
 ;	.SET	C5_VERSION								= "0.2.8"		;Версия ядра
 
+;---CORE-PUBLIC-PROCS------------------------------------;Доступные процедуры ядра
+	.EQU	C5_PROC_EXEC							= 0x01			;запуск процедуры драйвера
+	.EQU	C5_PROC_WAIT_2MS						= 0x02			;ожидание *2мс
+	.EQU	C5_PROC_DISPATCHER_LOCK				= 0x03			;блокировка диспетчера
+	.EQU	C5_PROC_DISPATCHER_UNLOCK			= 0x04			;разблокировка диспетчера
+	.EQU	C5_PROC_SUSPEND						= 0x05			;передать управление следующей задаче
+
+
 ;---PROC-STATES------------------------------------------;Состояния задачи (PROC-STATES-младший ниббл, PROC-MODE-старший ниббл)
 	.EQU	_C5_PROC_STATE_ABSENT				= 0x00			;Нет задачи
 	.EQU	_C5_PROC_STATE_GHOST					= 0x01			;Инициализируется или деактивация
