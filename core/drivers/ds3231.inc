@@ -8,6 +8,8 @@
 .else
 .set DEF_DRIVER_DS3231 = 1
 
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/ram/ram_realloc.inc"
 .include	"./conv/bcd_byte_to_str.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -67,7 +69,7 @@ DRV_DS3231_INIT:
 	PUSH TEMP
 
 	MOV TEMP,DRIVER_ID
-	MCALL C5_RAM_GET_OFFSET
+	MCALL C5_RAM_OFFSET
 
 	CPI ACCUM,DRV_DS3231__OP_READ_DATA
 	BRNE PC+0x04

@@ -4,9 +4,14 @@
 ;02.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 
+.include	"./core/ram/ram_realloc.inc"
+.include	"./core/ram/ram_offset.inc"
+.include	"./conv/str_to_ram.inc"
+
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
 	.EQU	_DRV_ESP8266_UART_DRV_ID						= 0x00;Идентификатор драйвера UART
+	.EQU	_DRV_ESP8266_BUFFER_SIZE						= 0x40;Размер буфера
 	;---OFFSETS---
 	.EQU	_DRV_ESP8266_BUFFER_OFFSET						= 0x01;Адрес начала буфера в выделенной памяти
 	;---OPERATIONS---
@@ -37,19 +42,107 @@ _DRV_ESP8266_AT_END:					.db 0x0d,0x0a,0x00
 DRV_ESP8266_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM - размер буфера для AT комманд
+;IN: TEMP - ид драйвера UART
 ;--------------------------------------------------------
-	PUSH TEMP_L
+	PUSH ACCUM
+
+	LDI ACCUM,_DRV_ESP8266_VARS_SIZE+_DRV_ESP8266_BUFFER_SIZE
 	MCALL C5_RAM_REALLOC
 
-	LDI TEMP_L,_DRV_ESP8266_VARS_SIZE
-	ADD TEMP,TEMP_L
 	STD Z+_DRV_ESP8266_UART_DRV_ID,TEMP
 
-	POP TEMP_L
+	POP ACCUM
 	MCALL C5_READY
 
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;--------------------------------------------------------
+;IN: ACCUM - тип операции
+;--------------------------------------------------------
+	PUSH_Z
+	PUSH TEMP
+
+	MCALL C5_RAM_OFFSET
+
+	CPI ACCUM,DRV_ESP8266_OP_INIT
+	BRNE PC+0x04
+	MCALL _DRV_ESP8266__OP_INIT
+	RJMP _DRV_ESP8266_PROC_END
+	CPI ACCUM,DRV_ESP8266_OP_RAW
+	BRNE PC+0x04
+	MCALL _DRV_ESP8266__OP_RAW
+	RJMP _DRV_ESP8266_PROC_END
+	CPI ACCUM,DRV_ESP8266_OP_SET_WIFI
+	BRNE PC+0x04
+	MCALL _DRV_ESP8266__OP_SET_WIFI
+	RJMP _DRV_ESP8266_PROC_END
+	CPI ACCUM,DRV_ESP8266_OP_TCP_SERVER
+	BRNE PC+0x04
+	MCALL _DRV_ESP8266__OP_TCP_SERVER
+	RJMP _DRV_ESP8266_PROC_END
+	CPI ACCUM,DRV_ESP8266_OP_WAIT_DATA
+	BRNE PC+0x04
+	MCALL _DRV_ESP8266__OP_WAIT_DATA
+	RJMP _DRV_ESP8266_PROC_END
+	CPI ACCUM,DRV_ESP8266_OP_SEND_DATA
+	BRNE PC+0x04
+	MCALL _DRV_ESP8266__OP_SEND_DATA
+	RJMP _DRV_ESP8266_PROC_END
+	CPI ACCUM,DRV_ESP8266_OP_TCP_CLOSE
+	BRNE PC+0x04
+	MCALL _DRV_ESP8266__OP_TCP_CLOSE
+	RJMP _DRV_ESP8266_PROC_END
+_DRV_ESP8266_PROC_END:
+	POP TEMP
+	POP_Z
+	RET
+
+;--------------------------------------------------------
+_DRV_ESP8266__OP_INIT:
+;--------------------------------------------------------
+;Инициализация ESP8266
+;OUT:TEMP_H - RESULT
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Y
+	PUSH TEMP_EH
+	PUSH TEMP_EL
+	PUSH TEMP_L
+
+	LDI XH,0x00
+	LDI XL,_DRV_ESP8266_BUFFER_OFFSET
+	ADD XL,ZL
+	ADC XH,ZH
+	PUSH_X
+	LDI YH,high(_DRV_ESP8266_AT_ECHO_OFF)|0x80
+	LDI YL,low(_DRV_ESP8266_AT_ECHO_OFF)
+	MCALL STR_TO_RAM
+	LDI YH,high(_DRV_ESP8266_AT_END)|0x80
+	LDI YL,low(_DRV_ESP8266_AT_END)
+	MCALL STR_TO_RAM
+	MOV TEMP_EH,XL
+	SUB TEMP_EH,ZL
+	SUBI TEMP_EH,_DRV_ESP8266_BUFFER_OFFSET
+	LDI TEMP_EL,_DRV_ESP8266_BUFFER_SIZE
+	LDI TEMP_H,high(1000/2)
+	LDI TEMP_L,low(1000/2)
+	POP_X
+	MOV YH,XH
+	MOV YL,XL
+	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
+	MCALL C5_EXEC
+
+	POP TEMP_L
+	POP TEMP_EL
+	POP TEMP_EH
+	POP_Y
+	POP_X
+	RET
+
+_DRV_ESP8266__OP_RAW:
+_DRV_ESP8266__OP_SET_WIFI:
+_DRV_ESP8266__OP_TCP_SERVER:
+_DRV_ESP8266__OP_WAIT_DATA:
+_DRV_ESP8266__OP_SEND_DATA:
+_DRV_ESP8266__OP_TCP_CLOSE:
 	RET
