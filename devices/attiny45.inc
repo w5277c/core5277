@@ -25,33 +25,33 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
 	.MESSAGE "######## DEVICE ATtiny45 ########"
-	.EQU	_C5_DRIVERS_MAX_QNT			= 0x03			;Максимальное количество драйверов
-	.EQU	_C5_TASKS_MAX_QNT				= 0x02			;Максимальное количество задач
-	.EQU	_C5_IR_QNT						= 0x0f			;Количество перырваний(без RESET)
-	.EQU	_C5_RES_QUEUE_SIZE			= 0x08			;Размер очереди к ресурсам(8 элементов по 2 байта)
-	.EQU	_C5_PCINT_PORTS_QNT			= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_C5_RAM_BORDER_SIZE			= 0x00			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_C5_STACK_SIZE					= 0x28			;Стек ядра - 40B
+	.EQU	_C5_DRIVERS_MAX_QNT					= 0x03			;Максимальное количество драйверов
+	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
+	.EQU	_C5_IR_QNT								= 0x0f			;Количество перырваний(без RESET)
+	.EQU	_C5_RES_QUEUE_SIZE					= 0x08			;Размер очереди к ресурсам(8 элементов по 2 байта)
+	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
+	.EQU	_C5_RAM_BORDER_SIZE					= 0x00			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
+	.EQU	_C5_STACK_SIZE							= 0x28			;Стек ядра - 40B
 	.EQU	RAMEND									= 0x01ff
 
 	;---IR---
-	.EQU	C5_IR_INT0						= 0x01
-	.EQU	C5_IR_PCINT0					= 0x02
-	.EQU	C5_IR_TIMER1_COMPA			= 0x03
-	.EQU	C5_IR_TIMER1_OVF				= 0x04
-	.EQU	C5_IR_TIMER0_OVF				= 0x05
-	.EQU	C5_IR_EE_READY					= 0x06
-	.EQU	C5_IR_ANALOG_COMP				= 0x07
-	.EQU	C5_IR_ADC						= 0x08
-	.EQU	C5_IR_TIMER1_COMPB			= 0x09
-	.EQU	C5_IR_TIMER0_COMPA			= 0x0a
-	.EQU	C5_IR_TIMER0_COMPB			= 0x0b
-	.EQU	C5_IR_WDT						= 0x0c
-	.EQU	C5_IR_USI_START				= 0x0d
-	.EQU	C5_IR_USI_OVF					= 0x0e
+	.EQU	C5_IR_INT0								= 0x01
+	.EQU	C5_IR_PCINT0							= 0x02
+	.EQU	C5_IR_TIMER1_COMPA					= 0x03
+	.EQU	C5_IR_TIMER1_OVF						= 0x04
+	.EQU	C5_IR_TIMER0_OVF						= 0x05
+	.EQU	C5_IR_EE_READY							= 0x06
+	.EQU	C5_IR_ANALOG_COMP						= 0x07
+	.EQU	C5_IR_ADC								= 0x08
+	.EQU	C5_IR_TIMER1_COMPB					= 0x09
+	.EQU	C5_IR_TIMER0_COMPA					= 0x0a
+	.EQU	C5_IR_TIMER0_COMPB					= 0x0b
+	.EQU	C5_IR_WDT								= 0x0c
+	.EQU	C5_IR_USI_START						= 0x0d
+	.EQU	C5_IR_USI_OVF							= 0x0e
 	;Отсутствуют
-	.EQU	C5_IR_PCINT1					= 0x00
-	.EQU	C5_IR_PCINT2					= 0x00
+	.EQU	C5_IR_PCINT1							= 0x00
+	.EQU	C5_IR_PCINT2							= 0x00
 
 	.EQU	PA0										= (0x00<<4)|0x00
 	.EQU	PA1										= (0x00<<4)|0x01
