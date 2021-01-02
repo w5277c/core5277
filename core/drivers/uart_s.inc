@@ -1,7 +1,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.01.2021  w5277c@gmail.com        Начало
+;02.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include "./core/drivers/_uart.inc"
@@ -45,6 +45,14 @@
 
 	.EQU	_DRV_UART_S_RAM_SIZE					= 0x15			;21 байт необходимо выделить
 
+	;---BAUDRATE_IDS---
+	.EQU	DRV_UART_S_50NS_BAUDRATE_4800		= 0x04
+	.EQU	DRV_UART_S_50NS_BAUDRATE_9600		= 0x02
+	.EQU	DRV_UART_S_50NS_BAUDRATE_19200	= 0x01
+	.EQU	DRV_UART_S_25NS_BAUDRATE_4800		= 0x08
+	.EQU	DRV_UART_S_25NS_BAUDRATE_9600		= 0x04
+	.EQU	DRV_UART_S_25NS_BAUDRATE_19200	= 0x02
+	.EQU	DRV_UART_S_25NS_BAUDRATE_38400	= 0x01
 
 ;--------------------------------------------------------
 DRV_UART_S_INIT:
@@ -61,18 +69,14 @@ DRV_UART_S_INIT:
 ;YL - ид драйвера PCINT
 ;--------------------------------------------------------
 	PUSH_Z
-;	PUSH TEMP_H
-;	PUSH TEMP_L
-;	PUSH TEMP
 	PUSH ACCUM
 	PUSH YH
+	PUSH TEMP
 
 	PUSH ACCUM
 	LDI ACCUM,_DRV_UART_S_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	POP ACCUM
-
-	;TODO расчитать период работы таймера и проинициализировать его
 
 	;Записываю ID таймера
 	STD Z+_DRV_UART_S_TIMER_ID,ACCUM
@@ -118,7 +122,7 @@ _DRV_UART_S_INIT__NO_LED_PORT:
 	;Инициализирую порт TX
 	MOV ACCUM,TEMP_L
 	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_LO	;TODO в UART_H используется SET_HI
+	MCALL PORT_SET_HI	;TODO в UART_H используется SET_HI
 	STD Z+_DRV_UART_S_TX_PORT,ACCUM
 	;Записываю период таймера
 	STD Z+_DRV_UART_S_TIMER_PERIOD,YH
@@ -128,11 +132,9 @@ _DRV_UART_S_INIT__NO_LED_PORT:
 	INC YH
 	STD Z+_DRV_UART_S_NEXT_TIMEOUT,YH
 
+	POP TEMP
 	POP YH
 	POP ACCUM
-;	POP TEMP
-;	POP TEMP_L
-;	POP TEMP_H
 	POP_Z
 	MCALL C5_READY
 ;--------------------------------------------------------
@@ -499,11 +501,15 @@ _DRV_UART_S_PCINT_EVENT:
 
 	CLR TEMP
 	STD Z+_DRV_UART_S_BIT_NUM,TEMP
-	;Задаю новый период таймеру для отсчета половины бита
+	;Задаю новый период таймеру для отсчета битов
 	LDD TEMP,Z+_DRV_UART_S_TIMER_ID
 	LDD ACCUM,Z+_DRV_UART_S_TIMER_PERIOD
 	MCALL C5_TIMER_SET_PERIOD
-
 	POP ACCUM
 	POP TEMP
-	RET
+	PUSH_Z
+	PUSH TEMP
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH ACCUM
+	RJMP _DRV_UART_S_RECV_EVENT
