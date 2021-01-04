@@ -48,11 +48,10 @@
 	;---BAUDRATE_IDS---
 	.EQU	DRV_UART_S_50NS_BAUDRATE_4800		= 0x04
 	.EQU	DRV_UART_S_50NS_BAUDRATE_9600		= 0x02
-	.EQU	DRV_UART_S_50NS_BAUDRATE_19200	= 0x01
+	.EQU	DRV_UART_S_50NS_BAUDRATE_19200	= 0x01			;Использвать с осторожностью, работает на пределе возможностей
 	.EQU	DRV_UART_S_25NS_BAUDRATE_4800		= 0x08
 	.EQU	DRV_UART_S_25NS_BAUDRATE_9600		= 0x04
-	.EQU	DRV_UART_S_25NS_BAUDRATE_19200	= 0x02
-	.EQU	DRV_UART_S_25NS_BAUDRATE_38400	= 0x01
+	.EQU	DRV_UART_S_25NS_BAUDRATE_19200	= 0x02			;Использвать с осторожностью, работает на пределе возможностей
 
 ;--------------------------------------------------------
 DRV_UART_S_INIT:
@@ -240,16 +239,6 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 	BREQ _DRV_UART_S_PROC__RECEIVING_WAIT
 	CPI TEMP,DRV_UART_ST_RECEIVING
 	BREQ _DRV_UART_S_PROC__RECEIVING_WAIT
-_DRV_UART_S_PROC__RECEIVING_DONE:
-
-	;Выключаю PCINT для RX порта
-	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
-	LDI FLAGS,0xff
-	MCALL C5_EXEC
-	;Останавливаю таймер
-	LDD TEMP,Z+_DRV_UART_S_TIMER_ID
-	MCALL C5_TIMER_STOP
 	RJMP _DRV_UART_S_PROC__DONE
 _DRV_UART_S_PROC__RX_SKIP:
 	MCALL C5_DISPATCHER_UNLOCK
@@ -401,8 +390,6 @@ _DRV_UART_S_RECV_EVENT:
 	;Читаем состояние порта и пишем его в флаг T
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	MCALL PORT_GET
-SBI 0x09,0x02
-SBI 0x09,0x02
 	LDS TEMP,SREG
 	BST TEMP,0x00
 	;Читаем номер бита
@@ -411,10 +398,7 @@ SBI 0x09,0x02
 	CPI TEMP_H,0x0a
 	BRNE __DRV_UART_S_RECV_EVENT__NO_NEXT_TIMEOUT
 		;Отработал таймер после STOP, т.е. прошло времени на несколько бит и START не был обнаружен
-		;Выключаю PCINT для RX порта
-		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-		LDI FLAGS,0xff
-		MCALL C5_EXEC
+		;Останавливаю таймер
 		LDD TEMP,Z+_DRV_UART_S_TIMER_ID
 		MCALL C5_TIMER_STOP
 		;Прием данных завершен
