@@ -303,7 +303,12 @@ _C5_TIMER_A_IR:
 	PUSH TEMP
 	LDS TEMP,SREG
 	PUSH TEMP
-	_CORRE5277_TIMERA_CORRECTOR
+
+	LDI TEMP,TIMERS_SPEED-0x02
+	SBRC _C5_COREFLAGS,_CFL_TIMER_UART_CORRECTION
+	LDI TEMP,TIMERS_SPEED+0x02
+	_CORRE5277_TIMERA_CORRECTOR TEMP
+
 	PUSH_Z
 
 .IF TIMERS > 0x00
@@ -601,7 +606,7 @@ C5_TCNT_GET:
 ;Осчет кратный 0.000 000 5s
 ;OUT: TEMP - значение счетчика таймера
 ;--------------------------------------------------------
-	_C5_TIMER_TCNT
+	_C5_TIMER_TCNT TEMP
 	RET
 
 ;--------------------------------------------------------
