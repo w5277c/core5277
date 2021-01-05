@@ -10,8 +10,8 @@
 .include	"./str/str_find.inc"
 .include	"./conv/num16_to_str.inc"
 .include	"./core/uptime_copy.inc"
-.include	"./prim/uptime_sub.inc"
-.include	"./prim/uptime_cp.inc"
+.include	"./prim/prim_sub.inc"
+.include	"./prim/prim_cp.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
@@ -389,11 +389,11 @@ __DRV_ESP8266__OP_SET_WIFI__FIRST_READ_SKIP:
 	LDI_Y _DRV_ESP8266_UPTIME_CURRENT
 	MCALL C5_UPTIME_COPY
 	LDI_X _DRV_ESP8266_UPTIME_START
-	MCALL UPTIME_SUB
+	PRIM_SUB UPTIME_SIZE
 	MOV XH,YH
 	MOV XL,YL
 	LDI_Y _DRV_ESP8266_WIFI_CONNECT_TIMEOUT|0x8000
-	MCALL UPTIME_CP
+	PRIM_CP UPTIME_SIZE
 	BRCS __DRV_ESP8266__OP_SET_WIFI__READ_LOOP
 	RJMP __DRV_ESP8266__OP_SET_WIFI__FAIL
 __DRV_ESP8266__OP_SET_WIFI__SUCCESS:

@@ -3,46 +3,42 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;05.01.2021  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_UPTIME_SUB
+.ifdef DEF_PRIM_CP
 .else
-.set DEF_UPTIME_SUB = 1
+.set DEF_PRIM_CP = 1
 
 .include	"./prim/common.inc"
 
 ;--------------------------------------------------------
-UPTIME_SUB:
+PRIM_CP:
 ;--------------------------------------------------------
 ;Выичтание UPTIME'ов
-;IN: X-адрес уменьшаемого, Y-вычитаемое
-;OUT: X-результат, Flags C - переполнение
+;IN: X-адрес арг.1, Y-адрес арг.2, LOOP_CNTR-SIZE
+;OUT: Flags C - арг.2>арг.1, Flag Z - арг.1=арг.2
 ;--------------------------------------------------------
+	PUSH_X
+	PUSH_Y
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH LOOP_CNTR
 
-	LDI TEMP_H,0x00
-	LDI TEMP_L,UPTIME_SIZE
-	ADD XL,TEMP_L
-	ADC XH,TEMP_H
-	ADD YL,TEMP_L
-	ADC YH,TEMP_H
-
-	LDI LOOP_CNTR,UPTIME_SIZE
 	CLC
 	LDS TEMP,SREG
-__UPTIME_SUB__LOOP:
+__PRIM_CP__LOOP:
 	STS SREG,TEMP
-	LD TEMP_H,-X
-	LD TEMP_L,-Y
-	SBC TEMP_H,TEMP_L
+	LD TEMP_H,X+
+	LD TEMP_L,Y+
+	CP TEMP_H,TEMP_L
+	BRNE __PRIM_CP__END
 	LDS TEMP,SREG
 	DEC LOOP_CNTR
-	BRNE __UPTIME_SUB__LOOP
+	BRNE __PRIM_CP__LOOP
+__PRIM_CP__END:
 	STS SREG,TEMP
 
-	POP LOOP_CNTR
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
+	POP_Y
+	POP_X
 .endif
