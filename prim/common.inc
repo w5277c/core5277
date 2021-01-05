@@ -8,22 +8,26 @@
 .set DEF_PRIM_COMMON = 1
 
 	;---SIZE---
-	.EQU	LONG_SIZE								= 0x08
-	.EQU	UPTIME_SIZE								= 0x05
-	.EQU	INT_SIZE									= 0x04
-	.EQU	SHORT_SIZE								= 0x02
-	.EQU	BYTE_SIZE								= 0x01
+
+	.EQU	BYTE										= 0x11
+	.EQU	SHORT										= 0x22
+	.EQU	SDNF										= 0x32
+	.EQU	INT										= 0x44
+	.EQU	FLOAT										= 0x54
+	.EQU	UPTIME									= 0x65
+	.EQU	LONG										= 0x78
+	.EQU	DOUBLE									= 0x88
 
 .MACRO PRIM_SUB
 	PUSH LOOP_CNTR
-	LDI LOOP_CNTR,@0
+	LDI LOOP_CNTR,(@0 & 0x0f)
 	MCALL PRIM_SUB
 	POP LOOP_CNTR
 .ENDMACRO
 
 .MACRO PRIM_CP
 	PUSH LOOP_CNTR
-	LDI LOOP_CNTR,@0
+	LDI LOOP_CNTR,(@0 & 0x0f)
 	MCALL PRIM_CP
 	POP LOOP_CNTR
 .ENDMACRO
