@@ -60,3 +60,16 @@
 	POP ZL
 	POP ZH
 .ENDMACRO
+
+.MACRO LDI_X
+	LDI XH,high(@0)
+	LDI XL,low(@0)
+.ENDMACRO
+.MACRO LDI_Y
+	LDI YH,high(@0)
+	LDI YL,low(@0)
+.ENDMACRO
+.MACRO LDI_Z
+	LDI ZH,high(@0)
+	LDI ZL,low(@0)
+.ENDMACRO
