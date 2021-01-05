@@ -164,7 +164,7 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	;Запоминаем SRC
 	SBRS YH,0x07
 	RJMP PC+0x04
-	;Умножаем на 2 адрес рабоыт с ROM
+	;Умножаем на 2 адрес работы с ROM
 	LSL YL
 	ROL YH
 	ORI YH,0x80
