@@ -18,27 +18,41 @@ PRIM_CP:
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
+	PUSH_Z
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 
-	CLC
-	LDS TEMP,SREG
+	SBRS YH,0x07
+	RJMP PC+0x04
+	LSL YL																;Умножаем на 2 адрес работы с ROM
+	ROL YH
+	ORI YH,0x80
+
+
+	MOV ZH,YH
+	MOV ZL,YL
+	ANDI ZH,0x7f
 __PRIM_CP__LOOP:
-	STS SREG,TEMP
 	LD TEMP_H,X+
-	LD TEMP_L,Y+
+	SBRC YH,0x07														;Берем данные из ROM или RAM?
+	LPM TEMP_L,Z+
+	SBRS YH,0x07														;Берем данные из ROM или RAM?
+	LD TEMP_L,Z+
+MCALL C5_LOG_WORD
 	CP TEMP_H,TEMP_L
 	BRNE __PRIM_CP__END
-	LDS TEMP,SREG
 	DEC LOOP_CNTR
 	BRNE __PRIM_CP__LOOP
+	CLC
+	SEZ
 __PRIM_CP__END:
-	STS SREG,TEMP
 
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
+	POP_Z
 	POP_Y
 	POP_X
+	RET
 .endif
