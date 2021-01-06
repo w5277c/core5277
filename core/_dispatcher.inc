@@ -49,8 +49,6 @@ _C5_DISPATCHER_EVENT__CHECK_WAITTIME:
 	CP ACCUM,TEMP
 	BRNE _C5_DISPATCHER_EVENT__TICK_NEXT_TASK
 
-
-
 	;Проверяю и обновляю метку времени для следующего срабатывания таймера
 	LDD TEMP,Z+_C5_PROC_STATE
 	SBRS TEMP,C5_PROCID_OPT_TIMER

@@ -39,7 +39,6 @@ __PRIM_CP__LOOP:
 	LPM TEMP_L,Z+
 	SBRS YH,0x07														;Берем данные из ROM или RAM?
 	LD TEMP_L,Z+
-MCALL C5_LOG_WORD
 	CP TEMP_H,TEMP_L
 	BRNE __PRIM_CP__END
 	DEC LOOP_CNTR
