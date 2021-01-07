@@ -11,6 +11,7 @@
 
 .include	"./math/div16x8.inc"
 .include	"./math/mul24x8.inc"
+.include	"./math/div10.inc"
 .include	"./math/mul10.inc"
 .include	"./math/mul100.inc"
 .include	"./core/log/log_char.inc"

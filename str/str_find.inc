@@ -12,11 +12,13 @@ STR_FIND:
 ;--------------------------------------------------------
 ;Поиск подстроки в строке
 ;IN: X-адрес на основной блок, Y-адрес на искомый блок
-;OUT: TEMP-смещение в основном блоке (0xff-не найдено)
+;OUT: TEMP_H-адрес начала совпадения в основном блоке
+;(0xff-не найдено)
+;TEMP_L-адрес следующего байта после совпадения в
+;основном блоке
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH TEMP_H
-	PUSH TEMP_L
+	PUSH TEMP
 	PUSH ACCUM
 	PUSH_X
 
@@ -65,17 +67,20 @@ __STR_FIND__SB_NEXT:
 	ADC XH,TEMP_H
 	RJMP __STR_FIND__FB_NEXT
 __STR_FIND__SUCCESS:
+	MOV ACCUM,XL
 	POP_X
+	SUB ACCUM,XL
 	SUB TEMP_L,XL
-	MOV TEMP,TEMP_L
+	MOV TEMP_H,TEMP_L
+	MOV TEMP_L,ACCUM
 	RJMP __STR_FIND__END
 __STR_FIND__FAIL:
 	POP_X
-	LDI TEMP,0xff
+	LDI TEMP_H,0xff
+	LDI TEMP_L,0x00
 __STR_FIND__END:
 	POP ACCUM
-	POP TEMP_L
-	POP TEMP_H
+	POP TEMP
 	POP_Z
 	RET
 .endif
