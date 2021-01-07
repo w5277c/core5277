@@ -18,7 +18,6 @@
 .include	"./core/timer_set_period.inc"
 .include	"./core/timer_start.inc"
 .include	"./core/timer_stop.inc"
-.include	"./core/uptime_get.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
@@ -425,6 +424,11 @@ _DRV_UART_S_RECV_EVENT:
 		MCALL C5_TIMER_STOP
 		;Прием данных завершен
 		LDI TEMP,DRV_UART_ST_READY
+		LDD TEMP_L,Z+_DRV_UART_S_BUFFER_POS
+		LDD ACCUM,Z+_DRV_UART_S_RX_LEN
+		CP TEMP_L,ACCUM
+		BRNE PC+0x02
+		LDI TEMP,DRV_UART_ST_OVERFLOW
 		STD Z+_DRV_UART_S_STATE,TEMP
 		RJMP __DRV_UART_S_RECV_EVENT__END
 __DRV_UART_S_RECV_EVENT__NO_NEXT_TIMEOUT:
