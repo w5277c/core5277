@@ -10,8 +10,11 @@
 .include	"./str/str_find.inc"
 .include	"./conv/num16_to_str.inc"
 .include	"./core/uptime_copy.inc"
+.include	"./core/log/log_char.inc"
+.include	"./core/log/log_strn.inc"
 .include	"./prim/prim_sub.inc"
 .include	"./prim/prim_cp.inc"
+
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
@@ -142,19 +145,31 @@ _DRV_ESP8266__OP_RAW:
 	PUSH_Y
 
 	LDI TRY_CNTR,0x03
-_DRV_ESP8266__OP_RAW__LOOP:
 	MOV TEMP_EH,TEMP_H
+_DRV_ESP8266__OP_RAW__LOOP:
 	LDI TEMP_EL,(_DRV_ESP8266_BUFFER_SIZE-0x01)
-	LDI TEMP_H,high(1000/2)
-	LDI TEMP_L,low(1000/2)
 	MOV YH,XH
 	MOV YL,XL
+.ifdef LOGGING_PORT
+LDI TEMP,'>'
+MCALL C5_LOG_CHAR
+MOV TEMP,TEMP_EH
+MCALL C5_LOG_STRN
+.endif
+	LDI TEMP_H,high(1000/2)
+	LDI TEMP_L,low(1000/2)
 	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
 	MCALL C5_EXEC
 	CPI TEMP_H,DRV_UART_ST_READY
 	BRNE _DRV_ESP8266__OP_RAW__ERROR
 	CPI TEMP_L,0x00
 	BREQ _DRV_ESP8266__OP_RAW__ERROR
+.ifdef LOGGING_PORT
+LDI TEMP,'<'
+MCALL C5_LOG_CHAR
+MOV TEMP,TEMP_L
+MCALL C5_LOG_STRN
+.endif
 	LDI TEMP_H,DRV_ESP8266_RESULT_OK
 	RJMP _DRV_ESP8266__OP_RAW__END
 _DRV_ESP8266__OP_RAW__ERROR:
