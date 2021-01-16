@@ -15,7 +15,10 @@
 .include	"./core/log/log_strn.inc"
 .include	"./prim/prim_sub.inc"
 .include	"./prim/prim_cp.inc"
-
+.ifdef LOGGING_PORT
+	.include	"./str/strn_trim.inc"
+	.include	"/core/log/log_cr.inc"
+.endif
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
@@ -618,7 +621,11 @@ _DRV_ESP8266__LOG_REQV:
 	LDI TEMP,'>'
 	MCALL C5_LOG_CHAR
 	MOV TEMP,TEMP_EH
+	PUSH_Y
+	MCALL STRN_TRIM
 	MCALL C5_LOG_STRN
+	POP_Y
+	MCALL C5_LOG_CR
 	RET
 ;--------------------------------------------------------
 _DRV_ESP8266__LOG_RESP:
@@ -631,6 +638,10 @@ _DRV_ESP8266__LOG_RESP:
 	LDI TEMP,'<'
 	MCALL C5_LOG_CHAR
 	MOV TEMP,TEMP_L
+	PUSH_Y
+	MCALL STRN_TRIM
 	MCALL C5_LOG_STRN
+	POP_Y
+	MCALL C5_LOG_CR
 	RET
 .endif
