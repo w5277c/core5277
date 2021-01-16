@@ -38,9 +38,9 @@
 	.EQU		_DRV_BUS5277_PACKET_HEADER_SIZE			= 0x01;
 	.EQU		_DRV_BUS5277_PACKET_HEADER_CODE			= 0x02;
 	.EQU	DRV_BUS5277_PACKET_DATA							= 0x03;37B - тело пакета
-	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x29;1B - адрес устройства на шине
-	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x2a;1B - ид драйвера UART
-	.EQU	_DRV_BUS5277_FLAGS								= 0x2b;Флаги драйвера
+	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x28;1B - адрес устройства на шине
+	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x29;1B - ид драйвера UART
+	.EQU	_DRV_BUS5277_FLAGS								= 0x2a;1B - флаги драйвера
 	;---FLAGS---
 	.EQU	DRV_BUS5277_FLAG_LOGGING						= 0x00;Бит логирования
 	;---OPERATIONS---
@@ -99,7 +99,7 @@
 	.EQU	_DRV_BUS5277_LISTEN_TIMEOUT					= 0x32;100 мс - таймаут для приема ответа
 	.EQU	_DRV_BUS5277_MASTER_ADDR						= 0x00;Адрес мастера
 	;---
-	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x2b;42B - буфер шины(40B) + переменные(3B)
+	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x2b;43B - буфер шины(40B) + переменные(3B)
 
 ;--------------------------------------------------------
 DRV_BUS5277_INIT:
@@ -227,14 +227,7 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	MOV YH,ZH															;Адрес блока данных для передачи
 	MOV YL,ZL
 .ifdef LOGGING_PORT
-	LDI TEMP,'>'
-	MCALL C5_LOG_CHAR
-	MOV TEMP,TEMP_EH
-	PUSH_Y
-	MCALL STRN_TRIM
-	MCALL C5_LOG_STRN
-	POP_Y
-	MCALL C5_LOG_CR
+	MCALL _DRV_BUS5277__LOG_REQV
 .endif
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
 	MOV XH,ZH															;Адрес блока данных для приема
@@ -254,16 +247,8 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	LDI ACCUM,BUS5277_RESP_NO_DATA
 	BREQ _DRV_BUS5277_PROC_MASTER__ERROR
 .ifdef LOGGING_PORT
-	LDI TEMP,'<'
-	MCALL C5_LOG_CHAR
-	MOV TEMP,TEMP_L
-	PUSH_Y
-	MCALL STRN_TRIM
-	MCALL C5_LOG_STRN
-	POP_Y
-	MCALL C5_LOG_CR
+	MCALL _DRV_BUS5277__LOG_RESP
 .endif
-
 	;Считываю адрес
 	LDD TEMP,Z+_DRV_BUS5277_PACKET_HEADER_ADDR
 	MOV TEMP_H,TEMP
