@@ -23,6 +23,13 @@
 	.include	"./mem/ram_copy8.inc"
 	.include	"./mem/rom_read_bytes.inc"
 
+.ifdef LOGGING_PORT
+	.include	"./core/log/log_cr.inc"
+	.include	"./core/log/log_numx8.inc"
+	.include	"./core/log/log_strn.inc"
+	.include	"./str/strn_trim.inc"
+.endif
+
 ;---CONSTANTS--------------------------------------------
 	;---VAR-OFFSETS---
 	;---DATA-OFFSETS---
@@ -33,6 +40,9 @@
 	.EQU	DRV_BUS5277_PACKET_DATA							= 0x03;37B - тело пакета
 	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x29;1B - адрес устройства на шине
 	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x2a;1B - ид драйвера UART
+	.EQU	_DRV_BUS5277_FLAGS								= 0x2b;Флаги драйвера
+	;---FLAGS---
+	.EQU	DRV_BUS5277_FLAG_LOGGING						= 0x00;Бит логирования
 	;---OPERATIONS---
 	.EQU	DRV_BUS5277_OP_MASTER							= 0x00;Режим ведущего (запрос-ожидание ответа)
 	.EQU	DRV_BUS5277_OP_SLAVE_RECV						= 0x01;Режим ведомого ожидание запроса
@@ -89,15 +99,16 @@
 	.EQU	_DRV_BUS5277_LISTEN_TIMEOUT					= 0x32;100 мс - таймаут для приема ответа
 	.EQU	_DRV_BUS5277_MASTER_ADDR						= 0x00;Адрес мастера
 	;---
-	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x29;41B - буфер шины(40B) + переменные(1B)
+	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x2b;42B - буфер шины(40B) + переменные(3B)
 
 ;--------------------------------------------------------
 DRV_BUS5277_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;TEMP_H - адрес устройства на шине
-;TEMP_L - номер флага EXTRASCAN_HAVE_DATA
-;ACCUM - ид UART драйвера
+;TEMP_H-адрес устройства на шине
+;TEMP_L-номер флага EXTRASCAN_HAVE_DATA
+;ACCUM-ид UART драйвера
+;FLAGS-флаги
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
@@ -106,8 +117,9 @@ DRV_BUS5277_INIT:
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BUS5277_RAM_SIZE
 	MCALL C5_RAM_REALLOC
-	;Записываем адрес на шине и флаг HAVE_DATA
+	;Записываем адрес на шине и флаги
 	STD Z+_DRV_BUS5277_BUS_ADDR,TEMP_H
+	STD Z+_DRV_BUS5277_FLAGS,FLAGS
 ;;;TODO	STD Z+DRV_BUS5277_FLAG_HAVE_DATA,TEMP_L
 	;Записываем ид UART'а
 	POP ACCUM
@@ -207,14 +219,26 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	;Восстанавливаем начальный адрес выделенной памяти
 	MOV ZH,XH
 	MOV ZL,XL
+
+
 	;Запускаем драйвер UART
-	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV YH,ZH															;Адрес блока данных для передачи
-	MOV YL,ZL
-	MOV XH,ZH															;Адрес блока данных для приема
-	MOV XL,ZL
 	LDI TEMP_EH,0x04													;Длина данных для передачи
 	ADD TEMP_EH,LOOP_CNTR
+	MOV YH,ZH															;Адрес блока данных для передачи
+	MOV YL,ZL
+.ifdef LOGGING_PORT
+	LDI TEMP,'>'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_EH
+	PUSH_Y
+	MCALL STRN_TRIM
+	MCALL C5_LOG_STRN
+	POP_Y
+	MCALL C5_LOG_CR
+.endif
+	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
+	MOV XH,ZH															;Адрес блока данных для приема
+	MOV XL,ZL
 	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
 	LDI TEMP_H,high(100/2)											;Максимальное время ожидания данных
 	LDI TEMP_L,low(100/2)
@@ -224,10 +248,22 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	LDI ACCUM,BUS5277_RESP_NO_ANSWER
 	BRNE _DRV_BUS5277_PROC_MASTER__ERROR
 	;Проверка на наличие данных
-	MOV LOOP_CNTR,TEMP_H
-	CPI LOOP_CNTR,0x00
+	;MOV LOOP_CNTR,TEMP_L ???
+	;CPI LOOP_CNTR,0x00 ???
+	CPI TEMP_L,0x00
 	LDI ACCUM,BUS5277_RESP_NO_DATA
 	BREQ _DRV_BUS5277_PROC_MASTER__ERROR
+.ifdef LOGGING_PORT
+	LDI TEMP,'<'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_L
+	PUSH_Y
+	MCALL STRN_TRIM
+	MCALL C5_LOG_STRN
+	POP_Y
+	MCALL C5_LOG_CR
+.endif
+
 	;Считываю адрес
 	LDD TEMP,Z+_DRV_BUS5277_PACKET_HEADER_ADDR
 	MOV TEMP_H,TEMP
@@ -485,3 +521,36 @@ _DRV_BUS5277_PROC_EXTRASCAN_T:
 ;--------------------------------------------------------
 	;TODO
 	RET
+
+
+.ifdef LOGGING_PORT
+;--------------------------------------------------------
+_DRV_BUS5277__LOG_REQV:
+;--------------------------------------------------------
+;Внутренняя процедура логирования
+;--------------------------------------------------------
+	LDD TEMP,Z+_DRV_BUS5277_FLAGS
+	SBRS TEMP,DRV_BUS5277_FLAG_LOGGING
+	RET
+	LDI TEMP,'>'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_EH
+	MCALL C5_LOG_BYTES
+	MCALL C5_LOG_CR
+	RET
+;--------------------------------------------------------
+_DRV_BUS5277__LOG_RESP:
+;--------------------------------------------------------
+;Внутренняя процедура логирования
+;--------------------------------------------------------
+	LDD TEMP,Z+_DRV_BUS5277_FLAGS
+	SBRS TEMP,DRV_BUS5277_FLAG_LOGGING
+	RET
+	LDI TEMP,'<'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_L
+	MCALL C5_LOG_BYTES
+	MCALL C5_LOG_CR
+	RET
+.endif
+

@@ -411,12 +411,13 @@ _DRV_UART_S_RECV_EVENT:
 	;Читаем состояние порта и пишем его в флаг T
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	MCALL PORT_GET
+
 	LDS TEMP,SREG
 	BST TEMP,0x00
 	;Читаем номер бита
 	LDD TEMP_H,Z+_DRV_UART_S_BIT_NUM
 
-	CPI TEMP_H,0x0a
+	CPI TEMP_H,0x00
 	BRNE __DRV_UART_S_RECV_EVENT__NO_NEXT_TIMEOUT
 		;Отработал таймер после STOP, т.е. прошло времени на несколько бит и START не был обнаружен
 		;Останавливаю таймер
@@ -480,15 +481,14 @@ __DRV_UART_S_RECV_EVENT__STOP:
 ;		STD Z+_DRV_UART_S_STATE,TEMP
 ;		RJMP __DRV_UART_S_RECV_EVENT__END
 __DRV_UART_S_RECV_EVENT__NEXT_BYTE:
-;		;Сбрасываю номер бита
-;		CLR TEMP_H
-;		STD Z+_DRV_UART_S_BIT_NUM,TEMP_H
-
+		;Сбрасываю номер бита
+		CLR TEMP_H
+		STD Z+_DRV_UART_S_BIT_NUM,TEMP_H
 		;Задаю новый период таймеру для отсчета таймаута
 		LDD TEMP,Z+_DRV_UART_S_TIMER_ID
 		LDD ACCUM,Z+_DRV_UART_S_NEXT_TIMEOUT
 		MCALL C5_TIMER_SET_PERIOD
-		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BIT
+		RJMP __DRV_UART_S_RECV_EVENT__END
 __DRV_UART_S_RECV_EVENT__ERROR:
 	;Останавливаю таймер
 	LDD TEMP,Z+_DRV_UART_S_TIMER_ID
@@ -523,6 +523,10 @@ _DRV_UART_S_PCINT_EVENT:
 	PUSH FLAGS
 
 	MCALL C5_RAM_OFFSET
+	LDD TEMP,Z+_DRV_UART_S_BIT_NUM
+	CPI TEMP,0x00
+	BRNE __DRV_UART_S_PCINT_EVENT__END
+
 
 	LDI TEMP,0x01
 	STD Z+_DRV_UART_S_BIT_NUM,TEMP

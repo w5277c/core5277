@@ -96,7 +96,7 @@ _DRV_PCINT_H_PROC__NOT_RESET:
 	MCALL PORT_GET
 	ROL TEMP_H
 
-	;Прлучаем адрес выделенной памяти
+	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 	PUSH_Z
 	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
@@ -197,7 +197,7 @@ _DRV_PCINT_H_EVENT:
 	MOV XH,ZH
 	MOV XL,ZL
 	;Получаем адрес предидущих состояний
-	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
+	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES+0x01)
 	ADD TEMP,LOOP_CNTR
 	ADD ZL,TEMP
 	CLR TEMP
