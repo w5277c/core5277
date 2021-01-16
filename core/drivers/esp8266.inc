@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.01.2021  w5277c@gmail.com			Начало
+;16.01.2021  w5277c@gmail.com			Исправлено часть ошибок, добавлено логирование
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/ram/ram_realloc.inc"
@@ -18,12 +19,16 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
-	.EQU	_DRV_ESP8266_BUFFER_SIZE						= 0x80;Размер буфера
+	.EQU	_DRV_ESP8266_BUFFER_SIZE						= 0xc0;Размер буфера
 	;---OFFSETS---
 	.EQU	_DRV_ESP8266_UART_DRV_ID						= 0x00;Идентификатор драйвера UART
 	.EQU	_DRV_ESP8266_UPTIME_START						= 0x01;Переменная1 UPTIME (5 байт)
 	.EQU	_DRV_ESP8266_UPTIME_CURRENT					= 0x06;Переменная2 UPTIME (5 байт)
-	.EQU	_DRV_ESP8266_BUFFER_OFFSET						= 0x0b;Адрес начала буфера в выделенной памяти
+	.EQU	_DRV_ESP8266_FLAGS								= 0x0b;Флаги драйвера
+	.EQU	_DRV_ESP8266_BUFFER_OFFSET						= 0x0c;Адрес начала буфера в выделенной памяти
+	;---FLAGS---
+	.EQU	DRV_ESP8266_FLAG_LOGGING						= 0x00;Бит логирования
+
 	;---OPERATIONS---
 	.EQU	DRV_ESP8266_OP_INIT								= 0x00;Инициализация работы
 	.EQU	DRV_ESP8266_OP_RAW								= 0x01;Свободный формат данных
@@ -39,7 +44,7 @@
 	.EQU	DRV_ESP8266_RESULT_NO_ANSWER					= 0x02
 
 	;---AT-CONSTANTS---
-_DRV_ESP8266_AT_ECHO_OFF:					.db "ATE1",0x0d,0x0a,0x00
+_DRV_ESP8266_AT_ECHO_OFF:					.db "ATE0",0x0d,0x0a,0x00
 _DRV_ESP8266_AT_SET_UART:					.db "AT+UART_CUR=9600,8,1,0,0",0x0d,0x0a,0x00
 _DRV_ESP8266_AT_SET_WIFI1:					.db "AT+CWJAP_CUR=",0x22,0x00;+APN+
 _DRV_ESP8266_AT_SET_WIFI2:					.db 0x22,",",0x22,0x00;+PASSWORD+
@@ -68,13 +73,13 @@ _DRV_ESP8266_AT_CONST_COLON:				.db ":",0x00
 
 _DRV_ESP8266_WIFI_CONNECT_TIMEOUT:		.db 0x00,0x00,0x00,0x3a,0x98	;UPTIME VAR = 30 сек.
 	;---
-	.EQU	_DRV_ESP8266_VARS_SIZE							= 0x0b
+	.EQU	_DRV_ESP8266_VARS_SIZE							= 0x0c
 
 ;--------------------------------------------------------
 DRV_ESP8266_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: TEMP - ид драйвера UART
+;IN: TEMP - ид драйвера UART, FLAGS-флаги
 ;--------------------------------------------------------
 	PUSH ACCUM
 
@@ -82,6 +87,7 @@ DRV_ESP8266_INIT:
 	MCALL C5_RAM_REALLOC
 
 	STD Z+_DRV_ESP8266_UART_DRV_ID,TEMP
+	STD Z+_DRV_ESP8266_FLAGS,FLAGS
 
 	POP ACCUM
 	MCALL C5_READY
@@ -138,23 +144,17 @@ _DRV_ESP8266__OP_RAW:
 ;Z-адрес на выделенную память
 ;OUT:TEMP_H-результат, TEMP_L-длина
 ;--------------------------------------------------------
-	PUSH TRY_CNTR
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH TEMP
 	PUSH_Y
 
-	LDI TRY_CNTR,0x03
 	MOV TEMP_EH,TEMP_H
-_DRV_ESP8266__OP_RAW__LOOP:
 	LDI TEMP_EL,(_DRV_ESP8266_BUFFER_SIZE-0x01)
 	MOV YH,XH
 	MOV YL,XL
 .ifdef LOGGING_PORT
-LDI TEMP,'>'
-MCALL C5_LOG_CHAR
-MOV TEMP,TEMP_EH
-MCALL C5_LOG_STRN
+	MCALL _DRV_ESP8266__LOG_REQV
 .endif
 	LDI TEMP_H,high(1000/2)
 	LDI TEMP_L,low(1000/2)
@@ -165,21 +165,11 @@ MCALL C5_LOG_STRN
 	CPI TEMP_L,0x00
 	BREQ _DRV_ESP8266__OP_RAW__ERROR
 .ifdef LOGGING_PORT
-LDI TEMP,'<'
-MCALL C5_LOG_CHAR
-MOV TEMP,TEMP_L
-MCALL C5_LOG_STRN
+	MCALL _DRV_ESP8266__LOG_RESP
 .endif
 	LDI TEMP_H,DRV_ESP8266_RESULT_OK
 	RJMP _DRV_ESP8266__OP_RAW__END
 _DRV_ESP8266__OP_RAW__ERROR:
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
-	LDI TEMP,(100/2)
-	MCALL C5_WAIT_2MS
-
-	DEC TRY_CNTR
-	BRNE _DRV_ESP8266__OP_RAW__LOOP
 	LDI TEMP_H,DRV_ESP8266_RESULT_ERROR
 _DRV_ESP8266__OP_RAW__END:
 
@@ -187,7 +177,6 @@ _DRV_ESP8266__OP_RAW__END:
 	POP TEMP
 	POP TEMP_EL
 	POP TEMP_EH
-	POP TRY_CNTR
 	RET
 
 ;--------------------------------------------------------
@@ -320,6 +309,9 @@ _DRV_ESP8266__OP_SET_WIFI:
 	LDI TEMP_L,low(3000/2)
 	MOV YH,XH
 	MOV YL,XL
+.ifdef LOGGING_PORT
+	MCALL _DRV_ESP8266__LOG_REQV
+.endif
 	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
 	MCALL C5_EXEC
 	;Если ответ не получен - выходим с ошибкой
@@ -329,7 +321,9 @@ _DRV_ESP8266__OP_SET_WIFI:
 	CPI TEMP_L,0x00
 	BRNE PC+0x02
 	RJMP __DRV_ESP8266__OP_SET_WIFI__FAIL
-
+.ifdef LOGGING_PORT
+	MCALL _DRV_ESP8266__LOG_RESP
+.endif
 	;Считываем сообщения ожидая "OK" в течении 15 секунд
 	LDI YH,0x00
 	LDI YL,_DRV_ESP8266_UPTIME_START
@@ -340,6 +334,12 @@ _DRV_ESP8266__OP_SET_WIFI:
 __DRV_ESP8266__OP_SET_WIFI__READ_LOOP:
 
 	;Только читаем
+	LDI XH,0x00
+	LDI XL,_DRV_ESP8266_BUFFER_OFFSET
+	ADD XL,ZL
+	ADC XH,ZH
+	MOV YH,XH
+	MOV YL,XL
 	LDI TEMP_EH,0x00
 	LDI TEMP_EL,(_DRV_ESP8266_BUFFER_SIZE-0x01)
 	LDI TEMP_H,high(3000/2)
@@ -352,7 +352,9 @@ __DRV_ESP8266__OP_SET_WIFI__READ_LOOP:
 	CPI TEMP_L,0x00
 	BRNE PC+0x02
 	RJMP __DRV_ESP8266__OP_SET_WIFI__NO_ANSWER
-
+.ifdef LOGGING_PORT
+	MCALL _DRV_ESP8266__LOG_RESP
+.endif
 __DRV_ESP8266__OP_SET_WIFI__FIRST_READ_SKIP:
 	PUSH_X
 	ADD XL,TEMP_L
@@ -403,7 +405,6 @@ __DRV_ESP8266__OP_SET_WIFI__SUCCESS:
 	SUBI TEMP_H,_DRV_ESP8266_BUFFER_OFFSET
 	POP_X
 	MCALL _DRV_ESP8266__OP_RAW
-
 	LDI TEMP_H,DRV_ESP8266_RESULT_OK
 	RJMP __DRV_ESP8266__OP_SET_WIFI__END
 __DRV_ESP8266__OP_SET_WIFI__FAIL:
@@ -604,3 +605,32 @@ _DRV_ESP8266__OP_RECEIVE_DATA__END:
 _DRV_ESP8266__OP_SEND_DATA:
 _DRV_ESP8266__OP_TCP_CLOSE:
 	RET
+
+.ifdef LOGGING_PORT
+;--------------------------------------------------------
+_DRV_ESP8266__LOG_REQV:
+;--------------------------------------------------------
+;Внутренняя процедура логирования
+;--------------------------------------------------------
+	LDD TEMP,Z+_DRV_ESP8266_FLAGS
+	SBRS TEMP,DRV_ESP8266_FLAG_LOGGING
+	RET
+	LDI TEMP,'>'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_EH
+	MCALL C5_LOG_STRN
+	RET
+;--------------------------------------------------------
+_DRV_ESP8266__LOG_RESP:
+;--------------------------------------------------------
+;Внутренняя процедура логирования
+;--------------------------------------------------------
+	LDD TEMP,Z+_DRV_ESP8266_FLAGS
+	SBRS TEMP,DRV_ESP8266_FLAG_LOGGING
+	RET
+	LDI TEMP,'<'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_L
+	MCALL C5_LOG_STRN
+	RET
+.endif
