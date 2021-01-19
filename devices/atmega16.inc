@@ -1,8 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.05.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;02.05.2020  w5277c@gmail.com			Начало
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;19.01.2021  w5277c@gmail.com			Обновлен блок EEPROM
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -24,40 +25,40 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA16
 	.MESSAGE "######## DEVICE ATmega16 ########"
-	.EQU	_C5_DRIVERS_MAX_QNT			= 0x10			;Максимальное количество драйверов
-	.EQU	_C5_TASKS_MAX_QNT				= 0x08			;Максимальное количество задач
-	.EQU	_C5_IR_QNT						= 0x15			;Количество перырваний(без RESET)
-	.EQU	_C5_RES_QUEUE_SIZE			= 0x10			;Размер очереди к ресурсам(8 элементов по 2 байта)
-	.EQU	_C5_PCINT_PORTS_QNT			= 0x00			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_C5_RAM_BORDER_SIZE			= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_C5_STACK_SIZE					= 0x40			;Стек ядра
-	.EQU	RAMEND							= 0x045f
+	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
+	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
+	.EQU	_C5_IR_QNT								= 0x15			;Количество перырваний(без RESET)
+	.EQU	_C5_RES_QUEUE_SIZE					= 0x10			;Размер очереди к ресурсам(8 элементов по 2 байта)
+	.EQU	_C5_PCINT_PORTS_QNT					= 0x00			;Количество портов поддерживающих внешние прерывания(PCINT)
+	.EQU	_C5_RAM_BORDER_SIZE					= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
+	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
+	.EQU	RAMEND									= 0x045f
 
 	;---IR---
-	.EQU	C5_IR_INT0						= 0x01
-	.EQU	C5_IR_INT1						= 0x02
-	.EQU	C5_IR_TIMER2_COMP				= 0x03
-	.EQU	C5_IR_TIMER2_OVF				= 0x04
-	.EQU	C5_IR_TIMER1_CAPT				= 0x05
-	.EQU	C5_IR_RESERVED_CORE_TIMER1	= 0x06
-	.EQU	C5_IR_RESERVED_CORE_TIMER2	= 0x07
-	.EQU	C5_IR_TIMER1_OVF				= 0x08
-	.EQU	C5_IR_TIMER0_OVF				= 0x09
-	.EQU	C5_IR_SPI						= 0x0a
-	.EQU	C5_IR_UART_RX					= 0x0b
-	.EQU	C5_IR_UART_UDRE				= 0x0c
-	.EQU	C5_IR_UART_TX					= 0x0d
-	.EQU	C5_IR_ADC						= 0x0e
-	.EQU	C5_IR_EE_READY					= 0x0f
-	.EQU	C5_IR_ANALOG_COMP				= 0x10
-	.EQU	C5_IR_TWI						= 0x11
-	.EQU	C5_IR_INT2						= 0x12
-	.EQU	C5_IR_TIMER0_COMP				= 0x13
-	.EQU	C5_IR_SPM_READY				= 0x14
+	.EQU	C5_IR_INT0								= 0x01
+	.EQU	C5_IR_INT1								= 0x02
+	.EQU	C5_IR_TIMER2_COMP						= 0x03
+	.EQU	C5_IR_TIMER2_OVF						= 0x04
+	.EQU	C5_IR_TIMER1_CAPT						= 0x05
+	.EQU	C5_IR_RESERVED_CORE_TIMER1			= 0x06
+	.EQU	C5_IR_RESERVED_CORE_TIMER2			= 0x07
+	.EQU	C5_IR_TIMER1_OVF						= 0x08
+	.EQU	C5_IR_TIMER0_OVF						= 0x09
+	.EQU	C5_IR_SPI								= 0x0a
+	.EQU	C5_IR_UART_RX							= 0x0b
+	.EQU	C5_IR_UART_UDRE						= 0x0c
+	.EQU	C5_IR_UART_TX							= 0x0d
+	.EQU	C5_IR_ADC								= 0x0e
+	.EQU	C5_IR_EE_READY							= 0x0f
+	.EQU	C5_IR_ANALOG_COMP						= 0x10
+	.EQU	C5_IR_TWI								= 0x11
+	.EQU	C5_IR_INT2								= 0x12
+	.EQU	C5_IR_TIMER0_COMP						= 0x13
+	.EQU	C5_IR_SPM_READY						= 0x14
 	;Отсутствуют
-	.EQU	C5_IR_PCINT0					= 0x00
-	.EQU	C5_IR_PCINT1					= 0x00
-	.EQU	C5_IR_PCINT2					= 0x00
+	.EQU	C5_IR_PCINT0							= 0x00
+	.EQU	C5_IR_PCINT1							= 0x00
+	.EQU	C5_IR_PCINT2							= 0x00
 
 	.EQU	PA0										= (0x00<<4)|0x00
 	.EQU	PA1										= (0x00<<4)|0x01
@@ -173,6 +174,17 @@
 	.EQU	PCMSK0									= 0x00
 	.EQU	PCMSK1									= 0x00
 	.EQU	PCMSK2									= 0x00
+	;---EEPROM---
+	.EQU	EEARH										= 0x3F
+	.EQU	EEARL										= 0x3E
+	.EQU	EEDR										= 0x3D
+	.EQU	EECR										= 0x3C
+	.EQU		EERIE									= 0x03
+	.EQU		EEMPE									= 0x02
+	.EQU		EEMWE									= EEMPE
+	.EQU		EEPE									= 0x01
+	.EQU		EEWE									= EEPE
+	.EQU		EERE									= 0x00
 	;---ADC---
 	.EQU	ADMUX										= 0x27
 	.EQU		REFS1									= 0x07
@@ -211,28 +223,28 @@
 
 .ORG 0x0000
 	JMP	MAIN															; Reset
-	CALL	_C5_IR												; External Interrupt0
-	CALL	_C5_IR												; External Interrupt1
-	CALL	_C5_IR												; Timer/Counter2 Compare
-	CALL	_C5_IR												; Timer/Counter2 Overflow
-	CALL	_C5_IR												; Timer/Counter1 Capture Event
-	JMP	_C5_TIMER_A_IR										; Timer/Counter1 Compare Match A
-	JMP	_C5_TIMER_B_IR										; Timer/Counter1 Compare Match B
-	CALL	_C5_IR												; Timer/Counter1 Overflow
-	CALL	_C5_IR												; Timer/Counter0 Overflow
-	CALL	_C5_IR												; SPI Serial Transfer Complete
-	CALL	_C5_IR												; USART Rx Complete
-	CALL	_C5_IR												; USART, Data Register Empty
-	CALL	_C5_IR												; USART, Tx Complete
-	CALL	_C5_IR												; ADC Conversion Complete
-	CALL	_C5_IR												; EEPROM Ready
-	CALL	_C5_IR												; Analog Comparator
-	CALL	_C5_IR												; 2-wire Serial Interface
-	CALL	_C5_IR												; External Interrupt2
-	CALL	_C5_IR												; Timer/Counter0 Compare
-	CALL	_C5_IR												; Store Program Memory Ready
+	CALL	_C5_IR														; External Interrupt0
+	CALL	_C5_IR														; External Interrupt1
+	CALL	_C5_IR														; Timer/Counter2 Compare
+	CALL	_C5_IR														; Timer/Counter2 Overflow
+	CALL	_C5_IR														; Timer/Counter1 Capture Event
+	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A
+	JMP	_C5_TIMER_B_IR												; Timer/Counter1 Compare Match B
+	CALL	_C5_IR														; Timer/Counter1 Overflow
+	CALL	_C5_IR														; Timer/Counter0 Overflow
+	CALL	_C5_IR														; SPI Serial Transfer Complete
+	CALL	_C5_IR														; USART Rx Complete
+	CALL	_C5_IR														; USART, Data Register Empty
+	CALL	_C5_IR														; USART, Tx Complete
+	CALL	_C5_IR														; ADC Conversion Complete
+	CALL	_C5_IR														; EEPROM Ready
+	CALL	_C5_IR														; Analog Comparator
+	CALL	_C5_IR														; 2-wire Serial Interface
+	CALL	_C5_IR														; External Interrupt2
+	CALL	_C5_IR														; Timer/Counter0 Compare
+	CALL	_C5_IR														; Store Program Memory Ready
 
-PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB и т.д.
+PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB и т.д.
 	.db	0x3b,0x3a,0x39,0x38,0x37,0x36,0x35,0x34,0x33,0x32,0x31,0x30
 PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00
@@ -283,23 +295,6 @@ PCINT_TABLE:
 	POP TEMP
 .ENDMACRO
 
-.MACRO _CORRE5277_TIMERA_CORRECTOR
-	PUSH TEMP_H
-	PUSH TEMP_L
-	LDS TEMP_L,TCNT1L
-	LDS TEMP_H,TCNT1H
-	LDI TEMP,TIMERS_SPEED-0x01
-	SBRC _C5_COREFLAGS,_CFL_TIMER_UART_CORRECTION
-	LDI TEMP,TIMERS_SPEED+0x02
-	ADD TEMP_L,TEMP
-	CLR TEMP
-	ADC TEMP_H,TEMP
-	STS OCR1AH,TEMP_H
-	STS OCR1AL,TEMP_L
-	POP TEMP_L
-	POP TEMP_H
-.ENDMACRO
-
 .MACRO _CORRE5277_IR_OFFSET_CORRECTOR
 	LSR _C5_TEMP_L
 	DEC _C5_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
@@ -340,4 +335,3 @@ PCINT_TABLE:
 .MACRO _C5_TIMER_TCNT
 	LDS @0,TCNT1L
 .ENDMACRO
-

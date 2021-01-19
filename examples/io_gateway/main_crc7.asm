@@ -7,24 +7,24 @@
 
 	.INCLUDE "./devices/atmega328.inc"
 	.SET	REALTIME									= 0	;0-1
-	.SET	TIMERS									= 1	;0-4
+	.SET	TIMERS									= 0	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
-	;.SET	LOGGING_PORT							= PC4	;PA0-PC7
+	.SET	LOGGING_PORT							= PC4	;PA0-PC7
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.include	"./core/drivers/sd.inc"
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
 	.include	"./core/log/log_byte.inc"
-	.include	"./core/wait_1s.inc"
+	.include	"./core/ram/ram_realloc.inc"
+	.include	"./conv/crc_block_x8.inc"
+	.include	"./conv/crc7_730.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_SD_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
@@ -37,24 +37,8 @@ MAIN:
 	LDI TEMP,low(RAMEND)
 	STS SPL,TEMP
 
-	LDI ACCUM,PB5
-	MCALL PORT_SET_HI
-	LDI ACCUM,PB3
-	MCALL PORT_SET_HI
-	LDI ACCUM,PB4
-	MCALL PORT_SET_HI
-	MCALL PORT_MODE_OUT
-
 	;Инициализация ядра
 	MCALL C5_INIT
-
-	;Инициализация SD
-	LDI PID,PID_SD_DRV
-	LDI ZH,high(DRV_SD_INIT)
-	LDI ZL,low(DRV_SD_INIT)
-	LDI TEMP_H,PB5
-	LDI TEMP_L,PB3
-	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_TASK
@@ -66,57 +50,44 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
+	LDI ACCUM,0x10
+	MCALL C5_RAM_REALLOC
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 _TASK__LOOP:
-	LDI ACCUM,PB4
-	MCALL PORT_SET_LO
 
-	LDI TEMP,PID_SD_DRV
-	LDI ACCUM,DRV_SD_CMD0
-	LDI TEMP_EH,0x00
-	LDI TEMP_EL,0x00
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
-	MCALL C5_EXEC
+;	LDI TEMP,0x40
+;	STD Z+0x00,TEMP
+;	LDI TEMP,0x00
+;	STD Z+0x01,TEMP
+;;	STD Z+0x02,TEMP
+	;STD Z+0x03,TEMP
+	;STD Z+0x04,TEMP
 
-	MOV TEMP,ACCUM
-	MCALL C5_LOG_BYTE
-
-	LDI ACCUM,PB4
-	MCALL PORT_SET_HI
-	LDI ACCUM,PB3
-	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_LO
-
-
-	LDI TEMP,0x01
-	MCALL C5_WAIT_1S
+	LDI TEMP,0x11
+	STD Z+0x00,TEMP
+	LDI TEMP,0x00
+	STD Z+0x01,TEMP
+	STD Z+0x02,TEMP
+	LDI TEMP,0x09
+	STD Z+0x03,TEMP
+	LDI TEMP,0x00
+	STD Z+0x04,TEMP
 
 
+	LDI LOOP_CNTR,0x05
+	MOV XH,ZH
+	MOV XL,ZL
+	LDI YH,high(CRC7_730)
+	LDI YL,low(CRC7_730)
+	MCALL CRC_BLOCK_X8
 
-	LDI ACCUM,PB4
-	MCALL PORT_SET_LO
-	LDI ACCUM,PB5
-	MCALL PORT_SET_LO
-
-	LDI TEMP,PID_SD_DRV
-	LDI ACCUM,DRV_SD_CMD8
-	LDI TEMP_EH,0x00
-	LDI TEMP_EL,0x00
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
-	MCALL C5_EXEC
+	;LSR ACCUM
+	;LSL ACCUM
+	ORI ACCUM,0x01
 
 	MOV TEMP,ACCUM
 	MCALL C5_LOG_BYTE
 
-	LDI ACCUM,PB4
-	MCALL PORT_SET_HI
-
-	LDI TEMP,0x01
-	MCALL C5_WAIT_1S
-
-
-
-	RJMP _TASK__LOOP
+	RET

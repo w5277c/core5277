@@ -1,8 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.08.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;08.08.2020  w5277c@gmail.com			Начало
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;19.01.2021  w5277c@gmail.com			Обновлен блок EEPROM
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -162,6 +163,19 @@
 	.EQU		PCINT2								= 0x02
 	.EQU		PCINT1								= 0x01
 	.EQU		PCINT0								= 0x00
+	;---EEPROM---
+	.EQU	EEARH										= 0x3F
+	.EQU	EEARL										= 0x3E
+	.EQU	EEDR										= 0x3D
+	.EQU	EECR										= 0x3C
+	.EQU		EEPM1									= 0x05
+	.EQU		EEPM0									= 0x04
+	.EQU		EERIE									= 0x03
+	.EQU		EEMPE									= 0x02
+	.EQU		EEMWE									= EEMPE
+	.EQU		EEPE									= 0x01
+	.EQU		EEWE									= EEPE
+	.EQU		EERE									= 0x00
 	;---ADC---
 	.EQU	ADMUX										= 0x27
 	.EQU		REFS1									= 0x07
@@ -211,22 +225,22 @@
 
 .ORG 0x0000
 	RJMP	MAIN															; Reset Handler
-	RCALL	_C5_IR												; External Interrupt0 Handler
-	RCALL	_C5_IR												; Pin Change Interrupt Request 0
-	RCALL	_C5_IR												; Timer/Counter1 Compare Match A
-	RCALL	_C5_IR												; Timer/Counter1 Overflow
-	RCALL	_C5_IR												; Timer/Counter0 Overflow
-	RCALL	_C5_IR												; EEPROM Ready
-	RCALL	_C5_IR												; Analog Comparator
-	RCALL	_C5_IR												; ADC Conversion Complete
-	RCALL	_C5_IR												; Timer/Counter1 Compare Match B
-	RJMP	_C5_TIMER_A_IR										; Timer/Counter0 Compare Match A
-	RCALL	_C5_TIMER_B_IR										; Timer/Counter0 Compare Match B
-	RCALL	_C5_IR												; Watchdog Time-out Interrupt
-	RCALL	_C5_IR												; USI start
-	RCALL	_C5_IR												; USI overflow
+	RCALL	_C5_IR														; External Interrupt0 Handler
+	RCALL	_C5_IR														; Pin Change Interrupt Request 0
+	RCALL	_C5_IR														; Timer/Counter1 Compare Match A
+	RCALL	_C5_IR														; Timer/Counter1 Overflow
+	RCALL	_C5_IR														; Timer/Counter0 Overflow
+	RCALL	_C5_IR														; EEPROM Ready
+	RCALL	_C5_IR														; Analog Comparator
+	RCALL	_C5_IR														; ADC Conversion Complete
+	RCALL	_C5_IR														; Timer/Counter1 Compare Match B
+	RJMP	_C5_TIMER_A_IR												; Timer/Counter0 Compare Match A
+	RCALL	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
+	RCALL	_C5_IR														; Watchdog Time-out Interrupt
+	RCALL	_C5_IR														; USI start
+	RCALL	_C5_IR														; USI overflow
 
-PORTS_TABLE:												;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA, и т.д.
+PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA, и т.д.
 	.db	0x00,0x00,0x00,0x38,0x37,0x36,0x00,0x00,0x00,0x00,0x00,0x00
 PCINT_TABLE:
 	.db	0x00,PCMSK,0x00,0x00
