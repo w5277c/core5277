@@ -9,8 +9,9 @@
 	.EQU	ATMEGA16									= 0x02
 	.EQU	ATMEGA48									= 0x03
 
-	.EQU	TIMERS_SPEED_50NS						= 0x64
-	.EQU	TIMERS_SPEED_25NS						= 0x32
+	.SET	CORE_FREQ								= 0x10
+	.EQU	TIMERS_SPEED_50NS						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
+	.EQU	TIMERS_SPEED_25NS						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 
 ;---PROC-ID-OPTIONS--------------------------------------;Не изменяемые опции процесса размещаемые в идентификаторе процесса
@@ -59,6 +60,15 @@
 .MACRO POP_Z
 	POP ZL
 	POP ZH
+.ENDMACRO
+
+.MACRO C5_WAIT_500NS
+	PUSH TEMP
+	LDI TEMP,low((@0-36)/(16/CORE_FREQ))
+	.if ((@0-36)/(16/CORE_FREQ)) > 0
+		MCALL _C5_WAIT_500NS
+	.endif
+	POP TEMP
 .ENDMACRO
 
 .MACRO LDI_X

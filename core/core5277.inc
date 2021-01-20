@@ -134,15 +134,24 @@
 	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
 	.MESSAGE "######## TASK ENDPOINT OFFSET:",_C5_TASK_ENDPOINT
+	.MESSAGE "######## CORE FREQ:",CORE_FREQ
+	.IF TIMERS_SPEED == TIMERS_SPEED_50NS
+		.MESSAGE "######## TIMERS NORMAL SPEED (",TIMERS_SPEED,")"
+	.ELSEIF TIMERS_SPEED == TIMERS_SPEED_25NS
+		.MESSAGE "######## TIMERS x2 SPEED (",TIMERS_SPEED,")"
+	.ELSE
+		.MESSAGE "######## TIMERS WRONG SPEED"
+	.ENDIF
+.ELSE
+	.IF TIMERS_SPEED == TIMERS_SPEED_50NS
+		.MESSAGE "######## TIMERS NORMAL SPEED"
+	.ELSEIF TIMERS_SPEED == TIMERS_SPEED_25NS
+		.MESSAGE "######## TIMERS x2 SPEED"
+	.ELSE
+		.MESSAGE "######## TIMERS WRONG SPEED"
+	.ENDIF
 .ENDIF
 
-.IF TIMERS_SPEED == TIMERS_SPEED_50NS
-	.MESSAGE "######## TIMERS NORMAL SPEED  ########"
-.ELSEIF TIMERS_SPEED == TIMERS_SPEED_25NS
-	.MESSAGE "######## TIMERS HIGH SPEED  ########"
-.ELSE
-	.MESSAGE "######## TIMERS WRONG SPEED  ########"
-.ENDIF
 
 ;---REGISTERS--------------------------------------------;r0-r14 выделено под нужды ядра
 	.DEF	_RESULT_L								= r0
@@ -612,23 +621,19 @@ C5_TCNT_GET:
 	RET
 
 ;--------------------------------------------------------
-C5_WAIT_500NS:
+_C5_WAIT_500NS:
 ;--------------------------------------------------------
 ;Ждем истечения времени
 ;IN TEMP - время в 0.000 000 5s(не менее 40 ~20us)
 ;--------------------------------------------------------
-	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 
-	SUBI TEMP,36
 	;Настройка таймера
 	_C5_TIMERB
 
-
 	POP TEMP_L
 	POP TEMP_H
-	POP TEMP
 	RET
 
 _C5_TIMER_B_IR:

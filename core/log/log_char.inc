@@ -35,18 +35,22 @@ C5_LOG_CHAR:
 	LD ACCUM,Z															;2t
 	ORI ACCUM,(EXP2 (LOGGING_PORT & 0x0f))														;1t
 	ST Z,ACCUM															;2t
-	LDI ACCUM,8
+.if CORE_FREQ > 0x02
+	LDI ACCUM,CORE_FREQ/2
 	DEC ACCUM
 	BRNE PC-0x01
+.endif
 
 	LDS FLAGS,SREG
 	CLI
 	LD ACCUM,Z															;2t
 	ANDI ACCUM,~(EXP2 (LOGGING_PORT & 0x0f))														;1t
 	ST Z,ACCUM															;2t
-	LDI ACCUM,8
+.if CORE_FREQ > 0x02
+	LDI ACCUM,CORE_FREQ/2
 	DEC ACCUM
 	BRNE PC-0x01
+.endif
 
 	;DATA BITS
 	LDI LOOP_CNTR,0x08
@@ -59,13 +63,11 @@ _C5_LOG_PROC__BITES_LOOP:
 	ANDI ACCUM,~(EXP2 (LOGGING_PORT & 0x0f))													;1t
 	LSR TEMP
 	ST Z,ACCUM															;2t
-
-	NOP
-	NOP
-	LDI ACCUM,7
+.if CORE_FREQ > 0x02
+	LDI ACCUM,CORE_FREQ/2
 	DEC ACCUM
 	BRNE PC-0x01
-
+.endif
 	DEC LOOP_CNTR
 	BRNE _C5_LOG_PROC__BITES_LOOP
 	;STOP
