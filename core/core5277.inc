@@ -213,6 +213,12 @@
 ;---OPTIONS-ANALYZE--------------------------------------
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED ########"
+	.IF AVRA == 0x01
+		.MESSAGE "######## LOGGING BAUDRATE:",28800*CORE_FREQ
+	.ELSEIF
+		.MESSAGE "######## LOGGING BAUDRATE:"
+		.MESSAGE 28800*CORE_FREQ
+	.ENDIF
 	LOGSTR_CORE:
 	.db   0x0d,0x0a,"core5277_v0.2.9",0x0d,0x0a,0x00
 	.INCLUDE "./core/log/log_init.inc"
