@@ -10,6 +10,7 @@
 .include	"./conv/crc7_730.inc"
 
 ;---CONSTANTS--------------------------------------------
+	.EQU	DRV_SD_CMD_INIT									= 0xff;
 	.EQU	DRV_SD_CMD0											= 0x00;
 	.EQU	DRV_SD_CMD1											= 0x01;
 	.EQU	DRV_SD_CMD5											= 0x05;
@@ -32,7 +33,7 @@ DRV_SD_INIT:
 	CBI PORTB,MOSI & 0x0f
 	SBI DDRB,MOSI & 0x0f
 	;Инициализируем порт MISO
-	CBI PORTB,MISO & 0x0f
+	SBI PORTB,MISO & 0x0f
 	CBI DDRB,MISO & 0x0f
 	;Инициализируем порт SS
 	SBI PORTB,SS & 0x0f

@@ -10,6 +10,7 @@
 	.EQU	ATMEGA16									= 0x02
 	.EQU	ATMEGA48									= 0x03
 
+	.SET	AVRA										= 0x00
 	.SET	CORE_FREQ								= 0x10
 	.EQU	TIMERS_SPEED_50NS						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
 	.EQU	TIMERS_SPEED_25NS						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
