@@ -6,93 +6,91 @@
 ;TODO реализовать прием данных
 ;TODO объединить с кодом ведомого?
 
-.include	"./core/ram/ram_offset.inc"
-.include	"./core/ram/ram_realloc.inc"
 .include	"./core/wait_2ms.inc"
-.include	"./io/port_mode_in.inc"
-.include	"./io/port_mode_out.inc"
-.include	"./io/port_set_lo.inc"
-.include	"./io/port_set_hi.inc"
-.include	"./io/port_set.inc"
-.include	"./io/port_get.inc"
 .include	"./conv/crc7_730.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_SD_CLCK_PORT									= 0x00;1b - Порт SCK
-	.EQU	_DRV_SD_CMD_PORT									= 0x01;1b - Порт MISO
-
-
 	.EQU	DRV_SD_CMD0											= 0x00;
 	.EQU	DRV_SD_CMD1											= 0x01;
+	.EQU	DRV_SD_CMD5											= 0x05;
 	.EQU	DRV_SD_CMD8											= 0x08;
+	.EQU	DRV_SD_CMD41										= 0x69;
 
 
-	.EQU	_DRV_SD_RAM_SIZE									= 0x02;2 байт необходимо выделить
+	.EQU	_DRV_SD_RAM_SIZE									= 0x00;0 байт необходимо выделить
 
-;Драйвер карты памяти (SD)
+;Драйвер карты памяти (режим SPI)
 ;--------------------------------------------------------
 DRV_SD_INIT:
 ;--------------------------------------------------------
 ;Инициализация драйвера
-;TEMP_H - порт CLCK, TEMP_L - порт CMD
 ;--------------------------------------------------------
-	PUSH ACCUM
-
-	LDI ACCUM,_DRV_SD_RAM_SIZE
-	MCALL C5_RAM_REALLOC
-
-	STD Z+_DRV_SD_CLCK_PORT,TEMP_H
-	STD Z+_DRV_SD_CMD_PORT,TEMP_L
-
 	;Инициализируем порт CLCK
-	MOV ACCUM,TEMP_H
-	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_LO
-	;Инициализируем порт CMD
-	MOV ACCUM,TEMP_L
-	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_LO
+	CBI PORTB,SCK & 0x0f
+	SBI DDRB,SCK & 0x0f
+	;Инициализируем порт MOSI
+	CBI PORTB,MOSI & 0x0f
+	SBI DDRB,MOSI & 0x0f
+	;Инициализируем порт MISO
+	CBI PORTB,MISO & 0x0f
+	CBI DDRB,MISO & 0x0f
+	;Инициализируем порт SS
+	SBI PORTB,SS & 0x0f
+	SBI DDRB,SS & 0x0f
 
-	POP ACCUM
 	MCALL C5_READY
-
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;IN: ACCUM-команда
 ;TEMP_EH/EL/H/L-аргументы
 ;OUT: ACCUM-ответ
 ;--------------------------------------------------------
-	PUSH_Z
 	PUSH ACCUM
 	PUSH TEMP
 	PUSH TEMP_H
-	PUSh TEMP_L
+	PUSH TEMP_L
+	PUSH LOOP_CNTR
 
-	;Загружаем в Z адрес на выделенный блок памяти
-	MCALL C5_RAM_OFFSET
+	CBI PORTB,SCK & 0x0f
+	CBI PORTB,SS & 0x0f
+	CBI PORTB,MOSI & 0x0f
 
-	;Инициализируем порт CMD
-	PUSH ACCUM
-	LDD ACCUM,Z+_DRV_SD_CMD_PORT
-	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_LO
-	POP ACCUM
+	CPI ACCUM,0xff
+	BRNE _DRV_SD__NOT_INIT_MODE
+	CBI DDRB,MOSI & 0x0f
+	LDI LOOP_CNTR,80
+_DRV_SD__INIT_LOOP:
+	CBI PORTB,SCK & 0x0f
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	SBI PORTB,SCK &0x0f
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	NOP
+	DEC LOOP_CNTR
+	BRNE _DRV_SD__INIT_LOOP
+	SBI DDRB,MOSI & 0x0f
+	RJMP _DRV_SD__END
 
-;	LDI LOOP_CNTR,0x0a
-;	LDI TEMP,0xFF
-;_LOOP:
-;	MCALL _DRV_SD_BYTE_SEND
-;	DEC LOOP_CNTR
-;	BRNE _LOOP
-;	PUSH ACCUM
-;	LDI ACCUM,PB4
-;	MCALL PORT_SET_HI
-;	MCALL _DRV_SD_WAIT
-;	MCALL _DRV_SD_WAIT
-;	MCALL _DRV_SD_WAIT
-;	MCALL _DRV_SD_WAIT
-;	MCALL PORT_SET_LO
-;	POP ACCUM
+_DRV_SD__NOT_INIT_MODE:
+
+
+	LDI TEMP,0xff
+	MCALL _DRV_SD_BYTE_SEND
 
 	MOV TEMP,ACCUM
 	CLR ACCUM
@@ -115,77 +113,84 @@ DRV_SD_INIT:
 	ORI TEMP,0x01
 	MCALL _DRV_SD_BYTE_SEND
 
-	LDD ACCUM,Z+_DRV_SD_CMD_PORT
-	MCALL PORT_MODE_IN
-	MCALL PORT_SET_LO
+	CBI DDRB,MOSI & 0x0f
+	CBI PORTB,MOSI & 0x0f
+
 	LDI TEMP,0xff
 	MCALL _DRV_SD_BYTE_SEND
 
+	LDI LOOP_CNTR,0x40
+_DRV_SD__WAIT_RESP_LOOP:
 	MCALL _DRV_SD_BYTE_RECV
+	SBRS TEMP,0x07
+	RJMP PC+0x03
+	DEC LOOP_CNTR
+	BRNE _DRV_SD__WAIT_RESP_LOOP
 
+	SBI DDRB,MOSI & 0x0f
+
+_DRV_SD__END:
+	;Отключаем чип
+	SBI PORTB,SS & 0x0f
+
+	POP LOOP_CNTR
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
 	POP ACCUM
-	POP_Z
 	RET
 
 ;--------------------------------------------------------
 _DRV_SD_BYTE_SEND:
 ;--------------------------------------------------------
 ;Передача байта
-;IN: Z-выделенная память, TEMP-значение
+;IN: TEMP-значение
 ;--------------------------------------------------------
-	PUSH ACCUM
 	PUSH LOOP_CNTR
 	PUSH TEMP
 
 	LDI LOOP_CNTR,0x08
 _DRV_SD_BYTE_SEND__LOOP:
+	SBRS TEMP,0x07
+	CBI PORTB,MOSI & 0x0f
+	SBRC TEMP,0x07
+	SBI PORTB,MOSI & 0x0f
 	LSL TEMP
-	LDD ACCUM,Z+_DRV_SD_CMD_PORT
-	MCALL PORT_SET
-	LDD ACCUM,Z+_DRV_SD_CLCK_PORT
-	MCALL PORT_SET_HI
+	CBI PORTB,SCK & 0x0f
 	MCALL _DRV_SD_WAIT
-	LDD ACCUM,Z+_DRV_SD_CLCK_PORT
-	MCALL PORT_SET_LO
+	SBI PORTB,SCK & 0x0f
 	MCALL _DRV_SD_WAIT
 	DEC LOOP_CNTR
 	BRNE _DRV_SD_BYTE_SEND__LOOP
 
+	CBI PORTB,SCK & 0x0f
+	MCALL _DRV_SD_WAIT
+
 	POP TEMP
 	POP LOOP_CNTR
-	POP ACCUM
 	RET
-
 
 ;--------------------------------------------------------
 _DRV_SD_BYTE_RECV:
 ;--------------------------------------------------------
 ;Передача байта
-;IN: Z-выделенная память
 ;OUT: TEMP-значение
 ;--------------------------------------------------------
-	PUSH ACCUM
 	PUSH LOOP_CNTR
 
 	LDI LOOP_CNTR,0x08
 _DRV_SD_BYTE_RECV__LOOP:
-	LDD ACCUM,Z+_DRV_SD_CLCK_PORT
-	MCALL PORT_SET_HI
+	SBI PORTB,SCK & 0x0f
 	MCALL _DRV_SD_WAIT
-	LDD ACCUM,Z+_DRV_SD_CMD_PORT
-	MCALL PORT_GET
-	ROR TEMP
-	LDD ACCUM,Z+_DRV_SD_CLCK_PORT
-	MCALL PORT_SET_LO
+	LSR TEMP
+	SBIC PINB,MISO & 0x0f
+	ORI TEMP,0x80
+	CBI PORTB,SCK & 0x0f
 	MCALL _DRV_SD_WAIT
 	DEC LOOP_CNTR
 	BRNE _DRV_SD_BYTE_RECV__LOOP
 
 	POP LOOP_CNTR
-	POP ACCUM
 	RET
 
 ;--------------------------------------------------------
@@ -193,5 +198,4 @@ _DRV_SD_WAIT:
 ;--------------------------------------------------------
 ;Выдерживаем паузу
 ;--------------------------------------------------------
-	C5_WAIT_500NS 40;~20us
 	RET

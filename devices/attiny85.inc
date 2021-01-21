@@ -4,6 +4,7 @@
 ;08.08.2020  w5277c@gmail.com			Начало
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;19.01.2021  w5277c@gmail.com			Обновлен блок EEPROM
+;21.01.2021  w5277c@gmail.com			Дбавлены порты для инструкций SBI,CBI...
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -55,39 +56,28 @@
 	.EQU	C5_IR_PCINT1							= 0x00
 	.EQU	C5_IR_PCINT2							= 0x00
 
-	.EQU	PA0										= (0x00<<4)|0x00
-	.EQU	PA1										= (0x00<<4)|0x01
-	.EQU	PA2										= (0x00<<4)|0x02
-	.EQU	PA3										= (0x00<<4)|0x03
-	.EQU	PA4										= (0x00<<4)|0x04
-	.EQU	PA5										= (0x00<<4)|0x05
-	.EQU	PA6										= (0x00<<4)|0x06
-	.EQU	PA7										= (0x00<<4)|0x07
-	.EQU	PB0										= (0x01<<4)|0x00
-	.EQU	PB1										= (0x01<<4)|0x01
-	.EQU	PB2										= (0x01<<4)|0x02
-	.EQU	PB3										= (0x01<<4)|0x03
-	.EQU	PB4										= (0x01<<4)|0x04
-	.EQU	PB5										= (0x01<<4)|0x05
-	.EQU	PB6										= (0x01<<4)|0x06
-	.EQU	PB7										= (0x01<<4)|0x07
-	.EQU	PC0										= (0x02<<4)|0x00
-	.EQU	PC1										= (0x02<<4)|0x01
-	.EQU	PC2										= (0x02<<4)|0x02
-	.EQU	PC3										= (0x02<<4)|0x03
-	.EQU	PC4										= (0x02<<4)|0x04
-	.EQU	PC5										= (0x02<<4)|0x05
-	.EQU	PC6										= (0x02<<4)|0x06
-	.EQU	PC7										= (0x02<<4)|0x07
-	.EQU	PD0										= (0x03<<4)|0x00
-	.EQU	PD1										= (0x03<<4)|0x01
-	.EQU	PD2										= (0x03<<4)|0x02
-	.EQU	PD3										= (0x03<<4)|0x03
-	.EQU	PD4										= (0x03<<4)|0x04
-	.EQU	PD5										= (0x03<<4)|0x05
-	.EQU	PD6										= (0x03<<4)|0x06
-	.EQU	PD7										= (0x03<<4)|0x07
+	;SBI/CBI/SBIS/SBIC port defines
+	.EQU	PORTA										= 0xff
+	.EQU	DDRA										= 0xff
+	.EQU	PINA										= 0xff
+	.EQU	PORTB										= 0x18
+	.EQU	DDRB										= 0x17
+	.EQU	PINB										= 0x16
+	.EQU	PORTC										= 0xff
+	.EQU	DDRC										= 0xff
+	.EQU	PINC										= 0xff
+	.EQU	PORTD										= 0xff
+	.EQU	DDRD										= 0xff
+	.EQU	PIND										= 0xff
 
+	.EQU	SDA										= 0xff
+	.EQU	SCL										= 0xff
+	.EQU	RXD										= 0xff
+	.EQU	TXD										= 0xff
+	.EQU	SCK										= PB2
+	.EQU	MISO										= PB1
+	.EQU	MOSI										= PB0
+	.EQU	SS											= PB3	;не описан в документации
 
 	;---IO-REGISTERS---------------------------------------
 	.EQU	SREG										= 0x5f
