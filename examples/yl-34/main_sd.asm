@@ -5,10 +5,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega16.inc"
 	.SET	CORE_FREQ								= 8	;2-20Mhz
+
+	.INCLUDE "./devices/atmega16.inc"
 	.SET	AVRA										= 1	;0-1
-	.SET	REALTIME									= 0	;0-1
+	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
@@ -24,6 +25,7 @@
 	;Дополнительно
 	.include	"./core/log/log_byte.inc"
 	.include	"./core/wait_1s.inc"
+	.include	"./core/log/log_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -64,42 +66,16 @@ MAIN:
 TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
-	LDI TEMP,0x01
-	MCALL C5_WAIT_1S
-
-_TASK_INIT_SD:
-	LDI TEMP,PID_SD_DRV
-	LDI ACCUM,DRV_SD_CMD_INIT
-	MCALL C5_EXEC
-
 _TASK__LOOP:
-
 	LDI TEMP,PID_SD_DRV
-	LDI ACCUM,DRV_SD_CMD0
-	LDI TEMP_EH,0x00
-	LDI TEMP_EL,0x00
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+	LDI FLAGS,DRV_SD_OP_INIT
 	MCALL C5_EXEC
 
-	LDI TEMP,PID_SD_DRV
-	LDI ACCUM,DRV_SD_CMD8											;47:40	b01001000
-	LDI TEMP_EH,0x00													;39:32	0x00
-	LDI TEMP_EL,0x00													;31:24	0x00
-	LDI TEMP_H,0x01													;23:16	19:16=b0001 (2.7-3.6V)
-	LDI TEMP_L,0xAA													;15-08	0x00
-																			;07:00	CRC
-	MCALL C5_EXEC
-
-;	LDI TEMP,PID_SD_DRV
-;	LDI ACCUM,DRV_SD_CMD5
-;	LDI TEMP_EH,0x00
-;	LDI TEMP_EL,0x00
-;	LDI TEMP_H,0x00
-;	LDI TEMP_L,0x00
-;	MCALL C5_EXEC
-
+CBI PORTB,SS & 0x0f
+SBI PORTB,SS & 0x0f
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
+CBI PORTB,SS & 0x0f
+SBI PORTB,SS & 0x0f
 
-	RJMP _TASK_INIT_SD
+	RJMP _TASK__LOOP

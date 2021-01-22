@@ -17,6 +17,7 @@ CRC_BLOCK_X8:
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH LOOP_CNTR
+	PUSH TEMP
 	CLR ACCUM
 
 _CRCX_BLOCK_X8__LOOP:
@@ -32,6 +33,7 @@ _CRC_BLOCK_X8__CODEPOINT:
 	DEC LOOP_CNTR
 	BRNE _CRCX_BLOCK_X8__LOOP
 
+	POP TEMP
 	POP LOOP_CNTR
 	POP_X
 	RET
