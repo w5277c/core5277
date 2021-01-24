@@ -72,14 +72,25 @@
 	.EQU	PORTC										= 0x08
 	.EQU	DDRC										= 0x07
 	.EQU	PINC										= 0x06
-	.EQU	PORTD										= 0x0B
-	.EQU	DDRD										= 0x0A
+	.EQU	PORTD										= 0x0b
+	.EQU	DDRD										= 0x0a
 	.EQU	PIND										= 0x09
+	.EQU	PORTE										= 0xff
+	.EQU	DDRE										= 0xff
+	.EQU	PINE										= 0xff
+	.EQU	PORTF										= 0xff
+	.EQU	DDRF										= 0xff
+	.EQU	PINF										= 0xff
+	.EQU	PORTG										= 0xff
+	.EQU	DDRG										= 0xff
+	.EQU	PING										= 0xff
 
 	.EQU	SDA										= PC4
 	.EQU	SCL										= PC5
 	.EQU	RXD										= PD0
 	.EQU	TXD										= PD1
+	.EQU	RXD0										= RXD
+	.EQU	TXD0										= TXD
 	.EQU	SCK										= PB5
 	.EQU	MISO										= PB4
 	.EQU	MOSI										= PB3
@@ -304,6 +315,12 @@
 	.EQU		PCINT18								= 0x02
 	.EQU		PCINT17								= 0x01
 	.EQU		PCINT16								= 0x00
+	;---INT---
+	.EQU	EICRA										= 0x69
+	.EQU		ISC11									= 0x03
+	.EQU		ISC10									= 0x02
+	.EQU		ISC01									= 0x01
+	.EQU		ISC00									= 0x00
 	;---EEPROM---
 	.EQU	EEARH										= 0x42
 	.EQU	EEARL										= 0x41
@@ -483,4 +500,14 @@ PCINT_TABLE:
 
 .MACRO _C5_TIMER_TCNT
 	LDS @0,TCNT0
+.ENDMACRO
+
+.MACRO C5_SET_ISC
+	PUSH TEMP
+	LDS TEMP,EICRA
+	ANDI TEMP_H,0x0f
+	ANDI TEMP,0xf0
+	OR TEMP,TEMP_H
+	STS EICRA,TEMP
+	POP TEMP
 .ENDMACRO

@@ -69,6 +69,15 @@
 	.EQU	PORTD										= 0x12
 	.EQU	DDRD										= 0x11
 	.EQU	PIND										= 0x10
+	.EQU	PORTE										= 0xff
+	.EQU	DDRE										= 0xff
+	.EQU	PINE										= 0xff
+	.EQU	PORTF										= 0xff
+	.EQU	DDRF										= 0xff
+	.EQU	PINF										= 0xff
+	.EQU	PORTG										= 0xff
+	.EQU	DDRG										= 0xff
+	.EQU	PING										= 0xff
 
 	;Отсутствуют
 	.EQU	C5_IR_PCINT0							= 0x00
@@ -79,6 +88,8 @@
 	.EQU	SCL										= PC5
 	.EQU	RXD										= PD0
 	.EQU	TXD										= PD1
+	.EQU	RXD0										= RXD
+	.EQU	TXD0										= TXD
 	.EQU	SCK										= PB5
 	.EQU	MISO										= PB4
 	.EQU	MOSI										= PB3
@@ -134,6 +145,17 @@
 	.EQU	ADC6										= 0x06
 	.EQU	ADC7										= 0x07
 	.EQU	ADCT										= 0x08
+	;---INT---
+	.EQU	MCUCR										= 0x55
+	.EQU		SE										= 0x07
+	.EQU		SM2									= 0x06
+	.EQU		SM1									= 0x05
+	.EQU		SM0									= 0x04
+	.EQU		ISC11									= 0x03
+	.EQU		ISC10									= 0x02
+	.EQU		ISC01									= 0x01
+	.EQU		ISC00									= 0x00
+
 
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
@@ -263,3 +285,19 @@ PCINT_TABLE:
 .MACRO _C5_TIMER_TCNT
 	LDS @0,TCNT1L
 .ENDMACRO
+
+.MACRO C5_SET_ISC
+	PUSH TEMP
+	CLI
+	LDS TEMP,SREG
+	PUSH TEMP
+	LDS TEMP,MCUCR
+	ANDI TEMP_H,0x0f
+	ANDI TEMP,0xf0
+	OR TEMP,TEMP_H
+	STS MCUCR,TEMP
+	POP TEMP
+	STS SREG,TEMP
+	POP TEMP
+.ENDMACRO
+

@@ -58,6 +58,11 @@
 	.EQU	PD6										= (0x03<<4)|0x06
 	.EQU	PD7										= (0x03<<4)|0x07
 
+	.EQU	C5_ISC_LOW_LEVEL						= 0x00
+	.EQU	C5_ISC_ANY_CHANGE						= 0x01
+	.EQU	C5_ISC_FALLING_EDGE					= 0x02
+	.EQU	C5_ISC_RISING_EDGE					= 0x03
+
 	.DEF	TEMP_L									= r16				;Младший регистр общего назначения
 	.DEF	TEMP_H									= r17				;Старший регистр общего назначения
 	.DEF	TEMP										= r18				;Регистр общего назначения

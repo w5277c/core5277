@@ -28,7 +28,7 @@ DRV_PCINT_H_INIT:
 	;Выделяем память
 	LDI ACCUM,_DRV_PCINT_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
-	;Заполняем нулями
+	;Заполняем
 	MOV XH,ZH
 	MOV XL,ZL
 	MOV LOOP_CNTR,ACCUM
@@ -50,7 +50,7 @@ DRV_PCINT_H_INIT:
 ;включаем необходимые флаги
 ;IN: ACCUM - порт
 ;Y - адрес обработчика
-;FLAGS - PID(0xFF - не использовать)
+;FLAGS - PID(0xFF - отключить)
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP

@@ -62,8 +62,8 @@
 	.EQU	C5_IR_PCINT2							= 0x00
 
 	;SBI/CBI/SBIS/SBIC port defines
-	.EQU	PORTA										= 0x1B
-	.EQU	DDRA										= 0x1A
+	.EQU	PORTA										= 0x1b
+	.EQU	DDRA										= 0x1a
 	.EQU	PINA										= 0x19
 	.EQU	PORTB										= 0x18
 	.EQU	DDRB										= 0x17
@@ -74,11 +74,22 @@
 	.EQU	PORTD										= 0x12
 	.EQU	DDRD										= 0x11
 	.EQU	PIND										= 0x10
+	.EQU	PORTE										= 0xff
+	.EQU	DDRE										= 0xff
+	.EQU	PINE										= 0xff
+	.EQU	PORTF										= 0xff
+	.EQU	DDRF										= 0xff
+	.EQU	PINF										= 0xff
+	.EQU	PORTG										= 0xff
+	.EQU	DDRG										= 0xff
+	.EQU	PING										= 0xff
 
 	.EQU	SDA										= PC1
 	.EQU	SCL										= PC0
 	.EQU	RXD										= PD0
 	.EQU	TXD										= PD1
+	.EQU	RXD0										= RXD
+	.EQU	TXD0										= TXD
 	.EQU	SCK										= PB7
 	.EQU	MISO										= PB6
 	.EQU	MOSI										= PB5
@@ -160,6 +171,16 @@
 	.EQU	PCMSK0									= 0x00
 	.EQU	PCMSK1									= 0x00
 	.EQU	PCMSK2									= 0x00
+	;---INT---
+	.EQU	MCUCR										= 0x55
+	.EQU		SM2									= 0x07
+	.EQU		SE										= 0x06
+	.EQU		SM1									= 0x05
+	.EQU		SM0									= 0x04
+	.EQU		ISC11									= 0x03
+	.EQU		ISC10									= 0x02
+	.EQU		ISC01									= 0x01
+	.EQU		ISC00									= 0x00
 	;---EEPROM---
 	.EQU	EEARH										= 0x3F
 	.EQU	EEARL										= 0x3E
@@ -320,4 +341,19 @@ PCINT_TABLE:
 
 .MACRO _C5_TIMER_TCNT
 	LDS @0,TCNT1L
+.ENDMACRO
+
+.MACRO C5_SET_ISC
+	PUSH TEMP
+	CLI
+	LDS TEMP,SREG
+	PUSH TEMP
+	LDS TEMP,MCUCR
+	ANDI TEMP_H,0x0f
+	ANDI TEMP,0xf0
+	OR TEMP,TEMP_H
+	STS MCUCR,TEMP
+	POP TEMP
+	STS SREG,TEMP
+	POP TEMP
 .ENDMACRO
