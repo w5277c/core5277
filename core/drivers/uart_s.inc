@@ -27,7 +27,7 @@
 	.EQU	_DRV_UART_S_LED_PORT					= 0x03			;1B - Порт индикации
 	.EQU	_DRV_UART_S_STATE						= 0x04			;1B - Статус драйвера
 	.EQU	_DRV_UART_S_TIMER_ID					= 0x05			;1B - ИД программного таймера
-	.EQU	_DRV_UART_S_PCINT_DRV_ID			= 0x06			;1B - ИД драйвера PCINT
+	.EQU	_DRV_UART_S_PCINT_DRV_ID			= 0x06			;1B - ИД драйвера PCINT или прерывание C5_IR_INTn(с включенным 0x07 битом)
 	.EQU	_DRV_UART_S_OPTIONS					= 0x07			;1B - опции
 	;---
 	.EQU	_DRV_UART_S_SRC_ADDR					= 0x08			;2B - адрес блока данных для передачи
@@ -231,6 +231,7 @@ _DRV_UART_S_PROC__TX_SKIP:
 	STD Z+_DRV_UART_S_STATE,TEMP
 	;Включаю PCINT для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
+;TODO поддержка eint
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	LDI YH,high(_DRV_UART_S_PCINT_EVENT)
 	LDI YL,low(_DRV_UART_S_PCINT_EVENT)
@@ -272,6 +273,7 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 		MCALL C5_TIMER_STOP
 		;Выключаю PCINT для RX порта
 		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
+;TODO поддержка eint
 		LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 		LDI FLAGS,0xff
 		MCALL C5_EXEC
@@ -446,6 +448,7 @@ __DRV_UART_S_RECV_EVENT__DATA:
 
 		;На бит раньше включаю PCINT для RX порта (так как позже моуг не успеть)
 		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
+;TODO поддержка eint
 		LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 		LDI YH,high(_DRV_UART_S_PCINT_EVENT)
 		LDI YL,low(_DRV_UART_S_PCINT_EVENT)
@@ -544,6 +547,7 @@ _DRV_UART_S_PCINT_EVENT:
 
 	;Выключаю PCINT для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
+;TODO поддержка eint
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	LDI FLAGS,0xff
 	MCALL C5_EXEC
