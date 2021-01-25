@@ -178,7 +178,7 @@
 	RCALL	_C5_IR														; Timer/Counter1 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter1 Overflow
 	RJMP	_C5_TIMER_A_IR												; Timer/Counter0 Compare Match A
-	RCALL	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
+	RJMP	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter0 Overflow
 	RCALL	_C5_IR														; SPI Serial Transfer Complete
 	RCALL	_C5_IR														; USART Rx Complete
@@ -192,7 +192,7 @@
 
 
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,DDRB,PORTB, и т.д.
+PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
 	.db	0x00,0x00,0x00,0x38,0x37,0x36,0x35,0x34,0x33,0x32,0x31,0x30
 PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00

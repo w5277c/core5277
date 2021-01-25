@@ -118,7 +118,7 @@
 	.EQU	TWPS0										= 0x00
 	.EQU	TWPS1										= 0x01
 	;---TIMERS---
-	.EQU	TIMSK										= 0x59
+	.EQU	TIMSK1									= 0x59
 	.EQU	TCCR1A									= 0x4f
 	.EQU	TCCR1B									= 0x4e
 	.EQU	TCNT1H									= 0x4d
@@ -127,7 +127,7 @@
 	.EQU	OCR1AL									= 0x4a
 	.EQU	OCR1BH									= 0x49
 	.EQU	OCR1BL									= 0x48
-	.EQU	TIFR										= 0x58
+	.EQU	TIFR1										= 0x58
 	;---
 	.EQU	OCIE1A									= 0x04
 	.EQU	WGM13										= 0x04
@@ -141,32 +141,26 @@
 	.EQU	OCF1B										= 0x03
 	.EQU	OCIE1B									= 0x03
 	;---UART---
-	.EQU	UDR										= 0x2c
-	.EQU	UCSRA										= 0x2b
-	.EQU	UCSRB										= 0x2a
-	.EQU	UCSRC										= 0x40
-	.EQU	UBRRH										= 0x40
-	.EQU	UBRRL										= 0x29
-	.EQU	UCSZ0										= 0x01
-	.EQU	UCSZ1										= 0x02
-	.EQU	UCSZ2										= 0x02
-	.EQU	URSEL										= 0x07
-	.EQU	UMSEL										= 0x06
-	.EQU	UPM0										= 0x04
-	.EQU	UPM1										= 0x05
-	.EQU	USBS										= 0x03
-	.EQU	RXC										= 0x07
-	.EQU	TXC										= 0x06
-	.EQU	RXCIE										= 0x07
-	.EQU	TXCIE										= 0x06
-	.EQU	RXEN										= 0x04
-	.EQU	TXEN										= 0x03
-	.EQU	UDR0										= UDR
-	.EQU	UCSR0A									= UCSRA
-	.EQU	UCSR0B									= UCSRB
-	.EQU	UCSR0C									= UCSRC
-	.EQU	UBRR0H									= UBRRH
-	.EQU	UBRR0L									= UBRRL
+	.EQU	UDR0										= 0x2c
+	.EQU	UCSR0A									= 0x2b
+	.EQU	UCSR0B									= 0x2a
+	.EQU	UCSR0C									= 0x40
+	.EQU	UBRR0H									= 0x40
+	.EQU	UBRR0L									= 0x29
+	.EQU	UCSZ00									= 0x01
+	.EQU	UCSZ01									= 0x02
+	.EQU	UCSZ02									= 0x02
+	.EQU	URSEL0									= 0x07
+	.EQU	UMSEL0									= 0x06
+	.EQU	UPM00										= 0x04
+	.EQU	UPM01										= 0x05
+	.EQU	USBS0										= 0x03
+	.EQU	RXC0										= 0x07
+	.EQU	TXC0										= 0x06
+	.EQU	RXCIE0									= 0x07
+	.EQU	TXCIE0									= 0x06
+	.EQU	RXEN0										= 0x04
+	.EQU	TXEN0										= 0x03
 	;---PCINT---
 	.EQU	PCMSK0									= 0x00
 	.EQU	PCMSK1									= 0x00
@@ -251,10 +245,11 @@
 	CALL	_C5_IR														; Timer/Counter0 Compare
 	CALL	_C5_IR														; Store Program Memory Ready
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB и т.д.
+PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
 	.db	0x3b,0x3a,0x39,0x38,0x37,0x36,0x35,0x34,0x33,0x32,0x31,0x30
 PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00
+
 .MACRO MCALL
 	CALL @0
 .ENDMACRO
@@ -275,13 +270,13 @@ PCINT_TABLE:
 	LDI TEMP,0x00
 	STS OCR1AH,TEMP
 	LDI TEMP,(1<<OCF1A)
-	STS TIFR,TEMP
+	STS TIFR1,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_START
-	LDS TEMP,TIMSK
+	LDS TEMP,TIMSK1
 	ORI TEMP,(1<<OCIE1A)
-	STS TIMSK,TEMP
+	STS TIMSK1,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_CORRECTOR
@@ -296,7 +291,7 @@ PCINT_TABLE:
 	STS OCR1AH,TEMP_H
 	STS OCR1AL,TEMP_L
 	LDI TEMP,(1<<OCF1A)
-	STS TIFR,TEMP
+	STS TIFR1,TEMP
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
@@ -316,22 +311,22 @@ PCINT_TABLE:
 	ADC TEMP_H,TEMP
 	STS OCR1BH,TEMP_H
 	STS OCR1BL,TEMP_L
-	LDS TEMP,TIFR
+	LDS TEMP,TIFR1
 	ORI TEMP,(1<<OCF1B)
-	STS TIFR,TEMP
+	STS TIFR1,TEMP
 	;Установка флага
 	LDI TEMP,(1<<_CFL_TIMER_B_USE)
 	OR _C5_COREFLAGS,TEMP
 	;Запуск таймера
-	LDS TEMP,TIMSK
+	LDS TEMP,TIMSK1
 	ORI TEMP,(1<<OCIE1B)
-	STS TIMSK,TEMP
+	STS TIMSK1,TEMP
 	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
-	LDS TEMP,TIMSK
+	LDS TEMP,TIMSK1
 	ANDI TEMP,~(1<<OCIE1B)
-	STS TIMSK,TEMP
+	STS TIMSK1,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON

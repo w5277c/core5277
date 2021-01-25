@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.01.2021  w5277c@gmail.com			Начало
+;25.01.2021  w5277c@gmail.com			Добавлена поддержка eint(не проверено)
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include "./core/drivers/_uart.inc"
@@ -63,7 +64,8 @@ DRV_UART_S_INIT:
 ;ACCUM - ид таймера
 ;FLAGS - опции
 ;YH - скорость передачи данных
-;YL - ид драйвера PCINT
+;YL - ид драйвера PCINT или
+;прерывание C5_IR_INTn(с включенным 0x07 битом)
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
@@ -229,9 +231,17 @@ _DRV_UART_S_PROC__TX_SKIP:
 	;Запуск приема
 	LDI TEMP,DRV_UART_ST_WAIT_DATA
 	STD Z+_DRV_UART_S_STATE,TEMP
-	;Включаю PCINT для RX порта
+	;Включаю прерывание для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-;TODO поддержка eint
+	SBRS TEMP,0x07
+	RJMP PC+0x09
+	MOV TEMP_H,TEMP
+	ANDI TEMP_H,0x7f
+	LDI TEMP_L,C5_ISC_RISING_EDGE
+	LDI YH,high(_DRV_UART_S_PCINT_EINT_EVENT)
+	LDI YL,low(_DRV_UART_S_PCINT_EINT_EVENT)
+	MCALL C5_EINT_ENBALE
+	RJMP PC+0x07
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	LDI YH,high(_DRV_UART_S_PCINT_EVENT)
 	LDI YL,low(_DRV_UART_S_PCINT_EVENT)
@@ -271,9 +281,14 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 		;Останавливаю таймер
 		LDD TEMP,Z+_DRV_UART_S_TIMER_ID
 		MCALL C5_TIMER_STOP
-		;Выключаю PCINT для RX порта
+		;Выключаю прерывание для RX порта
 		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-;TODO поддержка eint
+		SBRS TEMP,0x07
+		RJMP PC+0x06
+		MOV TEMP_H,TEMP
+		ANDI TEMP_H,0x7f
+		MCALL C5_EINT_DISABLE
+		RJMP PC+0x05
 		LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 		LDI FLAGS,0xff
 		MCALL C5_EXEC
@@ -446,9 +461,19 @@ __DRV_UART_S_RECV_EVENT__DATA:
 		CPI TEMP_H,0x08
 		BRNE __DRV_UART_S_RECV_EVENT__NEXT_BIT
 
-		;На бит раньше включаю PCINT для RX порта (так как позже моуг не успеть)
+		;На бит раньше включаю прерывание для RX порта (так как позже моуг не успеть)
 		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-;TODO поддержка eint
+		SBRS TEMP,0x07
+		RJMP PC+0x0b
+		PUSH TEMP_H
+		MOV TEMP_H,TEMP
+		ANDI TEMP_H,0x7f
+		LDI TEMP_L,C5_ISC_RISING_EDGE
+		LDI YH,high(_DRV_UART_S_PCINT_EINT_EVENT)
+		LDI YL,low(_DRV_UART_S_PCINT_EINT_EVENT)
+		MCALL C5_EINT_ENBALE
+		POP TEMP_H
+		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BIT
 		LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 		LDI YH,high(_DRV_UART_S_PCINT_EVENT)
 		LDI YL,low(_DRV_UART_S_PCINT_EVENT)
@@ -520,6 +545,7 @@ _DRV_UART_S_PCINT_EVENT:
 	SBRC FLAGS,0x00
 	RET
 
+_DRV_UART_S_PCINT_EINT_EVENT:
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
@@ -545,9 +571,16 @@ _DRV_UART_S_PCINT_EVENT:
 	LDI TEMP,TIMERS_SPEED/3
 	_CORRE5277_TIMERA_CORRECTOR TEMP
 
-	;Выключаю PCINT для RX порта
+	;Выключаю прерывание для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-;TODO поддержка eint
+	SBRS TEMP,0x07
+	RJMP PC+0x08
+	PUSH TEMP_H
+	MOV TEMP_H,TEMP
+	ANDI TEMP_H,0x7f
+	MCALL C5_EINT_DISABLE
+	POP TEMP_H
+	RJMP PC+0x05
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	LDI FLAGS,0xff
 	MCALL C5_EXEC

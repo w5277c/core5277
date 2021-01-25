@@ -41,11 +41,11 @@
 	.EQU	C5_IR_TIMER2_COMP						= 0x09
 	.EQU	C5_IR_TIMER2_OVF						= 0x0a
 	.EQU	C5_IR_TIMER1_CAPT						= 0x0b
-	.EQU	C5_IR_TIMER1_COMPA					= 0x0c
-	.EQU	C5_IR_TIMER1_COMPB					= 0x0d
+	.EQU	C5_IR_RESERVED_CORE_TIMER1			= 0x0c
+	.EQU	C5_IR_RESERVED_CORE_TIMER2			= 0x0d
 	.EQU	C5_IR_TIMER1_COMPC					= 0x0e
 	.EQU	C5_IR_TIMER1_OVF						= 0x0f
-	.EQU	C5_IR_RESERVED_CORE_TIMER			= 0x10
+	.EQU	C5_IR_TIMER0_COMP						= 0x10
 	.EQU	C5_IR_TIMER0_OVF						= 0x11
 	.EQU	C5_IR_CANIT								= 0x12
 	.EQU	C5_IR_OVRIT								= 0x13
@@ -245,73 +245,66 @@
 	.EQU		OCF3B									= 0x02
 	.EQU		OCF3A									= 0x01
 	.EQU		TOV3									= 0x00
-
-
-;TODO
-
-	;---UART---
-	.EQU	UDR										= 0xc6
-	.EQU	UCSRA										= 0xc0
-	.EQU		RXC									= 0x07
-	.EQU		TXC									= 0x06
-	.EQU		UDRE									= 0x05
-	.EQU		FE										= 0x04
-	.EQU		DOR									= 0x03
-	.EQU		UPE									= 0x02
-	.EQU		U2X									= 0x01
-	.EQU		MPCM									= 0x00
-	.EQU	UCSRB										= 0xc1
-	.EQU		RXCIE									= 0x07
-	.EQU		TXCIE									= 0x06
-	.EQU		UDRIE									= 0x05
-	.EQU		RXEN									= 0x04
-	.EQU		TXEN									= 0x03
-	.EQU		UCSZ2									= 0x02
-	.EQU		RXB8									= 0x01
-	.EQU		TXB8									= 0x00
-	.EQU	UCSRC										= 0xc2
+	;---UART0---
+	.EQU	UDR0										= 0xc6
+	.EQU	UCSR0A									= 0xc0
+	.EQU		RXC0									= 0x07
+	.EQU		TXC0									= 0x06
+	.EQU		UDRE0									= 0x05
+	.EQU		FE0									= 0x04
+	.EQU		DOR0									= 0x03
+	.EQU		UPE0									= 0x02
+	.EQU		U2X0									= 0x01
+	.EQU		MPCM0									= 0x00
+	.EQU	UCSR0B									= 0xc1
+	.EQU		RXCIE0								= 0x07
+	.EQU		TXCIE0								= 0x06
+	.EQU		UDRIE0								= 0x05
+	.EQU		RXEN0									= 0x04
+	.EQU		TXEN0									= 0x03
+	.EQU		UCSZ02								= 0x02
+	.EQU		RXB80									= 0x01
+	.EQU		TXB80									= 0x00
+	.EQU	UCSR0C									= 0xc2
 	.EQU		UMSEL0								= 0x06
-	.EQU		UPM1									= 0x05
-	.EQU		UPM0									= 0x04
-	.EQU		USBS									= 0x03
-	.EQU		UCSZ1									= 0x02
-	.EQU		UCSZ0									= 0x01
-	.EQU		UCPOL									= 0x00
-	.EQU	UBRRH										= 0xc5
-	.EQU	UBRRL										= 0xc4
-	;---
-	.EQU	UDR0										= UDR
-	.EQU	UCSR0A									= UCSRA
-	.EQU		RXC0									= RXC
-	.EQU		TXC0									= TXC
-	.EQU		UDRE0									= UDRE
-	.EQU		FE0									= FE
-	.EQU		DOR0									= DOR
-	.EQU		UPE0									= UPE
-	.EQU		U2X0									= U2X
-	.EQU		MPCM0									= MPCM
-	.EQU	UCSR0B									= UCSRB
-	.EQU		RXCIE0								= RXCIE
-	.EQU		TXCIE0								= TXCIE
-	.EQU		UDRIE0								= UDRIE
-	.EQU		RXEN0									= RXEN
-	.EQU		TXEN0									= TXEN
-	.EQU		UCSZ02								= UCSZ2
-	.EQU		RXB80									= RXB8
-	.EQU		TXB80									= TXB8
-	.EQU	UCSR0C									= UCSRC
-	.EQU		UMSEL01								= UMSEL1
-	.EQU		UMSEL00								= UMSEL0
-	.EQU		UPM01									= UPM1
-	.EQU		UPM00									= UPM0
-	.EQU		USBS0									= USBS
-	.EQU		UCSZ01								= UCSZ1
-	.EQU		UDCRD0								= UDCRD
-	.EQU		UCSZ00								= UCSZ0
-	.EQU		UCPHA0								= UCPHA
-	.EQU		UCPOL0								= UCPOL
-	.EQU	UBRR0H									= UBRRH
-	.EQU	UBRR0L									= UBRRL
+	.EQU		UPM01									= 0x05
+	.EQU		UPM00									= 0x04
+	.EQU		USBS0									= 0x03
+	.EQU		UCSZ01								= 0x02
+	.EQU		UCSZ00								= 0x01
+	.EQU		UCPOL0								= 0x00
+	.EQU	UBRR0H									= 0xc5
+	.EQU	UBRR0L									= 0xc4
+	;---UART1---
+	.EQU	UDR1										= 0xce
+	.EQU	UCSR1A									= 0xc8
+	.EQU		RXC1									= 0x07
+	.EQU		TXC1									= 0x06
+	.EQU		UDRE1									= 0x05
+	.EQU		FE1									= 0x04
+	.EQU		DOR1									= 0x03
+	.EQU		UPE1									= 0x02
+	.EQU		U2X1									= 0x01
+	.EQU		MPCM1									= 0x00
+	.EQU	UCSR1B									= 0xc9
+	.EQU		RXCIE1								= 0x07
+	.EQU		TXCIE1								= 0x06
+	.EQU		UDRIE1								= 0x05
+	.EQU		RXEN1									= 0x04
+	.EQU		TXEN1									= 0x03
+	.EQU		UCSZ12								= 0x02
+	.EQU		RXB81									= 0x01
+	.EQU		TXB81									= 0x00
+	.EQU	UCSR1C									= 0xca
+	.EQU		UMSEL1								= 0x06
+	.EQU		UPM11									= 0x05
+	.EQU		UPM10									= 0x04
+	.EQU		USBS1									= 0x03
+	.EQU		UCSZ11								= 0x02
+	.EQU		UCSZ10								= 0x01
+	.EQU		UCPOL1								= 0x00
+	.EQU	UBRR1H									= 0xcd
+	.EQU	UBRR1L									= 0xcc
 	;---INT---
 	.EQU	EICRA										= 0x69
 	.EQU		ISC31									= 0x07
@@ -395,34 +388,47 @@
 	JMP	MAIN															; Reset Handler
 	CALL	_C5_IR														; External Interrupt0 Handler
 	CALL	_C5_IR														; External Interrupt1 Handler
-	CALL	_C5_IR														; Pin Change Interrupt Request 0
-	CALL	_C5_IR														; Pin Change Interrupt Request 1
-	CALL	_C5_IR														; Pin Change Interrupt Request 2
-	CALL	_C5_IR														; Watchdog Time-out Interrupt
-	CALL	_C5_IR														; Timer/Counter2 Compare Match A
-	CALL	_C5_IR														; Timer/Counter2 Compare Match B
+	CALL	_C5_IR														; External Interrupt2 Handler
+	CALL	_C5_IR														; External Interrupt3 Handler
+	CALL	_C5_IR														; External Interrupt4 Handler
+	CALL	_C5_IR														; External Interrupt5 Handler
+	CALL	_C5_IR														; External Interrupt6 Handler
+	CALL	_C5_IR														; External Interrupt7 Handler
+	CALL	_C5_IR														; Timer/Counter2 Compare Match
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event
-	CALL	_C5_IR														; Timer/Counter1 Compare Match A
-	CALL	_C5_IR														; Timer/Counter1 Compare Match B
+	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A
+	JMP	_C5_TIMER_B_IR												; Timer/Counter1 Compare Match B
+	CALL	_C5_IR														; Timer/Counter1 Compare Match C
 	CALL	_C5_IR														; Timer/Counter1 Overflow
-	JMP	_C5_TIMER_A_IR												; Timer/Counter0 Compare Match A
-	CALL	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
+	CALL	_C5_IR														; Timer/Counter0 Compare Match
 	CALL	_C5_IR														; Timer/Counter0 Overflow
+	CALL	_C5_IR														; CAN Transfer Complete or Error
+	CALL	_C5_IR														; CAN Timer Overrun
 	CALL	_C5_IR														; SPI Serial Transfer Complete
-	CALL	_C5_IR														; USART Rx Complete
-	CALL	_C5_IR														; USART, Data Register Empty
-	CALL	_C5_IR														; USART, Tx Complete
+	CALL	_C5_IR														; USART0, Rx Complete
+	CALL	_C5_IR														; USART0, Data Register Empty
+	CALL	_C5_IR														; USART0, Tx Complete
+	CALL	_C5_IR														; Analog Comparator
 	CALL	_C5_IR														; ADC Conversion Complete
 	CALL	_C5_IR														; EEPROM Ready
-	CALL	_C5_IR														; Analog Comparator
+	CALL	_C5_IR														; Timer/Counter3 Capture Event
+	CALL	_C5_IR														; Timer/Counter3 Compare Match A
+	CALL	_C5_IR														; Timer/Counter3 Compare Match B
+	CALL	_C5_IR														; Timer/Counter3 Compare Match C
+	CALL	_C5_IR														; Timer/Counter3 Overflow
+	CALL	_C5_IR														; USART1, Rx Complete
+	CALL	_C5_IR														; USART1, Data Register Empty
+	CALL	_C5_IR														; USART1, Tx Complete
 	CALL	_C5_IR														; 2-wire Serial Interface
 	CALL	_C5_IR														; Store Program Memory Ready
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB и т.д.
-	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
+
+PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
+	.db	0x22,0x21,0x20,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29,0x2e,0x2d,0x2c,0x31,0x30,0x2f,0x34,0x33,0x32
 PCINT_TABLE:
-	.db	0x00,PCMSK0,PCMSK1,PCMSK2
+	.db	0x00,0x00,0x00,0x00,0x00,0x00,0x00
+
 .MACRO MCALL
 	CALL @0
 .ENDMACRO
@@ -431,36 +437,43 @@ PCINT_TABLE:
 .ENDMACRO
 
 .MACRO _C5_TIMERA_INIT
-	LDS TEMP,PRR
-	ANDI TEMP,~(1<<PRTIM0)											;Подпитываю TIMER0
-	STS PRR,TEMP
-
-	LDI TEMP,(0<<WGM01)|(0<<WGM00)
-	STS TCCR0A,TEMP
-	LDI TEMP,(0<<CS02)|(1<<CS01)|(0<<CS00)						;/8 - for 16MHz
-	STS TCCR0B,TEMP
+	LDI TEMP,(0<<WGM11)|(0<<WGM10)
+	STS TCCR1A,TEMP
+	LDI TEMP,(0<<WGM13)|(0<<WGM12)|(0<<CS12)|(1<<CS11)|(0<<CS10);/8 - for 16MHz
+	STS TCCR1B,TEMP
 	CLR TEMP
-	STS TCNT0,TEMP
-	LDI TEMP,TIMERS_SPEED-0x01										;0x64 - 100(16MHz) ;почему было 5a?
-	STS OCR0A,TEMP
-	LDI TEMP,(1<<OCF0A)
-	STS TIFR0,TEMP
+	STS TCNT1L,TEMP
+	STS TCNT1H,TEMP
+	LDI TEMP,TIMERS_SPEED-0x01										;0x64 - 100(16MHz)
+	STS OCR1AL,TEMP
+	LDI TEMP,0x00
+	STS OCR1AH,TEMP
+	LDI TEMP,(1<<OCF1A)
+	STS TIFR1,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_START
-	LDS TEMP,TIMSK0
-	ORI TEMP,(1<<OCIE0A)
-	STS TIMSK0,TEMP
+	LDS TEMP,TIMSK1
+	ORI TEMP,(1<<OCIE1A)
+	STS TIMSK1,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_CORRECTOR
-	PUSH ACCUM
-	LDS ACCUM,TCNT0
-	ADD ACCUM,@0
-	STS OCR0A,ACCUM
-	LDI ACCUM,(1<<OCF0A)
-	STS TIFR0,ACCUM
-	POP ACCUM
+	PUSH TEMP
+	PUSH TEMP_H
+	PUSH TEMP_L
+	LDS TEMP_L,TCNT1L
+	LDS TEMP_H,TCNT1H
+	ADD TEMP_L,@0
+	CLR TEMP
+	ADC TEMP_H,TEMP
+	STS OCR1AH,TEMP_H
+	STS OCR1AL,TEMP_L
+	LDI TEMP,(1<<OCF1A)
+	STS TIFR1,TEMP
+	POP TEMP_L
+	POP TEMP_H
+	POP TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_IR_OFFSET_CORRECTOR
@@ -469,43 +482,37 @@ PCINT_TABLE:
 .ENDMACRO
 
 .MACRO _C5_TIMERB
-	LDS TEMP_L,TCNT0
+	;SUBI TEMP,0x08														;Подобрано вручную, не должно быть вообще
+	LDS TEMP_L,TCNT1L
+	LDS TEMP_H,TCNT1H
 	ADD TEMP_L,TEMP
-	STS OCR0B,TEMP_L
-	LDS TEMP,TIFR0
-	ORI TEMP,(1<<OCF0B)
-	STS TIFR0,TEMP
+	LDI TEMP,0x00
+	ADC TEMP_H,TEMP
+	STS OCR1BH,TEMP_H
+	STS OCR1BL,TEMP_L
+	LDS TEMP,TIFR1
+	ORI TEMP,(1<<OCF1B)
+	STS TIFR1,TEMP
 	;Установка флага
 	LDI TEMP,(1<<_CFL_TIMER_B_USE)
 	OR _C5_COREFLAGS,TEMP
 	;Запуск таймера
-	LDS TEMP,TIMSK0
-	ORI TEMP,(1<<OCIE0B)
-	STS TIMSK0,TEMP
+	LDS TEMP,TIMSK1
+	ORI TEMP,(1<<OCIE1B)
+	STS TIMSK1,TEMP
 	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
-	LDS TEMP,TIMSK0
-	ANDI TEMP,~(1<<OCIE0B)
-	STS TIMSK0,TEMP
+	LDS TEMP,TIMSK1
+	ANDI TEMP,~(1<<OCIE1B)
+	STS TIMSK1,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON
-	PUSH TEMP
-	LDS TEMP,PRR
-	ANDI TEMP,low(~(1<<@0))
-	STS PRR,TEMP
-	POP TEMP
 .ENDMACRO
-
 .MACRO _C5_POWER_OFF
-	PUSH TEMP
-	LDS TEMP,PRR
-	ORI TEMP,low(1<<@0)
-	STS PRR,TEMP
-	POP TEMP
 .ENDMACRO
 
 .MACRO _C5_TIMER_TCNT
-	LDS @0,TCNT0
+	LDS @0,TCNT1L
 .ENDMACRO

@@ -49,8 +49,8 @@
 	.EQU	C5_IR_TIMER1_COMPA					= 0x0b
 	.EQU	C5_IR_TIMER1_COMPB					= 0x0c
 	.EQU	C5_IR_TIMER1_OVF						= 0x0d
-	.EQU	C5_IR_RESERVED_CORE_TIMER			= 0x0e
-	.EQU	C5_IR_TIMER0_COMPB					= 0x0f
+	.EQU	C5_IR_RESERVED_CORE_TIMER1			= 0x0e
+	.EQU	C5_IR_RESERVED_CORE_TIMER2			= 0x0f
 	.EQU	C5_IR_TIMER0_OVF						= 0x10
 	.EQU	C5_IR_SPI								= 0x11
 	.EQU	C5_IR_UART_RX							= 0x12
@@ -214,72 +214,39 @@
 	.EQU		OCF2A									= 0x01
 	.EQU		TOV2									= 0x00
 	;---UART---
-	.EQU	UDR										= 0xc6
-	.EQU	UCSRA										= 0xc0
-	.EQU		RXC									= 0x07
-	.EQU		TXC									= 0x06
-	.EQU		UDRE									= 0x05
-	.EQU		FE										= 0x04
-	.EQU		DOR									= 0x03
-	.EQU		UPE									= 0x02
-	.EQU		U2X									= 0x01
-	.EQU		MPCM									= 0x00
-	.EQU	UCSRB										= 0xc1
-	.EQU		RXCIE									= 0x07
-	.EQU		TXCIE									= 0x06
-	.EQU		UDRIE									= 0x05
-	.EQU		RXEN									= 0x04
-	.EQU		TXEN									= 0x03
-	.EQU		UCSZ2									= 0x02
-	.EQU		RXB8									= 0x01
-	.EQU		TXB8									= 0x00
-	.EQU	UCSRC										= 0xc2
-	.EQU		UMSEL1								= 0x07
-	.EQU		UMSEL0								= 0x06
-	.EQU		UPM1									= 0x05
-	.EQU		UPM0									= 0x04
-	.EQU		USBS									= 0x03
-	.EQU		UCSZ1									= 0x02
-	.EQU		UDCRD									= 0x02
-	.EQU		UCSZ0									= 0x01
-	.EQU		UCPHA									= 0x01
-	.EQU		UCPOL									= 0x00
-	.EQU		URSEL									= 0x08			;Для совместимости
-	.EQU	UBRRH										= 0xc5
-	.EQU	UBRRL										= 0xc4
-	;---
-	.EQU	UDR0										= UDR
-	.EQU	UCSR0A									= UCSRA
-	.EQU		RXC0									= RXC
-	.EQU		TXC0									= TXC
-	.EQU		UDRE0									= UDRE
-	.EQU		FE0									= FE
-	.EQU		DOR0									= DOR
-	.EQU		UPE0									= UPE
-	.EQU		U2X0									= U2X
-	.EQU		MPCM0									= MPCM
-	.EQU	UCSR0B									= UCSRB
-	.EQU		RXCIE0								= RXCIE
-	.EQU		TXCIE0								= TXCIE
-	.EQU		UDRIE0								= UDRIE
-	.EQU		RXEN0									= RXEN
-	.EQU		TXEN0									= TXEN
-	.EQU		UCSZ02								= UCSZ2
-	.EQU		RXB80									= RXB8
-	.EQU		TXB80									= TXB8
-	.EQU	UCSR0C									= UCSRC
-	.EQU		UMSEL01								= UMSEL1
-	.EQU		UMSEL00								= UMSEL0
-	.EQU		UPM01									= UPM1
-	.EQU		UPM00									= UPM0
-	.EQU		USBS0									= USBS
-	.EQU		UCSZ01								= UCSZ1
-	.EQU		UDCRD0								= UDCRD
-	.EQU		UCSZ00								= UCSZ0
-	.EQU		UCPHA0								= UCPHA
-	.EQU		UCPOL0								= UCPOL
-	.EQU	UBRR0H									= UBRRH
-	.EQU	UBRR0L									= UBRRL
+	.EQU	UDR0										= 0xc6
+	.EQU	UCSR0A									= 0xc0
+	.EQU		RXC0									= 0x07
+	.EQU		TXC0									= 0x06
+	.EQU		UDRE0									= 0x05
+	.EQU		FE0									= 0x04
+	.EQU		DOR0									= 0x03
+	.EQU		UPE0									= 0x02
+	.EQU		U2X0									= 0x01
+	.EQU		MPCM0									= 0x00
+	.EQU	UCSR0B									= 0xc1
+	.EQU		RXCIE0								= 0x07
+	.EQU		TXCIE0								= 0x06
+	.EQU		UDRIE0								= 0x05
+	.EQU		RXEN0									= 0x04
+	.EQU		TXEN0									= 0x03
+	.EQU		UCSZ02								= 0x02
+	.EQU		RXB80									= 0x01
+	.EQU		TXB80									= 0x00
+	.EQU	UCSR0C									= 0xc2
+	.EQU		UMSEL01								= 0x07
+	.EQU		UMSEL00								= 0x06
+	.EQU		UPM01									= 0x05
+	.EQU		UPM00									= 0x04
+	.EQU		USBS0									= 0x03
+	.EQU		UCSZ01								= 0x02
+	.EQU		UDCRD0								= 0x02
+	.EQU		UCSZ00								= 0x01
+	.EQU		UCPHA0								= 0x01
+	.EQU		UCPOL0								= 0x00
+	.EQU		URSEL0								= 0x08			;Для совместимости
+	.EQU	UBRR0H									= 0xc5
+	.EQU	UBRR0L									= 0xc4
 	;---PCINT---
 	.EQU	PCICR										= 0x68
 	.EQU		PCIE2									= 0x02
@@ -399,7 +366,7 @@
 	RCALL	_C5_IR														; Timer/Counter1 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter1 Overflow
 	RJMP	_C5_TIMER_A_IR												; Timer/Counter0 Compare Match A
-	RCALL	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
+	RJMP	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter0 Overflow
 	RCALL	_C5_IR														; SPI Serial Transfer Complete
 	RCALL	_C5_IR														; USART Rx Complete
@@ -411,7 +378,7 @@
 	RCALL	_C5_IR														; 2-wire Serial Interface
 	RCALL	_C5_IR														; Store Program Memory Ready
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно DDRA,PORTA,PINA,DDRB,PORTB,PINB и т.д.
+PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
 	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
 PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2

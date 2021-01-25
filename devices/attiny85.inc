@@ -47,8 +47,8 @@
 	.EQU	C5_IR_ANALOG_COMP						= 0x07
 	.EQU	C5_IR_ADC								= 0x08
 	.EQU	C5_IR_TIMER1_COMPB					= 0x09
-	.EQU	C5_IR_TIMER0_COMPA					= 0x0a
-	.EQU	C5_IR_TIMER0_COMPB					= 0x0b
+	.EQU	C5_IR_RESERVED_CORE_TIMER1			= 0x0a
+	.EQU	C5_IR_RESERVED_CORE_TIMER2			= 0x0b
 	.EQU	C5_IR_WDT								= 0x0c
 	.EQU	C5_IR_USI_START						= 0x0d
 	.EQU	C5_IR_USI_OVF							= 0x0e
@@ -246,12 +246,12 @@
 	RCALL	_C5_IR														; ADC Conversion Complete
 	RCALL	_C5_IR														; Timer/Counter1 Compare Match B
 	RJMP	_C5_TIMER_A_IR												; Timer/Counter0 Compare Match A
-	RCALL	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
+	RJMP	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
 	RCALL	_C5_IR														; Watchdog Time-out Interrupt
 	RCALL	_C5_IR														; USI start
 	RCALL	_C5_IR														; USI overflow
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA, и т.д.
+PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
 	.db	0x00,0x00,0x00,0x38,0x37,0x36,0x00,0x00,0x00,0x00,0x00,0x00
 PCINT_TABLE:
 	.db	0x00,PCMSK,0x00,0x00
