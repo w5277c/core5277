@@ -9,7 +9,7 @@
 
 .include	"./math/div32x16.inc"
 .include	"./math/div16x8.inc"
-.include	"./math/mul24x8.inc"
+.include	"./math/mul16x8.inc"
 
 ;--------------------------------------------------------
 NUM16_TO_STR:
@@ -47,10 +47,9 @@ __NUM16_TO_STR__LOOP:
 	ST Z+,TEMP
 __NUM16_TO_STR__SKIP_CHAR:
 	MOV TEMP,TEMP_L
-	LDI TEMP_EL,0x00
 	MOV TEMP_H,XH
 	MOV TEMP_L,XL
-	MCALL MUL24X8
+	MCALL MUL16X8
 	POP TEMP_EL
 	POP TEMP_EH
 	SUB TEMP_EL,TEMP_L

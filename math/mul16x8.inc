@@ -6,44 +6,30 @@
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;10.12.2020  w5277c@gmail.com			-с5
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_MUL24X8
+.ifdef DEF_MUL16X8
 .else
-.set DEF_MUL24X8 = 1
+.set DEF_MUL16X8 = 1
 
 ;--------------------------------------------------------
-MUL24X8:
+MUL16X8:
 ;--------------------------------------------------------
-;Умножение 24b числа на 8б число
-;IN: TEMP_EL,TEMP_H,TEMP_L - 24b число, TEMP - 8b число
-;OUT: TEMP_EH, TEMP_EL, TEMP_H, TEMP_L - 32b результат
+;Умножение 16б числа на 8б число
+;IN: TEMP_H,TEMP_L-16б число, TEMP - 8б число
+;OUT: TEMP_EL, TEMP_H, TEMP_L - 16б результат
 ;-START--------------------------------------------------
 	PUSH _RESULT_H
 	PUSH _RESULT_L
-	PUSH_Y
-	PUSH_X
 
-	CLR YH
-	CLR YL
-
+	PUSH TEMP_H
 	MUL TEMP_L,TEMP
-	MOV XL,_RESULT_L
-	MOV XH,_RESULT_H
-
-	MUL TEMP_H,TEMP
-	ADD XH,_RESULT_L
-	ADC YL,_RESULT_H
-
+	MOV TEMP_L,_RESULT_L
+	MOV TEMP_H,_RESULT_H
+	POP TEMP_EL
 	MUL TEMP_EL,TEMP
-	ADD YL,_RESULT_L
-	ADC YH,_RESULT_H
+	ADD TEMP_H,_RESULT_L
+	LDI TEMP_EL,0x00
+	ADC TEMP_EL,_RESULT_H
 
-	MOV TEMP_EH,YH
-	MOV TEMP_EL,YL
-	MOV TEMP_H,XH
-	MOV TEMP_L,XL
-
-	POP_X
-	POP_Y
 	POP _RESULT_L
 	POP _RESULT_H
 	RET

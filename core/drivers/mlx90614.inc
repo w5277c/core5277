@@ -7,7 +7,7 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./math/mul24x8.inc"
+.include	"./math/mul16x8.inc"
 .include	"./math/div16x8.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -45,7 +45,6 @@ DRV_MLX90614_INIT:
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH_X
 	PUSH_Y
@@ -65,21 +64,19 @@ DRV_MLX90614_INIT:
 	BRNE _DRV_MLX90614__ERROR
 
 
-	CLR TEMP_EL
 	LDD TEMP_H,Z+_DRV_MLX90614_RESULT+0x01
 	LDD TEMP_L,Z+_DRV_MLX90614_RESULT+0x00
 	LDI TEMP,0x02
-	MCALL MUL24X8
+	MCALL MUL16X8
 	SUBI TEMP_L,low(_DRV_MLX90614_K)
 	SBCI TEMP_H,high(_DRV_MLX90614_K)
 	MOV ACCUM,TEMP_L
 	LDI TEMP,100
 	MCALL DIV16X8
 	MOV ZH,TEMP_L
-	CLR TEMP_EL
 	CLR TEMP_H
 	LDI TEMP,100
-	MCALL MUL24X8
+	MCALL MUL16X8
 	MOV ZL,ACCUM
 	SUB ZL,TEMP_L
 	SEZ
@@ -91,7 +88,6 @@ _DRV_MLX90614__END:
 	POP_Y
 	POP_X
 	POP TEMP_EL
-	POP TEMP_EH
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
