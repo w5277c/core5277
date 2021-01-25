@@ -67,10 +67,12 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 _TASK__LOOP:
+	MCALL C5_LOG_CR
+
 	LDI TEMP,PID_SD_DRV
 	LDI FLAGS,DRV_SD_OP_INIT
 	MCALL C5_EXEC
 
-	LDI TEMP,0x01
+	LDI TEMP,0x03
 	MCALL C5_WAIT_1S
 	RJMP _TASK__LOOP

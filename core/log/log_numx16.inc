@@ -1,26 +1,22 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.10.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;25.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_LOG_NUMX8
+.ifdef DEF_C5_LOG_NUMX16
 .else
-.set DEF_C5_LOG_NUMX8 = 1
+.set DEF_C5_LOG_NUMX16 = 1
 .ifdef LOGGING_PORT
 
-.include	"./math/div16x8.inc"
+.include	"./math/div32x16.inc"
 .include	"./math/mul24x8.inc"
-.include	"./math/div10.inc"
-.include	"./math/mul10.inc"
-.include	"./math/mul100.inc"
 .include	"./core/log/log_char.inc"
 
 ;--------------------------------------------------------
-C5_LOG_NUMX8:
+C5_LOG_NUMX16:
 ;--------------------------------------------------------
 ;Логирование десятиричного числа(1байт)
-;IN: TEMP - байт
+;IN: TEMP_H/TEMP_L - слово
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH TEMP_EH
@@ -28,32 +24,73 @@ C5_LOG_NUMX8:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
+	PUSH_X
+	PUSH_Y
 
 	MOV ACCUM,TEMP
 	LDI TEMP_H,0x00
 	MOV TEMP_L,ACCUM
-	LDI TEMP,0x64
-	MCALL DIV16x8
+
+	MOV YH,TEMP_H
+	MOV YL,TEMP_L
+	LDI TEMP_EH,0
+	LDI TEMP_EL,0
+	LDI_X 10000
+	MCALL DIV32X16
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_LOG_CHAR
 
-	MOV TEMP,TEMP_L
-	MCALL MUL100
-	SUB ACCUM,TEMP_L
-	MOV TEMP,ACCUM
-	MCALL DIV10
+	LDI TEMP,100
+	MCALL MUL24X8
+	LDI TEMP,100
+	MCALL MUL24X8
+	SUB YL,TEMP_L
+	SBC YH,TEMP_H
+	LDI TEMP_EH,0
+	LDI TEMP_EL,0
+	LDI_X 1000
+	MCALL DIV32X16
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_LOG_CHAR
 
+	LDI TEMP,100
+	MCALL MUL24X8
+	LDI TEMP,10
+	MCALL MUL24X8
+	SUB YL,TEMP_L
+	SBC YH,TEMP_H
+	LDI TEMP_EH,0
+	LDI TEMP_EL,0
+	LDI_X 100
+	MCALL DIV32X16
 	MOV TEMP,TEMP_L
-	MCALL MUL10
-	SUB ACCUM,TEMP_L
-	SUBI ACCUM,(0x100-0x30)										;+0x30
-	MOV TEMP,ACCUM
+	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_LOG_CHAR
 
+	LDI TEMP,100
+	MCALL MUL24X8
+	SUB YL,TEMP_L
+	SBC YH,TEMP_H
+	LDI TEMP_EH,0
+	LDI TEMP_EL,0
+	LDI_X 10
+	MCALL DIV32X16
+	MOV TEMP,TEMP_L
+	SUBI TEMP,(0x100-0x30)											;+0x30
+	MCALL C5_LOG_CHAR
+
+	LDI TEMP,100
+	MCALL MUL24X8
+	SUB YL,TEMP_L
+	SBC YH,TEMP_H
+	SUBI YL,(0x100-0x30)												;+0x30
+	MOV TEMP,YL
+	MCALL C5_LOG_CHAR
+
+	POP_Y
+	POP_X
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
