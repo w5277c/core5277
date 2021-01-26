@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;08.10.2020  w5277c@gmail.com			Начало
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;26.01.2021  w5277c@gmail.com			Не выводим лишние нули
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_NUMX8
 .else
@@ -10,7 +11,6 @@
 .ifdef LOGGING_PORT
 
 .include	"./math/div16x8.inc"
-.include	"./math/mul24x8.inc"
 .include	"./math/div10.inc"
 .include	"./math/mul10.inc"
 .include	"./math/mul100.inc"
@@ -34,6 +34,8 @@ C5_LOG_NUMX8:
 	MOV TEMP_L,ACCUM
 	LDI TEMP,0x64
 	MCALL DIV16x8
+	CPI TEMP_L,0x00
+	BREQ PC+0x5
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_LOG_CHAR
@@ -43,6 +45,8 @@ C5_LOG_NUMX8:
 	SUB ACCUM,TEMP_L
 	MOV TEMP,ACCUM
 	MCALL DIV10
+	CPI TEMP_L,0x00
+	BREQ PC+0x5
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_LOG_CHAR
