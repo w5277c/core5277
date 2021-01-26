@@ -24,7 +24,7 @@
 	;---
 	;Дополнительно
 	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/log/log_cr.inc"
 	.include	"./mem/eeprom_write_byte.inc"
 	.include	"./mem/eeprom_read_byte.inc"
 	.include	"./core/wait_1s.inc"

@@ -24,7 +24,7 @@
 	;Дополнительно
 	.include	"./core/log/log_numx8.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/log/log_cr.inc"
 	.include	"./math/div10.inc"
 	.include	"./math/div100.inc"
 	;---

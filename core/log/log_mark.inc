@@ -14,7 +14,7 @@
 .include	"./core/log/log_byte.inc"
 .include	"./core/log/log_word.inc"
 .include	"./core/log/log_romstr.inc"
-.include	"./core/log/logstr_new_line.inc"
+.include	"./core/log/log_cr.inc"
 
 ;--------------------------------------------------------
 C5_LOG_MARK:
@@ -36,7 +36,7 @@ C5_LOG_MARK:
 	LDI TEMP,'.'
 	MCALL C5_LOG_CHAR
 	MCALL C5_LOG_WORD
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 
 	POP TEMP
 	RET

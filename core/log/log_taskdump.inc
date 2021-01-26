@@ -13,7 +13,7 @@
 .include	"./core/log/log_byte.inc"
 .include	"./core/log/log_word.inc"
 .include	"./core/log/log_romstr.inc"
-.include	"./core/log/logstr_new_line.inc"
+.include	"./core/log/log_cr.inc"
 .include	"./core/log/log_stackdump.inc"
 
 _LOGSTR_TID:
@@ -46,7 +46,7 @@ C5_LOG_TASKDUMP:
 	BRNE PC+0x02
 	RJMP C5_LOG_TASKDUMP__END
 
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 
 	C5_LOG_ROMSTR _LOGSTR_TID
 	MOV TEMP,PID

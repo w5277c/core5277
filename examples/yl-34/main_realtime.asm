@@ -27,7 +27,7 @@
 	.include	"./core/wait_1s.inc"
 	.include	"./core/log/log_bytes.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/log/log_cr.inc"
 	.include	"./core/uptime_copy.inc"
 	.include	"./core/meminfo_copy.inc"
 	;---
@@ -143,7 +143,7 @@ UPTIME_TASK__INFINITE_LOOP:
 	MCALL C5_UPTIME_COPY
 	LDI TEMP,0x05
 	MCALL C5_LOG_BYTES
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
@@ -167,7 +167,7 @@ FREEMEM_TASK__INFINITE_LOOP:
 	ADIW YL,0x02
 	LDI TEMP,0x02
 	MCALL C5_LOG_BYTES
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	CALL C5_LOG_CR
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S

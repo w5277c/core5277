@@ -15,7 +15,6 @@
 .include	"./core/log/log_bytes.inc"
 .include	"./core/log/log_romstr.inc"
 .include	"./core/log/logstr_done.inc"
-.include	"./core/log/logstr_new_line.inc"
 
 _LOGSTR_TASKSDUMP:
 	.db   0x0d,0x0a,"---TASKSDUMP:",0x00

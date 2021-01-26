@@ -15,7 +15,7 @@
 .include	"./core/log/log_word.inc"
 .include	"./core/log/log_romstr.inc"
 .include	"./core/log/logstr_done.inc"
-.include	"./core/log/logstr_new_line.inc"
+.include	"./core/log/log_cr.inc"
 
 _LOGSTR_RAMDUMP1:
 	.db   0x0d,0x0a,"---RAMDUMP:0x",0x00
@@ -93,7 +93,7 @@ _C5_LOG_RAMDUMP__ASCII_NEXT:
 	CPI TEMP_L,0x00
 	BREQ _C5_LOG_RAMDUMP__END
 	MOV TEMP_H,TEMP_L
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 	RJMP _C5_LOG_RAMDUMP__LOOP
 _C5_LOG_RAMDUMP__END:
 	C5_LOG_ROMSTR LOGSTR_DONE

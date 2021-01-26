@@ -37,7 +37,6 @@
 	.include	"./core/wait_1s.inc"
 	.include	"./core/log/log_bytes.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
 	;---
 
 

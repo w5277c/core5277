@@ -25,7 +25,7 @@
 	.include	"./core/log/log_char.inc"
 	.include	"./core/log/log_sdnf.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/log/log_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -95,7 +95,7 @@ TASK__INFINITE_LOOP:
 	MOV TEMP_H,TEMP_EH
 	MOV TEMP_L,TEMP_EL
 	MCALL C5_LOG_SDNF
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 	RJMP TASK__INFINITE_LOOP
 
 TASK__ERROR:

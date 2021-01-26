@@ -25,7 +25,7 @@
 	;Дополнительно
 	.include	"./core/log/log_bytes.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/log/log_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -95,7 +95,7 @@ TASK__INFINITE_LOOP:
 	MOV YH,XH
 	MOV YL,XL
 	MCALL C5_LOG_BYTES
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 	RJMP TASK__INFINITE_LOOP
 TASK__ERROR:
 	C5_LOG_ROMSTR TASK__LOGSTR_ERROR

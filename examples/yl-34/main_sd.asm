@@ -18,7 +18,7 @@
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.include	"./core/drivers/sd.inc"
+	.include	"./core/drivers/sd_spi.inc"
 	;---
 	;Блок задач
 	;---
