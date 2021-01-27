@@ -14,6 +14,7 @@
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
+	.SET	LOGGING_LEVEL							= LOGGING_LVL_PNC
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -23,9 +24,11 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_byte.inc"
 	.include	"./core/wait_1s.inc"
 	.include	"./core/log/log_cr.inc"
+	.include	"./core/drivers/sd/sd_log_ocr.inc"
+	.include	"./core/drivers/sd/sd_log_cid.inc"
+	.include	"./core/drivers/sd/sd_log_csd.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -80,18 +83,29 @@ _TASK__LOOP:
 	MCALL C5_EXEC
 	CPI ACCUM,0x00
 	BRNE _TASK__REPEATE
-
-	LDI TEMP,PID_SD_DRV
-	LDI FLAGS,DRV_SD_OP_GET_CSD
-	MCALL C5_EXEC
-	CPI ACCUM,0x00
-	BRNE _TASK__REPEATE
+	MOV ZH,YH
+	MOV ZL,YL
+	MCALL DRV_SD_LOG_OCR
 
 	LDI TEMP,PID_SD_DRV
 	LDI FLAGS,DRV_SD_OP_GET_CID
 	MCALL C5_EXEC
 	CPI ACCUM,0x00
 	BRNE _TASK__REPEATE
+	MOV ZH,YH
+	MOV ZL,YL
+	MCALL DRV_SD_LOG_CID
+
+
+	LDI TEMP,PID_SD_DRV
+	LDI FLAGS,DRV_SD_OP_GET_CSD
+	MCALL C5_EXEC
+	CPI ACCUM,0x00
+	BRNE _TASK__REPEATE
+	MOV ZH,YH
+	MOV ZL,YL
+	MCALL DRV_SD_LOG_CSD
+
 
 _TASK__REPEATE:
 	LDI TEMP,0x0a

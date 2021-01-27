@@ -10,6 +10,15 @@
 	.EQU	ATMEGA16									= 0x02
 	.EQU	ATMEGA48									= 0x03
 
+;---LOGGING----------------------------------------------;Параметры логирования
+	.EQU	LOGGING_LVL_DIS						= 0x00
+	.EQU	LOGGING_LVL_ERR						= 0x01
+	.EQU	LOGGING_LVL_WRN						= 0x02
+	.EQU	LOGGING_LVL_INF						= 0x03
+	.EQU	LOGGING_LVL_DBG						= 0x04
+	.EQU	LOGGING_LVL_PNC						= 0x05
+	.SET	LOGGING_LEVEL							=	LOGGING_LVL_INF
+
 	.SET	AVRA										= 0x00
 .ifdef CORE_FREQ
 .else
