@@ -29,6 +29,8 @@
 	.MESSAGE "######## DEVICE ATtiny45 ########"
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x03			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
+	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
+	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x0f			;Количество перырваний(без RESET)
 	.EQU	_C5_RES_QUEUE_SIZE					= 0x08			;Размер очереди к ресурсам(8 элементов по 2 байта)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)

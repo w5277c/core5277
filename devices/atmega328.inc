@@ -28,10 +28,12 @@
 	.MESSAGE "######## DEVICE ATmega328 ########"
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x10			;Максимальное количество задач
+	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
+	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x1a			;Количество перырваний(без RESET)
 	.EQU	_C5_RES_QUEUE_SIZE					= 0x20			;Размер очереди к ресурсам(16 элементов по 2 байта)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_C5_RAM_BORDER_SIZE					= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
+	.EQU	_C5_RAM_BORDER_SIZE					= 0x08			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMEND									= 0x08ff
 

@@ -11,14 +11,12 @@
 .include	"./core/wait_2ms.inc"
 .include	"./conv/crc7_730.inc"
 .include	"./conv/crc_block_x8.inc"
+.include	"./core/drivers/sd/sd_csd_block_info.inc"
+
 .ifdef LOGGING_PORT
 	.include	"./core/log/log_byte.inc"
 	.include	"./core/log/log_cr.inc"
 	.include	"./core/log/log_str_el.inc"
-;	.include	"./core/log/log_strn.inc"
-;	.include	"./core/log/log_numx8.inc"
-;	.include	"./core/log/log_numx16.inc"
-
 
 _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.db	"Got Ver1.X SD card",0x00,"Got Ver2.00 or later SC SD card",0x00,"Got Ver2.00 or later HC/EC SD card",0x00
@@ -28,9 +26,10 @@ _DRV_SD_LOG_STR_R3R7:
 	.db "<R3/R7:",0x00
 _DRV_SD_LOG_STR_BLOCK:
 	.db "<BLK:",0x00
-_DRV_SD_LOG_INIT_DONE:
-	.db 0x0d,0x0a,"Init done, R1:",0x00
 .endif
+
+;TODO не использовать внутренний буфер если выделен внешний
+;TODO учесть в коде смещение(выделенная память) из-за добавленных переменных
 
 	;---OPERATIONS---
 	.EQU	DRV_SD_OP_INIT										= 0x00;Инициализация
@@ -40,6 +39,13 @@ _DRV_SD_LOG_INIT_DONE:
 
 
 ;---CONSTANTS--------------------------------------------
+	.EQU	DRV_SD_VARS_SIZE									= 0x04;Размер данных под переменные
+	.EQU	DRV_SD_BUFFER_SIZE								= 0x40;Размер внутреннего блока для коммуникации (и записи/чтения если поддерживается partial)
+	;---OFFSETS---
+	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
+	.EQU	_DRV_SD_EXT_BLOCK_SIZE							= 0x00;2Б размер блока для чтения/записи
+	.EQU	_DRV_SD_BUFFER										= _DRV_SD_EXT_BUFFER_ADDR+DRV_SD_VARS_SIZE;
+
 	.EQU	_DRV_SD_CMD0										= 0x00;
 	.EQU	_DRV_SD_CMD1										= 0x01;
 	.EQU	_DRV_SD_CMD2										= 0x02;
@@ -54,15 +60,16 @@ _DRV_SD_LOG_INIT_DONE:
 	.EQU	DRV_SD_FLAG_VER1									= 0x01;
 	.EQU	DRV_SD_FLAG_VER2SC								= 0x02;
 	.EQU	DRV_SD_FLAG_VER2HC								= 0x03;
-
-
-	.EQU	_DRV_SD_RAM_SIZE									= 0x30;32 байта необходимо выделить под буфер
+	;---
 
 ;Драйвер карты памяти (режим SPI)
 ;--------------------------------------------------------
 DRV_SD_INIT:
 ;--------------------------------------------------------
 ;Инициализация драйвера
+;IN: Y-адрес на буффер в 512 байт, 0x0000 - не использо-
+;вать буфер (возможно, если карта поддерживает partial
+;для чтения и записи)
 ;--------------------------------------------------------
 	;Инициализируем порт CLCK
 	CBI PORTB,SCK & 0x0f
@@ -78,7 +85,13 @@ DRV_SD_INIT:
 	SBI DDRB,SS & 0x0f
 
 	;Выделяем память
-	LDI ACCUM,_DRV_SD_RAM_SIZE
+	LDI TEMP,DRV_SD_BUFFER_SIZE
+	LDI ACCUM,DRV_SD_VARS_SIZE
+	CPI YH,0x00
+	BRNE PC+0x03
+	CPI YL,0x00
+	BREQ PC+0x02
+	ADD ACCUM,TEMP
 	MCALL C5_RAM_REALLOC
 
 	MCALL C5_READY
@@ -124,8 +137,11 @@ _DRV_SD_OP_INIT:
 ;Инициализация карты
 ;OUT: ACCUM-R1 ответ, FLAGS - версия
 ;Y-адрес на данные OCR
+;TEMP_H/L - размер блока для чтения,
+;TEMP_EH/EL - размер блока для записи,
+;FLAGS-поддержка partial (0-бит чтение, 1-бит запись),
+;ошибка (7 бит)
 ;--------------------------------------------------------
-	PUSH FLAGS
 	PUSH TEMP
 	PUSH LOOP_CNTR
 	PUSH_Z
@@ -185,13 +201,14 @@ _DRV_SD_OP_INIT__LOOP:
 	MOV YL,ZL
 	MCALL _DRV_SD_GET_R3R7
 	SBI PORTB,SS & 0x0f
-	ANDI ACCUM,0xfe
 	CPI ACCUM,0x05
 	BRNE PC+0x03
 	LDI FLAGS,DRV_SD_FLAG_VER1
-	RJMP PC+0x03
+	RJMP PC+0x05
+	ANDI ACCUM,0xfe
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_INIT__END
+	BREQ PC+0x02
+	RJMP _DRV_SD_OP_INIT__END
 
 _DRV_SD_OP_INIT__WAIT:
 	CBI PORTB,SS & 0x0f
@@ -225,7 +242,7 @@ _DRV_SD_OP_INIT__WAIT:
 
 _DRV_SD_OP_INIT_SD_READY:
 	CPI FLAGS,DRV_SD_FLAG_VER1
-	BREQ _DRV_SD_OP_INIT__END
+	BREQ _DRV_SD_OP_INIT__CMD58_SKIP
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD58
@@ -249,6 +266,14 @@ _DRV_SD_OP_INIT_SD_READY:
 	LDI FLAGS,DRV_SD_FLAG_VER2SC
 	SBRS TEMP,0x01
 	LDI FLAGS,DRV_SD_FLAG_VER2HC
+_DRV_SD_OP_INIT__CMD58_SKIP:
+
+	MOV TEMP,FLAGS
+	MCALL _DRV_SD_OP_GET_CSD
+	MCALL DRV_SD_CSD_BLOCK_INFO
+	OR FLAGS,TEMP
+	SBRC FLAGS,0x07
+	LDI ACCUM,0xff
 
 _DRV_SD_OP_INIT__END:
 	SBI PORTB,SS & 0x0f
@@ -259,11 +284,6 @@ _DRV_SD_OP_INIT__END:
 	DEC TEMP
 	ANDI TEMP,0x03
 	MCALL C5_LOG_STR_EL
-
-	LDI_Y _DRV_SD_LOG_INIT_DONE|0x8000
-	MCALL C5_LOG_STR
-	MOV TEMP,ACCUM
-	MCALL C5_LOG_BYTE
 	MCALL C5_LOG_CR
 .endif
 
@@ -274,7 +294,6 @@ _DRV_SD_OP_INIT__END:
 	POP_Z
 	POP LOOP_CNTR
 	POP TEMP
-	POP FLAGS
 	RET
 
 ;--------------------------------------------------------

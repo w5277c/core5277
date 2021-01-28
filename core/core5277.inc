@@ -34,6 +34,8 @@
 ;тогда можно будет разрешить программному UART битрейт как минимум в 19200
 ;TODO TIMER-TASK отрабатывает немного чаще, почему?
 ;TODO давно не проверялся старый функционал, например BEEPER.
+;TODO нужна еще одна модель динамической памяти но с 16 битным размером. Плюс возможность задавать модель в main-е.
+;TODO проверить код на предмет установки DRIVERS_QNT в 0x00
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---CORE-PUBLIC-PROCS------------------------------------;Доступные процедуры ядра
@@ -110,10 +112,10 @@
 	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS+TIMERS*5
 																			;XB - таблица прерываний (_C5_IR_QNT*3 для каждгого прерывания, исключая RESET)
 	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3
-																			;XB - заголовки драйвера (X=_C5_DRIVERS_MAX_QNT*_C5_DRIVER_HEADER_SIZE)
-	.EQU	_C5_TASKS_HEADER						= _C5_DRIVERS_HEADER+_C5_DRIVERS_MAX_QNT*_C5_DRIVER_HEADER_SIZE
-																			;XB - заголовки задач (X=_C5_TASKS_MAX_QNT*_C5_TASK_HEADER_SIZE)
-	.EQU	_C5_RESOURCE_QUEUE					= _C5_TASKS_HEADER+_C5_TASKS_MAX_QNT*_C5_TASK_HEADER_SIZE
+																			;XB - заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
+	.EQU	_C5_TASKS_HEADER						= _C5_DRIVERS_HEADER+C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE
+																			;XB - заголовки задач (X=C5_TASKS_QNT*_C5_TASK_HEADER_SIZE)
+	.EQU	_C5_RESOURCE_QUEUE					= _C5_TASKS_HEADER+C5_TASKS_QNT*_C5_TASK_HEADER_SIZE
 																			;XB - очередь задач к ресурсам(1b - RES_ID, 1b - TASK_ID...)
 	.EQU	_C5_FREE_RAM							= _C5_RESOURCE_QUEUE+_C5_RES_QUEUE_SIZE
 	.EQU	C5_BUFFER								= RAMEND-(_C5_STACK_SIZE+BUFFER_SIZE)
@@ -530,15 +532,15 @@ C5_REINIT:
 	;Чистка заголовков драйверов
 	LDI XH,high(_C5_DRIVERS_HEADER)
 	LDI XL,low(_C5_DRIVERS_HEADER)
-	LDI TEMP_H,high(_C5_DRIVER_HEADER_SIZE*_C5_DRIVERS_MAX_QNT)
-	LDI TEMP_L,low(_C5_DRIVER_HEADER_SIZE*_C5_DRIVERS_MAX_QNT)
+	LDI TEMP_H,high(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
+	LDI TEMP_L,low(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	MCALL RAM_FILL16
 	;Чистка заголовков задач
 	LDI XH,high(_C5_TASKS_HEADER)
 	LDI XL,low(_C5_TASKS_HEADER)
-	LDI TEMP_H,high(_C5_TASK_HEADER_SIZE*_C5_TASKS_MAX_QNT)
-	LDI TEMP_L,low(_C5_TASK_HEADER_SIZE*_C5_TASKS_MAX_QNT)
+	LDI TEMP_H,high(_C5_TASK_HEADER_SIZE*C5_TASKS_QNT)
+	LDI TEMP_L,low(_C5_TASK_HEADER_SIZE*C5_TASKS_QNT)
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	MCALL RAM_FILL16
 
@@ -680,7 +682,7 @@ _C5_START__TASKS_LOOP:
 	SET
 _C5_START__NEXT_TASK:
 	INC PID
-	CPI PID,_C5_TASKS_MAX_QNT
+	CPI PID,C5_TASKS_QNT
 	BRNE _C5_START__TASKS_LOOP
 	BRTS _C5_START__LOOP
 	SLEEP
@@ -1218,7 +1220,7 @@ _C5_STACK_TO_TOP__CHANGE_OFFSET:
 
 _C5_STACK_TO_TOP__NEXT_TASK:
 	INC PID
-	CPI PID,_C5_TASKS_MAX_QNT
+	CPI PID,C5_TASKS_QNT
 	BRNE _C5_STACK_TO_TOP__LOOP
 
 _C5_STACK_TO_TOP__END:

@@ -53,10 +53,10 @@ MAIN:
 	MCALL C5_INIT
 
 	;Инициализация драйвера
-	LDI PID,PID_XXX_DRV
-	LDI ZH,high(DRV_XXX_INIT)
-	LDI ZL,low(DRV_XXX_INIT)
-	MCALL C5_CREATE
+;	LDI PID,PID_XXX_DRV
+;	LDI ZH,high(DRV_XXX_INIT)
+;	LDI ZL,low(DRV_XXX_INIT)
+;	MCALL C5_CREATE
 
 
 	;Инициализация задачи
