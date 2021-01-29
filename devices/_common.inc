@@ -66,11 +66,44 @@
 	.EQU	PD5										= (0x03<<4)|0x05
 	.EQU	PD6										= (0x03<<4)|0x06
 	.EQU	PD7										= (0x03<<4)|0x07
+	.EQU	PE0										= (0x04<<4)|0x00
+	.EQU	PE1										= (0x04<<4)|0x01
+	.EQU	PE2										= (0x04<<4)|0x02
+	.EQU	PE3										= (0x04<<4)|0x03
+	.EQU	PE4										= (0x04<<4)|0x04
+	.EQU	PE5										= (0x04<<4)|0x05
+	.EQU	PE6										= (0x04<<4)|0x06
+	.EQU	PE7										= (0x04<<4)|0x07
+	.EQU	PF0										= (0x05<<4)|0x00
+	.EQU	PF1										= (0x05<<4)|0x01
+	.EQU	PF2										= (0x05<<4)|0x02
+	.EQU	PF3										= (0x05<<4)|0x03
+	.EQU	PF4										= (0x05<<4)|0x04
+	.EQU	PF5										= (0x05<<4)|0x05
+	.EQU	PF6										= (0x05<<4)|0x06
+	.EQU	PF7										= (0x05<<4)|0x07
+	.EQU	PG0										= (0x06<<4)|0x00
+	.EQU	PG1										= (0x06<<4)|0x01
+	.EQU	PG2										= (0x06<<4)|0x02
+	.EQU	PG3										= (0x06<<4)|0x03
+	.EQU	PG4										= (0x06<<4)|0x04
+	.EQU	PG5										= (0x06<<4)|0x05
+	.EQU	PG6										= (0x06<<4)|0x06
+	.EQU	PG7										= (0x06<<4)|0x07
 
 	.EQU	C5_ISC_LOW_LEVEL						= 0x00
 	.EQU	C5_ISC_ANY_CHANGE						= 0x01
 	.EQU	C5_ISC_FALLING_EDGE					= 0x02
 	.EQU	C5_ISC_RISING_EDGE					= 0x03
+
+	.SET	INT0_PORT								= 0xff
+	.SET	INT1_PORT								= 0xff
+	.SET	INT2_PORT								= 0xff
+	.SET	INT3_PORT								= 0xff
+	.SET	INT4_PORT								= 0xff
+	.SET	INT5_PORT								= 0xff
+	.SET	INT6_PORT								= 0xff
+	.SET	INT7_PORT								= 0xff
 
 	.DEF	TEMP_L									= r16				;Младший регистр общего назначения
 	.DEF	TEMP_H									= r17				;Старший регистр общего назначения

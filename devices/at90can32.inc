@@ -386,6 +386,15 @@
 	.EQU	ADC_PRESC_X64							= 0x06
 	.EQU	ADC_PRESC_X128							= 0x07
 
+	.SET	INT0_PORT								= PD0
+	.SET	INT1_PORT								= PD1
+	.SET	INT2_PORT								= PD2
+	.SET	INT3_PORT								= PD3
+	.SET	INT4_PORT								= PE4
+	.SET	INT5_PORT								= PE5
+	.SET	INT6_PORT								= PE6
+	.SET	INT7_PORT								= PE7
+
 .ORG 0x0000
 	JMP	MAIN															; Reset Handler
 	CALL	_C5_IR														; External Interrupt0 Handler

@@ -224,6 +224,9 @@
 	.EQU	ADC_VREF_AVCC						= (0<<REFS1)|(1<<REFS0)
 	.EQU	ADC_VREF_2_56_CAP					= (1<<REFS1)|(1<<REFS0)
 
+	.SET	INT0_PORT								= PD2
+	.SET	INT1_PORT								= PD3
+
 .ORG 0x0000
 	JMP	MAIN															; Reset
 	CALL	_C5_IR														; External Interrupt0

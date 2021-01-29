@@ -153,6 +153,7 @@
 	.DEF	_RESULT_L								= r0
 	.DEF	_RESULT_H								= r1
 	;...
+	.DEF	_C5_INPUT_CHAR							= r8				;Хранит полученный из ввода символ
 	.DEF	_C5_DISPATCHER_LOCK_CNTR			= r9				;Счетчик вложенных блокировок диспетчера
 	.DEF	_C5_DRIVER_EXEC_ZH					= r10
 	.DEF	_C5_DRIVER_EXEC_ZL					= r11

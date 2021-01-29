@@ -236,6 +236,8 @@
 	.EQU	ADC_VREF_2_56							= (1<<REFS2)|(1<<REFS1)|(0<<REFS0)
 	.EQU	ADC_VREF_2_56_CAP						= (1<<REFS2)|(1<<REFS1)|(1<<REFS0)
 
+	.SET	INT0_PORT								= PB2
+
 .ORG 0x0000
 	RJMP	MAIN															; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
