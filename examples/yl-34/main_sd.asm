@@ -15,9 +15,10 @@
 	.SET	C5_TASKS_QNT							= 1
 	.SET	TIMERS									= 1	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
-	.SET	BUFFER_SIZE								= 0x0200;Размер общего буфера (буфер для SD)
+	.SET	BUFFER_SIZE								= 0x00;0200;Размер общего буфера (буфер для SD)
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_PNC
+	.SET	INPUT_PORT								= PB1
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -29,6 +30,7 @@
 	;Дополнительно
 	.include	"./core/wait_1s.inc"
 	.include	"./core/log/log_cr.inc"
+	.include "./io/input_get_char.inc"
 	.include	"./core/drivers/sd/sd_log_ocr.inc"
 	.include	"./core/drivers/sd/sd_log_cid.inc"
 	.include	"./core/drivers/sd/sd_log_csd.inc"
@@ -56,8 +58,8 @@ MAIN:
 	LDI PID,PID_SD_DRV
 	LDI ZH,high(DRV_SD_INIT)
 	LDI ZL,low(DRV_SD_INIT)
-	LDI TEMP_H,PB1
-	LDI TEMP_L,PB2
+	LDI YH,high(C5_BUFFER)
+	LDI YL,low(C5_BUFFER)
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
@@ -115,8 +117,7 @@ _TASK__LOOP:
 .endif
 
 _TASK__REPEATE:
-	LDI TEMP,0x0a
-	MCALL C5_WAIT_1S
+	MCALL INPUT_GET_CHAR
 	RJMP _TASK__LOOP
 
 ;Есть проблема с памятью. Для операций чтения и записи необходимо выделить буфер.

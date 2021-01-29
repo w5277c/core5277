@@ -225,6 +225,9 @@
 	.MESSAGE "######## LOGGING DISABLED ########"
 	.INCLUDE "./core/log/log_fake.inc"
 .ENDIF
+.IFDEF INPUT_PORT
+	.INCLUDE "./io/input_init.inc"
+.ENDIF
 .IF REALTIME == 1
 	.MESSAGE "######## DISPATCHER ENABLED ########"
 	.INCLUDE "./core/_dispatcher.inc"
@@ -450,7 +453,9 @@ C5_INIT:
 
 	;Инициализация логирования
 	MCALL C5_LOG_INIT
-
+.ifdef INPUT_PORT
+	MCALL INPUT_INIT
+.endif
 	MCALL C5_LOG_TASKSDUMP
 	;Сбрасываем флаги причины сброса
 	CLR TEMP

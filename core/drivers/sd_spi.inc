@@ -6,8 +6,6 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./core/ram/ram_extend.inc"
-.include	"./core/ram/ram_reduce.inc"
 .include	"./core/wait_2ms.inc"
 .include	"./conv/crc7_730.inc"
 .include	"./conv/crc_block_x8.inc"
@@ -94,6 +92,9 @@ DRV_SD_INIT:
 	ADD ACCUM,TEMP
 	MCALL C5_RAM_REALLOC
 
+	STD Z+_DRV_SD_EXT_BUFFER_ADDR+0x00,YH
+	STD Z+_DRV_SD_EXT_BUFFER_ADDR+0x01,YL
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
@@ -105,6 +106,25 @@ DRV_SD_INIT:
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
+	LDD TEMP_H,Z+_DRV_SD_EXT_BUFFER_ADDR+0x00
+	LDD TEMP_L,Z+_DRV_SD_EXT_BUFFER_ADDR+0x01
+	CPI TEMP_H,0x00
+	BRNE _DRV_SD_MAIN__GLOBAL_BUFFER
+	CPI TEMP_L,0x00
+	BREQ _DRV_SD_MAIN__LOCAL_BUFFER
+_DRV_SD_MAIN__GLOBAL_BUFFER:
+	PUSH TEMP_H
+	PUSH TEMP_L
+	LDD TEMP_H,Z+_DRV_SD_EXT_BLOCK_SIZE+0x00
+	LDD TEMP_L,Z+_DRV_SD_EXT_BLOCK_SIZE+0x01
+	POP ZL
+	POP ZH
+	RJMP _DRV_SD_MAIN__CONTINUE
+_DRV_SD_MAIN__LOCAL_BUFFER:
+	LDD TEMP_H,Z+_DRV_SD_EXT_BLOCK_SIZE+0x00
+	LDD TEMP_L,Z+_DRV_SD_EXT_BLOCK_SIZE+0x01
+	ADIW ZL,_DRV_SD_BUFFER
+_DRV_SD_MAIN__CONTINUE:
 
 	CPI FLAGS,DRV_SD_OP_INIT
 	BRNE PC+0x04
@@ -437,31 +457,28 @@ _DRV_SD__SEND_ACMD:
 ;OUT: ACCUM-R1 ответ
 ;--------------------------------------------------------
 	PUSH TEMP_L
+	PUSH_Y
 	PUSH_Z
 
-	LDI ACCUM,0x10
-	MCALL C5_RAM_EXTEND
-
+	ADIW ZL,0x10
 	LDI TEMP,_DRV_SD_CMD55
-	STD Y+0x00,TEMP
+	STD Z+0x00,TEMP
 	LDI TEMP,0x00
-	STD Y+0x01,TEMP
+	STD Z+0x01,TEMP
 	LDI TEMP,0x00
-	STD Y+0x02,TEMP
+	STD Z+0x02,TEMP
 	LDI TEMP,0x00
-	STD Y+0x03,TEMP
+	STD Z+0x03,TEMP
 	LDI TEMP,0x00
-	STD Y+0x04,TEMP
+	STD Z+0x04,TEMP
 	LDI TEMP_L,0x05
-	MOV ZH,YH
-	MOV ZL,YL
+	MOV YH,ZH
+	MOV YL,ZL
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
-	PUSH ACCUM
-	LDI ACCUM,0x10
-	MCALL C5_RAM_REDUCE
-	POP ACCUM
+
 	POP_Z
+	POP_Y
 	POP TEMP_L
 
 	ANDI ACCUM,0xfe
