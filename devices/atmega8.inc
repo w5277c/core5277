@@ -157,7 +157,16 @@
 	.EQU		ISC10									= 0x02
 	.EQU		ISC01									= 0x01
 	.EQU		ISC00									= 0x00
-	;TODO EIFR отсутствует, есть GIFR
+	.EQU	GICR										= 0x5b
+	.EQU		INT0									= 0x06
+	.EQU		INT1									= 0x07
+	.EQU		IVSEL									= 0x01
+	.EQU		IVCE									= 0x00
+	.EQU	GIFR										= 0x5a
+	.EQU		INTF0									= 0x06
+	.EQU		INTF1									= 0x07
+	.EQU	EIMSK										= GICR
+	.EQU	EIFR										= GIFR
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
 	.EQU	ADC_VREF_AVCC							= (0<<REFS1)|(1<<REFS0)

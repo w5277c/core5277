@@ -177,7 +177,18 @@
 	.EQU		ISC10									= 0x02
 	.EQU		ISC01									= 0x01
 	.EQU		ISC00									= 0x00
-	;TODO EIFR отсутствует, есть GIFR
+	.EQU	GICR										= 0x5b
+	.EQU		INT0									= 0x06
+	.EQU		INT1									= 0x07
+	.EQU		INT2									= 0x05
+	.EQU		IVSEL									= 0x01
+	.EQU		IVCE									= 0x00
+	.EQU	GIFR										= 0x5a
+	.EQU		INTF0									= 0x06
+	.EQU		INTF1									= 0x07
+	.EQU		INTF2									= 0x05
+	.EQU	EIMSK										= GICR
+	.EQU	EIFR										= GIFR
 	;---EEPROM---
 	.EQU	EEARH										= 0x3F
 	.EQU	EEARL										= 0x3E

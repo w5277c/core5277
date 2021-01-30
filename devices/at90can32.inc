@@ -326,7 +326,24 @@
 	.EQU		ISC50									= 0x02
 	.EQU		ISC41									= 0x01
 	.EQU		ISC40									= 0x00
+	.EQU	EIMSK										= 0x3d
+	.EQU		INT7									= 0x07
+	.EQU		INT6									= 0x06
+	.EQU		INT5									= 0x05
+	.EQU		INT4									= 0x04
+	.EQU		INT3									= 0x03
+	.EQU		INT2									= 0x02
+	.EQU		INT1									= 0x01
+	.EQU		INT0									= 0x00
 	.EQU	EIFR										= 0x3c
+	.EQU		INTF7									= 0x07
+	.EQU		INTF6									= 0x06
+	.EQU		INTF5									= 0x05
+	.EQU		INTF4									= 0x04
+	.EQU		INTF3									= 0x03
+	.EQU		INTF2									= 0x02
+	.EQU		INTF1									= 0x01
+	.EQU		INTF0									= 0x00
 	;---EEPROM---
 	.EQU	EEARH										= 0x42
 	.EQU	EEARL										= 0x41

@@ -177,7 +177,14 @@
 	.EQU		BODSE									= 0x02
 	.EQU		ISC01									= 0x01
 	.EQU		ISC00									= 0x00
-	;TODO EIFR отсутствует, есть GIFR
+	.EQU	GIMSK										= 0x5b
+	.EQU		INT0									= 0x06
+	.EQU		PCIE									= 0x05
+	.EQU	GIFR										= 0x5a
+	.EQU		INTF0									= 0x06
+	.EQU		PCIF									= 0x05
+	.EQU	EIMSK										= GIMSK
+	.EQU	EIFR										= GIFR
 	;---EEPROM---
 	.EQU	EEARH										= 0x3F
 	.EQU	EEARL										= 0x3E
