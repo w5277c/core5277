@@ -165,6 +165,7 @@
 	.EQU	GIFR										= 0x5a
 	.EQU		INTF0									= 0x06
 	.EQU		INTF1									= 0x07
+	.EQU	EICRA										= MCUCR
 	.EQU	EIMSK										= GICR
 	.EQU	EIFR										= GIFR
 	;---ADC-VOLTAGE-REFERENCE---

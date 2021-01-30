@@ -105,9 +105,10 @@
 	.EQU	_C5_CORE_STACK							= 0x105			;2B - хранит смещение стека ядра
 	.EQU	_C5_TOP_OF_STACK						= 0x107			;2B - хранит вершину стека
 	.EQU	_C5_TOP_OF_FREE_RAM					= 0x109			;2B - хранит вершину свободной памяти
-	.EQU	_C5_FLAGS								= 0x10b			;4B - флагов (32 флага)
-	.EQU	_C5_MAIN_TIMER_CNTR					= 0x10f			;1B - счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_TIMERS								= 0x110			;XB - таблица таймеров(TIMERS*5)
+	.EQU	_C5_INPUT_CHAR							= 0x10b			;1B - хранит полученный из ввода символ
+	.EQU	_C5_FLAGS								= 0x10c			;4B - флагов (32 флага)
+	.EQU	_C5_MAIN_TIMER_CNTR					= 0x110			;1B - счетчик таймера ядра (каждые 0.000050с)
+	.EQU	_C5_TIMERS								= 0x111			;XB - таблица таймеров(TIMERS*5)
 																			;TIMERS*5
 	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS+TIMERS*5
 																			;XB - таблица прерываний (_C5_IR_QNT*3 для каждгого прерывания, исключая RESET)
@@ -152,8 +153,7 @@
 ;---REGISTERS--------------------------------------------;r0-r14 выделено под нужды ядра
 	.DEF	_RESULT_L								= r0
 	.DEF	_RESULT_H								= r1
-	;...
-	.DEF	_C5_INPUT_CHAR							= r8				;Хранит полученный из ввода символ
+	;...r2-r8 используются в процедуре SUSPEND
 	.DEF	_C5_DISPATCHER_LOCK_CNTR			= r9				;Счетчик вложенных блокировок диспетчера
 	.DEF	_C5_DRIVER_EXEC_ZH					= r10
 	.DEF	_C5_DRIVER_EXEC_ZL					= r11
@@ -211,7 +211,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED ########"
 	.IF AVRA == 0x01
-		.MESSAGE "######## LOGGING BAUDRATE:",28800*CORE_FREQ
+		.MESSAGE "######## LOGGING BAUDRATE:",14400*CORE_FREQ
 	.ELSE
 		.MESSAGE "######## LOGGING BAUDRATE:"
 		.MESSAGE 28800*CORE_FREQ
@@ -319,6 +319,8 @@ _C5_TIMER_A_IR:
 	PUSH TEMP
 	LDS TEMP,SREG
 	PUSH TEMP
+
+	SEI
 
 	LDI TEMP,TIMERS_SPEED-0x02
 	SBRC _C5_COREFLAGS,_CFL_TIMER_UART_CORRECTION

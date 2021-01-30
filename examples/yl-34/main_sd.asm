@@ -18,7 +18,7 @@
 	.SET	BUFFER_SIZE								= 0x00;0200;Размер общего буфера (буфер для SD)
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_PNC
-	.SET	INPUT_PORT								= PB1
+	.SET	INPUT_PORT								= PD2
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -53,6 +53,9 @@ MAIN:
 
 	;Инициализация ядра
 	MCALL C5_INIT
+
+	SBI DDRB,PB2 & 0x0f
+	CBI PORTB,PB2 & 0x0f
 
 	;Инициализация SD
 	LDI PID,PID_SD_DRV
@@ -118,6 +121,7 @@ _TASK__LOOP:
 
 _TASK__REPEATE:
 	MCALL INPUT_GET_CHAR
+MCALL C5_LOG_CHAR
 	RJMP _TASK__LOOP
 
 ;Есть проблема с памятью. Для операций чтения и записи необходимо выделить буфер.

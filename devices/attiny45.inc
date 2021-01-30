@@ -182,6 +182,7 @@
 	.EQU	GIFR										= 0x5a
 	.EQU		INTF0									= 0x06
 	.EQU		PCIF									= 0x05
+	.EQU	EICRA										= MCUCR
 	.EQU	EIMSK										= GIMSK
 	.EQU	EIFR										= GIFR
 

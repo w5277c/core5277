@@ -187,6 +187,7 @@
 	.EQU		INTF0									= 0x06
 	.EQU		INTF1									= 0x07
 	.EQU		INTF2									= 0x05
+	.EQU	EICRA										= MCUCR
 	.EQU	EIMSK										= GICR
 	.EQU	EIFR										= GIFR
 	;---EEPROM---
