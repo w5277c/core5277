@@ -177,6 +177,7 @@
 	.EQU		BODSE									= 0x02
 	.EQU		ISC01									= 0x01
 	.EQU		ISC00									= 0x00
+	;TODO EIFR отсутствует, есть GIFR
 	;---EEPROM---
 	.EQU	EEARH										= 0x3F
 	.EQU	EEARL										= 0x3E

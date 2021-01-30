@@ -290,6 +290,7 @@
 	.EQU		ISC10									= 0x02
 	.EQU		ISC01									= 0x01
 	.EQU		ISC00									= 0x00
+	.EQU	EIFR										= 0x3c
 	;---EEPROM---
 	.EQU	EEARH										= 0x42
 	.EQU	EEARL										= 0x41

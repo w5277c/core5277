@@ -326,6 +326,7 @@
 	.EQU		ISC50									= 0x02
 	.EQU		ISC41									= 0x01
 	.EQU		ISC40									= 0x00
+	.EQU	EIFR										= 0x3c
 	;---EEPROM---
 	.EQU	EEARH										= 0x42
 	.EQU	EEARL										= 0x41
