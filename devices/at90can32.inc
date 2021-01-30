@@ -19,7 +19,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= CAN32
-	.MESSAGE "######## DEVICE AT90can32 ########"
+	.MESSAGE "######## DEVICE AT90can32"
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x10			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT

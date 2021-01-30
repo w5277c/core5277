@@ -25,7 +25,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA48
-	.MESSAGE "######## DEVICE ATmega328 ########"
+	.MESSAGE "######## DEVICE ATmega328"
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x10			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT

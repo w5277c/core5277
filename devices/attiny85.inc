@@ -27,7 +27,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
-	.MESSAGE "######## DEVICE ATtiny45 ########"
+	.MESSAGE "######## DEVICE ATtiny45"
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x08			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x04			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT

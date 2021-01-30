@@ -208,14 +208,14 @@
 	.ENDMACRO
 
 ;---OPTIONS-ANALYZE--------------------------------------
+.IF AVRA == 0x01
+	.MESSAGE "######## IO BAUDRATE:",14400*CORE_FREQ
+.ELSE
+	.MESSAGE "######## IO BAUDRATE:"
+	.MESSAGE 28800*CORE_FREQ
+.ENDIF
 .IFDEF LOGGING_PORT
-	.MESSAGE "######## LOGGING ENABLED ########"
-	.IF AVRA == 0x01
-		.MESSAGE "######## LOGGING BAUDRATE:",14400*CORE_FREQ
-	.ELSE
-		.MESSAGE "######## LOGGING BAUDRATE:"
-		.MESSAGE 28800*CORE_FREQ
-	.ENDIF
+	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
 	.db   0x0d,0x0a,"core5277_v0.3.0",0x0d,0x0a,0x00
 	.INCLUDE "./core/log/log_init.inc"
@@ -223,17 +223,18 @@
 	.INCLUDE	"./core/log/log_tasksdump.inc"
 	.INCLUDE "./core/log/log_corefault.inc"
 .ELSE
-	.MESSAGE "######## LOGGING DISABLED ########"
+	.MESSAGE "######## LOGGING DISABLED"
 	.INCLUDE "./core/log/log_fake.inc"
 .ENDIF
 .IFDEF INPUT_PORT
 	.INCLUDE "./io/input_init.inc"
+	.MESSAGE "######## INPUT ENABLED"
 .ENDIF
 .IF REALTIME == 1
-	.MESSAGE "######## DISPATCHER ENABLED ########"
+	.MESSAGE "######## DISPATCHER ENABLED"
 	.INCLUDE "./core/_dispatcher.inc"
 .ELSE
-	.MESSAGE "######## DISPATCHER DISABLED ########"
+	.MESSAGE "######## DISPATCHER DISABLED"
 	.INCLUDE "./core/wait_2ms.inc"
 C5_DISPATCHER_LOCK:
 C5_DISPATCHER_UNLOCK:
@@ -241,13 +242,13 @@ C5_DISPATCHER_UNLOCK:
 .ENDIF
 
 .IF TIMERS > 0x00
-	.MESSAGE "######## TIMERS ENABLED ########"
+	.MESSAGE "######## TIMERS ENABLED"
 	.INCLUDE "./core/timer_set.inc"
 	.INCLUDE "./core/timer_set_period.inc"
 	.INCLUDE "./core/timer_start.inc"
 	.INCLUDE "./core/timer_stop.inc"
 .ELSE
-	.MESSAGE "######## TIMERS DISABLED ########"
+	.MESSAGE "######## TIMERS DISABLED"
 	C5_TIMER_SET:
 	C5_TIMER_START:
 	C5_TIMER_STOP:
