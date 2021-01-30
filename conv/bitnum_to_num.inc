@@ -21,13 +21,14 @@ BITNUM_TO_NUM:
 ;IN: TEMP - номер бита(0-7)
 ;OUT: TEMP - число(1,2,4,8,16,32,64,128)
 ;-START--------------------------------------------------
-	PUSH_Z
-	LDI ZH,high(BITNUM_TO_NUM_TABLE*2)
-	LDI ZL,low(BITNUM_TO_NUM_TABLE*2)
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
-	LPM TEMP,Z
-	POP_Z
+	PUSH_Z										;4
+	LDI ZH,high(BITNUM_TO_NUM_TABLE*2)	;1
+	LDI ZL,low(BITNUM_TO_NUM_TABLE*2)	;1
+	ADD ZL,TEMP									;1
+	CLR TEMP										;1
+	ADC ZH,TEMP									;1
+	LPM TEMP,Z									;3
+	POP_Z											;4,total:16t
 	RET
 .endif
+
