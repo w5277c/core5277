@@ -35,6 +35,7 @@
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x04			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
+	.EQU	RAMSTART									= 0x0100
 	.EQU	RAMEND									= 0x04ff
 
 	;---IR---

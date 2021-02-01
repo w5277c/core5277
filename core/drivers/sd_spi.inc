@@ -8,7 +8,9 @@
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/wait_2ms.inc"
 .include	"./conv/crc7_730.inc"
-.include	"./conv/crc_block_x8.inc"
+.include	"./conv/crc8_block.inc"
+.include	"./conv/crc16_xmodem.inc"
+.include	"./conv/crc16_block.inc"
 .include	"./core/drivers/sd/sd_csd_block_info.inc"
 
 .ifdef LOGGING_PORT
@@ -18,6 +20,10 @@
 
 _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.db	"Got Ver1.X SD card",0x00,"Got Ver2.00 or later SC SD card",0x00,"Got Ver2.00 or later HC/EC SD card",0x00
+_DRV_SD_LOG_STR_DATA_ERROR_TOKEN:
+	.db	"Got data error token:",0x0d,0x0a,0x00
+_DRV_SD_LOG_STR_DATA_ERROR_TOKENS:
+	.db	"Error",0x00,"CC Error",0x00,"Card ECC Failed",0x00,"Out of range",0x00
 _DRV_SD_LOG_STR_R1:
 	.db "<R1:",0x00
 _DRV_SD_LOG_STR_R3R7:
@@ -28,20 +34,24 @@ _DRV_SD_LOG_STR_BLOCK:
 
 ;TODO не использовать внутренний буфер если выделен внешний
 ;TODO учесть в коде смещение(выделенная память) из-за добавленных переменных
+;TODO перейти на внешнюю реализацию spi
 
 	;---OPERATIONS---
 	.EQU	DRV_SD_OP_INIT										= 0x00;Инициализация
 	.EQU	DRV_SD_OP_GET_OCR									= 0x01;Получить OCR
 	.EQU	DRV_SD_OP_GET_CSD									= 0x02;Получить CSD
 	.EQU	DRV_SD_OP_GET_CID									= 0x03;Получить CID
-
+	.EQU	DRV_SD_OP_READ_BLOCK								= 0x04;Считать блок
+	.EQU	DRV_SD_OP_WRITE_BLOCK							= 0x05;Записать блок
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	DRV_SD_VARS_SIZE									= 0x04;Размер данных под переменные
+	.EQU	DRV_SD_VARS_SIZE									= 0x0e;Размер данных под переменные
 	.EQU	DRV_SD_BUFFER_SIZE								= 0x40;Размер внутреннего блока для коммуникации (и записи/чтения если поддерживается partial)
 	;---OFFSETS---
 	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
-	.EQU	_DRV_SD_EXT_BLOCK_SIZE							= 0x00;2Б размер блока для чтения/записи
+	.EQU	_DRV_SD_VAR_BLOCK_SIZE							= 0x02;2Б размер блока для чтения/записи
+	.EQU	_DRV_SD_VAR_UPTIME_START						= 0x04;5Б uptime
+	.EQU	_DRV_SD_VAR_UPTIME_END							= 0x09;5Б uptime
 	.EQU	_DRV_SD_BUFFER										= _DRV_SD_EXT_BUFFER_ADDR+DRV_SD_VARS_SIZE;
 
 	.EQU	_DRV_SD_CMD0										= 0x00;
@@ -51,6 +61,8 @@ _DRV_SD_LOG_STR_BLOCK:
 	.EQU	_DRV_SD_CMD8										= 0x08;
 	.EQU	_DRV_SD_CMD9										= 0x09;
 	.EQU	_DRV_SD_CMD10										= 0x0a;
+	.EQU	_DRV_SD_CMD17										= 0x11;
+	.EQU	_DRV_SD_CMD24										= 0x18;
 	.EQU	_DRV_SD_CMD55										= 0x37;
 	.EQU	_DRV_SD_CMD58										= 0x3a;
 	.EQU	_DRV_SD_ACMD41										= 0x29;
@@ -86,9 +98,9 @@ DRV_SD_INIT:
 	LDI TEMP,DRV_SD_BUFFER_SIZE
 	LDI ACCUM,DRV_SD_VARS_SIZE
 	CPI YH,0x00
-	BRNE PC+0x03
+	BRNE PC+0x04
 	CPI YL,0x00
-	BREQ PC+0x02
+	BRNE PC+0x02
 	ADD ACCUM,TEMP
 	MCALL C5_RAM_REALLOC
 
@@ -106,6 +118,9 @@ DRV_SD_INIT:
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
+
+	PUSH TEMP_H
+	PUSH TEMP_L
 	LDD TEMP_H,Z+_DRV_SD_EXT_BUFFER_ADDR+0x00
 	LDD TEMP_L,Z+_DRV_SD_EXT_BUFFER_ADDR+0x01
 	CPI TEMP_H,0x00
@@ -115,16 +130,18 @@ DRV_SD_INIT:
 _DRV_SD_MAIN__GLOBAL_BUFFER:
 	PUSH TEMP_H
 	PUSH TEMP_L
-	LDD TEMP_H,Z+_DRV_SD_EXT_BLOCK_SIZE+0x00
-	LDD TEMP_L,Z+_DRV_SD_EXT_BLOCK_SIZE+0x01
+;	LDD TEMP_EH,Z+_DRV_SD_VAR_BLOCK_SIZE+0x00
+;	LDD TEMP_EL,Z+_DRV_SD_VAR_BLOCK_SIZE+0x01
 	POP ZL
 	POP ZH
 	RJMP _DRV_SD_MAIN__CONTINUE
 _DRV_SD_MAIN__LOCAL_BUFFER:
-	LDD TEMP_H,Z+_DRV_SD_EXT_BLOCK_SIZE+0x00
-	LDD TEMP_L,Z+_DRV_SD_EXT_BLOCK_SIZE+0x01
+;	LDD TEMP_EH,Z+_DRV_SD_VAR_BLOCK_SIZE+0x00
+;	LDD TEMP_EL,Z+_DRV_SD_VAR_BLOCK_SIZE+0x01
 	ADIW ZL,_DRV_SD_BUFFER
 _DRV_SD_MAIN__CONTINUE:
+	POP TEMP_L
+	POP TEMP_H
 
 	CPI FLAGS,DRV_SD_OP_INIT
 	BRNE PC+0x04
@@ -142,11 +159,16 @@ _DRV_SD_MAIN__CONTINUE:
 	BRNE PC+0x04
 	MCALL _DRV_SD_OP_GET_OCR
 	RJMP _DRV_SD__END
+	CPI FLAGS,DRV_SD_OP_READ_BLOCK
+	BRNE PC+0x04
+	MCALL _DRV_SD_OP_READ_BLOCK
+	RJMP _DRV_SD__END
 
 	;...
 
 	LDI ACCUM,0xff
 _DRV_SD__END:
+
 	POP_Z
 	RET
 
@@ -247,6 +269,8 @@ _DRV_SD_OP_INIT__WAIT:
 	CPI ACCUM,0x00
 	BRNE _DRV_SD_OP_INIT__END
 	MCALL _DRV_SD_GET_R1
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x10
 	MCALL _DRV_SD_GET_BLOCK
 	SBI PORTB,SS & 0x0f
 	CPI ACCUM,0x00
@@ -297,6 +321,7 @@ _DRV_SD_OP_INIT__CMD58_SKIP:
 
 _DRV_SD_OP_INIT__END:
 	SBI PORTB,SS & 0x0f
+
 .ifdef LOGGING_PORT
 	MCALL C5_LOG_CR
 	LDI_Y _DRV_SD_LOG_STR_SD_CARD_VERSIONS|0x8000
@@ -306,7 +331,6 @@ _DRV_SD_OP_INIT__END:
 	MCALL C5_LOG_STR_EL
 	MCALL C5_LOG_CR
 .endif
-
 
 	MOV YH,ZH
 	MOV YL,ZL
@@ -353,8 +377,6 @@ _DRV_SD_OP_GET_OCR__END:
 	POP TEMP_L
 	POP TEMP
 	RET
-
-
 
 ;--------------------------------------------------------
 _DRV_SD_OP_GET_CSD:
@@ -447,7 +469,111 @@ _DRV_SD_OP_GET_CID__END:
 	RET
 
 
+;--------------------------------------------------------
+_DRV_SD_OP_READ_BLOCK:
+;--------------------------------------------------------
+;Читаем блок данных
+;IN: Z-адрес на внешний буфер 512 байт
+;TEMP_EH/EL/H/L-номер блока
+;OUT: ACCUM-R1 ответ
+;Y-адрес на буффер драйвера (где будет записан блок)
+;--------------------------------------------------------
+	PUSH TEMP
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH_Z
 
+	CBI PORTB,SS & 0x0f
+	LDI TEMP,_DRV_SD_CMD17
+	STD Z+0x00,TEMP
+	STD Z+0x01,TEMP_EH
+	STD Z+0x02,TEMP_EL
+	STD Z+0x03,TEMP_H
+	STD Z+0x04,TEMP_L
+	LDI TEMP_L,0x05
+
+;LDI YL,_DRV_SD_VAR_UPTIME_START
+;LDI YH,0x00
+;ADD YL,ZL
+;MCALL C5_UPTIME_COPY
+	MCALL _DRV_SD__SEND_CMD
+	MCALL _DRV_SD_GET_R1
+;MCALL C5_UPTIME_COPY
+;TODO посчитать дельту времени
+;TODO проверить CRC. Проверить статус?
+
+	CPI ACCUM,0x00
+	BRNE _DRV_SD_OP_READ_BLOCK__FAIL
+	MOV YH,ZH
+	MOV YL,ZL
+	LDI TEMP_H,high(512)
+	LDI TEMP_L,low(512)
+	MCALL _DRV_SD_GET_BLOCK
+	SBI PORTB,SS & 0x0f
+	MOV YH,ZH
+	MOV YL,ZL
+_DRV_SD_OP_READ_BLOCK__FAIL:
+_DRV_SD_OP_READ_BLOCK__END:
+	SBI PORTB,SS & 0x0f
+
+	POP_Z
+	POP TEMP_L
+	POP TEMP_H
+	POP TEMP
+	RET
+
+;--------------------------------------------------------
+_DRV_SD_OP_WRITE_BLOCK:
+;--------------------------------------------------------
+;Пишем блок данных
+;IN: Z-адрес на внешний буффер 512 байт
+;TEMP_EH/EL/H/L-номер блока
+;OUT: ACCUM-R1 ответ
+;Y-адрес на буффер драйвера (где будет записан блок)
+;--------------------------------------------------------
+	PUSH TEMP
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH_Z
+
+	CBI PORTB,SS & 0x0f
+	LDI TEMP,_DRV_SD_CMD24
+	STD Z+0x00,TEMP
+	STD Z+0x01,TEMP_EH
+	STD Z+0x02,TEMP_EL
+	STD Z+0x03,TEMP_H
+	STD Z+0x04,TEMP_L
+	LDI TEMP_L,0x05
+
+;LDI YL,_DRV_SD_VAR_UPTIME_START
+;LDI YH,0x00
+;ADD YL,ZL
+;MCALL C5_UPTIME_COPY
+;TODO посчитать дельту времени
+;TODO проверить статус, передать CRC16
+
+	MCALL _DRV_SD__SEND_CMD
+	MCALL _DRV_SD_GET_R1
+;MCALL C5_UPTIME_COPY
+	CPI ACCUM,0x00
+	BRNE _DRV_SD_OP_READ_BLOCK__FAIL
+	MOV YH,ZH
+	MOV YL,ZL
+	LDI TEMP_H,high(512)
+	LDI TEMP_L,low(512)
+	;MCALL _DRV_SD_SET_BLOCK
+	SBI PORTB,SS & 0x0f
+	MOV YH,ZH
+	MOV YL,ZL
+_DRV_SD_OP_WRITE_BLOCK__FAIL:
+_DRV_SD_OP_WRITE_BLOCK__END:
+	SBI PORTB,SS & 0x0f
+
+	POP_Z
+	POP TEMP_L
+	POP TEMP_H
+	POP TEMP
+	RET
 
 ;--------------------------------------------------------
 _DRV_SD__SEND_ACMD:
@@ -508,7 +634,7 @@ _DRV_SD__SEND_CMD:
 	MOV XL,ZL
 	LDI_Y CRC7_730
 	MOV LOOP_CNTR,TEMP_L
-	MCALL CRC_BLOCK_X8
+	MCALL CRC8_BLOCK
 	ADD XL,TEMP_L
 	CLR LOOP_CNTR
 	ADC XH,LOOP_CNTR
@@ -635,6 +761,8 @@ _DRV_SD_GET_BLOCK:
 ;--------------------------------------------------------
 	PUSH TRY_CNTR
 	PUSH TEMP
+	PUSH TEMP_EH
+	PUSH TEMP_EL
 	PUSH_Y
 
 	MOV XH,TEMP_H
@@ -644,31 +772,57 @@ _DRV_SD_GET_BLOCK__BEGIN_LOOP:
 	MCALL _DRV_SD_BYTE_RECV
 	CPI TEMP,0xfe
 	BREQ _DRV_SD_GET_BLOCK__DATA
+_DRV_SD_GET_BLOCK__NO_ERROR:
 	DEC TRY_CNTR
 	BRNE _DRV_SD_GET_BLOCK__BEGIN_LOOP
 	RJMP _DRV_SD_GET_BLOCK__FAIL
 
 _DRV_SD_GET_BLOCK__DATA:
 	MCALL _DRV_SD_BYTE_RECV
-	CPI TEMP,0xfd
-	BREQ _DRV_SD_GET_BLOCK__DONE
+;	CPI TEMP,0xfd
+;	BREQ _DRV_SD_GET_BLOCK__DONE
 	ST Y+,TEMP
 	SUBI XL,0x01
 	SBCI XH,0x00
-	BREQ _DRV_SD_GET_BLOCK__DONE
-	RJMP _DRV_SD_GET_BLOCK__DATA
+	CPI XH,0x00
+	BRNE _DRV_SD_GET_BLOCK__DATA
+	CPI XL,0x00
+	BRNE _DRV_SD_GET_BLOCK__DATA
 _DRV_SD_GET_BLOCK__DONE:
+MCALL _DRV_SD_BYTE_RECV
+MCALL C5_LOG_BYTE
+MCALL _DRV_SD_BYTE_RECV
+MCALL C5_LOG_BYTE
 	SUB TEMP_L,XL
 	SBC TEMP_H,XH
+
+	POP_X
+	PUSH_X
+	LDI TEMP_EH,0x00
+	LDI TEMP_EL,0x00
+	LDI YH,high(CRC16_XMODEM)
+	LDI YL,low(CRC16_XMODEM)
+	MCALL CRC16_BLOCK
+MOV TEMP,TEMP_EH
+COM TEMP
+MCALL C5_LOG_BYTE
+MOV TEMP,TEMP_EL
+COM TEMP
+MCALL C5_LOG_BYTE
+
+
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
 		LDI_Y _DRV_SD_LOG_STR_BLOCK|0x8000
 		MCALL C5_LOG_STR
+		LDI TEMP,'['
+		MCALL C5_LOG_CHAR
+		MCALL C5_LOG_WORD
+		LDI TEMP,']'
+		MCALL C5_LOG_CHAR
 		POP_Y
 		PUSH_Y
-		MOV TEMP,TEMP_L
-		MCALL C5_LOG_BYTES
-		MCALL C5_LOG_CR
+		MCALL C5_LOG_RAMDUMP
 	.endif
 .endif
 	RJMP _DRV_SD_GET_BLOCK__END
@@ -678,6 +832,8 @@ _DRV_SD_GET_BLOCK__FAIL:
 _DRV_SD_GET_BLOCK__END:
 
 	POP_Y
+	POP TEMP_EL
+	POP TEMP_EH
 	POP TEMP
 	POP TRY_CNTR
 	RET

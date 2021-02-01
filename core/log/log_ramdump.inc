@@ -1,9 +1,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;12.06.2020  w5277c@gmail.com        Начало
-;02.08.2020  w5277c@gmail.com        Разбиение на файлы
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;12.06.2020  w5277c@gmail.com			Начало
+;02.08.2020  w5277c@gmail.com			Разбиение на файлы
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;01.02.2021  w5277c@gmail.com			Вывод по 16 байт, 16 бит длина
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_RAMDUMP
 .else
@@ -28,7 +29,7 @@ _LOGSTR_RAMDUMP3:
 C5_LOG_RAMDUMP:
 ;--------------------------------------------------------
 ;Логируем блок памяти
-;IN: Z - адрес начала блока, TEMP - длина блока
+;IN: Z - адрес начала блока, TEMP_H/L - длина блока
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP_H
@@ -36,25 +37,32 @@ C5_LOG_RAMDUMP:
 	PUSH TEMP
 	PUSH LOOP_CNTR
 
+	PUSH TEMP_H
+	PUSH TEMP_L
 	MOV TEMP_H,ZH
 	MOV TEMP_L,ZL
 	C5_LOG_ROMSTR _LOGSTR_RAMDUMP1
 	MCALL C5_LOG_WORD
 	C5_LOG_ROMSTR _LOGSTR_RAMDUMP2
-	MCALL C5_LOG_BYTE
+	POP TEMP_L
+	POP TEMP_H
+	MCALL C5_LOG_WORD
 	C5_LOG_ROMSTR _LOGSTR_RAMDUMP3
-	MOV TEMP_H,TEMP
-	MOV TEMP_L,TEMP
+	MOV TEMP_EH,TEMP_H
+	MOV TEMP_EL,TEMP_L
 
 _C5_LOG_RAMDUMP__LOOP:
 	PUSH_Z
-	LDI LOOP_CNTR,0x08
+	LDI LOOP_CNTR,0x10
 _C5_LOG_RAMDUMP__HEX_LOOP:
 	CPI TEMP_H,0x00
+	BRNE PC+0x03
+	CPI TEMP_L,0x00
 	BREQ _C5_LOG_RAMDUMP__HEX_NO_DATA
 	LD TEMP,Z+
 	MCALL C5_LOG_BYTE
-	DEC TEMP_H
+	SUBI TEMP_L,0x01
+	SBCI TEMP_H,0x00
 	RJMP _C5_LOG_RAMDUMP__HEX_NEXT
 _C5_LOG_RAMDUMP__HEX_NO_DATA:
 	LDI TEMP,'-'
@@ -67,11 +75,14 @@ _C5_LOG_RAMDUMP__HEX_NEXT:
 	BRNE _C5_LOG_RAMDUMP__HEX_LOOP
 	POP_Z
 
-	LDI LOOP_CNTR,0x08
+	LDI LOOP_CNTR,0x10
 _C5_LOG_RAMDUMP__ASCII_LOOP:
-	CPI TEMP_L,0x00
+	CPI TEMP_EH,0x00
+	BRNE PC+0x03
+	CPI TEMP_EL,0x00
 	BREQ _C5_LOG_RAMDUMP__ASCII_NO_DATA
-	DEC TEMP_L
+	SUBI TEMP_EL,0x01
+	SBCI TEMP_EH,0x00
 	LD TEMP,Z+
 	CPI TEMP,0x20
 	BRCS _C5_LOG_RAMDUMP__ASCII_NOT_PRINTABLE_DATA
@@ -90,9 +101,10 @@ _C5_LOG_RAMDUMP__ASCII_NEXT:
 	DEC LOOP_CNTR
 	BRNE _C5_LOG_RAMDUMP__ASCII_LOOP
 
+	CPI TEMP_H,0x00
+	BRNE PC+0x03
 	CPI TEMP_L,0x00
 	BREQ _C5_LOG_RAMDUMP__END
-	MOV TEMP_H,TEMP_L
 	MCALL C5_LOG_CR
 	RJMP _C5_LOG_RAMDUMP__LOOP
 _C5_LOG_RAMDUMP__END:

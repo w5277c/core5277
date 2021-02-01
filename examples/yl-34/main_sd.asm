@@ -11,14 +11,14 @@
 	;Важные, но не обязательные параметры ядра
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
-	.SET	c5_DRIVERS_QNT							= 2
+	.SET	C5_DRIVERS_QNT							= 2
 	.SET	C5_TASKS_QNT							= 1
 	.SET	TIMERS									= 1	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
-	.SET	BUFFER_SIZE								= 0x00;0200;Размер общего буфера (буфер для SD)
+	.SET	BUFFER_SIZE								= 0x200;Размер общего буфера (буфер для SD)
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_PNC
-	.SET	INPUT_PORT								= PD2
+	.SET	INPUT_PORT								= PB1
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -34,6 +34,7 @@
 	.include	"./core/drivers/sd/sd_log_ocr.inc"
 	.include	"./core/drivers/sd/sd_log_cid.inc"
 	.include	"./core/drivers/sd/sd_log_csd.inc"
+	.include	"./core/log/log_ramdump.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -78,6 +79,7 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 _TASK__LOOP:
+
 	MCALL C5_LOG_CR
 
 	LDI TEMP,PID_SD_DRV
@@ -119,9 +121,21 @@ _TASK__LOOP:
 	MCALL DRV_SD_LOG_CSD
 .endif
 
+	MCALL INPUT_GET_CHAR
+	MCALL C5_LOG_CHAR
+
+	LDI TEMP,PID_SD_DRV
+	LDI FLAGS,DRV_SD_OP_READ_BLOCK
+	LDI TEMP_EH,0x7f													;TEMP_EH/EL/H/L-номер блока
+	LDI TEMP_EL,0x00
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x10
+	MCALL C5_EXEC
+
 _TASK__REPEATE:
 	MCALL INPUT_GET_CHAR
-MCALL C5_LOG_CHAR
+	MCALL C5_LOG_CHAR
+
 	RJMP _TASK__LOOP
 
 ;Есть проблема с памятью. Для операций чтения и записи необходимо выделить буфер.

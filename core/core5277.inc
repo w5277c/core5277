@@ -14,6 +14,7 @@
 ;22.12.2020	w5277c@gmail.com			Исправлена работа TIMER-TASK
 ;06.01.2021	w5277c@gmail.com			v0.2.9	Исправлена критическая ошибка в _C5_RESUME (перетирался SREG задачи)
 ;22.01.2021	w5277c@gmail.com			v0.3.0	Различные мелкие (и не очень) изменения
+;01.02.2021	w5277c@gmail.com			v0.3.1	Учтено разное начало RAM, мелкие доработки
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -101,14 +102,14 @@
 	.EQU	_CFL_DISPATCHER_ORDER				= 0x02			;Заявка на отработку диспетчера(формируется когда диспетчер заблокирован)
 
 ;---RAM-OFFSETS------------------------------------------
-	.EQU	_C5_UPTIME								= 0x100			;5B - отсчет времени (~75 лет при тике каждые 0.002мс)
-	.EQU	_C5_CORE_STACK							= 0x105			;2B - хранит смещение стека ядра
-	.EQU	_C5_TOP_OF_STACK						= 0x107			;2B - хранит вершину стека
-	.EQU	_C5_TOP_OF_FREE_RAM					= 0x109			;2B - хранит вершину свободной памяти
-	.EQU	_C5_INPUT_CHAR							= 0x10b			;1B - хранит полученный из ввода символ
-	.EQU	_C5_FLAGS								= 0x10c			;4B - флагов (32 флага)
-	.EQU	_C5_MAIN_TIMER_CNTR					= 0x110			;1B - счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_TIMERS								= 0x111			;XB - таблица таймеров(TIMERS*5)
+	.EQU	_C5_UPTIME								= RAMSTART+0x00;5B - отсчет времени (~75 лет при тике каждые 0.002мс)
+	.EQU	_C5_CORE_STACK							= RAMSTART+0x05;2B - хранит смещение стека ядра
+	.EQU	_C5_TOP_OF_STACK						= RAMSTART+0x07;2B - хранит вершину стека
+	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B - хранит вершину свободной памяти
+	.EQU	_C5_INPUT_CHAR							= RAMSTART+0x0b;1B - хранит полученный из ввода символ
+	.EQU	_C5_FLAGS								= RAMSTART+0x0c;4B - флагов (32 флага)
+	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x10;1B - счетчик таймера ядра (каждые 0.000050с)
+	.EQU	_C5_TIMERS								= RAMSTART+0x11;XB - таблица таймеров(TIMERS*5)
 																			;TIMERS*5
 	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS+TIMERS*5
 																			;XB - таблица прерываний (_C5_IR_QNT*3 для каждгого прерывания, исключая RESET)
@@ -118,18 +119,20 @@
 																			;XB - заголовки задач (X=C5_TASKS_QNT*_C5_TASK_HEADER_SIZE)
 	.EQU	_C5_RESOURCE_QUEUE					= _C5_TASKS_HEADER+C5_TASKS_QNT*_C5_TASK_HEADER_SIZE
 																			;XB - очередь задач к ресурсам(1b - RES_ID, 1b - TASK_ID...)
-	.EQU	_C5_FREE_RAM							= _C5_RESOURCE_QUEUE+_C5_RES_QUEUE_SIZE
-	.EQU	C5_BUFFER								= RAMEND-(_C5_STACK_SIZE+BUFFER_SIZE)
-	.EQU	_C5_STACK_END							= C5_BUFFER	;XB - стек ядра, далее буфер, стек задач и выделяемая память
+	.EQU	C5_BUFFER								= _C5_RESOURCE_QUEUE + _C5_RES_QUEUE_SIZE
+	.EQU	_C5_FREE_RAM							= C5_BUFFER+BUFFER_SIZE
+	.EQU	_C5_STACK_END							= RAMEND-_C5_STACK_SIZE	;XB - стек ядра, далее буфер, стек задач и выделяемая память
 														;TODO проверить что стек не перетирает первый байт буфера
 .IF AVRA == 0x01
+	.MESSAGE "######## BUFFER OFFSET:",C5_BUFFER
 	.IF BUFFER_SIZE > 0x00
 		.MESSAGE "######## BUFFER SIZE:",BUFFER_SIZE
 	.ENDIF
-	.MESSAGE "######## AVAILABLE RAM:",C5_BUFFER-(_C5_FREE_RAM+_C5_RAM_BORDER_SIZE)
+	.MESSAGE "######## AVAILABLE RAM:",((_C5_STACK_END-_C5_FREE_RAM)-_C5_RAM_BORDER_SIZE)
 	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
 	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
+	.MESSAGE "######## STACK END OFFSET:",_C5_STACK_END
 	.MESSAGE "######## TASK ENDPOINT OFFSET:",_C5_TASK_ENDPOINT
 	.MESSAGE "######## CORE FREQ:",CORE_FREQ
 	.IF TIMERS_SPEED == TIMERS_SPEED_50NS
@@ -217,7 +220,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"core5277_v0.3.0",0x0d,0x0a,0x00
+	.db   0x0d,0x0a,"core5277_v0.3.1",0x0d,0x0a,0x00
 	.INCLUDE "./core/log/log_init.inc"
 	.INCLUDE	"./core/log/log_romstr.inc"
 	.INCLUDE	"./core/log/log_tasksdump.inc"

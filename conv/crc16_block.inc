@@ -1,40 +1,45 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;19.01.2021  w5277c@gmail.com			Начало
+;01.02.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CRC_BLOCK_X8
+.ifdef DEF_CRC16_BLOCK
 .else
-.set DEF_CRC_BLOCK_X8 = 1
+.set DEF_CRC16_BLOCK = 1
 
 ;--------------------------------------------------------
-CRC_BLOCK_X8:
+CRC16_BLOCK:
 ;--------------------------------------------------------
-;Подсчет блока CRC
-;IN: X-адрес начала блока, LOOP_CNTR - длина
+;Подсчет блока CRC(16 бит)
+;IN: X-адрес начала блока, TEMP_H/L-длина
 ;Y-адрес процедуры для вычисления байта
-;OUT: ACCUM - сумма
+;OUT: TEMP_EH,EL-сумма
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH LOOP_CNTR
+	PUSH TEMP_H
+	PUSH TEMP_L
 	PUSH TEMP
-	CLR ACCUM
 
-_CRCX_BLOCK_X8__LOOP:
-	LDI TEMP,low(_CRC_BLOCK_X8__CODEPOINT)
+_CRC16_BLOCK__LOOP:
+	LDI TEMP,low(_CRC16_BLOCK__CODEPOINT)
 	PUSH TEMP
-	LDI TEMP,high(_CRC_BLOCK_X8__CODEPOINT)
+	LDI TEMP,high(_CRC16_BLOCK__CODEPOINT)
 	PUSH TEMP
 	PUSH YL
 	PUSH YH
 	LD TEMP,X+
 	RET
-_CRC_BLOCK_X8__CODEPOINT:
-	DEC LOOP_CNTR
-	BRNE _CRCX_BLOCK_X8__LOOP
+_CRC16_BLOCK__CODEPOINT:
+	SUBI TEMP_L,0x01
+	SBCI TEMP_H,0x00
+	CPI TEMP_L,0x00
+	BRNE _CRC16_BLOCK__LOOP
+	CPI TEMP_H,0x00
+	BRNE _CRC16_BLOCK__LOOP
 
 	POP TEMP
-	POP LOOP_CNTR
+	POP TEMP_L
+	POP TEMP_H
 	POP_X
 	RET
 .endif

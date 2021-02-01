@@ -23,7 +23,7 @@
 	;Дополнительно
 	.include	"./core/log/log_byte.inc"
 	.include	"./core/ram/ram_realloc.inc"
-	.include	"./conv/crc_block_x8.inc"
+	.include	"./conv/crc8_block.inc"
 	.include	"./conv/crc7_730.inc"
 	;---
 
@@ -85,7 +85,7 @@ _TASK__LOOP:
 	MOV XL,ZL
 	LDI YH,high(CRC7_730)
 	LDI YL,low(CRC7_730)
-	MCALL CRC_BLOCK_X8
+	MCALL CRC8_BLOCK
 
 	;LSR ACCUM
 	;LSL ACCUM
