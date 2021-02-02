@@ -30,12 +30,23 @@ _DRV_SD_LOG_STR_OCR_31:
 ;--------------------------------------------------------
 DRV_SD_LOG_OCR:
 ;Логирование OCR
-;IN: Z-адрес на блок данных
+;IN: X-адрес на блок данных
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_Y
 	PUSH TEMP
 	PUSH ACCUM
+
+	MOV ZH,XH
+	MOV ZL,XL
+
+PUSH TEMP_H
+PUSH TEMP_L
+MOV TEMP_H,XH
+MOV TEMP_H,XL
+MCALL C5_LOG_WORD
+POP TEMP_L
+POP TEMP_H
 
 	LDI_Y _DRV_SD_LOG_STR_OCR|0x8000
 	MCALL C5_LOG_STR

@@ -26,13 +26,16 @@ _DRV_SD_LOG_STR_CID_FIELDS:
 ;--------------------------------------------------------
 DRV_SD_LOG_CID:
 ;Логирование CID
-;IN: Z-адрес на блок данных
+;IN: X-адрес на блок данных
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_Y
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
+
+	MOV ZH,XH
+	MOV ZL,XL
 
 	LDI_Y _DRV_SD_LOG_STR_CID|0x8000
 	MCALL C5_LOG_STR

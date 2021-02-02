@@ -17,6 +17,8 @@
 	.include	"./core/log/log_byte.inc"
 	.include	"./core/log/log_cr.inc"
 	.include	"./core/log/log_str_el.inc"
+	.include	"./core/uptime_copy.inc"
+	.include	"./prim/prim_sub.inc"
 
 _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.db	"Got Ver1.X SD card",0x00,"Got Ver2.00 or later SC SD card",0x00,"Got Ver2.00 or later HC/EC SD card",0x00
@@ -30,6 +32,9 @@ _DRV_SD_LOG_STR_R3R7:
 	.db "<R3/R7:",0x00
 _DRV_SD_LOG_STR_BLOCK:
 	.db "<BLK:",0x00
+_DRV_SD_LOG_STR_GETTING_BLOCK_ERROR:
+	.db "Getting block error",0x0d,0x0a,0x00
+
 .endif
 
 ;TODO не использовать внутренний буфер если выделен внешний
@@ -114,34 +119,22 @@ DRV_SD_INIT:
 ;OUT: ACCUM - R1 ответ или
 ;TEMP_H/L-R2 ответ
 ;--------------------------------------------------------
+	PUSH_X
 	PUSH_Z
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 
-	PUSH TEMP_H
-	PUSH TEMP_L
-	LDD TEMP_H,Z+_DRV_SD_EXT_BUFFER_ADDR+0x00
-	LDD TEMP_L,Z+_DRV_SD_EXT_BUFFER_ADDR+0x01
-	CPI TEMP_H,0x00
-	BRNE _DRV_SD_MAIN__GLOBAL_BUFFER
-	CPI TEMP_L,0x00
-	BREQ _DRV_SD_MAIN__LOCAL_BUFFER
-_DRV_SD_MAIN__GLOBAL_BUFFER:
-	PUSH TEMP_H
-	PUSH TEMP_L
-;	LDD TEMP_EH,Z+_DRV_SD_VAR_BLOCK_SIZE+0x00
-;	LDD TEMP_EL,Z+_DRV_SD_VAR_BLOCK_SIZE+0x01
-	POP ZL
-	POP ZH
-	RJMP _DRV_SD_MAIN__CONTINUE
-_DRV_SD_MAIN__LOCAL_BUFFER:
-;	LDD TEMP_EH,Z+_DRV_SD_VAR_BLOCK_SIZE+0x00
-;	LDD TEMP_EL,Z+_DRV_SD_VAR_BLOCK_SIZE+0x01
-	ADIW ZL,_DRV_SD_BUFFER
+	LDD XH,Z+_DRV_SD_EXT_BUFFER_ADDR+0x00
+	LDD XL,Z+_DRV_SD_EXT_BUFFER_ADDR+0x01
+	CPI XH,0x00
+	BRNE _DRV_SD_MAIN__CONTINUE
+	CPI XL,0x00
+	BRNE _DRV_SD_MAIN__CONTINUE
+	MOV XH,ZH
+	MOV XL,ZL
+	ADIW XL,_DRV_SD_BUFFER
 _DRV_SD_MAIN__CONTINUE:
-	POP TEMP_L
-	POP TEMP_H
 
 	CPI FLAGS,DRV_SD_OP_INIT
 	BRNE PC+0x04
@@ -170,6 +163,7 @@ _DRV_SD_MAIN__CONTINUE:
 _DRV_SD__END:
 
 	POP_Z
+	POP_X
 	RET
 
 
@@ -177,8 +171,8 @@ _DRV_SD__END:
 _DRV_SD_OP_INIT:
 ;--------------------------------------------------------
 ;Инициализация карты
+;IN: Z-адрес на переменные, X-адрес на буфер
 ;OUT: ACCUM-R1 ответ, FLAGS - версия
-;Y-адрес на данные OCR
 ;TEMP_H/L - размер блока для чтения,
 ;TEMP_EH/EL - размер блока для записи,
 ;FLAGS-поддержка partial (0-бит чтение, 1-бит запись),
@@ -187,8 +181,10 @@ _DRV_SD_OP_INIT:
 	PUSH TEMP
 	PUSH LOOP_CNTR
 	PUSH_Z
+	PUSH_Y
 
 	CLR FLAGS
+
 
 	CBI PORTB,SCK & 0x0f
 	SBI DDRB,MOSI & 0x0f
@@ -208,15 +204,17 @@ _DRV_SD_OP_INIT__LOOP:
 	CBI PORTB,SS & 0x0f
 
 	LDI TEMP,_DRV_SD_CMD0
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
 	LDI TEMP_L,0x01
@@ -227,20 +225,21 @@ _DRV_SD_OP_INIT__LOOP:
 	RJMP _DRV_SD_OP_INIT__END
 	CBI PORTB,SS & 0x0f
 
+
 	LDI TEMP,_DRV_SD_CMD8
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x01
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x52
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
-	MOV YH,ZH
-	MOV YL,ZL
 	MCALL _DRV_SD_GET_R3R7
 	SBI PORTB,SS & 0x0f
 	CPI ACCUM,0x05
@@ -255,23 +254,23 @@ _DRV_SD_OP_INIT__LOOP:
 _DRV_SD_OP_INIT__WAIT:
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_ACMD41
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x40
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_ACMD
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_INIT__END
+	BREQ PC+0x02
+	RJMP _DRV_SD_OP_INIT__END
 	MCALL _DRV_SD_GET_R1
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x10
-	MCALL _DRV_SD_GET_BLOCK
 	SBI PORTB,SS & 0x0f
 	CPI ACCUM,0x00
 	BREQ _DRV_SD_OP_INIT_SD_READY
@@ -290,22 +289,22 @@ _DRV_SD_OP_INIT_SD_READY:
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD58
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
-	MOV YH,ZH
-	MOV YL,ZL
 	MCALL _DRV_SD_GET_R3R7
 	SBI PORTB,SS & 0x0f
-	LD TEMP,Z
+	LD TEMP,X
 	SBRC TEMP,0x01
 	LDI FLAGS,DRV_SD_FLAG_VER2SC
 	SBRS TEMP,0x01
@@ -319,9 +318,6 @@ _DRV_SD_OP_INIT__CMD58_SKIP:
 	SBRC FLAGS,0x07
 	LDI ACCUM,0xff
 
-_DRV_SD_OP_INIT__END:
-	SBI PORTB,SS & 0x0f
-
 .ifdef LOGGING_PORT
 	MCALL C5_LOG_CR
 	LDI_Y _DRV_SD_LOG_STR_SD_CARD_VERSIONS|0x8000
@@ -332,9 +328,10 @@ _DRV_SD_OP_INIT__END:
 	MCALL C5_LOG_CR
 .endif
 
-	MOV YH,ZH
-	MOV YL,ZL
+_DRV_SD_OP_INIT__END:
+	SBI PORTB,SS & 0x0f
 
+	POP_Y
 	POP_Z
 	POP LOOP_CNTR
 	POP TEMP
@@ -344,36 +341,45 @@ _DRV_SD_OP_INIT__END:
 _DRV_SD_OP_GET_OCR:
 ;--------------------------------------------------------
 ;Получить OCR
-;IN: Z-адрес на выделенную память
+;IN: X-адрес на буффер
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буффер драйвера (где будет записан OCR)
+;Y-адрес на буфер
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
-	PUSH_Z
+	PUSH_X
+
+	MOV YH,XH
+	MOV YL,XL
+
+PUSH TEMP_H
+PUSH TEMP_L
+MOV TEMP_H,XH
+MOV TEMP_L,XL
+MCALL C5_LOG_WORD
+POP TEMP_L
+POP TEMP_H
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD58
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
-	MOV YH,ZH
-	MOV YL,ZL
 	MCALL _DRV_SD_GET_R3R7
 	SBI PORTB,SS & 0x0f
-	MOV YH,ZH
-	MOV YL,ZL
 _DRV_SD_OP_GET_OCR__END:
 
-	POP_Z
+	POP_X
 	POP TEMP_L
 	POP TEMP
 	RET
@@ -382,43 +388,42 @@ _DRV_SD_OP_GET_OCR__END:
 _DRV_SD_OP_GET_CSD:
 ;--------------------------------------------------------
 ;Получить CSD
-;IN: Z-адрес на выделенную память
+;IN: X-адрес на выделенную память
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буффер драйвера (где будет записан CSD)
+;Y-адрес на буфер
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
-	PUSH_Z
+	PUSH_X
+
+	MOV YH,XH
+	MOV YL,XL
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD9
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_GET_CSD__FAIL
-	MOV YH,ZH
-	MOV YL,ZL
+	BRNE _DRV_SD_OP_GET_CSD__END
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x10
 	MCALL _DRV_SD_GET_BLOCK
-	SBI PORTB,SS & 0x0f
-	MOV YH,ZH
-	MOV YL,ZL
-_DRV_SD_OP_GET_CSD__FAIL:
 _DRV_SD_OP_GET_CSD__END:
-SBI PORTB,SS & 0x0f
+	SBI PORTB,SS & 0x0f
 
-	POP_Z
+	POP_X
 	POP TEMP_L
 	POP TEMP
 	RET
@@ -427,43 +432,42 @@ SBI PORTB,SS & 0x0f
 _DRV_SD_OP_GET_CID:
 ;--------------------------------------------------------
 ;Получить CID
-;IN: Z-адрес на выделенную память
+;IN: X-адрес на выделенную память
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буффер драйвера (где будет записан CID)
+;Y-адрес на буфер
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
-	PUSH_Z
+	PUSH_X
+
+	MOV YH,XH
+	MOV YL,XL
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD10
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_GET_CID__FAIL
-	MOV YH,ZH
-	MOV YL,ZL
+	BRNE _DRV_SD_OP_GET_CID__END
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x10
 	MCALL _DRV_SD_GET_BLOCK
-	SBI PORTB,SS & 0x0f
-	MOV YH,ZH
-	MOV YL,ZL
-_DRV_SD_OP_GET_CID__FAIL:
 _DRV_SD_OP_GET_CID__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_Z
+	POP_X
 	POP TEMP_L
 	POP TEMP
 	RET
@@ -473,50 +477,76 @@ _DRV_SD_OP_GET_CID__END:
 _DRV_SD_OP_READ_BLOCK:
 ;--------------------------------------------------------
 ;Читаем блок данных
-;IN: Z-адрес на внешний буфер 512 байт
+;IN: Z-адрес на переменные, X-адрес на буфер
 ;TEMP_EH/EL/H/L-номер блока
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буффер драйвера (где будет записан блок)
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_Z
+	PUSH_X
+	PUSH_Y
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD17
-	STD Z+0x00,TEMP
-	STD Z+0x01,TEMP_EH
-	STD Z+0x02,TEMP_EL
-	STD Z+0x03,TEMP_H
-	STD Z+0x04,TEMP_L
+	PUSH_X
+	ST X+,TEMP
+	ST X+,TEMP_EH
+	ST X+,TEMP_EL
+	ST X+,TEMP_H
+	ST x+,TEMP_L
+	POP_X
 	LDI TEMP_L,0x05
 
-;LDI YL,_DRV_SD_VAR_UPTIME_START
-;LDI YH,0x00
-;ADD YL,ZL
-;MCALL C5_UPTIME_COPY
+	LDI_Y _DRV_SD_VAR_UPTIME_START
+	ADD YL,ZL
+	ADC YH,ZH
+	MCALL C5_UPTIME_COPY
+
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
-;MCALL C5_UPTIME_COPY
-;TODO посчитать дельту времени
-;TODO проверить CRC. Проверить статус?
+
+	PUSH_X
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH LOOP_CNTR
+	MCALL C5_LOG_CR
+	LDI_Y _DRV_SD_VAR_UPTIME_END
+	ADD YL,ZL
+	ADC YH,ZH
+	MCALL C5_UPTIME_COPY
+	MOV XH,YH
+	MOV XL,YL
+	LDI LOOP_CNTR,UPTIME
+	LDI_Y _DRV_SD_VAR_UPTIME_START
+	ADD YL,ZL
+	ADC YH,ZH
+	MCALL PRIM_SUB
+	MOV TEMP_H,XH
+	MOV TEMP_L,XL
+	LSL TEMP_L
+	ROL TEMP_H
+	MCALL C5_LOG_NUMX16
+	LDI TEMP,'m'
+	MCALL C5_LOG_CHAR
+	LDI TEMP,'s'
+	MCALL C5_LOG_CHAR
+	MCALL C5_LOG_CR
+	POP LOOP_CNTR
+	POP TEMP_L
+	POP TEMP_H
+	POP_X
 
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_READ_BLOCK__FAIL
-	MOV YH,ZH
-	MOV YL,ZL
+	BRNE _DRV_SD_OP_READ_BLOCK__END
 	LDI TEMP_H,high(512)
 	LDI TEMP_L,low(512)
 	MCALL _DRV_SD_GET_BLOCK
-	SBI PORTB,SS & 0x0f
-	MOV YH,ZH
-	MOV YL,ZL
-_DRV_SD_OP_READ_BLOCK__FAIL:
 _DRV_SD_OP_READ_BLOCK__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_Z
+	POP_Y
+	POP_X
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
@@ -526,23 +556,24 @@ _DRV_SD_OP_READ_BLOCK__END:
 _DRV_SD_OP_WRITE_BLOCK:
 ;--------------------------------------------------------
 ;Пишем блок данных
-;IN: Z-адрес на внешний буффер 512 байт
+;IN: X-адрес на буффер
 ;TEMP_EH/EL/H/L-номер блока
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буффер драйвера (где будет записан блок)
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_Z
+	PUSH_X
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD24
-	STD Z+0x00,TEMP
-	STD Z+0x01,TEMP_EH
-	STD Z+0x02,TEMP_EL
-	STD Z+0x03,TEMP_H
-	STD Z+0x04,TEMP_L
+	PUSH_X
+	ST X+,TEMP
+	ST X+,TEMP_EH
+	ST X+,TEMP_EL
+	ST X+,TEMP_H
+	ST x+,TEMP_L
+	POP_X
 	LDI TEMP_L,0x05
 
 ;LDI YL,_DRV_SD_VAR_UPTIME_START
@@ -556,20 +587,14 @@ _DRV_SD_OP_WRITE_BLOCK:
 	MCALL _DRV_SD_GET_R1
 ;MCALL C5_UPTIME_COPY
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_READ_BLOCK__FAIL
-	MOV YH,ZH
-	MOV YL,ZL
+	BRNE _DRV_SD_OP_WRITE_BLOCK__END
 	LDI TEMP_H,high(512)
 	LDI TEMP_L,low(512)
 	;MCALL _DRV_SD_SET_BLOCK
-	SBI PORTB,SS & 0x0f
-	MOV YH,ZH
-	MOV YL,ZL
-_DRV_SD_OP_WRITE_BLOCK__FAIL:
 _DRV_SD_OP_WRITE_BLOCK__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_Z
+	POP_X
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
@@ -579,31 +604,31 @@ _DRV_SD_OP_WRITE_BLOCK__END:
 _DRV_SD__SEND_ACMD:
 ;--------------------------------------------------------
 ;Отправка команды
-;IN: Z-адрес на команду, TEMP_L-длина команды (без CRC)
+;IN: X-адрес на команду, TEMP_L-длина команды (без CRC)
 ;OUT: ACCUM-R1 ответ
 ;--------------------------------------------------------
 	PUSH TEMP_L
 	PUSH_Y
-	PUSH_Z
+	PUSH_X
 
-	ADIW ZL,0x10
+	ADIW XL,0x10
 	LDI TEMP,_DRV_SD_CMD55
-	STD Z+0x00,TEMP
+	PUSH_X
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x01,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x02,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x03,TEMP
+	ST X+,TEMP
 	LDI TEMP,0x00
-	STD Z+0x04,TEMP
+	ST X+,TEMP
+	POP_X
 	LDI TEMP_L,0x05
-	MOV YH,ZH
-	MOV YL,ZL
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
 
-	POP_Z
+	POP_X
 	POP_Y
 	POP TEMP_L
 
@@ -616,25 +641,24 @@ _DRV_SD__SEND_ACMD:
 _DRV_SD__SEND_CMD:
 ;--------------------------------------------------------
 ;Отправка команды
-;IN: Z-адрес на команду, TEMP_L-длина команды (без CRC)
+;IN: X-адрес на команду, TEMP_L-длина команды (без CRC)
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_X
 	PUSH LOOP_CNTR
 	PUSH ACCUM
 	PUSH TEMP
 	PUSH TEMP_L
 
-
-	LD TEMP,Z
+	LD TEMP,X
 	ORI TEMP,0x40
-	ST Z,TEMP
+	ST X,TEMP
 
 	PUSH_X
-	MOV XH,ZH
-	MOV XL,ZL
+	PUSH_Y
 	LDI_Y CRC7_730
 	MOV LOOP_CNTR,TEMP_L
 	MCALL CRC8_BLOCK
+	POP_Y
 	ADD XL,TEMP_L
 	CLR LOOP_CNTR
 	ADC XH,LOOP_CNTR
@@ -649,8 +673,8 @@ _DRV_SD__SEND_CMD:
 		LDI TEMP,'>'
 		MCALL C5_LOG_CHAR
 		MOV TEMP,TEMP_L
-		MOV YH,ZH
-		MOV YL,ZL
+		MOV YH,XH
+		MOV YL,XL
 		MCALL C5_LOG_BYTES
 		MCALL C5_LOG_CR
 		POP_Y
@@ -662,7 +686,7 @@ _DRV_SD__SEND_CMD:
 
 	MOV LOOP_CNTR,TEMP_L
 _DRV_SD__SEND_CMD__LOOP:
-	LD TEMP,Z+
+	LD TEMP,X+
 	MCALL _DRV_SD_BYTE_SEND
 	DEC LOOP_CNTR
 	BRNE _DRV_SD__SEND_CMD__LOOP
@@ -673,7 +697,7 @@ _DRV_SD__SEND_CMD__LOOP:
 	POP TEMP
 	POP ACCUM
 	POP LOOP_CNTR
-	POP_Z
+	POP_X
 	RET
 
 
@@ -716,7 +740,7 @@ _DRV_SD_GET_R1__DONE:
 _DRV_SD_GET_R3R7:
 ;--------------------------------------------------------
 ;Прием R7
-;IN: Y-адрес на буфер
+;IN: X-адрес на буфер
 ;OUT: ACCUM
 ;--------------------------------------------------------
 	PUSH TRY_CNTR
@@ -739,12 +763,14 @@ _DRV_SD_GET_R7__GOT_R1:
 		PUSH_Y
 		LDI_Y _DRV_SD_LOG_STR_R3R7|0x8000
 		MCALL C5_LOG_STR
-		POP_Y
 		MOV TEMP,ACCUM
 		MCALL C5_LOG_BYTE
+		MOV YH,XH
+		MOV YL,XL
 		LDI TEMP,0x04
 		MCALL C5_LOG_BYTES
 		MCALL C5_LOG_CR
+		POP_Y
 	.endif
 .endif
 	POP TEMP
@@ -755,18 +781,20 @@ _DRV_SD_GET_R7__GOT_R1:
 _DRV_SD_GET_BLOCK:
 ;--------------------------------------------------------
 ;Прием блока данных
-;IN: Y-адрес на выделенную память
+;IN: X-адрес на выделенную память
 ;TEMP_H,L-максимальная длина данных
 ;OUT: TEMP_H,L-длина полученных данных
 ;--------------------------------------------------------
+	PUSH ACCUM
 	PUSH TRY_CNTR
 	PUSH TEMP
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH_Y
+	PUSH_X
 
-	MOV XH,TEMP_H
-	MOV XL,TEMP_L
+	MOV YH,TEMP_H
+	MOV YL,TEMP_L
 	LDI TRY_CNTR,0x10
 _DRV_SD_GET_BLOCK__BEGIN_LOOP:
 	MCALL _DRV_SD_BYTE_RECV
@@ -779,22 +807,19 @@ _DRV_SD_GET_BLOCK__NO_ERROR:
 
 _DRV_SD_GET_BLOCK__DATA:
 	MCALL _DRV_SD_BYTE_RECV
-;	CPI TEMP,0xfd
-;	BREQ _DRV_SD_GET_BLOCK__DONE
-	ST Y+,TEMP
-	SUBI XL,0x01
-	SBCI XH,0x00
-	CPI XH,0x00
+	ST X+,TEMP
+	SUBI YL,0x01
+	SBCI YH,0x00
+	CPI YH,0x00
 	BRNE _DRV_SD_GET_BLOCK__DATA
-	CPI XL,0x00
+	CPI YL,0x00
 	BRNE _DRV_SD_GET_BLOCK__DATA
-_DRV_SD_GET_BLOCK__DONE:
-MCALL _DRV_SD_BYTE_RECV
-MCALL C5_LOG_BYTE
-MCALL _DRV_SD_BYTE_RECV
-MCALL C5_LOG_BYTE
-	SUB TEMP_L,XL
-	SBC TEMP_H,XH
+	;Получаем CRC
+	MCALL _DRV_SD_BYTE_RECV
+	MOV ACCUM,TEMP
+	MCALL _DRV_SD_BYTE_RECV
+	SUB TEMP_L,YL
+	SBC TEMP_H,YH
 
 	POP_X
 	PUSH_X
@@ -803,13 +828,10 @@ MCALL C5_LOG_BYTE
 	LDI YH,high(CRC16_XMODEM)
 	LDI YL,low(CRC16_XMODEM)
 	MCALL CRC16_BLOCK
-MOV TEMP,TEMP_EH
-COM TEMP
-MCALL C5_LOG_BYTE
-MOV TEMP,TEMP_EL
-COM TEMP
-MCALL C5_LOG_BYTE
-
+	CP ACCUM,TEMP_EH
+	BRNE _DRV_SD_GET_BLOCK__FAIL
+	CP TEMP,TEMP_EL
+	BRNE _DRV_SD_GET_BLOCK__FAIL
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
@@ -820,22 +842,32 @@ MCALL C5_LOG_BYTE
 		MCALL C5_LOG_WORD
 		LDI TEMP,']'
 		MCALL C5_LOG_CHAR
-		POP_Y
-		PUSH_Y
+		PUSH_Z
+		MOV ZH,XH
+		MOV ZL,XL
 		MCALL C5_LOG_RAMDUMP
+		POP_Z
 	.endif
 .endif
 	RJMP _DRV_SD_GET_BLOCK__END
 _DRV_SD_GET_BLOCK__FAIL:
+.ifdef LOGGING_PORT
+	.if LOGGING_LEVEL >= LOGGING_LVL_ERR
+		LDI_Y _DRV_SD_LOG_STR_GETTING_BLOCK_ERROR|0x8000
+		MCALL C5_LOG_STR
+	.endif
+.endif
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 _DRV_SD_GET_BLOCK__END:
 
+	POP_X
 	POP_Y
 	POP TEMP_EL
 	POP TEMP_EH
 	POP TEMP
 	POP TRY_CNTR
+	POP ACCUM
 	RET
 
 ;--------------------------------------------------------
@@ -896,32 +928,24 @@ _DRV_SD_BYTE_RECV__LOOP:
 _DRV_SD_BYTES_RECV:
 ;--------------------------------------------------------
 ;Прием данных
-;IN: Y-адрес на выделенную память
+;IN: X-адрес на буффер
 ;TEMP-длина данных
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH LOOP_CNTR
-	PUSH_Y
+	PUSH_X
 
 	MOV LOOP_CNTR,TEMP
 _DRV_SD_BYTES_RECV__LOOP:
 	MCALL _DRV_SD_BYTE_RECV
-	ST Y+,TEMP
+	ST X+,TEMP
 	DEC LOOP_CNTR
 	BRNE _DRV_SD_BYTES_RECV__LOOP
 
-	POP_Y
+	POP_X
 	POP LOOP_CNTR
 	POP TEMP
 	RET
-
-
-
-
-
-
-
-
 
 ;--------------------------------------------------------
 _DRV_SD_WAIT:

@@ -100,13 +100,17 @@ _DRV_SD_LOG_STR_CSD_RSV:
 ;--------------------------------------------------------
 DRV_SD_LOG_CSD:
 ;Логирование CSD
-;IN: Z-адрес на блок данных
+;IN: X-адрес на блок данных
 ;--------------------------------------------------------
+	PUSH_Z
 	PUSH_Y
 	PUSH TEMP
 	PUSH TEMP_L
 	PUSH TEMP_H
 	PUSH ACCUM
+
+	MOV ZH,XH
+	MOV ZL,XL
 
 	LDI_Y _DRV_SD_LOG_STR_CSD|0x8000
 	MCALL C5_LOG_STR
@@ -368,6 +372,7 @@ _DRV_SD_LOG_CSD__FILE_FORMAT_DONE:
 	POP TEMP_L
 	POP TEMP
 	POP_Y
+	POP_Z
 	RET
 
 
