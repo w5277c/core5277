@@ -1,37 +1,34 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;12.06.2020  w5277c@gmail.com        Начало
-;01.08.2020  w5277c@gmail.com        Разбиение на файлы
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;02.02.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_LOG_BYTE
+.ifdef DEF_C5_TIME_MARK
 .else
-.set DEF_C5_LOG_BYTE = 1
-.ifdef LOGGING_PORT
+.set DEF_C5_TIME_MARK = 1
 
-.include	"./conv/byte_to_hex.inc"
-.include	"./core/log/log_char.inc"
+.include	"./core/uptime_copy.inc"
 
 ;--------------------------------------------------------
-C5_LOG_BYTE:
+C5_TIME_MARK:
 ;--------------------------------------------------------
-;Логирование байта
-;IN: TEMP - байт
+;Записываем в выделенную память временную метку (6 байт)
+;IN: PID,TEMP-смещение на выделенные 6 байт, для хранения
+;временной метки
 ;--------------------------------------------------------
+	PUSH_Z
+	PUSH_Y
 	PUSH TEMP
-	PUSH TEMP_H
-	PUSH TEMP_L
 
-	MCALL BYTE_TO_HEX
-	MOV TEMP,TEMP_H
-	MCALL C5_LOG_CHAR
-	MOV TEMP,TEMP_L
-	MCALL C5_LOG_CHAR
+	MCALL C5_RAM_OFFSET
+	MOV YL,TEMP
+	ADD YL,ZL
+	ADC YH,ZH
+	MCALL C5_UPTIME_COPY
+	_C5_TIMER_TCNT TEMP
+	STD Z+0x05,TEMP
 
-	POP TEMP_L
-	POP TEMP_H
 	POP TEMP
+	POP_Y
+	POP_Z
 	RET
-.endif
-.endif
