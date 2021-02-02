@@ -109,7 +109,8 @@
 	.EQU	_C5_INPUT_CHAR							= RAMSTART+0x0b;1B - хранит полученный из ввода символ
 	.EQU	_C5_FLAGS								= RAMSTART+0x0c;4B - флагов (32 флага)
 	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x10;1B - счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_TIMERS								= RAMSTART+0x11;XB - таблица таймеров(TIMERS*5)
+	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x11;1B - порог срабатывания таймера ядра
+	.EQU	_C5_TIMERS								= RAMSTART+0x12;XB - таблица таймеров(TIMERS*5)
 																			;TIMERS*5
 	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS+TIMERS*5
 																			;XB - таблица прерываний (_C5_IR_QNT*3 для каждгого прерывания, исключая RESET)
@@ -373,14 +374,18 @@ _C5_TIMER_A_IR__HF_NEXT:
 _C5_TIMER_IR__DISPATCHER:
 
 	;14t max
+	PUSH ACCUM
 	LDS TEMP,_C5_MAIN_TIMER_CNTR
-	DEC TEMP
+	INC TEMP
 	STS _C5_MAIN_TIMER_CNTR,TEMP
+	LDS ACCUM,_C5_MAIN_TIMER_TRHLD
+	CPI TEMP,ACCUM
+	POP ACCUM
 	BREQ PC+0x04
 	POP_Z
 	RJMP _C5_TIMER_A_IR__END
-	LDI TEMP,_C5_TIMER_PERIOD
-	STS _C5_MAIN_TIMER_CNTR,TEMP
+	SUBI TEMP,(0x100-_C5_TIMER_PERIOD)
+	ST C5_MAIN_TIMER_TRHLD,TEMP
 	;Тик 1 кванта
 	LDI ZL,0x01
 	LDS ZH,_C5_UPTIME+0x04
@@ -529,8 +534,10 @@ C5_REINIT:
 	STS _C5_FLAGS+0x07,TEMP
 
 	;Задаем счетчик основному таймеру
-	LDI TEMP,_C5_TIMER_PERIOD
+	LDI TEMP,0x00
 	STS _C5_MAIN_TIMER_CNTR,TEMP
+	LDI TEMP,_C5_TIMER_PERIOD
+	STS _C5_MAIN_TIMER_TRHLD,TEMP
 .IF TIMERS > 0x00
 	;Установка таймеров как не используемых
 	LDI TEMP_H,high(TIMERS*0x05)
