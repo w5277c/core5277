@@ -10,18 +10,18 @@
 
 .include	"./math/mul16x8.inc"
 .include	"./math/mul32x16.inc"
-.include	"./core/log_cr.inc"
-.include	"./core/log_str.inc"
-.include	"./core/log_numx16.inc"
-.include	"./core/log_numx32.inc"
+.include	"./core/log/log_cr.inc"
+.include	"./core/log/log_str.inc"
+.include	"./core/log/log_numx16.inc"
+.include	"./core/log/log_numx32.inc"
 
-_LOGSTR_TIME:
-	.db   0x0d,0x0a,"TIME:",0x00
-_LOGSTR_TIME_OVERFLOW:
+_LOG_TIME_STR_TIME:
+	.db   "TIME:",0x00
+_LOG_TIME_STR_OVERFLOW:
 	.db   ">100days",0x00
-_LOGSTR_TIME_US:
+_LOG_TIME_STR_US:
 	.db   "us",0x00
-_LOGSTR_TIME_MS:
+_LOG_TIME_STR_MS:
 	.db   "ms",0x00
 ;--------------------------------------------------------
 C5_LOG_TIME:
@@ -45,7 +45,8 @@ C5_LOG_TIME:
 	LDI TEMP,0x00
 	ADC ZH,TEMP
 
-	LDI_Y _LOGSTR_TIME|0x8000
+
+	LDI_Y _LOG_TIME_STR_TIME|0x8000
 	MCALL C5_LOG_STR
 
 	LDI ACCUM,0x00
@@ -59,9 +60,9 @@ C5_LOG_TIME:
 	OR ACCUM,TEMP_EL
 	LDD TEMP_H,Z+0x03
 	OR ACCUM,TEMP_H
+	LDD TEMP_L,Z+0x04
 	CPI ACCUM,0x00
 	BRNE _C5_LOG_TIME__MS
-	LDD TEMP_L,Z+0x04
 	CPI TEMP_L,0x06
 	BRCC _C5_LOG_TIME__MS
 _C5_LOG_TIME__US:
@@ -69,20 +70,21 @@ _C5_LOG_TIME__US:
 	LDD TEMP_L,Z+0x05
 	LDI TEMP,0x32
 	MCALL MUL16X8
-	MCALL LOG_NUMX16
-	LDI_Y _LOGSTR_TIME_US|0x8000
+	MCALL C5_LOG_NUMX16
+	LDI_Y _LOG_TIME_STR_US|0x8000
 	MCALL C5_LOG_STR
 	RJMP _C5_LOG_TIME__END
 _C5_LOG_TIME__OVERFLOW:
-	LDI_Y _LOGSTR_TIME_OVERFLOW|0x8000
+	LDI_Y _LOG_TIME_STR_OVERFLOW|0x8000
 	MCALL C5_LOG_STR
 	RJMP _C5_LOG_TIME__END
 _C5_LOG_TIME__MS:
-	LDI XH,0x00
-	LDI XL,0x02
-	MCALL MUL32X16
+	LSL TEMP_L
+	ROL TEMP_H
+	ROL TEMP_EL
+	ROL TEMP_EH
 	MCALL C5_LOG_NUMX32
-	LDI_Y _LOGSTR_TIME_MS|0x8000
+	LDI_Y _LOG_TIME_STR_MS|0x8000
 	MCALL C5_LOG_STR
 _C5_LOG_TIME__END:
 	MCALL C5_LOG_CR
