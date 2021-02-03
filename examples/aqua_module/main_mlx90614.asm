@@ -1,16 +1,20 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;13.09.2020  w5277c@gmail.com        Начало
-;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;13.09.2020  w5277c@gmail.com			Начало
+;28.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
 	.INCLUDE "./devices/atmega328.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
@@ -21,7 +25,7 @@
 	;Дополнительно
 	.include	"./core/log/log_sdnf.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/log/log_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -86,6 +90,6 @@ TASK__INFINITE_LOOP:
 	MOV TEMP_H,ZH
 	MOV TEMP_L,ZL
 	MCALL C5_LOG_SDNF
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 	RJMP TASK__INFINITE_LOOP
 

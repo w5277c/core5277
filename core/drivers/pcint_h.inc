@@ -28,7 +28,7 @@ DRV_PCINT_H_INIT:
 	;Выделяем память
 	LDI ACCUM,_DRV_PCINT_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
-	;Заполняем нулями
+	;Заполняем
 	MOV XH,ZH
 	MOV XL,ZL
 	MOV LOOP_CNTR,ACCUM
@@ -46,12 +46,11 @@ DRV_PCINT_H_INIT:
 	;Завершаем инициализацию
 	MCALL C5_READY
 ;--------------------------------------------------------
-;Основной код, активируем пин. Т.е. переводим
-;порт в состояние IN, разрешаем прерывания и
+;Основной код, разрешаем прерывания и
 ;включаем необходимые флаги
-;IN: ACCUM - порт(7-бит - включать подтяжку)
+;IN: ACCUM - порт
 ;Y - адрес обработчика
-;FLAGS - PID(0xFF - не использовать)
+;FLAGS - PID(0xFF - отключить)
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
@@ -83,29 +82,21 @@ DRV_PCINT_H_INIT:
 	LD ACCUM,Z
 	;Проверка на освобождение пина
 	CPI FLAGS,0xff
-	BREQ _DRV_PCINT_H_PROC__RESET_PIN
-	OR ACCUM,TEMP
-	RJMP _DRV_PCINT_H_PROC__CONTINUE
-_DRV_PCINT_H_PROC__RESET_PIN:
+	BRNE _DRV_PCINT_H_PROC__NOT_RESET
 	COM TEMP
 	AND ACCUM,TEMP
-_DRV_PCINT_H_PROC__CONTINUE:
 	ST Z,ACCUM
 	POP ACCUM
-	MOV TEMP,ACCUM
-	ANDI ACCUM,0x7f
-	;Порт в режим входа, подтяжка зависит от старшего бита
-	MCALL PORT_MODE_IN
-	SBRS TEMP,0x07
-	RJMP PC+0x04
-	MCALL PORT_SET_HI
-	RJMP PC+0x03
-	MCALL PORT_SET_LO
+	RJMP _DRV_PCINT_H_PROC__END
+_DRV_PCINT_H_PROC__NOT_RESET:
+	OR ACCUM,TEMP
+	ST Z,ACCUM
+	POP ACCUM
 	;Получаем состоянеи пина
 	MCALL PORT_GET
 	ROL TEMP_H
 
-	;Прлучаем адрес выделенной памяти
+	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 	PUSH_Z
 	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
@@ -201,12 +192,12 @@ _DRV_PCINT_H_EVENT:
 	PUSH_Z
 	PUSH TEMP
 	PUSH FLAGS
-	;Прлучаем адрес выделенной памяти
+	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 	MOV XH,ZH
 	MOV XL,ZL
 	;Получаем адрес предидущих состояний
-	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
+	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES+0x01)
 	ADD TEMP,LOOP_CNTR
 	ADD ZL,TEMP
 	CLR TEMP

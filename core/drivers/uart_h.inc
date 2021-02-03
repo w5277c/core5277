@@ -1,9 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.04.2020  w5277c@gmail.com        Начало
-;19.04.2020  w5277c@gmail.com        Адаптировано под изменения ядра
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;03.04.2020  w5277c@gmail.com			Начало
+;19.04.2020  w5277c@gmail.com			Адаптировано под изменения ядра
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include "./core/drivers/_uart.inc"
@@ -38,6 +38,16 @@
 
 	.EQU	_DRV_UART_H_RAM_SIZE					= 0x0f			;15 байт необходимо выделить
 
+	;---BAUDRATE_IDS---
+	.EQU	DRV_UART_H_BAUDRATE_4800			= 0xcf
+	.EQU	DRV_UART_H_BAUDRATE_9600			= 0x67
+	.EQU	DRV_UART_H_BAUDRATE_14400			= 0x44
+	.EQU	DRV_UART_H_BAUDRATE_19200			= 0x33
+	.EQU	DRV_UART_H_BAUDRATE_28800			= 0x22
+	.EQU	DRV_UART_H_BAUDRATE_38400			= 0x19
+	.EQU	DRV_UART_H_BAUDRATE_57600			= 0x10
+	.EQU	DRV_UART_H_BAUDRATE_76800			= 0x0c
+	.EQU	DRV_UART_H_BAUDRATE_115200			= 0x08
 
 ;--------------------------------------------------------
 DRV_UART_H_INIT:
@@ -108,13 +118,13 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	STD Z+_DRV_UART_H_NEXT_TIMEOUT,YH
 	;Отключаю прием и передачу
 	LDI TEMP,0x00
-	STS UCSRB,TEMP
+	STS UCSR0B,TEMP
 	;Сбрасываю флаги
-	LDI TEMP,(1<<RXC)|(1<<TXC)
-	STS UCSRA,TEMP
+	LDI TEMP,(1<<RXC0)|(1<<TXC0)
+	STS UCSR0A,TEMP
 	;Async, no parity, 1 stop bits, 8 data bits
-	LDI TEMP,low((1<<URSEL)|(1<<UCSZ01)|(1<<UCSZ00))		;URSEL необходим для ATmega16, в остальных должен быть равен 0
-	STS UCSRC,TEMP
+	LDI TEMP,low((1<<URSEL0)|(1<<UCSZ01)|(1<<UCSZ00))		;URSEL необходим для ATmega16, в остальных должен быть равен 0
+	STS UCSR0C,TEMP
 	;Устанавливаю векторы прерывания TX и RX
 	LDI ACCUM,C5_IR_UART_RX
 	LDI TEMP_H,high(_DRV_UART_H_RX_EVENT)
@@ -154,7 +164,7 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	;Запоминаем SRC
 	SBRS YH,0x07
 	RJMP PC+0x04
-	;Умножаем на 2 адрес рабоыт с ROM
+	;Умножаем на 2 адрес работы с ROM
 	LSL YL
 	ROL YH
 	ORI YH,0x80
@@ -181,10 +191,10 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	LDI TEMP,DRV_UART_ST_SENDING
 	STD Z+_DRV_UART_H_STATE,TEMP
 	;Разрешаю UART(передача)
-	LDS TEMP,UCSRB
+	LDS TEMP,UCSR0B
 	ANDI TEMP,low(~((1<<RXCIE0)|(1<<RXEN0)))
 	ORI TEMP,(1<<TXCIE0)|(1<<TXEN0)
-	STS UCSRB,TEMP
+	STS UCSR0B,TEMP
 	;Отправляю первый байт
 	MCALL _DRV_UART_H_TX_EVENT
 	;Жду окончания передачи
@@ -212,10 +222,10 @@ _DRV_UART_H_PROC__TX_SKIP:
 	LDI TEMP,DRV_UART_ST_WAIT_DATA
 	STD Z+_DRV_UART_H_STATE,TEMP
 	;Разрешаю UART(прием)
-	LDS TEMP,UCSRB
+	LDS TEMP,UCSR0B
 	ANDI TEMP,~((1<<TXCIE0)|(1<<TXEN0))
-	ORI TEMP,(1<<RXCIE)|(1<<RXEN)
-	STS UCSRB,TEMP
+	ORI TEMP,(1<<RXCIE0)|(1<<RXEN0)
+	STS UCSR0B,TEMP
 	;Запоминаем метку времени для отсчета таймаута ожидания данных
 	LDS YH,_C5_UPTIME+0x03
 	LDS YL,_C5_UPTIME+0x04
@@ -251,9 +261,9 @@ _DRV_UART_H_PROC__RECEIVING_TIMEOUT:
 _DRV_UART_H_PROC__RECEIVING_DONE:
 _DRV_UART_H_PROC__RX_SKIP:
 	;Запрещаю UART
-	LDS TEMP,UCSRB
+	LDS TEMP,UCSR0B
 	ANDI TEMP,low(~((1<<TXCIE0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<RXEN0)))
-	STS UCSRB,TEMP
+	STS UCSR0B,TEMP
 
 	;Результат
 	LDD TEMP_H,Z+_DRV_UART_H_STATE
@@ -313,14 +323,14 @@ _DRV_UART_H_TX_EVENT__SKIP_DR:
 	LD TEMP,Z
 	RJMP PC+02
 	LPM TEMP,Z+
-	STS UDR,TEMP
+	STS UDR0,TEMP
 	POP_Z
 	RJMP _DRV_UART_H_TX_EVENT__END
 _DRV_UART_H_TX_EVENT__DONE:
 	;Отключаем передатчик
-	LDS TEMP,UCSRB
+	LDS TEMP,UCSR0B
 	ANDI TEMP,~((1<<TXCIE0)|(1<<TXEN0))
-	STS UCSRB,TEMP
+	STS UCSR0B,TEMP
 	;Выставляем TX в низкий уровень
 	LDI ACCUM,TXD
 	MCALL PORT_SET_LO
@@ -405,7 +415,7 @@ _DRV_UART_H_RX_EVENT__NO_BREAK:
 	ADD YL,ACCUM
 	CLR TEMP
 	ADC YH,TEMP
-	LDS TEMP,UDR
+	LDS TEMP,UDR0
 	ST Y,TEMP
 	;Инкрементирую и записываю позицию в буфере
 	INC ACCUM

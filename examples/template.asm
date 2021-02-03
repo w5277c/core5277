@@ -37,7 +37,6 @@
 	.include	"./core/wait_1s.inc"
 	.include	"./core/log/log_bytes.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
 	;---
 
 
@@ -54,10 +53,10 @@ MAIN:
 	MCALL C5_INIT
 
 	;Инициализация драйвера
-	LDI PID,PID_XXX_DRV
-	LDI ZH,high(DRV_XXX_INIT)
-	LDI ZL,low(DRV_XXX_INIT)
-	MCALL C5_CREATE
+;	LDI PID,PID_XXX_DRV
+;	LDI ZH,high(DRV_XXX_INIT)
+;	LDI ZL,low(DRV_XXX_INIT)
+;	MCALL C5_CREATE
 
 
 	;Инициализация задачи
@@ -79,4 +78,3 @@ TASK__INFINITE_LOOP:
 	LDI TEMP,0x01														;Пауза в 1 сеунду
 	MCALL C5_WAIT_1S
 	RJMP TASK__INFINITE_LOOP
-

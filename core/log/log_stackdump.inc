@@ -13,7 +13,6 @@
 .include	"./core/log/log_byte.inc"
 .include	"./core/log/log_word.inc"
 .include	"./core/log/log_romstr.inc"
-.include	"./core/log/logstr_new_line.inc"
 
 ;--------------------------------------------------------
 C5_LOG_STACKDUMP:

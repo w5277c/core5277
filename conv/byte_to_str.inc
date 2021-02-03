@@ -11,8 +11,7 @@
 .set DEF_BYTE_TO_STR = 1
 
 .include	"./math/div16x8.inc"
-.include	"./math/mul24x8.inc"
-
+.include	"./math/mul16x8.inc"
 ;--------------------------------------------------------
 BYTE_TO_STR:
 ;--------------------------------------------------------
@@ -31,11 +30,10 @@ BYTE_TO_STR:
 	MCALL DIV16x8
 	SUBI TEMP_L,(0x100-0x30)										;+0x30
 	PUSH TEMP_L
-	LDI TEMP_EL,0x00
 	LDI TEMP_H,0x00
 	SUBI TEMP_L,0x30
 	LDI TEMP,0x64
-	MCALL MUL24x8
+	MCALL MUL16x8
 	SUB ACCUM,TEMP_L
 
 	LDI TEMP_H,0x00
@@ -45,11 +43,10 @@ BYTE_TO_STR:
 	BRTS PC+0x03
 	SUBI TEMP_L,(0x100-0x30)										;+0x30
 	PUSH TEMP_L
-	LDI TEMP_EL,0x00
 	LDI TEMP_H,0x00
 	SUBI TEMP_L,0x30
 	LDI TEMP,0x0a
-	MCALL MUL24x8
+	MCALL MUL16x8
 	SUB ACCUM,TEMP_L
 	SUBI ACCUM,(0x100-0x30)										;+0x30
 

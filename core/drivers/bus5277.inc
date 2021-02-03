@@ -23,6 +23,12 @@
 	.include	"./mem/ram_copy8.inc"
 	.include	"./mem/rom_read_bytes.inc"
 
+.ifdef LOGGING_PORT
+	.include	"./core/log/log_cr.inc"
+	.include	"./core/log/log_char.inc"
+	.include	"./core/log/log_bytes.inc"
+.endif
+
 ;---CONSTANTS--------------------------------------------
 	;---VAR-OFFSETS---
 	;---DATA-OFFSETS---
@@ -31,8 +37,11 @@
 	.EQU		_DRV_BUS5277_PACKET_HEADER_SIZE			= 0x01;
 	.EQU		_DRV_BUS5277_PACKET_HEADER_CODE			= 0x02;
 	.EQU	DRV_BUS5277_PACKET_DATA							= 0x03;37B - тело пакета
-	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x29;1B - адрес устройства на шине
-	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x2a;1B - ид драйвера UART
+	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x28;1B - адрес устройства на шине
+	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x29;1B - ид драйвера UART
+	.EQU	_DRV_BUS5277_FLAGS								= 0x2a;1B - флаги драйвера
+	;---FLAGS---
+	.EQU	DRV_BUS5277_FLAG_LOGGING						= 0x00;Бит логирования
 	;---OPERATIONS---
 	.EQU	DRV_BUS5277_OP_MASTER							= 0x00;Режим ведущего (запрос-ожидание ответа)
 	.EQU	DRV_BUS5277_OP_SLAVE_RECV						= 0x01;Режим ведомого ожидание запроса
@@ -89,15 +98,16 @@
 	.EQU	_DRV_BUS5277_LISTEN_TIMEOUT					= 0x32;100 мс - таймаут для приема ответа
 	.EQU	_DRV_BUS5277_MASTER_ADDR						= 0x00;Адрес мастера
 	;---
-	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x29;41B - буфер шины(40B) + переменные(1B)
+	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x2b;43B - буфер шины(40B) + переменные(3B)
 
 ;--------------------------------------------------------
 DRV_BUS5277_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;TEMP_H - адрес устройства на шине
-;TEMP_L - номер флага EXTRASCAN_HAVE_DATA
-;ACCUM - ид UART драйвера
+;TEMP_H-адрес устройства на шине
+;TEMP_L-номер флага EXTRASCAN_HAVE_DATA
+;ACCUM-ид UART драйвера
+;FLAGS-флаги
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
@@ -106,8 +116,9 @@ DRV_BUS5277_INIT:
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BUS5277_RAM_SIZE
 	MCALL C5_RAM_REALLOC
-	;Записываем адрес на шине и флаг HAVE_DATA
+	;Записываем адрес на шине и флаги
 	STD Z+_DRV_BUS5277_BUS_ADDR,TEMP_H
+	STD Z+_DRV_BUS5277_FLAGS,FLAGS
 ;;;TODO	STD Z+DRV_BUS5277_FLAG_HAVE_DATA,TEMP_L
 	;Записываем ид UART'а
 	POP ACCUM
@@ -162,59 +173,23 @@ _DRV_BUS5277_PROC_MASTER:
 	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
 	;Получаю адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
+
 	;Формирую пакет
-	PUSH_Z
-	MOV ACCUM,TEMP_L
-	SUBI ACCUM,(0x100-0x04)											;+0x04
-	ST Z+,LOOP_CNTR													;Адрес устройства на шине
-	ST Z+,ACCUM															;Длина данных всего пакета
-	ST Z+,TEMP_H														;Код функции или ответа
-	MOV LOOP_CNTR,TEMP_L
-	;Проверяю наличие данных и копирую их
-	CPI TEMP_L,0x00
-	BREQ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE
-	SBRC YH,0x07
-	RJMP _DRV_BUS5277_PROC_MASTER__ROM_DATA_COPY
-_DRV_BUS5277_PROC_MASTER__RAM_DATA_COPY:
-	MOV XH,YH
-	MOV XL,YL
-	MCALL RAM_COPY8
-	RJMP _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE
-_DRV_BUS5277_PROC_MASTER__ROM_DATA_COPY:
-	ANDI YH,0b01111111
-	LSL YL
-	ROL YH
-	PUSH_Z
-	MOV XH,YH
-	MOV XL,YL
-	MOV YH,ZH
-	MOV YL,ZL
-	MOV ZH,XH
-	MOV ZL,XL
-	MCALL ROM_READ_BYTES
-	POP_Z
-_DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
-	ADD ZL,LOOP_CNTR
-	LDI TEMP,0x00
-	ADC ZH,TEMP
-	POP_X
-	PUSH LOOP_CNTR
-	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL CRC8_MAXIM_BLOCK
-	POP LOOP_CNTR
-	ST Z,ACCUM
-	;Формирование пакета завершено
-	;Восстанавливаем начальный адрес выделенной памяти
-	MOV ZH,XH
-	MOV ZL,XL
-	;Запускаем драйвер UART
-	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV YH,ZH															;Адрес блока данных для передачи
-	MOV YL,ZL
-	MOV XH,ZH															;Адрес блока данных для приема
+	MOV XH,ZH
 	MOV XL,ZL
+	MCALL DRV_BUS5277__PACKET_PACK
+
+	;Запускаем драйвер UART
 	LDI TEMP_EH,0x04													;Длина данных для передачи
 	ADD TEMP_EH,LOOP_CNTR
+	MOV YH,ZH															;Адрес блока данных для передачи
+	MOV YL,ZL
+.ifdef LOGGING_PORT
+	MCALL _DRV_BUS5277__LOG_REQV
+.endif
+	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
+	MOV XH,ZH															;Адрес блока данных для приема
+	MOV XL,ZL
 	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
 	LDI TEMP_H,high(100/2)											;Максимальное время ожидания данных
 	LDI TEMP_L,low(100/2)
@@ -223,58 +198,41 @@ _DRV_BUS5277_PROC_MASTER__DATA_COPY_DONE:
 	CPI TEMP_H,DRV_UART_ST_READY
 	LDI ACCUM,BUS5277_RESP_NO_ANSWER
 	BRNE _DRV_BUS5277_PROC_MASTER__ERROR
-	;Проверка на наличие данных
-	MOV LOOP_CNTR,TEMP_H
-	CPI LOOP_CNTR,0x00
+	CPI TEMP_L,0x00
 	LDI ACCUM,BUS5277_RESP_NO_DATA
 	BREQ _DRV_BUS5277_PROC_MASTER__ERROR
-	;Считываю адрес
-	LDD TEMP,Z+_DRV_BUS5277_PACKET_HEADER_ADDR
-	MOV TEMP_H,TEMP
-	ANDI TEMP_H,0x7f
-	LDD TEMP_L,Z+_DRV_BUS5277_BUS_ADDR
+.ifdef LOGGING_PORT
+	MCALL _DRV_BUS5277__LOG_RESP
+.endif
+
+	;Распаковка ответа
+	MCALL DRV_BUS5277__PACKET_UNPACK
 	;Проверяю адрес на совпадение
-	CP TEMP_H,TEMP_L
+	MOV ACCUM,LOOP_CNTR
+	ANDI ACCUM,0x7f
+	LDD TEMP,Z+_DRV_BUS5277_BUS_ADDR
+	CP ACCUM,TEMP
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 	BRNE _DRV_BUS5277_PROC_MASTER__ERROR
 	;Проверяю бит extrascan
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
-	SBRC TEMP,0x07
+	SBRC LOOP_CNTR,0x07
 	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
-	;Блок обычного режима(не EXTRASCAN)
 	;Проверяем бит ответа
-	LDD TEMP_H,Z+_DRV_BUS5277_PACKET_HEADER_CODE
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 	SBRS TEMP_H,0x07
 	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
-	;Получаю длину пакета
-	LDD LOOP_CNTR,Z+_DRV_BUS5277_PACKET_HEADER_SIZE
-	ANDI LOOP_CNTR,0x3f
-	;Вычисляю CRC
-	MOV XH,ZH
-	MOV XL,ZH
-	MCALL CRC8_MAXIM_BLOCK
-	DEC LOOP_CNTR
-	ADD XL,LOOP_CNTR
-	CLR TEMP
-	ADC XH,TEMP
-	LD TEMP,X
-	CP TEMP,ACCUM
-	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
-	BREQ _DRV_BUS5277_PROC_MASTER__ERROR
 	;Помещаю в ACCUM код ответа
 	MOV ACCUM,TEMP_H
-	ANDI ACCUM,0x7f
 	;Помещаю в Z адрес на блок данных
-	LDI TEMP_L,DRV_BUS5277_PACKET_DATA
-	ADD ZL,TEMP_L
-	LDI TEMP_L,0x00
-	ADC ZH,TEMP_L
-	;Вычисляю длину данных
-	SUBI LOOP_CNTR,0x03
-	MOV TEMP,LOOP_CNTR
+	MOV ZH,YH
+	MOV ZL,YL
+	;Помещаю длину данных
+	MOV TEMP,TEMP_L
 	RJMP _DRV_BUS5277_PROC_MASTER__END
 _DRV_BUS5277_PROC_MASTER__ERROR:
+	LDI TEMP,0x00
+	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 _DRV_BUS5277_PROC_MASTER__END:
 	POP LOOP_CNTR
 	POP TEMP_L
@@ -470,10 +428,6 @@ _DRV_BUS5277_PROC_SLAVE_SEND__END:
 	POP_X
 	RET
 
-
-
-
-
 ;--------------------------------------------------------
 _DRV_BUS5277_PROC_EXTRASCAN:
 ;--------------------------------------------------------
@@ -485,3 +439,131 @@ _DRV_BUS5277_PROC_EXTRASCAN_T:
 ;--------------------------------------------------------
 	;TODO
 	RET
+
+
+;--------------------------------------------------------
+DRV_BUS5277__PACKET_PACK:
+;--------------------------------------------------------
+;Сборка пакета
+;IN: Y-адрес на данные, TEMP_H-код функции,
+;TEMP_L-длина данных, LOOP_CNTR-адрес устройства
+;X-DST адрес
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Y
+	PUSH_Z
+	PUSH ACCUM
+	PUSH LOOP_CNTR
+
+	MOV ACCUM,TEMP_L
+	SUBI ACCUM,(0x100-0x04)											;+0x04
+	PUSH_X
+	ST X+,LOOP_CNTR													;Адрес устройства на шине
+	ST Z+,ACCUM															;Длина данных всего пакета
+	ST Z+,TEMP_H														;Код функции или ответа
+	MOV LOOP_CNTR,TEMP_L
+	;Проверяю наличие данных и копирую их
+	CPI TEMP_L,0x00
+	BREQ _DRV_BUS5277__PACKET_PACK__DATA_COPY_DONE
+	SBRC YH,0x07
+	RJMP _DRV_BUS5277__PACKET_PACK__ROM_DATA_COPY
+_DRV_BUS5277__PACKET_PACK__RAM_DATA_COPY:
+	MOV ZH,XH
+	MOV ZL,XL
+	MOV XH,YH
+	MOV XL,YL
+	MCALL RAM_COPY8
+	RJMP _DRV_BUS5277__PACKET_PACK__DATA_COPY_DONE
+_DRV_BUS5277__PACKET_PACK__ROM_DATA_COPY:
+	ANDI YH,0x7f
+	LSL YL
+	ROL YH
+	MOV ZH,YH
+	MOV ZL,YL
+	MOV YH,XH
+	MOV YL,XL
+	MCALL ROM_READ_BYTES
+_DRV_BUS5277__PACKET_PACK__DATA_COPY_DONE:
+	POP_X
+	SUBI LOOP_CNTR,(0x100-0x03)
+	MCALL CRC8_MAXIM_BLOCK
+	ADD XL,LOOP_CNTR
+	CLR LOOP_CNTR
+	ADC XH,LOOP_CNTR
+	ST X,ACCUM
+
+	POP LOOP_CNTR
+	POP ACCUM
+	POP_Z
+	POP_Y
+	POP_X
+	RET
+
+;--------------------------------------------------------
+DRV_BUS5277__PACKET_UNPACK:
+;--------------------------------------------------------
+;Распаковка пакета
+;IN: Y-SRC адрес
+;OUT: TEMP_H-код функции,
+;TEMP_L-длина данных, LOOP_CNTR-адрес устройства
+;Y-адрес на данные
+;--------------------------------------------------------
+	PUSH_X
+	PUSH ACCUM
+
+	PUSH_Y
+	LD LOOP_CNTR,Y+
+	LD TEMP_L,Y+
+	SUBI TEMP_L,0x04
+	LD TEMP_H,Y+
+	;Вычисляю CRC
+	POP_X
+	PUSH LOOP_CNTR
+	MOV LOOP_CNTR,TEMP_L
+	SUBI LOOP_CNTR,(0x100-0x03)
+	MCALL CRC8_MAXIM_BLOCK
+	ADD XL,LOOP_CNTR
+	CLR LOOP_CNTR
+	ADC XH,LOOP_CNTR
+	POP LOOP_CNTR
+	LD XH,X
+	CP XH,ACCUM
+	BREQ DRV_BUS5277__PACKET_UNPACK__CORRECT_CRC
+	LDI TEMP_L,0x04
+	LDI TEMP_H,BUS5277_RESP_INVALID_PACKET
+DRV_BUS5277__PACKET_UNPACK__CORRECT_CRC:
+	POP ACCUM
+	POP_X
+	RET
+
+.ifdef LOGGING_PORT
+;--------------------------------------------------------
+_DRV_BUS5277__LOG_REQV:
+;--------------------------------------------------------
+;Внутренняя процедура логирования
+;--------------------------------------------------------
+	LDD TEMP,Z+_DRV_BUS5277_FLAGS
+	SBRS TEMP,DRV_BUS5277_FLAG_LOGGING
+	RET
+	LDI TEMP,'>'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_EH
+	MCALL C5_LOG_BYTES
+	MCALL C5_LOG_CR
+	RET
+;--------------------------------------------------------
+_DRV_BUS5277__LOG_RESP:
+;--------------------------------------------------------
+;Внутренняя процедура логирования
+;--------------------------------------------------------
+	LDD TEMP,Z+_DRV_BUS5277_FLAGS
+	SBRS TEMP,DRV_BUS5277_FLAG_LOGGING
+	RET
+	LDI TEMP,'<'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_L
+	MCALL C5_LOG_BYTES
+	MCALL C5_LOG_CR
+	RET
+.endif
+

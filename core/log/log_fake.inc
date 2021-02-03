@@ -7,7 +7,6 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 	;Ссылаются в никуда, толкьо чтобы были метки
 	LOGSTR_CORE:
-	LOGSTR_NEW_LINE:
 	LOGSTR_NULL:
 	LOGSTR_ERROR:
 	.db	"?",0x00
@@ -30,8 +29,12 @@
 	C5_LOG_MARK:
 	C5_LOG_SDNF:
 	C5_LOG_STR:
+	C5_LOG_STR_EL:
 	C5_LOG_BYTES:
 	C5_LOG_WORD:
 	C5_LOG_BYTE:
 	C5_LOG_CHAR:
+	C5_LOG_NUMx8:
+	C5_LOG_NUMx16:
+	C5_LOG_CR:
 		RET

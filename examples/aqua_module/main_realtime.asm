@@ -1,17 +1,20 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;31.10.2020  w5277c@gmail.com        Начало
+;31.10.2020  w5277c@gmail.com			Начало
+;30.01.2021  w5277c@gmail.com			Тест, отработано корректно.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
 	.INCLUDE "./devices/atmega328.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
 	.SET	TIMERS									= 1	;0-4
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
@@ -24,7 +27,7 @@
 	.include	"./core/meminfo_copy.inc"
 	.include	"./core/log/log_bytes.inc"
 	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/logstr_new_line.inc"
+	.include	"./core/log/log_cr.inc"
 	.include "./io/port_mode_out.inc"
 	.include "./io/port_set_hi.inc"
 	.include "./io/port_set_lo.inc"
@@ -150,7 +153,7 @@ UPTIME_TASK__INFINITE_LOOP:
 	MCALL C5_UPTIME_COPY
 	LDI TEMP,0x05
 	MCALL C5_LOG_BYTES
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
@@ -174,7 +177,7 @@ FREEMEM_TASK__INFINITE_LOOP:
 	ADIW YL,0x02
 	LDI TEMP,0x02
 	MCALL C5_LOG_BYTES
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S

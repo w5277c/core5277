@@ -15,7 +15,6 @@
 .include	"./core/log/log_bytes.inc"
 .include	"./core/log/log_romstr.inc"
 .include	"./core/log/logstr_done.inc"
-.include	"./core/log/logstr_new_line.inc"
 
 _LOGSTR_TASKSDUMP:
 	.db   0x0d,0x0a,"---TASKSDUMP:",0x00
@@ -51,7 +50,7 @@ C5_LOG_TASKSDUMP:
 _C5_LOG_TASKSDUMP__TASK_LOOP:
 	MCALL C5_LOG_TASKDUMP
 	INC PID
-	CPI PID,_C5_TASKS_MAX_QNT
+	CPI PID,C5_TASKS_QNT
 	BRNE _C5_LOG_TASKSDUMP__TASK_LOOP
 	C5_LOG_ROMSTR LOGSTR_DONE
 

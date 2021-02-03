@@ -9,7 +9,7 @@
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./conv/crc8_maxim_block.inc"
-.include	"./math/mul24x8.inc"
+.include	"./math/mul16x8.inc"
 .include	"./math/div16x8.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -117,10 +117,9 @@ DRV_DS18B20_INIT:
 
 	ANDI TEMP_L,0x0f													;Оставили только дробную часть
 	MOV TEMP,TEMP_L
-	CLR TEMP_EL
 	LDI TEMP_H,0x02													;Умножаем на 625
 	LDI TEMP_L,0x71
-	MCALL MUL24x8
+	MCALL MUL16x8
 	LDI TEMP,100														;Делим на 100
 	MCALL DIV16x8														;В TEMP_L - дробная часть в человеческом формате 0-99
 

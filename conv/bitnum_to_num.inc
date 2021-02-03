@@ -5,11 +5,15 @@
 ;01.08.2020  w5277c@gmail.com			Разбиение на файлы
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020  w5277c@gmail.com			-с5
+;28.12.2020  w5277c@gmail.com			;Переделал на табличный вариант
 ;-----------------------------------------------------------------------------------------------------------------------
+
 .ifdef DEF_BITNUM_TO_NUM
 .else
 .set DEF_BITNUM_TO_NUM = 1
 
+BITNUM_TO_NUM_TABLE:
+	.db	0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80
 ;--------------------------------------------------------
 BITNUM_TO_NUM:
 ;--------------------------------------------------------
@@ -17,16 +21,14 @@ BITNUM_TO_NUM:
 ;IN: TEMP - номер бита(0-7)
 ;OUT: TEMP - число(1,2,4,8,16,32,64,128)
 ;-START--------------------------------------------------
-	PUSH TEMP_L
-	LDI TEMP_L,0x01
-	TST TEMP
-	BREQ _BITNUM_TO_NUM__END
-_BITNUM_TO_NUM__LOOP:
-	LSL TEMP_L
-	DEC TEMP
-	BRNE _BITNUM_TO_NUM__LOOP
-_BITNUM_TO_NUM__END:
-	MOV TEMP,TEMP_L
-	POP TEMP_L
+	PUSH_Z										;4
+	LDI ZH,high(BITNUM_TO_NUM_TABLE*2)	;1
+	LDI ZL,low(BITNUM_TO_NUM_TABLE*2)	;1
+	ADD ZL,TEMP									;1
+	CLR TEMP										;1
+	ADC ZH,TEMP									;1
+	LPM TEMP,Z									;3
+	POP_Z											;4,total:16t
 	RET
 .endif
+
