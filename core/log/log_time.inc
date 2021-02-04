@@ -23,11 +23,14 @@ _LOG_TIME_STR_US:
 	.db   "us",0x00
 _LOG_TIME_STR_MS:
 	.db   "ms",0x00
+_LOG_TIME_STR_NS:
+	.db   "ns",0x00
+
 ;--------------------------------------------------------
 C5_LOG_TIME:
 ;--------------------------------------------------------
 ;Логирование временной метки
-;IN: PID,TEMP-смещение на выделенные 6 байт, хранящие
+;IN: PID,TEMP-смещение на выделенные 7 байт, хранящие
 ;временную метку
 ;--------------------------------------------------------
 	PUSH_X
@@ -44,7 +47,6 @@ C5_LOG_TIME:
 	ADD ZL,TEMP
 	LDI TEMP,0x00
 	ADC ZH,TEMP
-
 
 	LDI_Y _LOG_TIME_STR_TIME|0x8000
 	MCALL C5_LOG_STR
@@ -66,12 +68,26 @@ C5_LOG_TIME:
 	CPI TEMP_L,0x06
 	BRCC _C5_LOG_TIME__MS
 _C5_LOG_TIME__US:
-	LDI TEMP_H,0x00
 	LDD TEMP_L,Z+0x05
+	CPI TEMP_L,0x03
+	BRCS _C5_LOG_TIME__NS
+	LDI TEMP_H,0x00
 	LDI TEMP,0x32
 	MCALL MUL16X8
 	MCALL C5_LOG_NUMX16
 	LDI_Y _LOG_TIME_STR_US|0x8000
+	MCALL C5_LOG_STR
+	RJMP _C5_LOG_TIME__END
+_C5_LOG_TIME__NS:
+	LDI TEMP_EH,0x00
+	LDI TEMP_EL,0x00
+	LDI TEMP_H,0x00
+	LDD TEMP_L,Z+0x06
+	LDI XH,high(500)
+	LDI XL,low(500)
+	MCALL MUL32X16
+	MCALL C5_LOG_NUMX32
+	LDI_Y _LOG_TIME_STR_NS|0x8000
 	MCALL C5_LOG_STR
 	RJMP _C5_LOG_TIME__END
 _C5_LOG_TIME__OVERFLOW:

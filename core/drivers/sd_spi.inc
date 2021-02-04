@@ -70,13 +70,13 @@
 	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x06;Очистка блоков
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	DRV_SD_VARS_SIZE									= 0x09;Размер данных под переменные
+	.EQU	DRV_SD_VARS_SIZE									= 0x0b;Размер данных под переменные
 	.EQU	DRV_SD_BUFFER_SIZE								= 0x40;Размер внутреннего блока для коммуникации (и записи/чтения если поддерживается partial)
 	;---OFFSETS---
 	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
 	.EQU	_DRV_SD_VAR_BLOCK_SIZE							= 0x02;2Б размер блока для чтения/записи
-	.EQU	_DRV_SD_VAR_TIME									= 0x04;5Б uptime
-	.EQU	_DRV_SD_BUFFER										= 0x09;DRV_SD_BUFFER_SIZE
+	.EQU	_DRV_SD_VAR_TIME									= 0x04;7Б uptime
+	.EQU	_DRV_SD_BUFFER										= 0x0b;DRV_SD_BUFFER_SIZE
 
 	.EQU	_DRV_SD_CMD0										= 0x00;Reset
 	.EQU	_DRV_SD_CMD8										= 0x08;Send interface condition
@@ -515,6 +515,34 @@ _DRV_SD_OP_GET_CID__END:
 	POP TEMP
 	RET
 
+;--------------------------------------------------------
+_DRV_SD_GET_STATUS:
+;--------------------------------------------------------
+;Получить состояние карты
+;IN: X-адрес на выделенную память
+;OUT: TEMP_H/L-R2 ответ
+;--------------------------------------------------------
+	PUSH ACCUM
+	PUSH TEMP
+
+	CBI PORTB,SS & 0x0f
+	LDI TEMP,_DRV_SD_CMD13
+	PUSH_X
+	ST X+,TEMP
+	CLR TEMP
+	ST X+,TEMP
+	ST X+,TEMP
+	ST X+,TEMP
+	ST x+,TEMP
+	POP_X
+	LDI TEMP_L,0x05
+	MCALL _DRV_SD__SEND_CMD
+	MCALL _DRV_SD_GET_R2
+	SBI PORTB,SS & 0x0f
+
+	POP TEMP
+	POP ACCUM
+	RET
 
 ;--------------------------------------------------------
 _DRV_SD_OP_READ_BLOCK:
@@ -631,21 +659,7 @@ _DRV_SD_OP_WRITE_BLOCK:
 
 	SBI PORTB,SS & 0x0f
 	MCALL _DRV_SD_WAIT
-	CBI PORTB,SS & 0x0f
-
-	LDI TEMP,_DRV_SD_CMD13
-	PUSH_X
-	ST X+,TEMP
-	CLR TEMP
-	ST X+,TEMP
-	ST X+,TEMP
-	ST X+,TEMP
-	ST x+,TEMP
-	POP_X
-	LDI TEMP_L,0x05
-	MOV FLAGS,ACCUM
-	MCALL _DRV_SD__SEND_CMD
-	MCALL _DRV_SD_GET_R2
+	MCALL _DRV_SD_GET_STATUS
 	LDI ACCUM,0xff
 	CPI TEMP_H,0x00
 	BRNE _DRV_SD_OP_WRITE_BLOCK__FAIL
@@ -724,7 +738,7 @@ _DRV_SD_OP_ERASE_BLOCKS:
 	LDI TEMP,_DRV_SD_CMD38
 	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
+	LDI TEMP,0x52
 	ST X+,TEMP
 	ST X+,TEMP
 	ST X+,TEMP
@@ -748,8 +762,21 @@ _DRV_SD_OP_ERASE_BLOCKS:
 	.endif
 .endif
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_ERASE_BLOCKS__END
+	BRNE _DRV_SD_OP_ERASE_BLOCKS__FAIL
 
+	SBI PORTB,SS & 0x0f
+	MCALL _DRV_SD_WAIT
+	MCALL _DRV_SD_GET_STATUS
+	LDI ACCUM,0xff
+	CPI TEMP_H,0x00
+	BRNE _DRV_SD_OP_ERASE_BLOCKS__FAIL
+	CPI TEMP_L,0x00
+	BRNE _DRV_SD_OP_ERASE_BLOCKS__FAIL
+	LDI ACCUM,0x00
+	RJMP _DRV_SD_OP_ERASE_BLOCKS__END
+
+_DRV_SD_OP_ERASE_BLOCKS__FAIL:
+	LDI ACCUM,0xff
 _DRV_SD_OP_ERASE_BLOCKS__END:
 	SBI PORTB,SS & 0x0f
 

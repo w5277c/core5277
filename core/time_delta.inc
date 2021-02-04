@@ -13,8 +13,8 @@
 C5_TIME_DELTA:
 ;--------------------------------------------------------
 ;Считаем дельту между текущей временной меткой и
-;записанной в выделенной паямти (6 байт)
-;IN: PID,TEMP-смещение на выделенные 6 байт, хранящие
+;записанной в выделенной паямти (7 байт)
+;IN: PID,TEMP-смещение на выделенные 7 байт, хранящие
 ;временную метку
 ;OUT: Дельта будет записана поверх временной метки в
 ;выделенную память
@@ -32,12 +32,23 @@ C5_TIME_DELTA:
 	LDI TEMP,0x00
 	ADC ZH,TEMP
 
-	LDD TEMP_L,Z+0x05
-	LDS TEMP,_C5_MAIN_TIMER_CNTR
-	SUB TEMP,TEMP_L
-	STD Z+0x05,TEMP
+	LDS TEMP,SREG
+	PUSH TEMP
+	CLI
 
 	MCALL C5_UPTIME_GET
+
+	PUSH TEMP
+	LDD ACCUM,Z+0x05
+	LDS TEMP,_C5_MAIN_TIMER_CNTR
+	SUB TEMP,ACCUM
+	STD Z+0x05,TEMP
+
+	LDD ACCUM,Z+0x06
+	_C5_TIMER_TCNT TEMP
+	SUB TEMP,ACCUM
+	STD Z+0x06,TEMP
+	POP TEMP
 
 	LDD ACCUM,Z+0x04
 	SUB TEMP,ACCUM
@@ -54,6 +65,9 @@ C5_TIME_DELTA:
 	LDD ACCUM,Z+0x00
 	SBC TEMP_EH,ACCUM
 	STD Z+0x00,TEMP_EH
+
+	POP TEMP
+	STS SREG,TEMP
 
 	POP TEMP_EH
 	POP TEMP_EL
