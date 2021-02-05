@@ -8,14 +8,14 @@
 .set DEF_PRIM_COMMON = 1
 
 	;---TYPE-AND-SIZE---
-	.EQU	BYTE										= 0x11
-	.EQU	SHORT										= 0x22
-	.EQU	SDNF										= 0x32
-	.EQU	INT										= 0x44
-	.EQU	FLOAT										= 0x54
-	.EQU	UPTIME									= 0x65
-	.EQU	LONG										= 0x78
-	.EQU	DOUBLE									= 0x88
+	.EQU	PRIM_BYTE								= 0x11
+	.EQU	PRIM_SHORT								= 0x22
+	.EQU	PRIM_SDNF								= 0x32
+	.EQU	PRIM_INT									= 0x44
+	.EQU	PRIM_FLOAT								= 0x54
+	.EQU	PRIM_UPTIME								= 0x65
+	.EQU	PRIM_LONG								= 0x78
+	.EQU	PRIM_DOUBLE								= 0x88
 
 .MACRO PRIM_SUB
 ;	.IF @0=SDNF

@@ -19,9 +19,8 @@
 	.include	"./core/log/log_byte.inc"
 	.include	"./core/log/log_cr.inc"
 	.include	"./core/log/log_str_el.inc"
-	.include	"./core/time_mark.inc"
-	.include	"./core/time_delta.inc"
-	.include	"./core/log/log_time.inc"
+	.include	"./core/time32_mark.inc"
+	.include	"./core/time32_delta.inc"
 
 	_DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.db	"Got Ver1.X SD card",0x00,"Got Ver2.00 or later SC SD card",0x00,"Got Ver2.00 or later HC/EC SD card",0x00
@@ -68,15 +67,16 @@
 	.EQU	DRV_SD_OP_READ_BLOCK								= 0x04;Считать блок
 	.EQU	DRV_SD_OP_WRITE_BLOCK							= 0x05;Записать блок
 	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x06;Очистка блоков
+	.EQU	DRV_SD_OP_GET_OP_TIME							= 0x07;Получить время выполнения процедуры
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	DRV_SD_VARS_SIZE									= 0x0b;Размер данных под переменные
+	.EQU	DRV_SD_VARS_SIZE									= 0x08;Размер данных под переменные
 	.EQU	DRV_SD_BUFFER_SIZE								= 0x40;Размер внутреннего блока для коммуникации (и записи/чтения если поддерживается partial)
 	;---OFFSETS---
 	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
 	.EQU	_DRV_SD_VAR_BLOCK_SIZE							= 0x02;2Б размер блока для чтения/записи
-	.EQU	_DRV_SD_VAR_TIME									= 0x04;7Б uptime
-	.EQU	_DRV_SD_BUFFER										= 0x0b;DRV_SD_BUFFER_SIZE
+	.EQU	_DRV_SD_VAR_TIME									= 0x04;4Б uptime
+	.EQU	_DRV_SD_BUFFER										= 0x08;DRV_SD_BUFFER_SIZE
 
 	.EQU	_DRV_SD_CMD0										= 0x00;Reset
 	.EQU	_DRV_SD_CMD8										= 0x08;Send interface condition
@@ -142,7 +142,8 @@ DRV_SD_INIT:
 ;Основной код, коммуникация
 ;IN: FLAGS - тип операции
 ;OUT: ACCUM - R1 ответ или
-;TEMP_H/L-R2 ответ
+;TEMP_H/L-R2 ответ или
+;TEMP_EH/EL/H/L-time32
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Z
@@ -189,7 +190,13 @@ _DRV_SD_MAIN__CONTINUE:
 	BRNE PC+0x04
 	MCALL _DRV_SD_OP_ERASE_BLOCKS
 	RJMP _DRV_SD__END
-
+	CPI FLAGS,DRV_SD_OP_GET_OP_TIME
+	BRNE PC+0x06
+	LDD TEMP_EH,Z+_DRV_SD_VAR_TIME+0x00
+	LDD TEMP_EL,Z+_DRV_SD_VAR_TIME+0x01
+	LDD TEMP_H,Z+_DRV_SD_VAR_TIME+0x02
+	LDD TEMP_L,Z+_DRV_SD_VAR_TIME+0x03
+	RJMP _DRV_SD__END
 	;...
 
 	LDI ACCUM,0xff
@@ -285,12 +292,8 @@ _DRV_SD_OP_INIT__LOOP:
 	RJMP _DRV_SD_OP_INIT__END
 
 
-.ifdef LOGGING_PORT
-	.if LOGGING_LEVEL >= LOGGING_LVL_DBG
-		LDI TEMP,_DRV_SD_VAR_TIME
-		MCALL C5_TIME_MARK
-	.endif
-.endif
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_MARK
 _DRV_SD_OP_INIT__WAIT:
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_ACMD41
@@ -322,19 +325,9 @@ _DRV_SD_OP_INIT__WAIT:
 	LDI TEMP,0x32
 	MCALL C5_WAIT_2MS
 	RJMP _DRV_SD_OP_INIT__WAIT
-
 _DRV_SD_OP_INIT_SD_READY:
-.ifdef LOGGING_PORT
-	.if LOGGING_LEVEL >= LOGGING_LVL_DBG
-		LDI TEMP,_DRV_SD_VAR_TIME
-		MCALL C5_TIME_DELTA
-		PUSH_Y
-		LDI_Y _DRV_SD_LOG_STR_INIT|0x8000
-		MCALL C5_LOG_STR
-		POP_Y
-		MCALL C5_LOG_TIME
-	.endif
-.endif
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_DELTA
 	CPI FLAGS,DRV_SD_FLAG_VER1
 	BREQ _DRV_SD_OP_INIT__CMD58_SKIP
 
@@ -572,19 +565,10 @@ _DRV_SD_OP_READ_BLOCK:
 	MCALL _DRV_SD__SEND_CMD
 
 	LDI TEMP,_DRV_SD_VAR_TIME
-	MCALL C5_TIME_MARK
+	MCALL C5_TIME32_MARK
 	MCALL _DRV_SD_GET_R1
-.ifdef LOGGING_PORT
-	.if LOGGING_LEVEL >= LOGGING_LVL_DBG
-		LDI TEMP,_DRV_SD_VAR_TIME
-		MCALL C5_TIME_DELTA
-		PUSH_Y
-		LDI_Y _DRV_SD_LOG_STR_READ|0x8000
-		MCALL C5_LOG_STR
-		POP_Y
-		MCALL C5_LOG_TIME
-	.endif
-.endif
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_DELTA
 	CPI ACCUM,0x00
 	BRNE _DRV_SD_OP_READ_BLOCK__END
 	LDI TEMP_H,high(512)
@@ -748,19 +732,10 @@ _DRV_SD_OP_ERASE_BLOCKS:
 	MCALL _DRV_SD__SEND_CMD
 
 	LDI TEMP,_DRV_SD_VAR_TIME
-	MCALL C5_TIME_MARK
+	MCALL C5_TIME32_MARK
 	MCALL _DRV_SD_GET_R1
-.ifdef LOGGING_PORT
-	.if LOGGING_LEVEL >= LOGGING_LVL_DBG
-		LDI TEMP,_DRV_SD_VAR_TIME
-		MCALL C5_TIME_DELTA
-		PUSH_Y
-		LDI_Y _DRV_SD_LOG_STR_ERASE|0x8000
-		MCALL C5_LOG_STR
-		POP_Y
-		MCALL C5_LOG_TIME
-	.endif
-.endif
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_DELTA
 	CPI ACCUM,0x00
 	BRNE _DRV_SD_OP_ERASE_BLOCKS__FAIL
 
@@ -997,7 +972,7 @@ _DRV_SD_GET_DATARESP_TOKEN:
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_DBG
 		LDI TEMP,_DRV_SD_VAR_TIME
-		MCALL C5_TIME_MARK
+		MCALL C5_TIME32_MARK
 	.endif
 .endif
 
@@ -1026,16 +1001,9 @@ _DRV_SD_GET_DATARESP_TOKEN2__LOOP2:
 	LDI ACCUM,0xff
 _DRV_SD_GET_DATARESP_TOKEN2__DONE:
 
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_DELTA
 .ifdef LOGGING_PORT
-	.if LOGGING_LEVEL >= LOGGING_LVL_DBG
-		LDI TEMP,_DRV_SD_VAR_TIME
-		MCALL C5_TIME_DELTA
-		PUSH_Y
-		LDI_Y _DRV_SD_LOG_STR_WRITE|0x8000
-		MCALL C5_LOG_STR
-		POP_Y
-		MCALL C5_LOG_TIME
-	.endif
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
 		PUSH_Y
 		LDI_Y _DRV_SD_LOG_STR_DATA_RESPONSE_TOKEN|0x8000
