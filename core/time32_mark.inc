@@ -8,6 +8,8 @@
 .set DEF_C5_TIME32_MARK = 1
 
 .include	"./core/uptime_copy.inc"
+.include	"./math/mul32x16.inc"
+.include	"./math/mul16x8.inc"
 
 ;--------------------------------------------------------
 C5_TIME32_MARK:
