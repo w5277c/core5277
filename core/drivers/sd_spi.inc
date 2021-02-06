@@ -6,8 +6,6 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./core/ram/ram_extend.inc"
-.include	"./core/ram/ram_reduce.inc"
 .include	"./core/wait_2ms.inc"
 .include	"./conv/crc7_730.inc"
 .include	"./conv/crc8_block.inc"
@@ -77,7 +75,8 @@
 	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
 	.EQU	_DRV_SD_VAR_BLOCK_SIZE							= 0x02;2Б размер блока для чтения/записи
 	.EQU	_DRV_SD_VAR_TIME									= 0x04;4Б uptime
-	.EQU	_DRV_SD_BUFFER										= 0x08;DRV_SD_BUFFER_SIZE
+	.EQU	_DRV_SD_WRITE_CMD_BUFFER						= 0x08;6Б
+	.EQU	_DRV_SD_BUFFER										= 0x0e;DRV_SD_BUFFER_SIZE
 
 	.EQU	_DRV_SD_CMD0										= 0x00;Reset
 	.EQU	_DRV_SD_CMD8										= 0x08;Send interface condition
@@ -204,6 +203,7 @@ _DRV_SD_MAIN__CONTINUE:
 	RJMP _DRV_SD__END
 	;...
 
+
 	LDI ACCUM,0xff
 _DRV_SD__END:
 
@@ -217,12 +217,13 @@ _DRV_SD_OP_INIT:
 ;--------------------------------------------------------
 ;Инициализация карты
 ;IN: Z-адрес на переменные, X-адрес на буфер
-;OUT: ACCUM-R1 ответ, FLAGS - версия
-;TEMP_H/L - размер блока для чтения,
-;TEMP_EH/EL - размер блока для записи,
+;OUT: ACCUM-R1 ответ(0x80-сбой инициализации), FLAGS-вер-
+;сия, TEMP_H/L-размер блока для чтения,
+;TEMP_EH/EL-размер блока для записи,
 ;FLAGS-поддержка partial (0-бит чтение, 1-бит запись),
 ;ошибка (7 бит)
 ;--------------------------------------------------------
+	PUSH TRY_CNTR
 	PUSH TEMP
 	PUSH LOOP_CNTR
 	PUSH_Z
@@ -296,7 +297,7 @@ _DRV_SD_OP_INIT__LOOP:
 	BREQ PC+0x02
 	RJMP _DRV_SD_OP_INIT__END
 
-
+	LDI TRY_CNTR,0x32
 	LDI TEMP,_DRV_SD_VAR_TIME
 	MCALL C5_TIME32_MARK
 _DRV_SD_OP_INIT__WAIT:
@@ -327,9 +328,12 @@ _DRV_SD_OP_INIT__WAIT:
 	RJMP _DRV_SD_OP_INIT__END
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
-	LDI TEMP,0x64
+	LDI TEMP,0x32
 	MCALL C5_WAIT_2MS
-	RJMP _DRV_SD_OP_INIT__WAIT
+	DEC TRY_CNTR
+	BRNE _DRV_SD_OP_INIT__WAIT
+	LDI ACCUM,0x80
+	RJMP _DRV_SD_OP_INIT__END
 _DRV_SD_OP_INIT_SD_READY:
 	LDI TEMP,_DRV_SD_VAR_TIME
 	MCALL C5_TIME32_DELTA
@@ -384,6 +388,7 @@ _DRV_SD_OP_INIT__END:
 	POP_Z
 	POP LOOP_CNTR
 	POP TEMP
+	POP TRY_CNTR
 	RET
 
 ;--------------------------------------------------------
@@ -594,7 +599,7 @@ _DRV_SD_OP_READ_BLOCK__END:
 _DRV_SD_OP_WRITE_BLOCK:
 ;--------------------------------------------------------
 ;Пишем блок данных
-;IN: X-адрес на буффер
+;IN: X-адрес на буффер,Z-адрес на переменные
 ;TEMP_EH/EL/H/L-номер блока
 ;OUT: ACCUM-R1 ответ
 ;--------------------------------------------------------
@@ -605,14 +610,13 @@ _DRV_SD_OP_WRITE_BLOCK:
 	PUSH_X
 	PUSH_Z
 
-	LDI ACCUM,0x08
-	MCALL C5_RAM_EXTEND
-	MOV ZH,YH
-	MOV ZL,YL
-	LDI LOOP_CNTR,0x08
-	MCALL RAM_COPY8
-
 	CBI PORTB,SS & 0x0f
+	PUSH_X
+	LDI XH,0x00
+	LDI XL,_DRV_SD_WRITE_CMD_BUFFER
+	ADD XL,ZL
+	LDI TEMP,0x00
+	ADC XH,ZH
 	LDI TEMP,_DRV_SD_CMD24
 	PUSH_X
 	ST X+,TEMP
@@ -622,19 +626,8 @@ _DRV_SD_OP_WRITE_BLOCK:
 	ST X+,TEMP_L
 	POP_X
 	LDI TEMP_L,0x05
-
 	MCALL _DRV_SD__SEND_CMD
-
-	MOV XH,YH
-	MOV XL,YL
-	POP_Z
-	PUSH_Z
-	LDI LOOP_CNTR,0x08
-	MCALL RAM_COPY8
-	LDI ACCUM,0x08
-	MCALL C5_RAM_REDUCE
 	POP_X
-	PUSH_X
 
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
@@ -646,7 +639,6 @@ _DRV_SD_OP_WRITE_BLOCK:
 
 	CPI ACCUM,_DRV_SD_DR_TOKEN_ACCEPTED
 	BRNE _DRV_SD_OP_WRITE_BLOCK__FAIL
-
 
 	SBI PORTB,SS & 0x0f
 	MCALL _DRV_SD_WAIT
