@@ -15,6 +15,7 @@
 ;06.01.2021	w5277c@gmail.com			v0.2.9	Исправлена критическая ошибка в _C5_RESUME (перетирался SREG задачи)
 ;22.01.2021	w5277c@gmail.com			v0.3.0	Различные мелкие (и не очень) изменения
 ;01.02.2021	w5277c@gmail.com			v0.3.1	Учтено разное начало RAM, мелкие доработки
+;06.02.2021	w5277c@gmail.com			v0.3.2	Примитивы и проверка на отсутствие драйверов
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -221,7 +222,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"core5277_v0.3.1",0x0d,0x0a,0x00
+	.db   0x0d,0x0a,"core5277_v0.3.2",0x0d,0x0a,0x00
 	.INCLUDE "./core/log/log_init.inc"
 	.INCLUDE	"./core/log/log_romstr.inc"
 	.INCLUDE	"./core/log/log_tasksdump.inc"
@@ -550,12 +551,14 @@ C5_REINIT:
 .ENDIF
 
 	;Чистка заголовков драйверов
+.IF	0x00 != C5_DRIVERS_QNT
 	LDI XH,high(_C5_DRIVERS_HEADER)
 	LDI XL,low(_C5_DRIVERS_HEADER)
 	LDI TEMP_H,high(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
 	LDI TEMP_L,low(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	MCALL RAM_FILL16
+.ENDIF
 	;Чистка заголовков задач
 	LDI XH,high(_C5_TASKS_HEADER)
 	LDI XL,low(_C5_TASKS_HEADER)

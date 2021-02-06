@@ -1,50 +1,56 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;05.02.2021  w5277c@gmail.com			Начало
-;06.02.2021  w5277c@gmail.com			Изменены аргументы
+;05.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_PRIM_ADD
+.ifdef DEF_PRIM_CPI
 .else
-.set DEF_PRIM_ADD = 1
+.set DEF_PRIM_CPI = 1
 
 .include	"./prim/_offsets.inc"
 
 ;--------------------------------------------------------
-PRIM_ADD:
+PRIM_CPI:
 ;--------------------------------------------------------
-;Сложение примитивов
+;Сравнение примитива с константой
 ;IN: Z-адрес на память с переменными, TEMP_H-смещение для
-;слагаемого и результата, TEMP_L-смещение второго слага-
-;емого, ACCUM-тип примитива
-;OUT: флаги SREG после команды ADC
+;арг.1, Y-адрес на константу из ROM, ACCUM-тип примитива
+;OUT: флаги SREG после команды CP
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH LOOP_CNTR
-	PUSH_X
+	PUSH_Y
 	PUSH_Z
 
-	MCALL _PRIM_OFFSETS_R
+	CLR TEMP
+	ADD ZL,TEMP_H
+	ADC ZH,TEMP
+	PUSH ZH
+	PUSH ZL
+	LSL YL
+	ROL YH
+	MOV ZH,YH
+	MOV ZL,YL
+	POP YL
+	POP YH
 
-	CLC
-	LDS TEMP,SREG
 	MOV LOOP_CNTR,ACCUM
 	ANDI LOOP_CNTR,0x0f
-__PRIM_ADD__LOOP:
-	LD TEMP_H,-Z
-	LD TEMP_L,-X
-	STS SREG,TEMP
-	ADC TEMP_H,TEMP_L
+__PRIM_CPI__LOOP:
+	LD TEMP_H,Y+
+	LPM TEMP_L,Z+
+	CP TEMP_H,TEMP_L
+	BRNE __PRIM_CPI__END
 	LDS TEMP,SREG
-	ST Z,TEMP_H
 	DEC LOOP_CNTR
-	BRNE __PRIM_ADD__LOOP
+	BRNE __PRIM_CPI__LOOP
 	STS SREG,TEMP
+__PRIM_CPI__END:
 
 	POP_Z
-	POP_X
+	POP_Y
 	POP LOOP_CNTR
 	POP TEMP_L
 	POP TEMP_H
