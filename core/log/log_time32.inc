@@ -10,15 +10,8 @@
 
 .include	"./math/mul16x8.inc"
 .include	"./math/mul32x16.inc"
-.include	"./core/log/log_cr.inc"
-.include	"./core/log/log_str.inc"
 .include	"./core/log/log_numx16.inc"
 .include	"./core/log/log_numx32.inc"
-
-_LOG_TIME_STR_TIME32:
-	.db   "TIME:",0x00
-_LOG_TIME_STR_US32:
-	.db   "us",0x00
 
 ;--------------------------------------------------------
 C5_LOG_TIME32:
@@ -44,9 +37,6 @@ C5_LOG_TIME32:
 	ADD ZL,TEMP
 	LDI TEMP,0x00
 	ADC ZH,TEMP
-
-	LDI_Y _LOG_TIME_STR_TIME32|0x8000
-	MCALL C5_LOG_STR
 
 	LDD TEMP_EH,Z+0x00
 	LDD TEMP_EL,Z+0x01
@@ -92,9 +82,6 @@ C5_LOG_TIME32__LOOP_S:
 	MCALL C5_LOG_CHAR
 	DEC LOOP_CNTR
 	BRNE C5_LOG_TIME32__LOOP_S
-	BRTC PC+0x04
-	LDI TEMP,' '
-	MCALL C5_LOG_CHAR
 
 	LDI LOOP_CNTR,0x03
 C5_LOG_TIME32__LOOP_MS:
@@ -107,9 +94,6 @@ C5_LOG_TIME32__LOOP_MS:
 	MCALL C5_LOG_CHAR
 	DEC LOOP_CNTR
 	BRNE C5_LOG_TIME32__LOOP_MS
-	BRTC PC+0x04
-	LDI TEMP,' '
-	MCALL C5_LOG_CHAR
 
 	LDI LOOP_CNTR,0x03
 C5_LOG_TIME32__LOOP_US:
@@ -125,7 +109,6 @@ C5_LOG_TIME32__LOOP_US:
 	BRTS PC+0x04
 	LDI TEMP,'0'
 	MCALL C5_LOG_CHAR
-	MCALL C5_LOG_CR
 
 
 	POP TEMP

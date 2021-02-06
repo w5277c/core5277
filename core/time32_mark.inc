@@ -18,8 +18,9 @@ C5_TIME32_MARK:
 ;IN: PID,TEMP-смещение на выделенные 4 байт, для хранения
 ;временной метки (71s-1us)
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_X
 	PUSH_Y
+	PUSH_Z
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH TEMP_H
@@ -73,7 +74,8 @@ _C5_TIME32_MARK__STORE:
 	POP TEMP_H
 	POP TEMP_EL
 	POP TEMP_EH
-	POP_Y
 	POP_Z
+	POP_Y
+	POP_X
 	RET
 .endif

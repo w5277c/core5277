@@ -3,44 +3,33 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;06.02.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_LOG_PRIM_HEX
+.ifdef DEF_INT_ST
 .else
-.set DEF_C5_LOG_PRIM_HEX = 1
-.ifdef LOGGING_PORT
+.set DEF_INT_ST = 1
 
-.include	"./core/log/log_char.inc"
-.include	"./core/log/log_byte.inc"
+.include	"./prim/_offsets.inc"
 
 ;--------------------------------------------------------
-C5_LOG_PRIM_HEX:
+INT_ST:
 ;--------------------------------------------------------
-;Логирование примитива
+;Чтение значения из INT
 ;IN: Z-адрес на память с переменными, TEMP-смещение для
-;переменной, ACCUM-тип примитива
+;записи значения
+;OUT: TEMP_EH/EL/H/L-значение
 ;--------------------------------------------------------
 	PUSH TEMP
-	PUSH LOOP_CNTR
 	PUSH_Z
 
 	ADD ZL,TEMP
 	CLR TEMP
 	ADC ZH,TEMP
-	MOV LOOP_CNTR,ACCUM
-	ANDI LOOP_CNTR,0x0f
 
-	LDI TEMP,'0'
-	MCALL C5_LOG_CHAR
-	LDI TEMP,'x'
-	MCALL C5_LOG_CHAR
-_C5_LOG_PRIM_HEX__LOOP:
-	LD TEMP,Z+
-	MCALL C5_LOG_BYTE
-	DEC LOOP_CNTR
-	BRNE _C5_LOG_PRIM_HEX__LOOP
+	LDD TEMP_EH,Z+0x00
+	LDD TEMP_EL,Z+0x01
+	LDD TEMP_H,Z+0x02
+	LDD TEMP_L,Z+0x03
 
 	POP_Z
-	POP LOOP_CNTR
 	POP TEMP
 	RET
-.endif
 .endif
