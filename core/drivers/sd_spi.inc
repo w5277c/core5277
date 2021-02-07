@@ -69,7 +69,7 @@
 	.EQU	DRV_SD_OP_GET_OP_TIME							= 0x08;Получить время выполнения процедуры
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	DRV_SD_VARS_SIZE									= 0x08;Размер данных под переменные
+	.EQU	DRV_SD_VARS_SIZE									= 0x0e;Размер данных под переменные
 	.EQU	DRV_SD_BUFFER_SIZE								= 0x40;Размер внутреннего блока для коммуникации (и записи/чтения если поддерживается partial)
 	;---OFFSETS---
 	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
@@ -578,17 +578,14 @@ _DRV_SD_OP_READ_BLOCK:
 
 	MCALL _DRV_SD__SEND_CMD
 
-	LDI TEMP,_DRV_SD_VAR_TIME
-	MCALL C5_TIME32_MARK
 	MCALL _DRV_SD_GET_R1
-	LDI TEMP,_DRV_SD_VAR_TIME
-	MCALL C5_TIME32_DELTA
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_READ_BLOCK__END
+	BRNE _DRV_SD_OP_READ_BLOCK__FAIL
 	LDI TEMP_H,high(512)
 	LDI TEMP_L,low(512)
 	MCALL _DRV_SD_GET_BLOCK
-
+	RJMP _DRV_SD_OP_READ_BLOCK__END
+_DRV_SD_OP_READ_BLOCK__FAIL:
 _DRV_SD_OP_READ_BLOCK__END:
 	SBI PORTB,SS & 0x0f
 
@@ -640,7 +637,6 @@ _DRV_SD_OP_WRITE_BLOCK:
 	LDI TEMP_L,low(512)
 	MCALL _DRV_SD_SET_BLOCK
 	MCALL _DRV_SD_GET_DATARESP_TOKEN
-
 	CPI ACCUM,_DRV_SD_DR_TOKEN_ACCEPTED
 	BRNE _DRV_SD_OP_WRITE_BLOCK__FAIL
 
@@ -976,12 +972,8 @@ _DRV_SD_GET_DATARESP_TOKEN:
 	PUSH TEMP
 	PUSH LOOP_CNTR
 
-.ifdef LOGGING_PORT
-	.if LOGGING_LEVEL >= LOGGING_LVL_DBG
-		LDI TEMP,_DRV_SD_VAR_TIME
-		MCALL C5_TIME32_MARK
-	.endif
-.endif
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_MARK
 
 	LDI TRY_CNTR,0x00
 _DRV_SD_GET_DATARESP_TOKEN1__LOOP:
@@ -1076,7 +1068,7 @@ _DRV_SD_GET_R7__GOT_R1:
 _DRV_SD_GET_BLOCK:
 ;--------------------------------------------------------
 ;Прием блока данных
-;IN: X-адрес на выделенную память
+;IN: X-адрес на выделенную память,Z-адрес на переменные
 ;TEMP_H,L-максимальная длина данных
 ;OUT: TEMP_H,L-длина полученных данных
 ;ACCUM-0x00 успешное выполнение
@@ -1088,17 +1080,24 @@ _DRV_SD_GET_BLOCK:
 	PUSH_Y
 	PUSH_X
 
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_MARK
+
 	MOV YH,TEMP_H
 	MOV YL,TEMP_L
 	LDI TRY_CNTR,0x00
 _DRV_SD_GET_BLOCK__BEGIN_LOOP:
 	MCALL _DRV_SD_BYTE_RECV
 	CPI TEMP,0xfe
-	BREQ _DRV_SD_GET_BLOCK__DATA
+	BREQ _DRV_SD_GET_BLOCK__GOT_ANSWER
 _DRV_SD_GET_BLOCK__NO_ERROR:
 	DEC TRY_CNTR
 	BRNE _DRV_SD_GET_BLOCK__BEGIN_LOOP
 	RJMP _DRV_SD_GET_BLOCK__FAIL
+
+_DRV_SD_GET_BLOCK__GOT_ANSWER:
+	LDI TEMP,_DRV_SD_VAR_TIME
+	MCALL C5_TIME32_DELTA
 
 _DRV_SD_GET_BLOCK__DATA:
 	MCALL _DRV_SD_BYTE_RECV

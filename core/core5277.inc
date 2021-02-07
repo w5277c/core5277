@@ -222,7 +222,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"core5277_v0.3.2",0x0d,0x0a,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.2",0x0d,0x0a,0x00
 	.INCLUDE "./core/log/log_init.inc"
 	.INCLUDE	"./core/log/log_romstr.inc"
 	.INCLUDE	"./core/log/log_tasksdump.inc"
