@@ -1,46 +1,40 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.02.2021  w5277c@gmail.com			Начало
+;18.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_TIME32_MARK
+.ifdef DEF_DRIVER_SD_GET_STATUS
 .else
-.set DEF_C5_TIME32_MARK = 1
+.set DEF_DRIVER_SD_GET_STATUS = 1
 
-.include	"./core/uptime_copy.inc"
+.include	"./core/drivers/sd/sd_get_r2.inc"
 
 ;--------------------------------------------------------
-C5_TIME32_MARK:
+_DRV_SD_OP_GET_STATUS:
 ;--------------------------------------------------------
-;Записываем в выделенную память временную метку (4 байт)
-;IN: PID,TEMP-смещение на выделенные 4 байт, для хранения
-;временной метки
+;Получить состояние карты
+;IN: X-адрес на выделенную память
+;OUT: TEMP_H/L-R2 ответ
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH ACCUM
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET
-	ADD ZL,TEMP
+	CBI PORTB,SS & 0x0f
+	LDI TEMP,_DRV_SD_CMD13
+	PUSH_X
+	ST X+,TEMP
 	CLR TEMP
-	ADC ZH,TEMP
-
-	LDS TEMP,SREG
-	PUSH TEMP
-	CLI
-
-	LDS TEMP,_C5_UPTIME+0x02
-	STD Z+0x00,TEMP
-	LDS TEMP,_C5_UPTIME+0x03
-	STD Z+0x01,TEMP
-	LDS TEMP,_C5_UPTIME+0x04
-	STD Z+0x02,TEMP
-	LDS TEMP,_C5_MAIN_TIMER_CNTR
-	STD Z+0x03,TEMP
+	ST X+,TEMP
+	ST X+,TEMP
+	ST X+,TEMP
+	ST x+,TEMP
+	POP_X
+	LDI TEMP_L,0x05
+	MCALL _DRV_SD__SEND_CMD
+	MCALL _DRV_SD_GET_R2
+	SBI PORTB,SS & 0x0f
 
 	POP TEMP
-	STS SREG,TEMP
-
-	POP TEMP
-	POP_Z
+	POP ACCUM
 	RET
 .endif

@@ -1,46 +1,50 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.02.2021  w5277c@gmail.com			Начало
+;18.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_TIME32_MARK
+.ifdef DEF_DRIVER_SD_GET_OCR
 .else
-.set DEF_C5_TIME32_MARK = 1
+.set DEF_DRIVER_SD_GET_OCR = 1
 
-.include	"./core/uptime_copy.inc"
+.include	"./core/drivers/sd/sd_get_r3r7.inc"
 
 ;--------------------------------------------------------
-C5_TIME32_MARK:
+_DRV_SD_OP_GET_OCR:
 ;--------------------------------------------------------
-;Записываем в выделенную память временную метку (4 байт)
-;IN: PID,TEMP-смещение на выделенные 4 байт, для хранения
-;временной метки
+;Получить OCR
+;IN: X-адрес на буффер
+;OUT: ACCUM-R1 ответ
+;Y-адрес на буфер
 ;--------------------------------------------------------
-	PUSH_Z
 	PUSH TEMP
+	PUSH TEMP_L
+	PUSH_X
 
-	MCALL C5_RAM_OFFSET
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	MOV YH,XH
+	MOV YL,XL
 
-	LDS TEMP,SREG
-	PUSH TEMP
-	CLI
+	CBI PORTB,SS & 0x0f
+	LDI TEMP,_DRV_SD_CMD58
+	PUSH_X
+	ST X+,TEMP
+	LDI TEMP,0x00
+	ST X+,TEMP
+	LDI TEMP,0x00
+	ST X+,TEMP
+	LDI TEMP,0x00
+	ST X+,TEMP
+	LDI TEMP,0x00
+	ST X+,TEMP
+	POP_X
+	LDI TEMP_L,0x05
+	MCALL _DRV_SD__SEND_CMD
+	MCALL _DRV_SD_GET_R3R7
+	SBI PORTB,SS & 0x0f
+_DRV_SD_OP_GET_OCR__END:
 
-	LDS TEMP,_C5_UPTIME+0x02
-	STD Z+0x00,TEMP
-	LDS TEMP,_C5_UPTIME+0x03
-	STD Z+0x01,TEMP
-	LDS TEMP,_C5_UPTIME+0x04
-	STD Z+0x02,TEMP
-	LDS TEMP,_C5_MAIN_TIMER_CNTR
-	STD Z+0x03,TEMP
-
+	POP_X
+	POP TEMP_L
 	POP TEMP
-	STS SREG,TEMP
-
-	POP TEMP
-	POP_Z
 	RET
 .endif
