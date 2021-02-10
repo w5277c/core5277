@@ -35,11 +35,13 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.EQU	DRV_SD_OP_GET_CSD									= 0x02;Получить CSD
 	.EQU	DRV_SD_OP_GET_CID									= 0x03;Получить CID
 	.EQU	DRV_SD_OP_READ_BLOCK								= 0x04;Считать блок
-	.EQU	DRV_SD_OP_WRITE_BLOCK							= 0x05;Записать блок
-	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x06;Очистка блоков
-	.EQU	DRV_SD_OP_GET_STATUS								= 0x07;Чтение статуса карты
-	.EQU	DRV_SD_OP_GET_OP_TIME							= 0x08;Получить время выполнения процедуры
-	.EQU	DRV_SD_OP_GEN_CMD									= 0x09;Чтение/запись данных контроллера?
+	.EQU	DRV_SD_OP_READ_DUMMY_BLOCK						= 0x05;Фиктивное чтение блока
+	.EQU	DRV_SD_OP_WRITE_BLOCK							= 0x06;Записать блок
+	.EQU	DRV_SD_OP_WRITE_DUMMY_BLOCK					= 0x07;Фиктивная запись блока
+	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x08;Очистка блоков
+	.EQU	DRV_SD_OP_GET_STATUS								= 0x09;Чтение статуса карты
+	.EQU	DRV_SD_OP_GET_OP_TIME							= 0x0a;Получить время выполнения процедуры
+	.EQU	DRV_SD_OP_GEN_CMD									= 0x0b;Чтение/запись данных контроллера?
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_SD_VARS_SIZE									= 0x0e;Размер данных под переменные
@@ -168,10 +170,22 @@ _DRV_SD_MAIN__CONTINUE:
 	MCALL _DRV_SD_OP_READ_BLOCK
 	RJMP _DRV_SD__END
 .endif
+.ifdef DEF_DRIVER_SD_READ_DUMMY_BLOCK
+	CPI FLAGS,DRV_SD_OP_READ_DUMMY_BLOCK
+	BRNE PC+0x04
+	MCALL _DRV_SD_OP_READ_DUMMY_BLOCK
+	RJMP _DRV_SD__END
+.endif
 .ifdef DEF_DRIVER_SD_WRITE_BLOCK
 	CPI FLAGS,DRV_SD_OP_WRITE_BLOCK
 	BRNE PC+0x04
 	MCALL _DRV_SD_OP_WRITE_BLOCK
+	RJMP _DRV_SD__END
+.endif
+.ifdef DEF_DRIVER_SD_WRITE_DUMMY_BLOCK
+	CPI FLAGS,DRV_SD_OP_WRITE_DUMMY_BLOCK
+	BRNE PC+0x04
+	MCALL _DRV_SD_OP_WRITE_DUMMY_BLOCK
 	RJMP _DRV_SD__END
 .endif
 .ifdef DEF_DRIVER_SD_ERASE_BLOCKS
