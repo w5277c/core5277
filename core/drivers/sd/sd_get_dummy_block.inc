@@ -1,7 +1,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;18.01.2021  w5277c@gmail.com			Начало
+;10.02.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DRIVER_SD_GET_DUMMY_BLOCK
 .else
@@ -47,7 +47,13 @@ _DRV_SD_GET_DUMMY_BLOCK__DATA:
 	BRNE _DRV_SD_GET_DUMMY_BLOCK__DATA
 	;Получаем CRC
 	MCALL _DRV_SD_BYTE_RECV
+	MOV YH,TEMP
 	MCALL _DRV_SD_BYTE_RECV
+	MOV YL,TEMP
+	CPI YH,0x50
+	BRNE _DRV_SD_GET_DUMMY_BLOCK__FAIL
+	CPI YL,0x88
+	BRNE _DRV_SD_GET_DUMMY_BLOCK__FAIL
 
 	LDI ACCUM,0x00
 	RJMP _DRV_SD_GET_DUMMY_BLOCK__END

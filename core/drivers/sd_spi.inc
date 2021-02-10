@@ -6,6 +6,7 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
+.include	"./core/drivers/sd/sd_reset.inc"
 .include	"./core/drivers/sd/sd_get_status.inc"
 .include	"./core/drivers/sd/sd_get_r1.inc"
 .include	"./core/drivers/sd/sd_get_r3r7.inc"
@@ -30,18 +31,19 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 ;TODO перейти на внешнюю реализацию spi
 
 	;---OPERATIONS---
-	.EQU	DRV_SD_OP_INIT										= 0x00;Инициализация
-	.EQU	DRV_SD_OP_GET_OCR									= 0x01;Получить OCR
-	.EQU	DRV_SD_OP_GET_CSD									= 0x02;Получить CSD
-	.EQU	DRV_SD_OP_GET_CID									= 0x03;Получить CID
-	.EQU	DRV_SD_OP_READ_BLOCK								= 0x04;Считать блок
-	.EQU	DRV_SD_OP_READ_DUMMY_BLOCK						= 0x05;Фиктивное чтение блока
-	.EQU	DRV_SD_OP_WRITE_BLOCK							= 0x06;Записать блок
-	.EQU	DRV_SD_OP_WRITE_DUMMY_BLOCK					= 0x07;Фиктивная запись блока
-	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x08;Очистка блоков
-	.EQU	DRV_SD_OP_GET_STATUS								= 0x09;Чтение статуса карты
-	.EQU	DRV_SD_OP_GET_OP_TIME							= 0x0a;Получить время выполнения процедуры
-	.EQU	DRV_SD_OP_GEN_CMD									= 0x0b;Чтение/запись данных контроллера?
+	.EQU	DRV_SD_OP_RESET									= 0x00;Перевод SD в изначальное состояние
+	.EQU	DRV_SD_OP_INIT										= 0x01;Инициализация
+	.EQU	DRV_SD_OP_GET_OCR									= 0x02;Получить OCR
+	.EQU	DRV_SD_OP_GET_CSD									= 0x03;Получить CSD
+	.EQU	DRV_SD_OP_GET_CID									= 0x04;Получить CID
+	.EQU	DRV_SD_OP_READ_BLOCK								= 0x05;Считать блок
+	.EQU	DRV_SD_OP_READ_DUMMY_BLOCK						= 0x06;Фиктивное чтение блока
+	.EQU	DRV_SD_OP_WRITE_BLOCK							= 0x07;Записать блок
+	.EQU	DRV_SD_OP_WRITE_DUMMY_BLOCK					= 0x08;Фиктивная запись блока
+	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x09;Очистка блоков
+	.EQU	DRV_SD_OP_GET_STATUS								= 0x0a;Чтение статуса карты
+	.EQU	DRV_SD_OP_GET_OP_TIME							= 0x0b;Получить время выполнения процедуры
+	.EQU	DRV_SD_OP_GEN_CMD									= 0x0c;Чтение/запись данных контроллера?
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_SD_VARS_SIZE									= 0x0e;Размер данных под переменные
@@ -138,6 +140,10 @@ DRV_SD_INIT:
 	ADIW XL,_DRV_SD_BUFFER
 _DRV_SD_MAIN__CONTINUE:
 
+	CPI FLAGS,DRV_SD_OP_RESET
+	BRNE PC+0x04
+	MCALL _DRV_SD_OP_RESET
+	RJMP _DRV_SD__END
 	CPI FLAGS,DRV_SD_OP_INIT
 	BRNE PC+0x04
 	MCALL _DRV_SD_OP_INIT
@@ -255,23 +261,7 @@ _DRV_SD_OP_INIT__LOOP:
 
 	CBI PORTB,SS & 0x0f
 
-	LDI TEMP,_DRV_SD_CMD0
-	PUSH_X
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	POP_X
-	LDI TEMP_L,0x05
-	MCALL _DRV_SD__SEND_CMD
-	LDI TEMP_L,0x01
-	MCALL _DRV_SD_GET_R1
-	SBI PORTB,SS & 0x0f
+	MCALL _DRV_SD_OP_RESET
 	CPI ACCUM,0x01
 	BREQ PC+0x02
 	RJMP _DRV_SD_OP_INIT__END
