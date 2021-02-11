@@ -19,6 +19,8 @@
 .include	"./core/timer_set_period.inc"
 .include	"./core/timer_start.inc"
 .include	"./core/timer_stop.inc"
+.include	"./core/eint_enable.inc"
+.include	"./core/eint_disable.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
@@ -462,7 +464,7 @@ __DRV_UART_S_RECV_EVENT__DATA:
 		CPI TEMP_H,0x08
 		BRNE __DRV_UART_S_RECV_EVENT__NEXT_BIT
 
-		;На бит раньше включаю прерывание для RX порта (так как позже моуг не успеть)
+		;На бит раньше включаю прерывание для RX порта (так как позже могу не успеть)
 		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
 		SBRS TEMP,0x07
 		RJMP PC+0x0b
@@ -472,7 +474,7 @@ __DRV_UART_S_RECV_EVENT__DATA:
 		LDI TEMP_L,C5_ISC_RISING_EDGE
 		LDI YH,high(_DRV_UART_S_PCINT_EINT_EVENT)
 		LDI YL,low(_DRV_UART_S_PCINT_EINT_EVENT)
-		MCALL C5_EINT_ENBALE
+		MCALL C5_EINT_ENABLE
 		POP TEMP_H
 		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BIT
 		LDD ACCUM,Z+_DRV_UART_S_RX_PORT

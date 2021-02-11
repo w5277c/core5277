@@ -10,26 +10,30 @@
 .include	"./str/str_to_ram.inc"
 .include	"./str/str_find.inc"
 .include	"./conv/num16_to_str.inc"
-.include	"./core/uptime_copy.inc"
-.include	"./core/log/log_char.inc"
-.include	"./core/log/log_strn.inc"
-.include	"./prim/prim_sub.inc"
-.include	"./prim/prim_cp.inc"
+.include	"./core/time32_mark.inc"
+.include	"./core/time32_delta.inc"
+.include	"./prim/common.inc"
+.include	"./prim/prim_mov.inc"
+.include	"./prim/prim_cpi.inc"
 
 .ifdef LOGGING_PORT
-	.include	"./str/strn_trim.inc"
-	.include	"/core/log/log_cr.inc"
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		.include	"./core/log/log_char.inc"
+		.include	"./core/log/log_strn.inc"
+		.include	"./str/strn_trim.inc"
+		.include	"/core/log/log_cr.inc"
+	.endif
 .endif
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
 	.EQU	_DRV_ESP8266_BUFFER_SIZE						= 0xc0;Размер буфера
 	;---OFFSETS---
-	.EQU	_DRV_ESP8266_UART_DRV_ID						= 0x00;Идентификатор драйвера UART
-	.EQU	_DRV_ESP8266_UPTIME_START						= 0x01;Переменная1 UPTIME (5 байт)
-	.EQU	_DRV_ESP8266_UPTIME_CURRENT					= 0x06;Переменная2 UPTIME (5 байт)
-	.EQU	_DRV_ESP8266_FLAGS								= 0x0b;Флаги драйвера
-	.EQU	_DRV_ESP8266_BUFFER_OFFSET						= 0x0c;Адрес начала буфера в выделенной памяти
+	.EQU	_DRV_ESP8266_UART_DRV_ID						= 0x00;1Б - Идентификатор драйвера UART
+	.EQU	_DRV_ESP8266_TIME_START							= 0x01;4Б - Переменная INT (4 байта)
+	.EQU	_DRV_ESP8266_TIME_DELTA							= 0x05;4Б - Переменная INT (4 байта)
+	.EQU	_DRV_ESP8266_FLAGS								= 0x08;1Б - Флаги драйвера
+	.EQU	_DRV_ESP8266_BUFFER_OFFSET						= 0x09;Адрес начала буфера в выделенной памяти
 	;---FLAGS---
 	.EQU	DRV_ESP8266_FLAG_LOGGING						= 0x00;Бит логирования
 
@@ -158,7 +162,9 @@ _DRV_ESP8266__OP_RAW:
 	MOV YH,XH
 	MOV YL,XL
 .ifdef LOGGING_PORT
-	MCALL _DRV_ESP8266__LOG_REQV
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MCALL _DRV_ESP8266__LOG_REQV
+	.endif
 .endif
 	LDI TEMP_H,high(1000/2)
 	LDI TEMP_L,low(1000/2)
@@ -169,7 +175,9 @@ _DRV_ESP8266__OP_RAW:
 	CPI TEMP_L,0x00
 	BREQ _DRV_ESP8266__OP_RAW__ERROR
 .ifdef LOGGING_PORT
-	MCALL _DRV_ESP8266__LOG_RESP
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MCALL _DRV_ESP8266__LOG_RESP
+	.endif
 .endif
 	LDI TEMP_H,DRV_ESP8266_RESULT_OK
 	RJMP _DRV_ESP8266__OP_RAW__END
@@ -281,6 +289,8 @@ _DRV_ESP8266__OP_SET_WIFI:
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH TEMP_L
+	PUSH TEMP
+	PUSH ACCUM
 	PUSH TRY_CNTR
 
 	PUSH_Y
@@ -314,7 +324,9 @@ _DRV_ESP8266__OP_SET_WIFI:
 	MOV YH,XH
 	MOV YL,XL
 .ifdef LOGGING_PORT
-	MCALL _DRV_ESP8266__LOG_REQV
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MCALL _DRV_ESP8266__LOG_REQV
+	.endif
 .endif
 	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
 	MCALL C5_EXEC
@@ -326,14 +338,13 @@ _DRV_ESP8266__OP_SET_WIFI:
 	BRNE PC+0x02
 	RJMP __DRV_ESP8266__OP_SET_WIFI__FAIL
 .ifdef LOGGING_PORT
-	MCALL _DRV_ESP8266__LOG_RESP
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MCALL _DRV_ESP8266__LOG_RESP
+	.endif
 .endif
 	;Считываем сообщения ожидая "OK" в течении 15 секунд
-	LDI YH,0x00
-	LDI YL,_DRV_ESP8266_UPTIME_START
-	ADD YL,ZL
-	ADC YH,ZH
-	MCALL C5_UPTIME_COPY
+	LDI TEMP,_DRV_ESP8266_TIME_START
+	MCALL C5_TIME32_MARK
 	RJMP __DRV_ESP8266__OP_SET_WIFI__FIRST_READ_SKIP
 __DRV_ESP8266__OP_SET_WIFI__READ_LOOP:
 
@@ -357,7 +368,9 @@ __DRV_ESP8266__OP_SET_WIFI__READ_LOOP:
 	BRNE PC+0x02
 	RJMP __DRV_ESP8266__OP_SET_WIFI__NO_ANSWER
 .ifdef LOGGING_PORT
-	MCALL _DRV_ESP8266__LOG_RESP
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MCALL _DRV_ESP8266__LOG_RESP
+	.endif
 .endif
 __DRV_ESP8266__OP_SET_WIFI__FIRST_READ_SKIP:
 	PUSH_X
@@ -377,20 +390,14 @@ __DRV_ESP8266__OP_SET_WIFI__FIRST_READ_SKIP:
 	BRNE __DRV_ESP8266__OP_SET_WIFI__FAIL
 
 __DRV_ESP8266__OP_SET_WIFI__NO_ANSWER:
-	LDI YH,0x00
-	LDI YL,_DRV_ESP8266_UPTIME_CURRENT
-	ADD YL,ZL
-	ADC YH,ZH
-	MCALL C5_UPTIME_COPY
-	MOV XH,YH
-	MOV XL,YL
-	LDI YH,0x00
-	LDI YL,_DRV_ESP8266_UPTIME_START
-	ADD YL,ZL
-	ADC YH,ZH
-	PRIM_SUB UPTIME
+	LDI ACCUM,PRIM_INT
+	LDI TEMP_H,_DRV_ESP8266_TIME_DELTA
+	LDI TEMP_L,_DRV_ESP8266_TIME_START
+	MCALL PRIM_MOV
+	LDI TEMP,_DRV_ESP8266_TIME_DELTA
+	MCALL C5_TIME32_DELTA
 	LDI_Y _DRV_ESP8266_WIFI_CONNECT_TIMEOUT|0x8000
-	PRIM_CP UPTIME
+	MCALL PRIM_CPI
 	BRCC PC+0x02
 	RJMP __DRV_ESP8266__OP_SET_WIFI__READ_LOOP
 	RJMP __DRV_ESP8266__OP_SET_WIFI__FAIL
@@ -416,6 +423,8 @@ __DRV_ESP8266__OP_SET_WIFI__FAIL:
 __DRV_ESP8266__OP_SET_WIFI__END:
 
 	POP TRY_CNTR
+	POP ACCUM
+	POP TEMP
 	POP TEMP_L
 	POP TEMP_EL
 	POP TEMP_EH
@@ -611,6 +620,7 @@ _DRV_ESP8266__OP_TCP_CLOSE:
 	RET
 
 .ifdef LOGGING_PORT
+.if LOGGING_LEVEL >= LOGGING_LVL_PNC
 ;--------------------------------------------------------
 _DRV_ESP8266__LOG_REQV:
 ;--------------------------------------------------------
@@ -645,4 +655,5 @@ _DRV_ESP8266__LOG_RESP:
 	POP_Y
 	MCALL C5_LOG_CR
 	RET
+.endif
 .endif
