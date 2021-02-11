@@ -51,8 +51,12 @@
 	;---BAUDRATE_IDS---
 	.EQU	DRV_UART_S_50NS_BAUDRATE_4800		= 0x04
 	.EQU	DRV_UART_S_50NS_BAUDRATE_9600		= 0x02
+	.EQU	DRV_UART_S_50NS_BAUDRATE_19200	= 0x01			;Только совместно с C5_IR_INTn
+	.EQU	DRV_UART_S_50NS_BAUDRATE_38400	= 0x00			;Только совместно с C5_IR_INTn
 	.EQU	DRV_UART_S_25NS_BAUDRATE_4800		= 0x08
 	.EQU	DRV_UART_S_25NS_BAUDRATE_9600		= 0x04
+	.EQU	DRV_UART_S_25NS_BAUDRATE_19200	= 0x02			;Только совместно с C5_IR_INTn
+	.EQU	DRV_UART_S_25NS_BAUDRATE_38400	= 0x01			;Только совместно с C5_IR_INTn
 
 ;--------------------------------------------------------
 DRV_UART_S_INIT:

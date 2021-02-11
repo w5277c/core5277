@@ -53,7 +53,8 @@
 
 	;---AT-CONSTANTS---
 _DRV_ESP8266_AT_ECHO_OFF:					.db "ATE0",0x0d,0x0a,0x00
-_DRV_ESP8266_AT_SET_UART:					.db "AT+UART_CUR=9600,8,1,0,0",0x0d,0x0a,0x00
+_DRV_ESP8266_AT_SET_UART1:					.db "AT+UART_CUR=",0x00
+_DRV_ESP8266_AT_SET_UART2:					.db ",8,1,0,0",0x0d,0x0a,0x00
 _DRV_ESP8266_AT_SET_WIFI1:					.db "AT+CWJAP_CUR=",0x22,0x00;+APN+
 _DRV_ESP8266_AT_SET_WIFI2:					.db 0x22,",",0x22,0x00;+PASSWORD+
 _DRV_ESP8266_AT_SET_WIFI3:					.db 0x22,0x0d,0x0a,0x00
@@ -87,7 +88,7 @@ _DRV_ESP8266_WIFI_CONNECT_TIMEOUT:		.db 0x00,0x00,0x00,0x3a,0x98	;UPTIME VAR = 3
 DRV_ESP8266_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: TEMP - ид драйвера UART, FLAGS-флаги
+;IN: TEMP-ид драйвера UART, FLAGS-флаги
 ;--------------------------------------------------------
 	PUSH ACCUM
 
@@ -103,7 +104,7 @@ DRV_ESP8266_INIT:
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;--------------------------------------------------------
-;IN: ACCUM - тип операции
+;IN: ACCUM-тип операции
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
@@ -232,10 +233,12 @@ __DRV_ESP8266_CHECK_RESP_OK__END:
 _DRV_ESP8266__OP_INIT:
 ;--------------------------------------------------------
 ;Инициализация ESP8266
-;OUT:TEMP_H - RESULT
+;IN: TEMP_H/L-UART baudrate
+;OUT:TEMP_H-RESULT
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
+	PUSH TEMP_H
 	PUSH TEMP_L
 
 	;SET UART
@@ -244,8 +247,18 @@ _DRV_ESP8266__OP_INIT:
 	ADD XL,ZL
 	ADC XH,ZH
 	PUSH_X
-	LDI_Y _DRV_ESP8266_AT_SET_UART|0x8000
+	LDI_Y _DRV_ESP8266_AT_SET_UART1|0x8000
 	MCALL STR_TO_RAM
+	PUSH_Z
+	MOV ZH,XH
+	MOV ZL,XL
+	MCALL NUM16_TO_STR
+	MOV XH,ZH
+	MOV XL,ZL
+	POP_Z
+	LDI_Y _DRV_ESP8266_AT_SET_UART2|0x8000
+	MCALL STR_TO_RAM
+	POP_Y
 	MOV TEMP_H,XL
 	SUB TEMP_H,ZL
 	SUBI TEMP_H,_DRV_ESP8266_BUFFER_OFFSET
@@ -282,7 +295,7 @@ _DRV_ESP8266__OP_SET_WIFI:
 ;Задаем подключение к WI-FI точке доступа
 ;IN; Z-адрес выделенной памяти
 ;X-адрес на имя AP, Y-адрес на пароль
-;OUT:TEMP_H - RESULT
+;OUT:TEMP_H-RESULT
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -436,8 +449,8 @@ __DRV_ESP8266__OP_SET_WIFI__END:
 _DRV_ESP8266__OP_TCP_SERVER:
 ;--------------------------------------------------------
 ;Активируем TCP сервер
-;IN; TEMP_H/L - TCP порт
-;OUT:TEMP_H - RESULT
+;IN; TEMP_H/L-TCP порт
+;OUT:TEMP_H-RESULT
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -491,7 +504,6 @@ _DRV_ESP8266__OP_TCP_SERVER:
 	PUSH_Z
 	MOV ZH,XH
 	MOV ZL,XL
-
 	MCALL NUM16_TO_STR
 	MOV XH,ZH
 	MOV XL,ZL
@@ -543,7 +555,7 @@ _DRV_ESP8266__OP_TCP_SERVER_END:
 _DRV_ESP8266__OP_RECEIVE_DATA:
 ;--------------------------------------------------------
 ;Принимаем данные
-;IN; TEMP_H/L - таймаут ожидания данных (2мс)
+;IN; TEMP_H/L-таймаут ожидания данных (2мс)
 ;OUT:TEMP_H-результат, TEMP_L-длина,Y-адрес на начало
 ;данных
 ;--------------------------------------------------------
