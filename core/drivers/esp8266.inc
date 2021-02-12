@@ -26,14 +26,15 @@
 .endif
 
 ;---CONSTANTS--------------------------------------------
+	.EQU	_DRV_ESP8266_VARS_SIZE							= 0x0a
 	;---VARS---
 	.EQU	_DRV_ESP8266_BUFFER_SIZE						= 0xc0;Размер буфера
 	;---OFFSETS---
 	.EQU	_DRV_ESP8266_UART_DRV_ID						= 0x00;1Б - Идентификатор драйвера UART
 	.EQU	_DRV_ESP8266_TIME_START							= 0x01;4Б - Переменная INT (4 байта)
 	.EQU	_DRV_ESP8266_TIME_DELTA							= 0x05;4Б - Переменная INT (4 байта)
-	.EQU	_DRV_ESP8266_FLAGS								= 0x08;1Б - Флаги драйвера
-	.EQU	_DRV_ESP8266_BUFFER_OFFSET						= 0x09;Адрес начала буфера в выделенной памяти
+	.EQU	_DRV_ESP8266_FLAGS								= 0x09;1Б - Флаги драйвера
+	.EQU	_DRV_ESP8266_BUFFER_OFFSET						= 0x0a;Адрес начала буфера в выделенной памяти
 	;---FLAGS---
 	.EQU	DRV_ESP8266_FLAG_LOGGING						= 0x00;Бит логирования
 
@@ -80,9 +81,8 @@ _DRV_ESP8266_AT_RESP_IPD:					.db 0x0d,0x0a,"+IPD,"0x00
 _DRV_ESP8266_AT_CONST_COLON:				.db ":",0x00
 ;_DRV_ESP8266_AT_WIFI_CONNECTED:			.db 0x0d,0x0a,"WIFI CONNECTED",0x0d,0x0a,0x00
 
-_DRV_ESP8266_WIFI_CONNECT_TIMEOUT:		.db 0x00,0x00,0x00,0x3a,0x98	;UPTIME VAR = 30 сек.
+_DRV_ESP8266_WIFI_CONNECT_TIMEOUT:		.db 0x01,0xc9,0xc3,0x80	;TIME VAR = 30 сек.
 	;---
-	.EQU	_DRV_ESP8266_VARS_SIZE							= 0x0c
 
 ;--------------------------------------------------------
 DRV_ESP8266_INIT:
@@ -238,7 +238,6 @@ _DRV_ESP8266__OP_INIT:
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
-	PUSH TEMP_H
 	PUSH TEMP_L
 
 	;SET UART
@@ -258,7 +257,6 @@ _DRV_ESP8266__OP_INIT:
 	POP_Z
 	LDI_Y _DRV_ESP8266_AT_SET_UART2|0x8000
 	MCALL STR_TO_RAM
-	POP_Y
 	MOV TEMP_H,XL
 	SUB TEMP_H,ZL
 	SUBI TEMP_H,_DRV_ESP8266_BUFFER_OFFSET
@@ -671,9 +669,9 @@ _DRV_ESP8266__OP_SEND_DATA:
 	MOV TEMP_EH,TEMP_L
 	LDI TEMP_EL,(_DRV_ESP8266_BUFFER_SIZE-0x01)
 .ifdef LOGGING_PORT
-   .if LOGGING_LEVEL >= LOGGING_LVL_PNC
-      MCALL _DRV_ESP8266__LOG_REQV
-   .endif
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MCALL _DRV_ESP8266__LOG_REQV
+	.endif
 .endif
 	LDI TEMP_H,high(1000/2)
 	LDI TEMP_L,low(1000/2)
@@ -701,6 +699,7 @@ __DRV_ESP8266__OP_SEND_DATA__END:
 
 
 _DRV_ESP8266__OP_TCP_CLOSE:
+	;TODO
 	RET
 
 .ifdef LOGGING_PORT

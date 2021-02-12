@@ -30,7 +30,8 @@
 	.EQU	_DRV_UART_S_LED_PORT					= 0x03			;1B - Порт индикации
 	.EQU	_DRV_UART_S_STATE						= 0x04			;1B - Статус драйвера
 	.EQU	_DRV_UART_S_TIMER_ID					= 0x05			;1B - ИД программного таймера
-	.EQU	_DRV_UART_S_PCINT_DRV_ID			= 0x06			;1B - ИД драйвера PCINT или прерывание C5_IR_INTn(с включенным 0x07 битом)
+	.EQU	_DRV_UART_S_PCINT_DRV_ID			= 0x06			;1B - ИД драйвера PCINT или прерывание C5_IR_INTn(с выключенным 0x07 битом,
+																			;у ИД драйвера всегда старший бит C5_PROCID_OPT_DRV - включен)
 	.EQU	_DRV_UART_S_OPTIONS					= 0x07			;1B - опции
 	;---
 	.EQU	_DRV_UART_S_SRC_ADDR					= 0x08			;2B - адрес блока данных для передачи
@@ -240,10 +241,9 @@ _DRV_UART_S_PROC__TX_SKIP:
 	STD Z+_DRV_UART_S_STATE,TEMP
 	;Включаю прерывание для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-	SBRS TEMP,0x07
-	RJMP PC+0x09
+	SBRC TEMP,0x07
+	RJMP PC+0x08
 	MOV TEMP_H,TEMP
-	ANDI TEMP_H,0x7f
 	LDI TEMP_L,C5_ISC_RISING_EDGE
 	LDI YH,high(_DRV_UART_S_PCINT_EINT_EVENT)
 	LDI YL,low(_DRV_UART_S_PCINT_EINT_EVENT)
@@ -290,10 +290,9 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 		MCALL C5_TIMER_STOP
 		;Выключаю прерывание для RX порта
 		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-		SBRS TEMP,0x07
-		RJMP PC+0x06
+		SBRC TEMP,0x07
+		RJMP PC+0x05
 		MOV TEMP_H,TEMP
-		ANDI TEMP_H,0x7f
 		MCALL C5_EINT_DISABLE
 		RJMP PC+0x05
 		LDD ACCUM,Z+_DRV_UART_S_RX_PORT
@@ -302,8 +301,6 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 _DRV_UART_S_PROC__RX_SKIP:
 ;;;	MCALL C5_DISPATCHER_UNLOCK
 _DRV_UART_S_PROC__DONE:
-
-
 	MCALL C5_SOFT_UART_MODE_RESET
 
 	;Результат
@@ -470,11 +467,10 @@ __DRV_UART_S_RECV_EVENT__DATA:
 
 		;На бит раньше включаю прерывание для RX порта (так как позже могу не успеть)
 		LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-		SBRS TEMP,0x07
-		RJMP PC+0x0b
+		SBRC TEMP,0x07
+		RJMP PC+0x0a
 		PUSH TEMP_H
 		MOV TEMP_H,TEMP
-		ANDI TEMP_H,0x7f
 		LDI TEMP_L,C5_ISC_RISING_EDGE
 		LDI YH,high(_DRV_UART_S_PCINT_EINT_EVENT)
 		LDI YL,low(_DRV_UART_S_PCINT_EINT_EVENT)
@@ -580,11 +576,10 @@ _DRV_UART_S_PCINT_EINT_EVENT:
 
 	;Выключаю прерывание для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
-	SBRS TEMP,0x07
-	RJMP PC+0x08
+	SBRC TEMP,0x07
+	RJMP PC+0x07
 	PUSH TEMP_H
 	MOV TEMP_H,TEMP
-	ANDI TEMP_H,0x7f
 	MCALL C5_EINT_DISABLE
 	POP TEMP_H
 	RJMP PC+0x05
