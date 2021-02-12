@@ -2,7 +2,8 @@
 ;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
 ;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.05.2020  w5277c@gmail.com        Начало
+;03.05.2020  w5277c@gmail.com			Начало
+;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Шина на базе serial(19200-8N1+BREAK)
 ;  addr     size     code     data0        dataN     crc
@@ -19,7 +20,8 @@
 
 	.include	"./core/ram/ram_offset.inc"
 	.include	"./core/ram/ram_realloc.inc"
-	.include	"./conv/crc8_maxim_block.inc"
+	.include	"./conv/crc8_maxim.inc"
+	.include	"./conv/crc8_block.inc"
 	.include	"./mem/ram_copy8.inc"
 	.include	"./mem/rom_read_bytes.inc"
 
@@ -162,9 +164,8 @@ _DRV_BUS5277_PROC_MASTER:
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH LOOP_CNTR
+	PUSH TEMP
+	PUSH ACCUM
 
 	;Проверяю на максимальный размер пакета
 	CPI TEMP_L,0x24+0x01
@@ -222,21 +223,14 @@ _DRV_BUS5277_PROC_MASTER:
 	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
 	SBRS TEMP_H,0x07
 	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
-	;Помещаю в ACCUM код ответа
-	MOV ACCUM,TEMP_H
-	;Помещаю в Z адрес на блок данных
-	MOV ZH,YH
-	MOV ZL,YL
-	;Помещаю длину данных
-	MOV TEMP,TEMP_L
 	RJMP _DRV_BUS5277_PROC_MASTER__END
 _DRV_BUS5277_PROC_MASTER__ERROR:
-	LDI TEMP,0x00
-	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
+	LDI TEMP_H,BUS5277_RESP_INVALID_PACKET
+	LDI TEMP_L,0x00
 _DRV_BUS5277_PROC_MASTER__END:
-	POP LOOP_CNTR
-	POP TEMP_L
-	POP TEMP_H
+
+	POP ACCUM
+	POP TEMP
 	POP_Y
 	POP_X
 	RET
@@ -298,7 +292,8 @@ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	;Вычисляю CRC
 	MOV XH,ZH
 	MOV XL,ZL
-	MCALL CRC8_MAXIM_BLOCK
+	LDI_Y CRC8_MAXIM
+	MCALL CRC8_BLOCK
 	ADD XL,LOOP_CNTR
 	CLR TEMP
 	ADC XH,TEMP
@@ -397,7 +392,8 @@ _DRV_BUS5277_PROC_SLAVE_SEND__DATA_COPY_DONE:
 	POP_X
 	PUSH LOOP_CNTR
 	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL CRC8_MAXIM_BLOCK
+	LDI_Y CRC8_MAXIM
+	MCALL CRC8_BLOCK
 	POP LOOP_CNTR
 	ST Z,ACCUM
 	;Формирование пакета завершено
@@ -445,8 +441,9 @@ _DRV_BUS5277_PROC_EXTRASCAN_T:
 DRV_BUS5277__PACKET_PACK:
 ;--------------------------------------------------------
 ;Сборка пакета
-;IN: Y-адрес на данные, TEMP_H-код функции,
-;TEMP_L-длина данных, LOOP_CNTR-адрес устройства
+;IN: Y-адрес на данные (0-копировать не нужно),
+;TEMP_H-код функции, TEMP_L-длина данных,
+;LOOP_CNTR-адрес устройства
 ;X-DST адрес
 ;--------------------------------------------------------
 	PUSH_X
@@ -468,6 +465,11 @@ DRV_BUS5277__PACKET_PACK:
 	SBRC YH,0x07
 	RJMP _DRV_BUS5277__PACKET_PACK__ROM_DATA_COPY
 _DRV_BUS5277__PACKET_PACK__RAM_DATA_COPY:
+	;Проверка на необходимость копирования
+	CPI YH,0x00
+	BRNE PC+0x03
+	CPI YL,0x00
+	BREQ _DRV_BUS5277__PACKET_PACK__DATA_COPY_DONE
 	MOV ZH,XH
 	MOV ZL,XL
 	MOV XH,YH
@@ -486,7 +488,9 @@ _DRV_BUS5277__PACKET_PACK__ROM_DATA_COPY:
 _DRV_BUS5277__PACKET_PACK__DATA_COPY_DONE:
 	POP_X
 	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL CRC8_MAXIM_BLOCK
+
+	LDI_Y CRC8_MAXIM
+	MCALL CRC8_BLOCK
 	ADD XL,LOOP_CNTR
 	CLR LOOP_CNTR
 	ADC XH,LOOP_CNTR
@@ -514,6 +518,10 @@ DRV_BUS5277__PACKET_UNPACK:
 	PUSH_Y
 	LD LOOP_CNTR,Y+
 	LD TEMP_L,Y+
+	CPI TEMP_L,DRV_BUS5277_MAX_PACKET_SIZE+0x01
+	BRCC DRV_BUS5277__PACKET_UNPACK__INVALID_PACKET
+	CPI TEMP_L,DRV_BUS5277_MIN_PACKET_SIZE
+	BRCS DRV_BUS5277__PACKET_UNPACK__INVALID_PACKET
 	SUBI TEMP_L,0x04
 	LD TEMP_H,Y+
 	;Вычисляю CRC
@@ -521,7 +529,10 @@ DRV_BUS5277__PACKET_UNPACK:
 	PUSH LOOP_CNTR
 	MOV LOOP_CNTR,TEMP_L
 	SUBI LOOP_CNTR,(0x100-0x03)
-	MCALL CRC8_MAXIM_BLOCK
+	PUSH_Y
+	LDI_Y CRC8_MAXIM
+	MCALL CRC8_BLOCK
+	POP_Y
 	ADD XL,LOOP_CNTR
 	CLR LOOP_CNTR
 	ADC XH,LOOP_CNTR
@@ -529,6 +540,7 @@ DRV_BUS5277__PACKET_UNPACK:
 	LD XH,X
 	CP XH,ACCUM
 	BREQ DRV_BUS5277__PACKET_UNPACK__CORRECT_CRC
+DRV_BUS5277__PACKET_UNPACK__INVALID_PACKET:
 	LDI TEMP_L,0x04
 	LDI TEMP_H,BUS5277_RESP_INVALID_PACKET
 DRV_BUS5277__PACKET_UNPACK__CORRECT_CRC:

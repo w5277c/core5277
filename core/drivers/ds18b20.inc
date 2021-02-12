@@ -1,14 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;29.03.2020  w5277c@gmail.com        Начало
-;30.08.2020  w5277c@gmail.com        Адаптировано под изменения ядра
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;29.03.2020  w5277c@gmail.com			Начало
+;30.08.2020  w5277c@gmail.com			Адаптировано под изменения ядра
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./conv/crc8_maxim_block.inc"
+.include	"./conv/crc8_block.inc"
+.include	"./conv/crc8_maxim.inc"
 .include	"./math/mul16x8.inc"
 .include	"./math/div16x8.inc"
 
@@ -98,7 +100,8 @@ DRV_DS18B20_INIT:
 	RJMP _DRV_DS18B20_PROC__ERROR
 
 	LDI LOOP_CNTR,0x08
-	MCALL CRC8_MAXIM_BLOCK
+	LDI_Y CRC8_MAXIM
+	MCALL CRC8_BLOCK
 	LDD TEMP,Z+_DRV_DS18B20_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03

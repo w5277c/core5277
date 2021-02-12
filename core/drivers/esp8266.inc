@@ -233,7 +233,7 @@ __DRV_ESP8266_CHECK_RESP_OK__END:
 _DRV_ESP8266__OP_INIT:
 ;--------------------------------------------------------
 ;Инициализация ESP8266
-;IN: TEMP_H/L-UART baudrate
+;IN: Z-адрес на выделенную память, TEMP_H/L-UART baudrate
 ;OUT:TEMP_H-RESULT
 ;--------------------------------------------------------
 	PUSH_X
@@ -555,7 +555,8 @@ _DRV_ESP8266__OP_TCP_SERVER_END:
 _DRV_ESP8266__OP_RECEIVE_DATA:
 ;--------------------------------------------------------
 ;Принимаем данные
-;IN; TEMP_H/L-таймаут ожидания данных (2мс)
+;IN: Z-адрес на выделенную память, TEMP_H/L-таймаут
+;ожидания данных (2мс)
 ;OUT:TEMP_H-результат, TEMP_L-длина,Y-адрес на начало
 ;данных
 ;--------------------------------------------------------
@@ -624,10 +625,81 @@ _DRV_ESP8266__OP_RECEIVE_DATA__END:
 	POP_X
 	RET
 
-
-
-
+;--------------------------------------------------------
 _DRV_ESP8266__OP_SEND_DATA:
+;--------------------------------------------------------
+;Передаем данные данные
+;IN: Z-адрес на выделенную память, Y-адрес на начало
+;передаваемых данных, TEMP_L-размер данных
+;OUT:TEMP_H-результат
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Y
+	PUSH TEMP
+	PUSH TEMP_L
+	PUSH TEMP_EH
+	PUSH TEMP_EL
+
+	LDI XH,0x00
+	LDI XL,_DRV_ESP8266_BUFFER_OFFSET
+	ADD XL,ZL
+	ADC XH,ZH
+	PUSH_X
+
+	LDI_Y _DRV_ESP8266_AT_SEND|0x8000
+	MCALL STR_TO_RAM
+	PUSH_Z
+	MOV ZH,XH
+	MOV ZL,XL
+	MOV TEMP,TEMP_L
+	LDI TEMP_H,0x00
+	MCALL NUM16_TO_STR
+	MOV XH,ZH
+	MOV XL,ZL
+	POP_Z
+	LDI_Y _DRV_ESP8266_AT_END|0x8000
+	MCALL STR_TO_RAM
+	MOV TEMP_H,XL
+	SUB TEMP_H,ZL
+	SUBI TEMP_H,_DRV_ESP8266_BUFFER_OFFSET
+	POP_X
+	MCALL _DRV_ESP8266__OP_RAW
+	MCALL _DRV_ESP8266_CHECK_RESP_OK
+	CPI TEMP_H,DRV_ESP8266_RESULT_OK
+	BRNE __DRV_ESP8266__OP_SEND_DATA__END
+
+	MOV TEMP_EH,TEMP_L
+	LDI TEMP_EL,(_DRV_ESP8266_BUFFER_SIZE-0x01)
+.ifdef LOGGING_PORT
+   .if LOGGING_LEVEL >= LOGGING_LVL_PNC
+      MCALL _DRV_ESP8266__LOG_REQV
+   .endif
+.endif
+	LDI TEMP_H,high(1000/2)
+	LDI TEMP_L,low(1000/2)
+	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
+	MCALL C5_EXEC
+.ifdef LOGGING_PORT
+	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MCALL _DRV_ESP8266__LOG_RESP
+	.endif
+.endif
+	CPI TEMP_H,DRV_UART_ST_READY
+	BRNE __DRV_ESP8266__OP_SEND_DATA__ERROR
+	LDI TEMP_H,DRV_ESP8266_RESULT_OK
+	RJMP __DRV_ESP8266__OP_SEND_DATA__END
+__DRV_ESP8266__OP_SEND_DATA__ERROR:
+	LDI TEMP_H,DRV_ESP8266_RESULT_ERROR
+__DRV_ESP8266__OP_SEND_DATA__END:
+	POP TEMP_EL
+	POP TEMP_EH
+	POP TEMP
+	POP_Y
+	POP_X
+	RET
+
+
+
 _DRV_ESP8266__OP_TCP_CLOSE:
 	RET
 

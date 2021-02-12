@@ -1,14 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;29.03.2020  w5277c@gmail.com        Начало
-;13.09.2020  w5277c@gmail.com        Актуализирован
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;29.03.2020  w5277c@gmail.com			Начало
+;13.09.2020  w5277c@gmail.com			Актуализирован
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./conv/crc8_maxim_block.inc"
+.include	"./conv/crc8_block.inc"
+.include	"./conv/crc8_maxim.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_DS1990A_BUFFER					= 0x00			;7b - буффер для чтения с шины 1w
@@ -74,7 +76,8 @@ DRV_DS1990A_INIT:
 	RJMP _DRV_DS1990A_PROC__END
 
 	LDI LOOP_CNTR,0x07
-	MCALL CRC8_MAXIM_BLOCK
+	LDI_Y CRC8_MAXIM
+	MCALL CRC8_BLOCK
 	LDD TEMP,Z+DRV_DS1990A_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03
