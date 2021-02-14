@@ -52,14 +52,22 @@
 	.EQU	DRV_BUS5277_OP_EXTRASCAN_T						= 0x04;Режим TIMING EXTRASCAN
 	;---REQUEST-CODES---
 	.EQU	BUS5277_FUNC_INFO									= 0x00;Чтение исномации об устройстве (тип, версия, uptime)
-	.EQU	BUS5277_FUNC_DATA									= 0x01;Чтение данных
-	.EQU	BUS5277_FUNC_READ_SETTINGS						= 0x02;Чтение блока настроек
-	.EQU	BUS5277_FUNC_WRITE_SETTINGS					= 0x03;Запись блока настроек
-	.EQU	BUS5277_FUNC_EXECUTE_COMMAND					= 0x04;Выполнение команды (таких как вкл/выкл/инвертировать)
+	.EQU	BUS5277_FUNC_DATA_READ							= 0x01;Чтение данных
+	.EQU	BUS5277_FUNC_SETTINGS_READ						= 0x02;Чтение блока настроек
+	.EQU	BUS5277_FUNC_SETTINGS_WRITE					= 0x03;Запись блока настроек
+	.EQU	BUS5277_FUNC_COMMAND_EXEC						= 0x04;Выполнение команды (таких как вкл/выкл/инвертировать)
 	.EQU	BUS5277_FUNC_HISTORY_GET						= 0x05;Чтение первой записи истории
 	.EQU	BUS5277_FUNC_HISTORY_CLEAR						= 0x06;Удаление первой записи истории
-
-	.EQU	BUS5277_FUNC_RESET								= 0x7f;Сброс устройства к первоначальным настройкам
+	.EQU	BUS5277_FUNC_IFACE_OPEN							= 0x07;Инициализация доп. интерфейса (открытие соединения)
+	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x08;Выполнить процедуру передачи и приема данных
+	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x09;Сообщить состояние интерфейса
+	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x0a;Закрытие соединения
+	.EQU	BUS5277_FUNC_BUFFER_READ						= 0x0b;Чтение блока данных буфера
+	.EQU	BUS5277_FUNC_BUFFER_WRITE						= 0x0c;Запись блока данных в буфер
+	;---
+	.EQU	BUS5277_FUNC_SOFT_RESET							= 0x7c;Перезагрузка устройства
+	.EQU	BUS5277_FUNC_RESET								= 0x7d;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
+	.EQU	BUS5277_FUNC_FULL_RESET							= 0x7e;Сброс устройства к первоначальным настройкам
 	;---RESPONSE-CODES---
 	.EQU	BUS5277_RESP_OK									= 0x80;Все в порядке
 	.EQU	BUS5277_RESP_NO_ANSWER							= 0x81;Нет ответа
