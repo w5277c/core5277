@@ -4,6 +4,10 @@
 ;07.07.2020  w5277c@gmail.com        Начало
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_PCINT_H
+.else
+.set DEF__C5_DRV_PCINT_H = 1
+.message "Included driver hardware PCINT v0.1"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -243,3 +247,4 @@ _DRV_PCINT_H_EVENT__NEXT:
 	POP LOOP_CNTR
 	POP ACCUM
 	RET
+.endif

@@ -5,6 +5,10 @@
 ;19.04.2020  w5277c@gmail.com			Адаптировано под изменения ядра
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_UART_H
+.else
+.set DEF__C5_DRV_UART_H = 1
+.message "Included driver hardware UART v0.1"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -474,4 +478,4 @@ _DRV_UART_H_TIMER_EVENT__END:
 	POP TEMP
 	POP_Z
 	RET
-
+.endif

@@ -6,6 +6,11 @@
 ;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
 ;17.02.2021  w5277c@gmail.com			Исправлены ошибки
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_BUS5277
+.else
+.set DEF__C5_DRV_BUS5277 = 1
+.message "Included driver Bus5277 v0.1"
+
 ;Шина на базе serial(19200-8N1+BREAK)
 ;  addr     size     code     data0        dataN     crc
 ; |eaaaaaaa|rrssssss|qccccccc|dddddddd|...|dddddddd|wwwwwwww|
@@ -587,4 +592,4 @@ _DRV_BUS5277__LOG_RESP:
 	MCALL C5_LOG_CR
 	RET
 .endif
-
+.endif

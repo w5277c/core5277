@@ -4,6 +4,10 @@
 ;02.01.2021  w5277c@gmail.com			Начало
 ;25.01.2021  w5277c@gmail.com			Добавлена поддержка eint(не проверено)
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_UART_S
+.else
+.set DEF__C5_DRV_UART_S = 1
+.message "Included driver software UART v0.1"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -593,3 +597,4 @@ __DRV_UART_S_PCINT_EVENT__END:
 	POP TEMP
 	POP_Z
 	RET
+.endif

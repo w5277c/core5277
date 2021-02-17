@@ -5,6 +5,10 @@
 ;16.01.2021  w5277c@gmail.com			Исправлена часть ошибок, добавлено логирование
 ;17.02.2021  w5277c@gmail.com			Частично реализована SEND_DATA и исправлены ошибки
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_ESP8266
+.else
+.set DEF__C5_DRV_ESP8266 = 1
+.message "Included driver ESP8266 v0.1"
 
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -54,31 +58,31 @@
 	.EQU	DRV_ESP8266_RESULT_NO_ANSWER					= 0x02
 
 	;---AT-CONSTANTS---
-_DRV_ESP8266_AT_ECHO_OFF:					.db "ATE0",0x0d,0x0a,0x00
-_DRV_ESP8266_AT_SET_UART1:					.db "AT+UART_CUR=",0x00
-_DRV_ESP8266_AT_SET_UART2:					.db ",8,1,0,0",0x0d,0x0a,0x00
-_DRV_ESP8266_AT_SET_WIFI1:					.db "AT+CWJAP_CUR=",0x22,0x00;+APN+
+_DRV_ESP8266_AT_ECHO_OFF:					.db "ATE0",0x0d,0x0a,0x00,0x00
+_DRV_ESP8266_AT_SET_UART1:					.db "AT+UART_CUR=",0x00,0x00
+_DRV_ESP8266_AT_SET_UART2:					.db ",8,1,0,0",0x0d,0x0a,0x00,0x00
+_DRV_ESP8266_AT_SET_WIFI1:					.db "AT+CWJAP_CUR=",0x22,0x00,0x00;+APN+
 _DRV_ESP8266_AT_SET_WIFI2:					.db 0x22,",",0x22,0x00;+PASSWORD+
 _DRV_ESP8266_AT_SET_WIFI3:					.db 0x22,0x0d,0x0a,0x00
-_DRV_ESP8266_AT_GET_IP:						.db "AT+CIFSR",0x0d,0x0a,0x00
+_DRV_ESP8266_AT_GET_IP:						.db "AT+CIFSR",0x0d,0x0a,0x00,0x00
 _DRV_ESP8266_AT_SET_MULTIPLE_CONNS:		.db "AT+CIPMUX=1",0x0d,0x0a,0x00
 _DRV_ESP8266_AT_RES_MULTIPLE_CONNS:		.db "AT+CIPMUX=0",0x0d,0x0a,0x00
 _DRV_ESP8266_AT_SET_SERVER_TIMEOUT:		.db "AT+CIPSTO=5",0x0d,0x0a,0x00
-_DRV_ESP8266_AT_SET_RECV_MODE:			.db "AT+CIPRECVMODE=0",0x0d,0x0a,0x00
-_DRV_ESP8266_AT_CREATE_TCP_SERVER:		.db "AT+CIPSERVER=1,";+PORT+END
-_DRV_ESP8266_AT_CLOSE_TCP_SERVER:		.db "AT+CIPSERVER=0",0x0d,0x0a,0x00
+_DRV_ESP8266_AT_SET_RECV_MODE:			.db "AT+CIPRECVMODE=0",0x0d,0x0a,0x00,0x00
+_DRV_ESP8266_AT_CREATE_TCP_SERVER:		.db "AT+CIPSERVER=1,",0x00;+PORT+END
+_DRV_ESP8266_AT_CLOSE_TCP_SERVER:		.db "AT+CIPSERVER=0",0x0d,0x0a,0x00,0x00
 _DRV_ESP8266_AT_SET_TCP_CLIENT1:			.db "AT+CIPSTART=0,",0x22,"TCP",0x22,",",0x22,0x00;+IP+
-_DRV_ESP8266_AT_SET_TCP_CLIENT2:			.db 0x22,",",0x00;+PORT+
-_DRV_ESP8266_AT_SET_TCP_CLIENT3:			.db ",5",0x0d,0x0a,0x00
+_DRV_ESP8266_AT_SET_TCP_CLIENT2:			.db 0x22,",",0x00,0x00;+PORT+
+_DRV_ESP8266_AT_SET_TCP_CLIENT3:			.db ",5",0x0d,0x0a,0x00,0x00
 _DRV_ESP8266_AT_CLOSE_TCP:					.db "AT+CIPCLOSE=0",0x0d,0x0a,0x00
 
 _DRV_ESP8266_AT_RECV:						.db "AT+CIPRECVDATA=0,40",0x0d,0x0a,0x00
 _DRV_ESP8266_AT_SEND:						.db "AT+CIPSEND=0,",0x00;+XXX+END
-_DRV_ESP8266_AT_END:							.db 0x0d,0x0a,0x00
+_DRV_ESP8266_AT_END:							.db 0x0d,0x0a,0x00,0x00
 
-_DRV_ESP8266_AT_RESP_OK:					.db 0x0d,0x0a,"OK",0x0d,0x0a,0x00
+_DRV_ESP8266_AT_RESP_OK:					.db 0x0d,0x0a,"OK",0x0d,0x0a,0x00,0x00
 _DRV_ESP8266_AT_RESP_ERROR:				.db 0x0d,0x0a,"ERROR",0x0d,0x0a,0x00
-_DRV_ESP8266_AT_RESP_IPD:					.db 0x0d,0x0a,"+IPD,"0x00
+_DRV_ESP8266_AT_RESP_IPD:					.db 0x0d,0x0a,"+IPD,",0x00
 _DRV_ESP8266_AT_CONST_COLON:				.db ":",0x00
 ;_DRV_ESP8266_AT_WIFI_CONNECTED:			.db 0x0d,0x0a,"WIFI CONNECTED",0x0d,0x0a,0x00
 
@@ -770,5 +774,6 @@ _DRV_ESP8266__LOG_RESP:
 	POP_Y
 	MCALL C5_LOG_CR
 	RET
+.endif
 .endif
 .endif
