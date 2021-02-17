@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.01.2021  w5277c@gmail.com			Начало
 ;16.01.2021  w5277c@gmail.com			Исправлена часть ошибок, добавлено логирование
+;17.02.2021  w5277c@gmail.com			Частично реализована SEND_DATA и исправлены ошибки
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/ram/ram_realloc.inc"
@@ -140,6 +141,7 @@ DRV_ESP8266_INIT:
 	MCALL _DRV_ESP8266__OP_TCP_CLOSE
 	RJMP _DRV_ESP8266_PROC_END
 _DRV_ESP8266_PROC_END:
+
 	POP TEMP
 	POP_Z
 	RET
@@ -606,7 +608,6 @@ _DRV_ESP8266__OP_RECEIVE_DATA:
 	ADC XH,TEMP
 	MOV TEMP_L,TEMP_EL
 
-	SUBI TEMP_L,0x02
 	MOV YH,XH
 	MOV YL,XL
 	LDI TEMP_H,DRV_ESP8266_RESULT_OK
@@ -642,10 +643,13 @@ _DRV_ESP8266__OP_SEND_DATA:
 	LDI XL,_DRV_ESP8266_BUFFER_OFFSET
 	ADD XL,ZL
 	ADC XH,ZH
-	PUSH_X
 
+	PUSH TEMP_L
+	PUSH_X
+	PUSH_Y
 	LDI_Y _DRV_ESP8266_AT_SEND|0x8000
 	MCALL STR_TO_RAM
+	POP_Y
 	PUSH_Z
 	MOV ZH,XH
 	MOV ZL,XL
@@ -655,8 +659,10 @@ _DRV_ESP8266__OP_SEND_DATA:
 	MOV XH,ZH
 	MOV XL,ZL
 	POP_Z
+	PUSH_Y
 	LDI_Y _DRV_ESP8266_AT_END|0x8000
 	MCALL STR_TO_RAM
+	POP_Y
 	MOV TEMP_H,XL
 	SUB TEMP_H,ZL
 	SUBI TEMP_H,_DRV_ESP8266_BUFFER_OFFSET
@@ -664,24 +670,34 @@ _DRV_ESP8266__OP_SEND_DATA:
 	MCALL _DRV_ESP8266__OP_RAW
 	MCALL _DRV_ESP8266_CHECK_RESP_OK
 	CPI TEMP_H,DRV_ESP8266_RESULT_OK
+	POP TEMP_EH
 	BRNE __DRV_ESP8266__OP_SEND_DATA__END
 
-	MOV TEMP_EH,TEMP_L
-	LDI TEMP_EL,(_DRV_ESP8266_BUFFER_SIZE-0x01)
+
+	;TODO WAIT '>'
+
+	LDI TEMP_EL,0x00;(_DRV_ESP8266_BUFFER_SIZE-0x01)
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
-		MCALL _DRV_ESP8266__LOG_REQV
+		MCALL _DRV_ESP8266__LOG_REQV_BYTES
 	.endif
 .endif
 	LDI TEMP_H,high(1000/2)
 	LDI TEMP_L,low(1000/2)
 	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
 	MCALL C5_EXEC
+	CPI TEMP_H,DRV_ESP8266_RESULT_OK
+	BRNE __DRV_ESP8266__OP_SEND_DATA__ERROR
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
+		MOV YH,XH
+		MOV YL,XL
 		MCALL _DRV_ESP8266__LOG_RESP
 	.endif
 .endif
+
+	;TODO CHECK 'SEND OK'
+
 	CPI TEMP_H,DRV_UART_ST_READY
 	BRNE __DRV_ESP8266__OP_SEND_DATA__ERROR
 	LDI TEMP_H,DRV_ESP8266_RESULT_OK
@@ -689,8 +705,10 @@ _DRV_ESP8266__OP_SEND_DATA:
 __DRV_ESP8266__OP_SEND_DATA__ERROR:
 	LDI TEMP_H,DRV_ESP8266_RESULT_ERROR
 __DRV_ESP8266__OP_SEND_DATA__END:
+
 	POP TEMP_EL
 	POP TEMP_EH
+	POP TEMP_L
 	POP TEMP
 	POP_Y
 	POP_X
@@ -719,6 +737,20 @@ _DRV_ESP8266__LOG_REQV:
 	MCALL STRN_TRIM
 	MCALL C5_LOG_STRN
 	POP_Y
+	MCALL C5_LOG_CR
+	RET
+;--------------------------------------------------------
+_DRV_ESP8266__LOG_REQV_BYTES:
+;--------------------------------------------------------
+;Внутренняя процедура логирования
+;--------------------------------------------------------
+	LDD TEMP,Z+_DRV_ESP8266_FLAGS
+	SBRS TEMP,DRV_ESP8266_FLAG_LOGGING
+	RET
+	LDI TEMP,'>'
+	MCALL C5_LOG_CHAR
+	MOV TEMP,TEMP_EH
+	MCALL C5_LOG_BYTES
 	MCALL C5_LOG_CR
 	RET
 ;--------------------------------------------------------

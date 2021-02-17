@@ -4,6 +4,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;03.05.2020  w5277c@gmail.com			Начало
 ;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
+;17.02.2021  w5277c@gmail.com			Исправлены ошибки
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Шина на базе serial(19200-8N1+BREAK)
 ;  addr     size     code     data0        dataN     crc
@@ -464,8 +465,8 @@ DRV_BUS5277__PACKET_PACK:
 	SUBI ACCUM,(0x100-0x04)											;+0x04
 	PUSH_X
 	ST X+,LOOP_CNTR													;Адрес устройства на шине
-	ST Z+,ACCUM															;Длина данных всего пакета
-	ST Z+,TEMP_H														;Код функции или ответа
+	ST X+,ACCUM															;Длина данных всего пакета
+	ST X+,TEMP_H														;Код функции или ответа
 	MOV LOOP_CNTR,TEMP_L
 	;Проверяю наличие данных и копирую их
 	CPI TEMP_L,0x00
@@ -523,7 +524,8 @@ DRV_BUS5277__PACKET_UNPACK:
 	PUSH_X
 	PUSH ACCUM
 
-	PUSH_Y
+	MOV XH,YH
+	MOV XL,YL
 	LD LOOP_CNTR,Y+
 	LD TEMP_L,Y+
 	CPI TEMP_L,DRV_BUS5277_MAX_PACKET_SIZE+0x01
@@ -533,7 +535,6 @@ DRV_BUS5277__PACKET_UNPACK:
 	SUBI TEMP_L,0x04
 	LD TEMP_H,Y+
 	;Вычисляю CRC
-	POP_X
 	PUSH LOOP_CNTR
 	MOV LOOP_CNTR,TEMP_L
 	SUBI LOOP_CNTR,(0x100-0x03)
