@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_RES_UNLOCK = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_RES_UNLOCK"
+.endif
+
 ;--------------------------------------------------------
 C5_RES_UNLOCK:
 ;--------------------------------------------------------

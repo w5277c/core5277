@@ -7,6 +7,10 @@
 .else
 .set DEF_STR_TO_RAM = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included STR_TO_RAM"
+.endif
+
 ;--------------------------------------------------------
 STR_TO_RAM:
 ;--------------------------------------------------------

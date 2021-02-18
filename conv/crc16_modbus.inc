@@ -7,6 +7,10 @@
 .else
 .set DEF_CRC16_MODBUS = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included CRC16_MODBUS"
+.endif
+
 ;--------------------------------------------------------
 CRC16_MODBUS:
 ;--------------------------------------------------------

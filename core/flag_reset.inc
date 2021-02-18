@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_FLAG_RESET = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_FLAG_RESET"
+.endif
+
 .include	"./inc/core/_flag_offset.inc"
 .include	"./inc/conv/bitnum_to_num.inc"
 

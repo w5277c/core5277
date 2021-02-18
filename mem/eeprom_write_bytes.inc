@@ -9,6 +9,10 @@
 .else
 .set DEF_EEPROM_WRITE_BYTES = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included EEPROM_WRITE_BYTES"
+.endif
+
 .include	"./mem/eeprom_write_byte.inc"
 
 ;--------------------------------------------------------

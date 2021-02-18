@@ -7,6 +7,10 @@
 .else
 .set DEF_C5_TIME32_MARK = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_TIME32_MARK"
+.endif
+
 .include	"./core/uptime_copy.inc"
 
 ;--------------------------------------------------------

@@ -8,6 +8,10 @@
 .else
 .set DEF_INPUT_GET = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included INPUT_GET"
+.endif
+
 .include	"./core/wait.inc"
 
 ;Ожидает символ с порта по методу UART.

@@ -10,6 +10,10 @@
 .else
 .set DEF_SDNF_CP = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included SDNF_CP"
+.endif
+
 ;--------------------------------------------------------
 SDNF_CP:																	;Signed Digital aNd Fractional
 ;--------------------------------------------------------

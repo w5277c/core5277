@@ -8,6 +8,10 @@
 .set DEF_INPUT_INIT = 1
 .ifdef INPUT_PORT
 
+.if REPORT_INCLUDES == 0x01
+.message "included INPUT_INIT"
+.endif
+
 ;--------------------------------------------------------
 INPUT_INIT:
 ;--------------------------------------------------------

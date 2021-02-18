@@ -10,6 +10,10 @@
 .else
 .set DEF_PORT_GET = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included PORT_GET"
+.endif
+
 .include	"./io/port_offsets.inc"
 
 ;--------------------------------------------------------

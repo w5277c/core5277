@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_FLAG_GET = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_FLAG_GET"
+.endif
+
 .include	"./core/_flag_offset.inc"
 .include	"./conv/bitnum_to_num.inc"
 

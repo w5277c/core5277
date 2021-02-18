@@ -10,6 +10,10 @@
 .else
 .set DEF_BCD_BYTE_TO_STR = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included BCD_BYTE_TO_STR"
+.endif
+
 ;--------------------------------------------------------
 BCD_BYTE_TO_STR:
 ;--------------------------------------------------------

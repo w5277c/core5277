@@ -10,6 +10,10 @@
 .else
 .set DEF_CRC8_MAXIM = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included CRC8_MAXIM"
+.endif
+
 ;--------------------------------------------------------
 CRC8_MAXIM:
 ;--------------------------------------------------------

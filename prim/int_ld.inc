@@ -7,6 +7,10 @@
 .else
 .set DEF_INT_LD = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included INT_LD"
+.endif
+
 .include	"./prim/_offsets.inc"
 
 ;--------------------------------------------------------

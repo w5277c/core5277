@@ -12,6 +12,11 @@
 .else
 .set DEF_BITNUM_TO_NUM = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included BITNUM_TO_NUM"
+.endif
+
+
 BITNUM_TO_NUM_TABLE:
 	.db	0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80
 ;--------------------------------------------------------

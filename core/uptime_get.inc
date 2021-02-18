@@ -7,6 +7,10 @@
 .else
 .set DEF_C5_UPTIME_GET = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_UPTIME_GET"
+.endif
+
 ;--------------------------------------------------------
 C5_UPTIME_GET:
 ;--------------------------------------------------------

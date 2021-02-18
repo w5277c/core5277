@@ -8,6 +8,10 @@
 .else
 .set DEF_C5_EINT_ENABLE = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_EINT_ENABLE"
+.endif
+
 ;TODO запретить прерывания?
 ;TODO привести к виду EIMSK,EIFR
 

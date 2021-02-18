@@ -7,6 +7,10 @@
 .else
 .set DEF_PRIM_CPI = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included PRIM_CPI"
+.endif
+
 .include	"./prim/_offsets.inc"
 
 ;--------------------------------------------------------

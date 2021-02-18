@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_RES_LOCK = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_RES_LOCK"
+.endif
+
 .include	"./core/res_wait_n_lock.inc"
 
 ;--------------------------------------------------------

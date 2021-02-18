@@ -7,6 +7,10 @@
 .else
 .set DEF_CRC16_XMODEM = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included CRC16_XMODEM"
+.endif
+
 ;--------------------------------------------------------
 CRC16_XMODEM:
 ;--------------------------------------------------------

@@ -10,6 +10,10 @@
 .else
 .set DEF_SDNF_TO_STR = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included SDNF_TO_STR"
+.endif
+
 .include	"./conv/num_to_str.inc"
 
 ;--------------------------------------------------------

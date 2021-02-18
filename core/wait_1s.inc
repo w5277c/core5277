@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_WAIT_1S = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_WAIT_1S"
+.endif
+
 .include "./core/wait_2ms.inc"
 ;--------------------------------------------------------
 C5_WAIT_1S:

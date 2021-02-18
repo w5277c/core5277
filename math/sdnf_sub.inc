@@ -10,6 +10,10 @@
 .else
 .set DEF_SDNF_SUB = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included SDNF_SUB"
+.endif
+
 .include	"./math/sdnf_add.inc"
 
 ;--------------------------------------------------------

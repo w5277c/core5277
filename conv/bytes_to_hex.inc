@@ -10,6 +10,10 @@
 .else
 .set DEF_BYTES_TO_HEX = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included BYTES_TO_HEX"
+.endif
+
 .include	"./conv/byte_to_hex.inc"
 
 ;--------------------------------------------------------

@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_RAM_DEFRAG = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_RAM_DEFRAG"
+.endif
+
 ;--------------------------------------------------------
 C5_RAM_DEFRAG:
 ;--------------------------------------------------------

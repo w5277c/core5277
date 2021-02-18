@@ -7,6 +7,10 @@
 .else
 .set DEF_NUM16_TO_STR = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included NUM16_TO_STR"
+.endif
+
 .include	"./math/div32x16.inc"
 .include	"./math/div16x8.inc"
 .include	"./math/mul16x8.inc"

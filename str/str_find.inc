@@ -7,6 +7,10 @@
 .else
 .set DEF_STR_FIND = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included STR_FIND"
+.endif
+
 ;--------------------------------------------------------
 STR_FIND:
 ;--------------------------------------------------------

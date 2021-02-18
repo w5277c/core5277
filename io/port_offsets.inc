@@ -10,6 +10,10 @@
 .else
 .set DEF_PORT_OFFSETS = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included PORT_OFFSETS"
+.endif
+
 .include	"./conv/bitnum_to_num.inc"
 
 ;--------------------------------------------------------

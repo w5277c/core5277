@@ -10,6 +10,10 @@
 .else
 .set DEF_PORT_MODE_OUT = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included PORT_MODE_OUT"
+.endif
+
 .include	"./io/port_offsets.inc"
 
 ;--------------------------------------------------------

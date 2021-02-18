@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_FLAG_INVERT = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_FLAG_INVERT"
+.endif
+
 .include	"./inc/core/flag_get.inc"
 .include	"./inc/core/flag_set.inc"
 .include	"./inc/core/flag_reset.inc"

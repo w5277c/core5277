@@ -7,6 +7,10 @@
 .else
 .set DEF_INT_ST = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included INT_ST"
+.endif
+
 .include	"./prim/_offsets.inc"
 
 ;--------------------------------------------------------

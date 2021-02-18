@@ -19,6 +19,8 @@
 	.EQU	LOGGING_LVL_PNC						= 0x05
 	.SET	LOGGING_LEVEL							=	LOGGING_LVL_INF
 
+	.SET	REPORT_INCLUDES						= 0x00
+
 	.SET	AVRA										= 0x00
 .ifdef CORE_FREQ
 .else

@@ -10,6 +10,10 @@
 .else
 .set DEF_RAM_COPY8_DESC = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included RAM_COPY8_DESC"
+.endif
+
 ;--------------------------------------------------------
 RAM_COPY8_DESC:
 ;--------------------------------------------------------

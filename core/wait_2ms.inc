@@ -10,6 +10,10 @@
 .else
 .set DEF_C5_WAIT_2MS = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_WAIT_2MS"
+.endif
+
 C5_WAIT_2MS:
 	PUSH TEMP_H
 	PUSH TEMP_L

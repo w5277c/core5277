@@ -7,6 +7,10 @@
 .else
 .set DEF_PORT_ISET = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included PORT_ISET"
+.endif
+
 .include	"./io/port_set_hi.inc"
 .include	"./io/port_set_lo.inc"
 

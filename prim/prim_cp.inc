@@ -8,6 +8,10 @@
 .else
 .set DEF_PRIM_CP = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included PRIM_CP"
+.endif
+
 .include	"./prim/_offsets.inc"
 
 ;--------------------------------------------------------

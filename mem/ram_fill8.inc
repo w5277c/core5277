@@ -10,6 +10,12 @@
 .else
 .set DEF_RAM_FILL8 = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included RAM_FILL8"
+.endif
+
+.include	"./mem/ram_fill16.inc"
+
 ;--------------------------------------------------------
 RAM_FILL8:
 ;--------------------------------------------------------

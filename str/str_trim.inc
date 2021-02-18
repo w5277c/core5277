@@ -7,6 +7,10 @@
 .else
 .set DEF_STR_TRIM = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included STR_TRIM"
+.endif
+
 ;--------------------------------------------------------
 STR_TRIM:
 ;--------------------------------------------------------

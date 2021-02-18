@@ -62,7 +62,7 @@
 	.EQU	BUS5277_FUNC_SETTINGS_READ						= 0x02;Чтение блока настроек
 	.EQU	BUS5277_FUNC_SETTINGS_WRITE					= 0x03;Запись блока настроек
 	.EQU	BUS5277_FUNC_COMMAND_EXEC						= 0x04;Выполнение команды (таких как вкл/выкл/инвертировать)
-	.EQU	BUS5277_FUNC_HISTORY_PULL						= 0x05;Вытягивание первой записи истории
+	.EQU	BUS5277_FUNC_HISTORY_PULL						= 0x05;Чтение первой записи истории или последующей с удалением первой
 	.EQU	BUS5277_FUNC_IFACE_OPEN							= 0x06;Инициализация доп. интерфейса (открытие соединения)
 	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x07;Выполнить процедуру передачи и приема данных
 	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x08;Сообщить состояние интерфейса

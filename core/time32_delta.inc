@@ -7,6 +7,10 @@
 .else
 .set DEF_C5_TIME32_DELTA = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_TIME32_DELTA"
+.endif
+
 .include	"./core/time32_mark.inc"
 .include	"./math/mul32x16.inc"
 .include	"./math/mul16x8.inc"

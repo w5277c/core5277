@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_FLAG_WAIT_LO = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_FLAG_WAIT_LO"
+.endif
+
 .include	"./inc/core/flag_get.inc"
 .include	"./inc/core/wait.inc"
 

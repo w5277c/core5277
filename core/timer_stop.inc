@@ -10,6 +10,10 @@
 .else
 .set DEF_C5_TIMER_STOP = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_TIMER_STOP"
+.endif
+
 ;--------------------------------------------------------
 C5_TIMER_STOP:
 ;--------------------------------------------------------

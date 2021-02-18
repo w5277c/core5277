@@ -7,6 +7,10 @@
 .else
 .set DEF_C5_EINT_DISABLE = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_EINT_DISABLE"
+.endif
+
 ;--------------------------------------------------------
 C5_EINT_DISABLE:
 ;--------------------------------------------------------

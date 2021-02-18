@@ -8,6 +8,10 @@
 .else
 .set DEF_C5_TIMER_SET_PERIOD = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_TIMER_SET_PERIOD"
+.endif
+
 ;--------------------------------------------------------
 C5_TIMER_SET_PERIOD:
 ;--------------------------------------------------------

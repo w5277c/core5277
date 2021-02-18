@@ -10,6 +10,10 @@
 .else
 .set DEF_SDNF_ADD = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included SDNF_ADD"
+.endif
+
 ;--------------------------------------------------------
 SDNF_ADD:																;Signed Digital aNd Fractional
 ;--------------------------------------------------------

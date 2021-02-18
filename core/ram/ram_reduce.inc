@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_RAM_REDUCE = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_RAM_REDUCE"
+.endif
+
 .include	"./core/ram/ram_realloc.inc"
 
 ;TODO где-то бага, перписывает адрес выдвленной памяти

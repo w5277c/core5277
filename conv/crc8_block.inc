@@ -7,6 +7,10 @@
 .else
 .set DEF_CRC8_BLOCK = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included CRC8_BLOCK"
+.endif
+
 ;--------------------------------------------------------
 CRC8_BLOCK:
 ;--------------------------------------------------------

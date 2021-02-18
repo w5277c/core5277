@@ -10,6 +10,10 @@
 .else
 .set DEF_BYTE_TO_STR = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included BYTE_TO_STR"
+.endif
+
 .include	"./math/div16x8.inc"
 .include	"./math/mul16x8.inc"
 ;--------------------------------------------------------

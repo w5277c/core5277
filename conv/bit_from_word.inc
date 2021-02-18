@@ -10,6 +10,10 @@
 .else
 .set DEF_BIT_FROM_WORD = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included BIT_FROM_WORD"
+.endif
+
 ;--------------------------------------------------------
 BIT_FROM_WORD:
 ;--------------------------------------------------------

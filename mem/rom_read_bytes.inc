@@ -10,6 +10,10 @@
 .else
 .set DEF_ROM_READ_BYTES = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included ROM_READ_BYTES"
+.endif
+
 ;--------------------------------------------------------
 ROM_READ_BYTES:
 ;--------------------------------------------------------

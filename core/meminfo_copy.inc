@@ -7,6 +7,10 @@
 .else
 .set DEF_C5_MEMINFO_COPY = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_MEMINFO_COPY"
+.endif
+
 ;--------------------------------------------------------
 C5_MEMINFO_COPY:
 ;--------------------------------------------------------

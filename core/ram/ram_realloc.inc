@@ -9,6 +9,10 @@
 .else
 .set DEF_C5_RAM_REALLOC = 1
 
+.if REPORT_INCLUDES == 0x01
+.message "included C5_RAM_REALLOC"
+.endif
+
 .include	"./core/ram/_ram_find_free_block.inc"
 .include	"./core/ram/_ram_resize.inc"
 
