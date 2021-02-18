@@ -62,14 +62,13 @@
 	.EQU	BUS5277_FUNC_SETTINGS_READ						= 0x02;Чтение блока настроек
 	.EQU	BUS5277_FUNC_SETTINGS_WRITE					= 0x03;Запись блока настроек
 	.EQU	BUS5277_FUNC_COMMAND_EXEC						= 0x04;Выполнение команды (таких как вкл/выкл/инвертировать)
-	.EQU	BUS5277_FUNC_HISTORY_GET						= 0x05;Чтение первой записи истории
-	.EQU	BUS5277_FUNC_HISTORY_CLEAR						= 0x06;Удаление первой записи истории
-	.EQU	BUS5277_FUNC_IFACE_OPEN							= 0x07;Инициализация доп. интерфейса (открытие соединения)
-	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x08;Выполнить процедуру передачи и приема данных
-	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x09;Сообщить состояние интерфейса
-	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x0a;Закрытие соединения
-	.EQU	BUS5277_FUNC_BUFFER_READ						= 0x0b;Чтение блока данных буфера
-	.EQU	BUS5277_FUNC_BUFFER_WRITE						= 0x0c;Запись блока данных в буфер
+	.EQU	BUS5277_FUNC_HISTORY_PULL						= 0x05;Вытягивание первой записи истории
+	.EQU	BUS5277_FUNC_IFACE_OPEN							= 0x06;Инициализация доп. интерфейса (открытие соединения)
+	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x07;Выполнить процедуру передачи и приема данных
+	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x08;Сообщить состояние интерфейса
+	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x09;Закрытие соединения
+	.EQU	BUS5277_FUNC_BUFFER_READ						= 0x0a;Чтение блока данных буфера
+	.EQU	BUS5277_FUNC_BUFFER_WRITE						= 0x0b;Запись блока данных в буфер
 	;---
 	.EQU	BUS5277_FUNC_SOFT_RESET							= 0x7c;Перезагрузка устройства
 	.EQU	BUS5277_FUNC_RESET								= 0x7d;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
@@ -105,7 +104,7 @@
 	.EQU	BUS5277_CMD_SRC_BUS								= 0x02;Шина
 	.EQU	BUS5277_CMD_SRC_TIMER							= 0x04;Таймер
 	.EQU	BUS5277_CMD_SRC_TRIGGER							= 0x08;Триггер
-	.EQU	BUS5277_CMD_SRC_TRIGGER_ERR					= 0x0C;Триггер(ошибка датчика)
+	.EQU	BUS5277_CMD_SRC_TRIGGER_ERR					= 0x88;Триггер, ошибка датчика(старший бит)
 	;---REQUEST/RESPONSE-INTERNAL-ERROR-CODE
 	.EQU	BUS5277_FAULT										= 0xff;Сбой в логике
 	;---

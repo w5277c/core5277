@@ -5,8 +5,14 @@
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
 ;28.10.2020  w5277c@gmail.com        Корректировка таймингов
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_BUTTONS
+.else
+.set DEF__C5_DRV_BUTTONS = 1
+.message "Included driver Buttons v0.1"
+
 ;TODO реализовать обработчики для переключаетеля и сенсора
 ;TODO Фиксируется 5-ое длинное нажатие (вероятно с потерей первого значения) из 4 допустимых
+
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -216,10 +222,7 @@ _DRV_BUTTONS_OP_GET:
 	ADD XL,ZL
 	ADC XH,ZH
 	PUSH_Z
-	LDI TEMP,_DRV_BUTTONS_QUEUE
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_DRV_BUTTONS_QUEUE
 	MCALL RAM_COPY8
 	POP_Z
 _DRV_BUTTONS_PULL_QUEUE__END:
@@ -255,10 +258,7 @@ DRV_BUTTONS_TIMER_EVENT:
 	STD Z+_DRV_BUTTONS_CNTR,TEMP
 
 	;Смещаемся на данные первой кнопки
-	LDI TEMP,_DRV_BUTTONS_DATA
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_DRV_BUTTONS_DATA
 
 	;Читаем состояние портов для каждой кнопки
 DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
@@ -275,10 +275,7 @@ DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
 	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
 DRV_BUTTONS_TIMER_EVENT__LO_STATE:
 
-	LDI TEMP,_DRV_BUTTONS_STRUCT_SIZE
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_DRV_BUTTONS_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BRNE DRV_BUTTONS_TIMER_EVENT__READ_LOOP
 	RJMP DRV_BUTTONS_TIMER_EVENT__END
@@ -293,10 +290,7 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	MOV YL,ZL
 
 	;Смещаемся на данные первой кнопки
-	LDI TEMP,_DRV_BUTTONS_DATA
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_DRV_BUTTONS_DATA
 
 DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
 	;Проверяю на только что добавленную кнопку
@@ -439,10 +433,7 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
 	STD Z+_DRV_BUTTONS_RESULT,TEMP_H
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT:
-	LDI TEMP,_DRV_BUTTONS_STRUCT_SIZE
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_DRV_BUTTONS_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BREQ PC+0x02
 	RJMP DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP
@@ -477,10 +468,7 @@ _DRV_BUTTONS__QUEUE_ADD:
 	;Вычисляем адрес очереди
 	MOV XH,YH
 	MOV XL,YL
-	LDI TEMP,_DRV_BUTTONS_QUEUE
-	ADD XL,TEMP
-	LDI TEMP,0x00
-	ADC XH,TEMP
+	ADIW XL,_DRV_BUTTONS_QUEUE
 
 	LDS TEMP_L,SREG
 	CLI
@@ -506,4 +494,4 @@ _DRV_BUTTONS__QUEUE_ADD_END:
 	POP TEMP_L
 	POP TEMP
 	RET
-
+.endif
