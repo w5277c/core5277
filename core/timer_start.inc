@@ -15,6 +15,8 @@
 .message "included C5_TIMER_START"
 .endif
 
+.include "./core/_timer_offset.inc"
+
 ;--------------------------------------------------------
 C5_TIMER_START:
 ;--------------------------------------------------------
@@ -22,22 +24,11 @@ C5_TIMER_START:
 ;IN: PID,TEMP - номер таймера(0-...),
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH TEMP
 
-	MOV ZL,TEMP
-	LSL TEMP
-	LSL TEMP
-	ADD TEMP,ZL
-
-	LDI ZH,high(_C5_TIMERS)
-	LDI ZL,low(_C5_TIMERS)
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	MCALL _C5_TIMER_OFFSET
 
 	STD Z+_C5_TIMER_PROC_ID,PID
 
-	POP TEMP
 	POP_Z
 	RET
 .endif

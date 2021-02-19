@@ -12,6 +12,8 @@
 .message "included C5_TIMER_SET_PERIOD"
 .endif
 
+.include "./core/_timer_offset.inc"
+
 ;--------------------------------------------------------
 C5_TIMER_SET_PERIOD:
 ;--------------------------------------------------------
@@ -22,19 +24,9 @@ C5_TIMER_SET_PERIOD:
 ;диапазон значений 0x01-0x7f
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH TEMP
 	PUSH ACCUM
 
-	MOV ZL,TEMP
-	LSL TEMP
-	LSL TEMP
-	ADD TEMP,ZL
-
-	LDI ZH,high(_C5_TIMERS)
-	LDI ZL,low(_C5_TIMERS)
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	MCALL _C5_TIMER_OFFSET
 
 	STD Z+_C5_TIMER_PROC_ID,PID
 	STD Z+_C5_TIMER_DEFAULT,ACCUM
@@ -42,7 +34,6 @@ C5_TIMER_SET_PERIOD:
 	STD Z+_C5_TIMER_CNTR,ACCUM
 
 	POP ACCUM
-	POP TEMP
 	POP_Z
 	RET
 .endif

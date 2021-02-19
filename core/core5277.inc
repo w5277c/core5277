@@ -470,11 +470,15 @@ C5_INIT:
 	CLI
 
 	;Инициализация логирования
+.ifdef LOGGING_PORT
 	MCALL C5_LOG_INIT
+.endif
 .ifdef INPUT_PORT
 	MCALL INPUT_INIT
 .endif
+.ifdef LOGGING_PORT
 	MCALL C5_LOG_TASKSDUMP
+.endif
 	;Сбрасываем флаги причины сброса
 	CLR TEMP
 	STS MCUSR,TEMP
@@ -534,10 +538,6 @@ C5_REINIT:
 	STS _C5_FLAGS+0x01,TEMP
 	STS _C5_FLAGS+0x02,TEMP
 	STS _C5_FLAGS+0x03,TEMP
-	STS _C5_FLAGS+0x04,TEMP
-	STS _C5_FLAGS+0x05,TEMP
-	STS _C5_FLAGS+0x06,TEMP
-	STS _C5_FLAGS+0x07,TEMP
 
 	;Задаем счетчик основному таймеру
 	LDI TEMP,0x00

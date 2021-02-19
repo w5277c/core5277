@@ -1,36 +1,32 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019  w5277c@gmail.com        Начало
-;09.08.2020  w5277c@gmail.com        Разбиение на файлы
-;19.08.2020  w5277c@gmail.com        Отсчет с нуля
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;19.02.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_TIMER_STOP
+.ifdef DEF_C5_TIMER_OFFSET
 .else
-.set DEF_C5_TIMER_STOP = 1
-
-.if REPORT_INCLUDES == 0x01
-.message "included C5_TIMER_STOP"
-.endif
-
-.include "./core/_timer_offset.inc"
+.set DEF_C5_TIMER_OFFSET = 1
 
 ;--------------------------------------------------------
-C5_TIMER_STOP:
+_C5_TIMER_OFFSET:
 ;--------------------------------------------------------
-;Останов таймера
-;IN TEMP - номер таймера(0-...)
+;Получаем адрес на данные таймера
+;IN: PID,TEMP - номер таймера(0-...)
+;OUT: Z-адрес на данные таймера
 ;--------------------------------------------------------
-	PUSH_Z
 	PUSH TEMP
 
-	MCALL _C5_TIMER_OFFSET
+	MOV ZL,TEMP
+	LSL TEMP
+	LSL TEMP
+	ADD TEMP,ZL
 
-	LDI TEMP,0xff
-	STD Z+_C5_TIMER_PROC_ID,TEMP
+	LDI ZH,high(_C5_TIMERS)
+	LDI ZL,low(_C5_TIMERS)
+	ADD ZL,TEMP
+	CLR TEMP
+	ADC ZH,TEMP
 
 	POP TEMP
-	POP_Z
 	RET
 .endif

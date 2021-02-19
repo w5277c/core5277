@@ -52,8 +52,7 @@ _C5_RES_WAIT_N_LOCK__QUEUE_NEXT:
 
 _C5_RES_WAIT_N_LOCK__QUEUE_LOOP_END:
 	;Возвращается на адрес свободной ячейки
-	SUBI ZL,0x02
-	SBCI ZH,0x00
+	SBIW ZL,0x02
 	;Помещаем в очередь ид ресурса и ид задачи
 	ST Z+,ACCUM
 	ST Z+,_PID
