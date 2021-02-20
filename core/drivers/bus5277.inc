@@ -78,6 +78,9 @@
 	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x09;Закрытие соединения
 	.EQU	BUS5277_FUNC_BUFFER_READ						= 0x0a;Чтение блока данных буфера
 	.EQU	BUS5277_FUNC_BUFFER_WRITE						= 0x0b;Запись блока данных в буфер
+	.EQU	BUS5277_FUNC_BTLDR_MODE							= 0x0c;Перейти в режим бутлоадера
+	.EQU	BUS5277_FUNC_BTLDR_WRITE						= 0x0d;Записать блок данных во флеш
+	.EQU	BUS5277_FUNC_BTLDR_DONE							= 0x0e;Выйти из режима бутлоадера
 	;---
 	.EQU	BUS5277_FUNC_SOFT_RESET							= 0x7c;Перезагрузка устройства
 	.EQU	BUS5277_FUNC_RESET								= 0x7d;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
@@ -94,6 +97,7 @@
 	.EQU	BUS5277_RESP_RELAY_LOCK							= 0x88;Реле заблокировано тригерром
 	.EQU	BUS5277_RESP_ILLEGAL_CHANNEL					= 0x89;Некорректный номер канала
 	.EQU	BUS5277_RESP_ILLEGAL_COMMAND					= 0x8a;Некорректная комманда
+	.EQU	BUS5277_RESP_BTLDR_CRC							= 0x8b;Выозвращаем CRC полезных данных флеша
 	;---COMMAND-CODES---
 	.EQU	BUS5277_CMD_CANCEL								= 0x00;Отмена текущей команды (не используется)
 	.EQU	BUS5277_CMD_TURN_ON								= 0x01;Включить
