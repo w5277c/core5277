@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;24.01.2021  w5277c@gmail.com			Начало
 ;12.02.2021  w5277c@gmail.com			Исправлены явные косяки
+;26.02.2021  w5277c@gmail.com			EIMSK,EIFR!
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_EINT_ENABLE
 .else
@@ -29,6 +30,7 @@ C5_EINT_ENABLE:
 	PUSH TEMP_L
 	PUSH TEMP
 	PUSH LOOP_CNTR
+	PUSH_Z
 
 	SBRS TEMP_H,0x02
 	LDS TEMP,EICRA
@@ -68,13 +70,27 @@ _C5_EINT_ENABLE__ISC_SET_SKIP:
 	MOV TEMP_L,YL
 	MCALL C5_IR_VECTOR_SET
 
-	SBRS TEMP_H,0x02
+	SBRS ACCUM,0x02
 	STS EICRA,TEMP
+
 .ifdef EICRB
-	SBRC TEMP_H,0x02
+	SBRC ACCUM,0x02
 	STS EICRB,TEMP
 .endif
 
+	LDI_Z (INT_TABLE*2)-C5_IR_INT0
+	ADD ZL,ACCUM
+	CLR ACCUM
+	ADC ZH,ACCUM
+	LPM ACCUM,Z
+	LDS TEMP,EIMSK
+	OR TEMP,ACCUM
+	STS EIMSK,TEMP
+	LDS TEMP,EIFR
+	OR TEMP,ACCUM
+	STS EIFR,TEMP
+
+	POP_Z
 	POP LOOP_CNTR
 	POP TEMP
 	POP TEMP_L

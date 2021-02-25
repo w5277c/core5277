@@ -408,6 +408,9 @@ PORTS_TABLE:															;Таблица из адресов IO регистр
 	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
 PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2
+INT_TABLE:
+	.db	(1<<INT0),(1<<INT1)
+
 .MACRO MCALL
 	CALL @0
 .ENDMACRO

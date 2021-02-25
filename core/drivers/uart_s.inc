@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.01.2021  w5277c@gmail.com			Начало
 ;25.01.2021  w5277c@gmail.com			Добавлена поддержка eint(не проверено)
+;26.02.2021  w5277c@gmail.com			Исправляю баги(в процессе)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
@@ -67,16 +68,16 @@
 DRV_UART_S_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: TEMP_H - порт RX, TEMP_L - порт TX
-;TEMP_EH - порт направления передача/прием
+;IN: TEMP_H-порт RX, TEMP_L-порт TX
+;TEMP_EH-порт направления передача/прием
 ;(0xff-не используется),
-;TEMP_EL - порт индикации передачи
+;TEMP_EL-порт индикации передачи
 ;(0xff-не используется)
-;ACCUM - ид таймера
-;FLAGS - опции
-;YH - скорость передачи данных
-;YL - ид драйвера PCINT или
-;прерывание C5_IR_INTn(с включенным 0x07 битом)
+;ACCUM-ид таймера
+;FLAGS-опции
+;YH-скорость передачи данных
+;YL-ид драйвера PCINT или
+;прерывание C5_IR_INTn(с выключенным 0x07 битом)
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
@@ -248,9 +249,9 @@ _DRV_UART_S_PROC__TX_SKIP:
 	SBRC TEMP,0x07
 	RJMP PC+0x08
 	MOV TEMP_H,TEMP
-	LDI TEMP_L,C5_ISC_RISING_EDGE
-	LDI YH,high(_DRV_UART_S_PCINT_EINT_EVENT)
-	LDI YL,low(_DRV_UART_S_PCINT_EINT_EVENT)
+	LDI TEMP_L,C5_ISC_FALLING_EDGE
+	LDI YH,high(_DRV_UART_S_EINT_EVENT)
+	LDI YL,low(_DRV_UART_S_EINT_EVENT)
 	MCALL C5_EINT_ENABLE
 	RJMP PC+0x07
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
@@ -475,9 +476,9 @@ __DRV_UART_S_RECV_EVENT__DATA:
 		RJMP PC+0x0a
 		PUSH TEMP_H
 		MOV TEMP_H,TEMP
-		LDI TEMP_L,C5_ISC_RISING_EDGE
-		LDI YH,high(_DRV_UART_S_PCINT_EINT_EVENT)
-		LDI YL,low(_DRV_UART_S_PCINT_EINT_EVENT)
+		LDI TEMP_L,C5_ISC_FALLING_EDGE
+		LDI YH,high(_DRV_UART_S_EINT_EVENT)
+		LDI YL,low(_DRV_UART_S_EINT_EVENT)
 		MCALL C5_EINT_ENABLE
 		POP TEMP_H
 		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BIT
@@ -552,7 +553,7 @@ _DRV_UART_S_PCINT_EVENT:
 	SBRC FLAGS,0x00
 	RET
 
-_DRV_UART_S_PCINT_EINT_EVENT:
+_DRV_UART_S_EINT_EVENT:
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
