@@ -349,6 +349,7 @@
 	.EQU	ADCT										= 0x08
 	;--SPM---
 	.EQU	SPMCSR									= 0x57
+	.EQU	SPMCR										= SPMCSR
 	.EQU		SPMIE									= 0x07
 	.EQU		RWWSB									= 0x06
 	.EQU		SIGRD									= 0x05

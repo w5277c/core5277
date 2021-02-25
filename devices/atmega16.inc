@@ -21,6 +21,10 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 1024
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
+	.SET	BOOT_512B_ADDR							= 0x1e00
+	.SET	BOOT_1024B_ADDR						= 0x1c00
+	.SET 	FLASH_PAGESIZE_B						= 0x80			;128 байт - размер страницы FLASH
+
 	#include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -233,6 +237,17 @@
 	.EQU	ADC6										= 0x06
 	.EQU	ADC7										= 0x07
 	.EQU	ADCT										= 0x08
+	;--SPM---
+	.EQU	SPMCSR									= 0x57
+	.EQU	SPMCR										= SPMCSR
+	.EQU		SPMIE									= 0x07
+	.EQU		RWWSB									= 0x06
+	.EQU		SIGRD									= 0x05
+	.EQU		RWWSRE								= 0x04
+	.EQU		BLBSET								= 0x03
+	.EQU		PGWRT									= 0x02
+	.EQU		PGERS									= 0x01
+	.EQU		SPMEN									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF						= (0<<REFS1)|(0<<REFS0)

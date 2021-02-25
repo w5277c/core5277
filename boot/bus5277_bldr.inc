@@ -13,7 +13,7 @@
 ;	2)Выйти из режима BOOTLOADER'а (addr(1Б) + size(1Б) + code(1б) + crc(1Б)
 
 ;Для тестирования
-.include			"./devices/atmega328.inc"
+;.include			"./devices/atmega16.inc"
 
 .ORG 0x01c0
 	;---EEPROM-DATA---
@@ -465,8 +465,8 @@ _BLDR__DO_SMP:
 	RET
 
 ;для тестирования
-MAIN:
-_C5_IR:
-_C5_TIMER_A_IR:
-_C5_TIMER_B_IR:
+;MAIN:
+;_C5_IR:
+;_C5_TIMER_A_IR:
+;_C5_TIMER_B_IR:
 	RET
