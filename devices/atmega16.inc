@@ -26,6 +26,7 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA16
 	.MESSAGE "######## DEVICE ATmega16"
+	.SET	_IV_STEP									= 0x02;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
@@ -314,11 +315,6 @@ PCINT_TABLE:
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
-.ENDMACRO
-
-.MACRO _CORRE5277_IR_OFFSET_CORRECTOR
-	LSR _C5_TEMP_L
-	DEC _C5_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
 .ENDMACRO
 
 .MACRO _C5_TIMERB

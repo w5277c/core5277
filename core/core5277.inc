@@ -288,7 +288,10 @@ _C5_IR:
 	LDI ZH,high(_C5_IR_VECTORS_TABLE)
 	LDI ZL,low(_C5_IR_VECTORS_TABLE)
 
-	_CORRE5277_IR_OFFSET_CORRECTOR
+.if _IV_STEP == 2
+	LSR _C5_TEMP_L
+.endif
+	DEC _C5_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
 
 	MOV ACCUM,_C5_TEMP_L												;Номер строки в таблице перывания
 	DEC _C5_TEMP_L														;Первая запись в таблице прерываний не используется

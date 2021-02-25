@@ -21,11 +21,16 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
 	#pragma AVRPART MEMORY EEPROM 512
 
+	.SET	BOOT_512B_ADDR							= 0x0e00
+	.SET	BOOT_1024B_ADDR						= 0x0c00
+	.SET 	FLASH_PAGESIZE_B						= 0x40			;64 байта - размер страницы FLASH
+
 	#include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA48
 	.MESSAGE "######## DEVICE ATmega88"
+	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
@@ -345,6 +350,16 @@
 	.EQU	ADC6										= 0x06
 	.EQU	ADC7										= 0x07
 	.EQU	ADCT										= 0x08
+	;--SPM---
+	.EQU	SPMCSR									= 0x57
+	.EQU		SPMIE									= 0x07
+	.EQU		RWWSB									= 0x06
+	.EQU		SIGRD									= 0x05
+	.EQU		RWWSRE								= 0x04
+	.EQU		BLBSET								= 0x03
+	.EQU		PGWRT									= 0x02
+	.EQU		PGERS									= 0x01
+	.EQU		SPMEN									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
@@ -435,11 +450,6 @@ PCINT_TABLE:
 	LDI ACCUM,(1<<OCF0A)
 	STS TIFR0,ACCUM
 	POP ACCUM
-.ENDMACRO
-
-.MACRO _CORRE5277_IR_OFFSET_CORRECTOR
-	NOP
-	DEC _C5_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
 .ENDMACRO
 
 .MACRO _C5_TIMERB

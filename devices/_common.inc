@@ -5,6 +5,10 @@
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;21.01.2020  w5277c@gmail.com			Вынесен блок определений пинов для процедур PORT_...
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF_DEVICES_COMMON
+.else
+.set DEF_DEVICES_COMMON = 1
+
 	.EQU	ATTINY25									= 0x00
 	.EQU	ATMEGA8									= 0x01
 	.EQU	ATMEGA16									= 0x02
@@ -26,6 +30,7 @@
 .else
 	.SET	CORE_FREQ								= 0x08
 .endif
+	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	TIMERS_SPEED_50NS						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
 	.EQU	TIMERS_SPEED_25NS						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
@@ -170,3 +175,4 @@
 	LDI ZH,high(@0)
 	LDI ZL,low(@0)
 .ENDMACRO
+.endif

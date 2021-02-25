@@ -27,6 +27,7 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
 	.MESSAGE "######## DEVICE ATtiny45"
+	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x03			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
@@ -310,11 +311,6 @@ PCINT_TABLE:
 	LDI ACCUM,(1<<OCF0A)
 	STS TIFR0,ACCUM
 	POP ACCUM
-.ENDMACRO
-
-.MACRO _CORRE5277_IR_OFFSET_CORRECTOR
-	NOP
-	DEC _C5_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
 .ENDMACRO
 
 .MACRO _C5_TIMERB

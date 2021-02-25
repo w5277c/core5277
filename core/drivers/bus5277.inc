@@ -97,7 +97,6 @@
 	.EQU	BUS5277_RESP_RELAY_LOCK							= 0x88;Реле заблокировано тригерром
 	.EQU	BUS5277_RESP_ILLEGAL_CHANNEL					= 0x89;Некорректный номер канала
 	.EQU	BUS5277_RESP_ILLEGAL_COMMAND					= 0x8a;Некорректная комманда
-	.EQU	BUS5277_RESP_BTLDR_CRC							= 0x8b;Выозвращаем CRC полезных данных флеша
 	;---COMMAND-CODES---
 	.EQU	BUS5277_CMD_CANCEL								= 0x00;Отмена текущей команды (не используется)
 	.EQU	BUS5277_CMD_TURN_ON								= 0x01;Включить
