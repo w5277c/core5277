@@ -23,7 +23,8 @@
 
 	.SET	BOOT_512B_ADDR							= 0x0e00
 	.SET	BOOT_1024B_ADDR						= 0x0c00
-	.SET 	FLASH_PAGESIZE_B						= 0x40			;64 байта - размер страницы FLASH
+	.SET 	FLASH_PAGESIZE							= 0x40			;64 байта - размер страницы FLASH
+	.SET	EEPROM_SIZE								= 0x200
 
 	#include "/devices/_common.inc"
 

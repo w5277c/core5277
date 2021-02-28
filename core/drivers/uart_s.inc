@@ -4,11 +4,12 @@
 ;02.01.2021  w5277c@gmail.com			Начало
 ;25.01.2021  w5277c@gmail.com			Добавлена поддержка eint(не проверено)
 ;26.02.2021  w5277c@gmail.com			Исправляю баги(в процессе)
+;26.02.2021  w5277c@gmail.com			Починил прием с использованием EINT
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
 .set DEF__C5_DRV_UART_S = 1
-.message "Included driver software UART v0.1"
+.message "Included driver software UART v0.2"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -576,18 +577,20 @@ _DRV_UART_S_EINT_EVENT:
 	LDD ACCUM,Z+_DRV_UART_S_TIMER_PERIOD
 	MCALL C5_TIMER_SET_PERIOD
 
-	LDI TEMP,TIMERS_SPEED/3
-	_CORRE5277_TIMERA_CORRECTOR TEMP
-
 	;Выключаю прерывание для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
 	SBRC TEMP,0x07
-	RJMP PC+0x07
+	RJMP __DRV_UART_S_PCINT_EVENT__PCINT
 	PUSH TEMP_H
 	MOV TEMP_H,TEMP
 	MCALL C5_EINT_DISABLE
 	POP TEMP_H
-	RJMP PC+0x05
+	LDI TEMP,(TIMERS_SPEED/4)*2
+	MCALL __DRV_UART_S_PCINT_EVENT__CORRECTOR
+	RJMP __DRV_UART_S_PCINT_EVENT__END
+__DRV_UART_S_PCINT_EVENT__PCINT:
+	LDI TEMP,TIMERS_SPEED/3
+	MCALL __DRV_UART_S_PCINT_EVENT__CORRECTOR
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	LDI FLAGS,0xff
 	MCALL C5_EXEC
@@ -598,4 +601,8 @@ __DRV_UART_S_PCINT_EVENT__END:
 	POP TEMP
 	POP_Z
 	RET
+__DRV_UART_S_PCINT_EVENT__CORRECTOR:
+	_CORRE5277_TIMERA_CORRECTOR TEMP
+	RET
 .endif
+
