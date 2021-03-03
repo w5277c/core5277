@@ -21,10 +21,10 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
 	#pragma AVRPART MEMORY EEPROM 1024
 
-	.SET	BOOT_512B_ADDR							= 0x3e00
-	.SET	BOOT_1024B_ADDR						= 0x3c00
-	.SET 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
-	.SET	EEPROM_SIZE								= 0x400
+	.EQU	BOOT_512W_ADDR							= 0x3e00
+	.EQU	FLASH_PAGESIZE							= 0x0080			;128 байт - размер страницы FLASH
+	.EQU	EEPROM_SIZE								= 0x0400			;1K
+	.EQU	FLASH_SIZE								= 0x8000			;32K
 
 	#include "/devices/_common.inc"
 
@@ -414,6 +414,8 @@ PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2
 INT_TABLE:
 	.db	(1<<INT0),(1<<INT1)
+
+APPLICATION_BLOCK:
 
 .MACRO MCALL
 	CALL @0

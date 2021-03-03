@@ -15,6 +15,12 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
 	#pragma AVRPART MEMORY EEPROM 1024
 
+	.EQU	BOOT_512B_ADDR							= 0x3e00
+	.EQU	BOOT_1024B_ADDR						= 0x3c00
+	.EQU	FLASH_PAGESIZE							= 0x0100			;256 байт - размер страницы FLASH
+	.EQU	EEPROM_SIZE								= 0x0400			;1K
+	.EQU	FLASH_SIZE								= 0x8000			;32K
+
 	#include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -461,6 +467,8 @@ PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00,0x00,0x00,0x00
 INT_TABLE:
 	.db	(1<<INT0),(1<<INT1),(1<<INT2),(1<<INT3),(1<<INT4),(1<<INT5),(1<<INT6),(1<<INT7)
+
+APPLICATION_BLOCK:
 
 .MACRO MCALL
 	CALL @0
