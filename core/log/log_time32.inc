@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.02.2021  w5277c@gmail.com			Начало (не проверено)
+;03.03.2021  w5277c@gmail.com			PUSH/POP LOOP_CNTR
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_TIME32
 .else
@@ -28,6 +29,7 @@ C5_LOG_TIME32:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
+	PUSH LOOP_CNTR
 
 	LDS TEMP_L,SREG
 	PUSH TEMP_L
@@ -114,6 +116,7 @@ C5_LOG_TIME32__LOOP_US:
 	POP TEMP
 	STS SREG,TEMP
 
+	POP LOOP_CNTR
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
