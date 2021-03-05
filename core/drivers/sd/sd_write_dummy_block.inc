@@ -18,6 +18,7 @@ _DRV_SD_OP_WRITE_DUMMY_BLOCK:
 ;Пишем блок данных(фикция)
 ;IN: X-адрес на буффер,Z-адрес на переменные
 ;TEMP_EH/EL/H/L-номер блока
+;ACCUM-основной байт записи
 ;OUT: ACCUM-R1 ответ
 ;--------------------------------------------------------
 	PUSH LOOP_CNTR
@@ -46,8 +47,10 @@ _DRV_SD_OP_WRITE_DUMMY_BLOCK:
 	MCALL _DRV_SD__SEND_CMD
 	POP_X
 
+	PUSH ACCUM
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
+	POP ACCUM
 	BRNE _DRV_SD_OP_WRITE_DUMMY_BLOCK__END
 	MCALL _DRV_SD_SET_DUMMY_BLOCK
 	MCALL _DRV_SD_GET_DATARESP_TOKEN
