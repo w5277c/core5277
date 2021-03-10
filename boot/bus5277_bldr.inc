@@ -26,13 +26,13 @@
 	.SET	EEPROM_MSET_OFFSET							= 0x08						;Смещение на основные настройки
 	;---
 	.EQU	EEPROM_RESERVED1								= 0x00	;8Б зарезервировано, первая страница, не безопасна
-	.SET	EEPROM_DEV_TYPE								= 0x08	;1B тип устройства
-	.SET	EEPROM_DEV_SERIAL								= 0x09	;8Б серийного номера
-	.SET	EEPROM_PCB_VERSION							= 0x11	;1Б Версия PCB
-	.SET	EEPROM_FW_VERSION								= 0x12	;1Б Версия прошивки
-	.SET	EEPROM_BUS_ADDR								= 0x13	;1Б Адрес устройства на шине
-	.SET	EEPROM_BLDR_ERR_CNTR							= 0x14	;1Б Счетчик ошибок, изначально равен 64, при нуле блокируем работу загрузчика
-	.SET	EEPROM_BLDR_ENABLED							= 0x15	;1Б Признак работы бутлоадера(0x52)
+	.SET	EEPROM_DEV_TYPE								= 0x08	;2B тип устройства
+	.SET	EEPROM_DEV_SERIAL								= 0x0a	;8Б серийного номера
+	.SET	EEPROM_PCB_VERSION							= 0x12	;1Б Версия PCB
+	.SET	EEPROM_FW_VERSION								= 0x13	;1Б Версия прошивки
+	.SET	EEPROM_BUS_ADDR								= 0x14	;1Б Адрес устройства на шине
+	.SET	EEPROM_BLDR_ERR_CNTR							= 0x15	;1Б Счетчик ошибок, изначально равен 64, при нуле блокируем работу загрузчика
+	.SET	EEPROM_BLDR_ENABLED							= 0x16	;1Б Признак работы бутлоадера(0x52)
 	;---выравниваем по размеру страницы 8Б---
 .ifdef EEPROM_BLDR_SECURE_DATA_SIZE
 	.EQU	EEPROM_BLDR_SECURE_DATA						= 0x18	;Смещение для опциональных данных процедуры расшифровки данных прошивки
