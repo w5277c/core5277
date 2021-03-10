@@ -14,8 +14,14 @@
 
 .ORG BOOT_512W_ADDR
 	;---CONSTANTS---
+.ifdef	ACT_LED_PORT
+.else
 	.SET	ACT_LED_PORT									= 0xff
+.endif
+.ifdef	BUS_DR_PORT
+.else
 	.SET	BUS_DR_PORT										= 0xff
+.endif
 	;---
 	.SET	EEPROM_MSET_OFFSET							= 0x08						;Смещение на основные настройки
 	;---
@@ -53,9 +59,9 @@
 	.EQU	_BLDR_BUS5277_PACKET_HEADER_CODE			= 0x02
 	.EQU	_BLDR_BUS5277_PACKET_DATA					= 0x03
 	;---BUS5277-REQUEST-CODES---
-	.EQU	_BLDR_BUS5277_FUNC_BTLDR_MODE				= 0x0c	;Перейти в режим бутлоадера
-	.EQU	_BLDR_BUS5277_FUNC_BTLDR_WRITE			= 0x0d	;Записать блока данных во флеш, передаем номер 32б блока в странице или смещение во FLASH
-	.EQU	_BLDR_BUS5277_FUNC_BTLDR_DONE				= 0x0e	;Выйти из режима бутлоадера
+	.EQU	_BLDR_BUS5277_FUNC_BTLDR_MODE				= 0x0d	;Перейти в режим бутлоадера
+	.EQU	_BLDR_BUS5277_FUNC_BTLDR_WRITE			= 0x0e	;Записать блока данных во флеш, передаем номер 32б блока в странице или смещение во FLASH
+	.EQU	_BLDR_BUS5277_FUNC_BTLDR_DONE				= 0x0f	;Выйти из режима бутлоадера
 	;---BUS5277-RESPONSE-CODES---
 	.EQU	_BLDR_BUS5277_RESP_OK						= 0x80	;Все в порядке
 	.EQU	_BLDR_BUS5277_RESP_ILLEGAL_DATA_ADDR	= 0x84	;Не корректная длина пакета или запрошенный блок выходит за рамки доступной FLASH
@@ -409,10 +415,13 @@ _BLDR__UART_TX_START:
 ;--------------------------------------------------------
 	;DR TURN ON
 .if	BUS_DR_PORT != 0xff
+.message BUS_DR_PORT
+	PUSH TEMP_L
 	LDI ACCUM,BUS_DR_PORT
 	MCALL _BLDR__PORT_OFFSETS
 	MOV TEMP,TEMP_H
 	MCALL _BLDR__PORT_SET_HI
+	POP TEMP_L
 .endif
 	LDI TEMP,(1<<TXEN0)
 	STS UCSR0B,TEMP
@@ -420,9 +429,10 @@ _BLDR__UART_TX_START:
 _BLDR__UART_TX_LOOP:
 	LD TEMP,Y+
 	STS UDR0,TEMP
+_BLDR__UART_TX__WAIT:
 	LDS TEMP,UCSR0A
 	SBRS TEMP,TXC0
-	RJMP PC-0x03
+	RJMP _BLDR__UART_TX__WAIT
 	DEC TEMP_L
 	BRNE _BLDR__UART_TX_LOOP
 	STS UCSR0B,B00
@@ -567,12 +577,14 @@ _BLDR_CRC8_BLOCK:
 ;IN: Z-адрес на блок данных,TEMP_L-длина
 ;OUT: ACCUM - сумма
 ;--------------------------------------------------------
+	PUSH TEMP_L
 	CLR ACCUM
 _BLDR_CRC8_BLOCK__BYTES_LOOP:
 	LD TEMP,Z+
 	MCALL _BLDR_CRC8
 	DEC TEMP_L
 	BRNE _BLDR_CRC8_BLOCK__BYTES_LOOP
+	POP TEMP_L
 	RET
 
 ;--------------------------------------------------------

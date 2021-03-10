@@ -66,21 +66,22 @@
 	.EQU	DRV_BUS5277_OP_EXTRASCAN_T						= 0x04;Режим TIMING EXTRASCAN
 	.EQU	DRV_BUS5277_OP_HAVE_DATA						= 0x05;Устанавливаем флаг HAVE_DATA
 	;---REQUEST-CODES---
-	.EQU	BUS5277_FUNC_INFO									= 0x00;Чтение исномации об устройстве (тип, версия, uptime)
-	.EQU	BUS5277_FUNC_DATA_READ							= 0x01;Чтение данных
-	.EQU	BUS5277_FUNC_SETTINGS_READ						= 0x02;Чтение блока настроек
-	.EQU	BUS5277_FUNC_SETTINGS_WRITE					= 0x03;Запись блока настроек
-	.EQU	BUS5277_FUNC_COMMAND_EXEC						= 0x04;Выполнение команды (таких как вкл/выкл/инвертировать)
-	.EQU	BUS5277_FUNC_HISTORY_PULL						= 0x05;Чтение первой записи истории или последующей с удалением первой
-	.EQU	BUS5277_FUNC_IFACE_OPEN							= 0x06;Инициализация доп. интерфейса (открытие соединения)
-	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x07;Выполнить процедуру передачи и приема данных
-	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x08;Сообщить состояние интерфейса
-	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x09;Закрытие соединения
-	.EQU	BUS5277_FUNC_BUFFER_READ						= 0x0a;Чтение блока данных буфера
-	.EQU	BUS5277_FUNC_BUFFER_WRITE						= 0x0b;Запись блока данных в буфер
-	.EQU	BUS5277_FUNC_BTLDR_MODE							= 0x0c;Перейти в режим бутлоадера
-	.EQU	BUS5277_FUNC_BTLDR_WRITE						= 0x0d;Записать блок данных во флеш
-	.EQU	BUS5277_FUNC_BTLDR_DONE							= 0x0e;Выйти из режима бутлоадера
+	.EQU	BUS5277_FUNC_INFO									= 0x00;Чтение исномации об устройстве (0x5277 + тип, серийниый номер, версия PCB, версия FW, адрес на шине, uptime)
+	.EQU	BUS5277_FUNC_ADDR_SET							= 0x01;Установка адреса на шине(1-126)
+	.EQU	BUS5277_FUNC_DATA_READ							= 0x02;Чтение данных(показаний)
+	.EQU	BUS5277_FUNC_SETTINGS_READ						= 0x03;Чтение блока расширенных настроек
+	.EQU	BUS5277_FUNC_SETTINGS_WRITE					= 0x04;Запись блока расширенных настроек (с изменением в EEPROM)
+	.EQU	BUS5277_FUNC_COMMAND_EXEC						= 0x05;Выполнение команды (таких как вкл/выкл/инвертировать)
+	.EQU	BUS5277_FUNC_HISTORY_PULL						= 0x06;Чтение первой записи истории или последующей с удалением первой
+	.EQU	BUS5277_FUNC_IFACE_OPEN							= 0x07;Инициализация доп. интерфейса (открытие соединения)
+	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x08;Выполнить процедуру передачи и приема данных
+	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x09;Сообщить состояние интерфейса
+	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x0a;Закрытие соединения
+	.EQU	BUS5277_FUNC_BUFFER_READ						= 0x0b;Чтение блока данных буфера
+	.EQU	BUS5277_FUNC_BUFFER_WRITE						= 0x0c;Запись блока данных в буфер
+	.EQU	BUS5277_FUNC_BTLDR_MODE							= 0x0d;Перейти в режим бутлоадера
+	.EQU	BUS5277_FUNC_BTLDR_WRITE						= 0x0e;Записать блок данных во FLASH
+	.EQU	BUS5277_FUNC_BTLDR_DONE							= 0x0f;Выйти из режима бутлоадера
 	;---
 	.EQU	BUS5277_FUNC_SOFT_RESET							= 0x7c;Перезагрузка устройства
 	.EQU	BUS5277_FUNC_RESET								= 0x7d;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
@@ -109,8 +110,6 @@
 	.EQU	BUS5277_CMD_EXECUTE								= 0x08;Выполнить
 	.EQU	BUS5277_CMD_SET_VALUE							= 0x09;Задать значение
 	.EQU	BUS5277_CMD_SET_TIMER							= 0x0a;Запустить таймер
-	.EQU	BUS5277_CMD_CONNECT								= 0x0b;Подключиться
-	.EQU	BUS5277_CMD_DISCONNECT							= 0x0c;Отключиться
 	;---COMMAND-SOURCE-CODES---
 	.EQU	BUS5277_CMD_SRC_MANUAL							= 0x01;Вручную
 	.EQU	BUS5277_CMD_SRC_BUS								= 0x02;Шина
