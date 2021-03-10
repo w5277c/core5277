@@ -16,13 +16,15 @@ _DRV_SD_OP_READ_DUMMY_BLOCK:
 ;Читаем блок данных(фикция)
 ;IN: Z-адрес на переменные, X-адрес на буфер
 ;TEMP_EH/EL/H/L-номер блока
-;OUT: ACCUM-R1 ответ
+;ACCUM-ожидаемый байт в записи
+;OUT: ACCUM-R1 ответ или ответ sd_get_dummy_block
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH_X
 	PUSH_Y
+	PUSH ACCUM
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD17
@@ -40,9 +42,11 @@ _DRV_SD_OP_READ_DUMMY_BLOCK:
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
 	BRNE _DRV_SD_OP_READ_DUMMY_BLOCK__FAIL
+	POP ACCUM
 	MCALL _DRV_SD_GET_DUMMY_BLOCK
 	RJMP _DRV_SD_OP_READ_DUMMY_BLOCK__END
 _DRV_SD_OP_READ_DUMMY_BLOCK__FAIL:
+	POP TEMP
 _DRV_SD_OP_READ_DUMMY_BLOCK__END:
 	SBI PORTB,SS & 0x0f
 
