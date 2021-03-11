@@ -21,7 +21,7 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
 	#pragma AVRPART MEMORY EEPROM 1024
 
-	.EQU	BOOT_512W_ADDR							= 0x3e00
+	.EQU	BOOT_512W_ADDR							= 0x3e00			;Начальный адрес килобайтного бутлоадера в словах
 	.EQU	FLASH_PAGESIZE							= 0x0080			;128 байт - размер страницы FLASH
 	.EQU	EEPROM_SIZE								= 0x0400			;1K
 	.EQU	FLASH_SIZE								= 0x8000			;32K

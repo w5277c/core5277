@@ -18,7 +18,7 @@
 ; |eaaaaaaa|rrssssss|qccccccc|dddddddd|...|dddddddd|wwwwwwww|
 ; где:
 ; e - бит extrascan, если включен, то пакет состоит из 2 байт(addr+crc)(если а=0 - режим таймингов)
-; a - адрес устройства (0-127)
+; a - адрес ведомого устройства (1-127, 0-ведущее устройство)
 ; r - заразервировано
 ; s - размер всего пакета(40B максимум, длина данных = s-4)
 ; q - бит 0-запрос, 1-ответ
@@ -216,7 +216,7 @@ _DRV_BUS5277_PROC_MASTER:
 
 	;Запускаем драйвер UART
 	LDI TEMP_EH,0x04													;Длина данных для передачи
-	ADD TEMP_EH,LOOP_CNTR
+	ADD TEMP_EH,TEMP_L
 	MOV YH,ZH															;Адрес блока данных для передачи
 	MOV YL,ZL
 .ifdef LOGGING_PORT
