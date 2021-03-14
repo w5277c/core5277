@@ -77,8 +77,8 @@
 	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x08;Выполнить процедуру передачи и приема данных
 	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x09;Сообщить состояние интерфейса
 	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x0a;Закрытие соединения
-	.EQU	BUS5277_FUNC_BUFFER_READ						= 0x0b;Чтение блока данных буфера
-	.EQU	BUS5277_FUNC_BUFFER_WRITE						= 0x0c;Запись блока данных в буфер
+	.EQU	BUS5277_FUNC_IFACE_BUFFER_READ				= 0x0b;Чтение блока данных буфера интерфейса
+	.EQU	BUS5277_FUNC_IFACE_BUFFER_WRITE				= 0x0c;Запись блока данных в буфер интерфейса
 	.EQU	BUS5277_FUNC_BTLDR_MODE							= 0x0d;Перейти в режим бутлоадера
 	.EQU	BUS5277_FUNC_BTLDR_WRITE						= 0x0e;Записать блок данных во FLASH
 	.EQU	BUS5277_FUNC_BTLDR_DONE							= 0x0f;Выйти из режима бутлоадера

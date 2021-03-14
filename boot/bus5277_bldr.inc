@@ -24,7 +24,7 @@
 	.SET	BUS_DR_PORT										= 0xff
 .endif
 	;---
-	.SET	EEPROM_MSET_OFFSET							= 0x08						;Смещение на основные настройки
+	.SET	EEPROM_MSETS_OFFSET							= 0x08						;Смещение на основные настройки
 	;---
 	.EQU	EEPROM_RESERVED1								= 0x00	;8Б зарезервировано, первая страница, не безопасна
 	.SET	EEPROM_DEV_TYPE								= 0x08	;2B тип устройства
@@ -37,9 +37,9 @@
 	;---выравниваем по размеру страницы 8Б---
 .ifdef EEPROM_BLDR_SECURE_DATA_SIZE
 	.EQU	EEPROM_BLDR_SECURE_DATA						= 0x18	;Смещение для опциональных данных процедуры расшифровки данных прошивки
-	.SET	EEPROM_ESET_OFFSET							= EEPROM_BLDR_SECURE_DATA+EEPROM_BLDR_SECURE_DATA_SIZE	;Смещение доступное для нужд основной программы
+	.SET	EEPROM_ESETS_OFFSET							= EEPROM_BLDR_SECURE_DATA+EEPROM_BLDR_SECURE_DATA_SIZE	;Смещение доступное для нужд основной программы
 .else
-	.SET	EEPROM_ESET_OFFSET							= 0x18	;Смещение доступное для нужд основной программы
+	.SET	EEPROM_ESETS_OFFSET							= 0x18	;Смещение доступное для нужд основной программы
 .endif
 
 	.EQU	_BLDR_UART_BUFFER_LEN						= 0x28	;40B - максимальная длина буфера UART
