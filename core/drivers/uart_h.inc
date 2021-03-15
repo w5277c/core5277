@@ -4,11 +4,12 @@
 ;03.04.2020  w5277c@gmail.com			Начало
 ;19.04.2020  w5277c@gmail.com			Адаптировано под изменения ядра
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;16.03.2021  w5277c@gmail.com			Устранено несколько серьезных ошибок в логике приема данных
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_H
 .else
 .set DEF__C5_DRV_UART_H = 1
-.message "Included driver hardware UART v0.1"
+.message "Included driver hardware UART v0.2"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -117,8 +118,7 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	MCALL PORT_SET_HI
 	;Расчитываю NEXT TIMEOUT										;Для 4800 таймаут составит 2.6ms(~13бит), для 115200 составит 0.150ms(~17бит)
 	LSR YH																;Таймаут будет базироваться на _C5_MAIN_TIMER_CNTR(отсчет каждые 0.050ms)
-	LSR YH
-	INC YH
+;	LSR YH																;Увеличил в 2 раза, так как здесь работаем побайтно а не побитно
 	STD Z+_DRV_UART_H_NEXT_TIMEOUT,YH
 	;Отключаю прием и передачу
 	LDI TEMP,0x00
@@ -203,7 +203,6 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	MCALL _DRV_UART_H_TX_EVENT
 	;Жду окончания передачи
 _DRV_UART_H_PROC__SENDING_WAIT:
-	MCALL C5_WAIT
 	LDD TEMP,Z+_DRV_UART_H_STATE
 	CPI TEMP,DRV_UART_ST_READY
 	BRNE _DRV_UART_H_PROC__SENDING_WAIT
@@ -231,16 +230,20 @@ _DRV_UART_H_PROC__TX_SKIP:
 	ORI TEMP,(1<<RXCIE0)|(1<<RXEN0)
 	STS UCSR0B,TEMP
 	;Запоминаем метку времени для отсчета таймаута ожидания данных
+	CLI
 	LDS YH,_C5_UPTIME+0x03
 	LDS YL,_C5_UPTIME+0x04
+	SEI
 _DRV_UART_H_PROC__RECEIVING_WAIT:
 	MCALL C5_WAIT
 	LDD TEMP,Z+_DRV_UART_H_STATE
 	CPI TEMP,DRV_UART_ST_WAIT_DATA
 	BRNE _DRV_UART_H_PROC__RECEIVING_NOT_WAIT_DATA
-	LDS TEMP_L,_C5_UPTIME+0x04
-	SUB TEMP_L,YL
+	CLI
 	LDS TEMP_H,_C5_UPTIME+0x03
+	LDS TEMP_L,_C5_UPTIME+0x04
+	SEI
+	SUB TEMP_L,YL
 	SBC TEMP_H,YH
 	LDD TEMP,Z+_DRV_UART_H_FIRST_TIMEOUT+0x00
 	LDD ACCUM,Z+_DRV_UART_H_FIRST_TIMEOUT+0x01
@@ -249,10 +252,10 @@ _DRV_UART_H_PROC__RECEIVING_WAIT:
 	CPI ACCUM,0x00
 	BREQ _DRV_UART_H_PROC__RECEIVING_WAIT
 _DRV_UART_H_PROC__RECEIVING_NOT_ZERO_TIMEOUT:
-	CP TEMP,TEMP_H
+	CP TEMP_H,TEMP
 	BRCS _DRV_UART_H_PROC__RECEIVING_TIMEOUT
 	BRNE _DRV_UART_H_PROC__RECEIVING_WAIT
-	CP ACCUM,TEMP_L
+	CP TEMP_L,ACCUM
 	BRCS _DRV_UART_H_PROC__RECEIVING_WAIT
 	RJMP _DRV_UART_H_PROC__RECEIVING_TIMEOUT
 _DRV_UART_H_PROC__RECEIVING_NOT_WAIT_DATA:
@@ -335,13 +338,13 @@ _DRV_UART_H_TX_EVENT__DONE:
 	LDS TEMP,UCSR0B
 	ANDI TEMP,~((1<<TXCIE0)|(1<<TXEN0))
 	STS UCSR0B,TEMP
-	;Выставляем TX в низкий уровень
-	LDI ACCUM,TXD
-	MCALL PORT_SET_LO
 	;Проверяем на опцию BREAK
 	LDD TEMP,Z+_DRV_UART_H_OPTIONS
 	SBRS TEMP,DRV_UART_OPT_BREAK
 	RJMP _DRV_UART_H_TX_EVENT__NO_BREAK
+	;Выставляем TX в низкий уровень
+	LDI ACCUM,TXD
+	MCALL PORT_SET_LO
 	LDI TEMP,DRV_UART_ST_BREAK
 	STD Z+_DRV_UART_H_STATE,TEMP
 	;Обновляю таймер на отсчет таймаута для посылки BREAK
@@ -354,6 +357,9 @@ _DRV_UART_H_TX_EVENT__DONE:
 	MCALL C5_TIMER_START
 	RJMP _DRV_UART_H_TX_EVENT__END
 _DRV_UART_H_TX_EVENT__NO_BREAK:
+	;Выставляем TX в высокий уровень
+	LDI ACCUM,TXD
+	MCALL PORT_SET_HI
 	;Порт направления в LO
 	LDD ACCUM,Z+_DRV_UART_H_DR_PORT
 	CPI ACCUM,0xff
@@ -384,6 +390,9 @@ _DRV_UART_H_RX_EVENT:
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
+	PUSH FLAGS
+
+	LDS FLAGS,UDR0
 
 	MCALL C5_RAM_OFFSET
 	;Считываю позицию в буфере
@@ -419,8 +428,7 @@ _DRV_UART_H_RX_EVENT__NO_BREAK:
 	ADD YL,ACCUM
 	CLR TEMP
 	ADC YH,TEMP
-	LDS TEMP,UDR0
-	ST Y,TEMP
+	ST Y,FLAGS
 	;Инкрементирую и записываю позицию в буфере
 	INC ACCUM
 	STD Z+_DRV_UART_H_BUFFER_POS,ACCUM
@@ -431,6 +439,8 @@ _DRV_UART_H_RX_EVENT__TIMER_UPDATE:
 	MCALL C5_TIMER_SET_PERIOD		;TODO оптимизировать
 	MCALL C5_TIMER_START
 _DRV_UART_H_RX_EVENT__END:
+
+	POP FLAGS
 	POP ACCUM
 	POP TEMP
 	POP_Z
@@ -459,11 +469,11 @@ _DRV_UART_H_TIMER_EVENT:
 	RJMP _DRV_UART_H_TIMER_EVENT__END
 
 _DRV_UART_H_TIMER_EVENT__NOT_RECEIVING:
-	CPI TEMP,DRV_UART_ST_BREAK
-	BRNE _DRV_UART_H_TIMER_EVENT__END
 	;Останавливаю таймер
 	LDD TEMP,Z+_DRV_UART_H_TIMER_ID
 	MCALL C5_TIMER_STOP
+	CPI TEMP,DRV_UART_ST_BREAK
+	BRNE _DRV_UART_H_TIMER_EVENT__END
 	;Порт направления в LO
 	LDD ACCUM,Z+_DRV_UART_H_DR_PORT
 	CPI ACCUM,0xff
