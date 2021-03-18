@@ -5,11 +5,12 @@
 ;19.04.2020  w5277c@gmail.com			Адаптировано под изменения ядра
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;16.03.2021  w5277c@gmail.com			Устранено несколько серьезных ошибок в логике приема данных
+;18.03.2021  w5277c@gmail.com			C5_WAIT используется только в ожидании начала приема данных
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_H
 .else
 .set DEF__C5_DRV_UART_H = 1
-.message "Included driver hardware UART v0.2"
+.message "Included driver hardware UART v0.3"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -235,10 +236,10 @@ _DRV_UART_H_PROC__TX_SKIP:
 	LDS YL,_C5_UPTIME+0x04
 	SEI
 _DRV_UART_H_PROC__RECEIVING_WAIT:
-	MCALL C5_WAIT
 	LDD TEMP,Z+_DRV_UART_H_STATE
 	CPI TEMP,DRV_UART_ST_WAIT_DATA
 	BRNE _DRV_UART_H_PROC__RECEIVING_NOT_WAIT_DATA
+	MCALL C5_WAIT
 	CLI
 	LDS TEMP_H,_C5_UPTIME+0x03
 	LDS TEMP_L,_C5_UPTIME+0x04

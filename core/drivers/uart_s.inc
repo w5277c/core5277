@@ -5,11 +5,12 @@
 ;25.01.2021  w5277c@gmail.com			Добавлена поддержка eint(не проверено)
 ;26.02.2021  w5277c@gmail.com			Исправляю баги(в процессе)
 ;26.02.2021  w5277c@gmail.com			Починил прием с использованием EINT
+;18.03.2021  w5277c@gmail.com			Багфикс
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
 .set DEF__C5_DRV_UART_S = 1
-.message "Included driver software UART v0.2"
+.message "Included driver software UART v0.3"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -263,6 +264,7 @@ _DRV_UART_S_PROC__TX_SKIP:
 
 ;;;	MCALL C5_DISPATCHER_UNLOCK
 
+	;TODO проверить на возможность использования C5_WAIT при ожидании начала данных
 	;Запоминаем текущий UPTIME
 	LDS YH,_C5_UPTIME+0x03
 	LDS YL,_C5_UPTIME+0x04
@@ -585,12 +587,14 @@ _DRV_UART_S_EINT_EVENT:
 	MOV TEMP_H,TEMP
 	MCALL C5_EINT_DISABLE
 	POP TEMP_H
-	LDI TEMP,(TIMERS_SPEED/4)*2
+	LDI TEMP,(TIMERS_SPEED/3)*2
 	MCALL __DRV_UART_S_PCINT_EVENT__CORRECTOR
 	RJMP __DRV_UART_S_PCINT_EVENT__END
 __DRV_UART_S_PCINT_EVENT__PCINT:
-	LDI TEMP,TIMERS_SPEED/3
+	PUSH TEMP
+	LDI TEMP,(TIMERS_SPEED/3)*1
 	MCALL __DRV_UART_S_PCINT_EVENT__CORRECTOR
+	POP TEMP
 	LDD ACCUM,Z+_DRV_UART_S_RX_PORT
 	LDI FLAGS,0xff
 	MCALL C5_EXEC
