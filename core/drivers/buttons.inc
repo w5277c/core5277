@@ -29,10 +29,11 @@
 	.EQU	_DRV_BUTTONS_STRUCT_SIZE						= 0x04;Размер структуры данных для каждой кнопки
 	.EQU	_DRV_BUTTONS_QUEUE_MAX_SIZE					= 0x05;Количество кнопок очереди для событий
 	;---
-	.EQU	_DRV_BUTTONS_BUTTONS_QNT						= 0x00;1B - Количество кнопок
-	.EQU	_DRV_BUTTONS_CNTR									= 0x01;1B - Счетчик опроса
-	.EQU	_DRV_BUTTONS_QUEUE_SIZE							= 0x02;1B - Кол-во элементов в очереди
-	.EQU	_DRV_BUTTONS_QUEUE								= 0x03;_DRV_BUTTONS_QUEUE_MAX_SIZE*2 - очередь событий [PORT,RESULT]
+	.EQU	_DRV_BUTTONS_TIMER_ID							= 0x00;1B - ИД таймера
+	.EQU	_DRV_BUTTONS_BUTTONS_QNT						= 0x01;1B - Количество кнопок
+	.EQU	_DRV_BUTTONS_CNTR									= 0x02;1B - Счетчик опроса
+	.EQU	_DRV_BUTTONS_QUEUE_SIZE							= 0x03;1B - Кол-во элементов в очереди
+	.EQU	_DRV_BUTTONS_QUEUE								= 0x04;_DRV_BUTTONS_QUEUE_MAX_SIZE*2 - очередь событий [PORT,RESULT]
 	.EQU	_DRV_BUTTONS_DATA									= _DRV_BUTTONS_QUEUE+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2);x4B - Данные кнопок
 
 	;---Структура данных по кнопкам---
@@ -48,7 +49,7 @@
 	.EQU	_DRV_BUTTONS_HOLD_TIME							= 1000/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
 	.EQU	_DRV_BUTTONS_TIMEOUT								= 400/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
 	;---Флаги---
-	.EQU	_DRV_BUTTONS_FL_INIT								= 0x04;Только что добавлено(ожидание начала цикла опроса)
+	.EQU	_DRV_BUTTONS_FL_INIT								= 0x04;Ожидание начала цикла опроса
 	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN						= 0x05;Первый опрос(нет предыдущего занчения)
 	.EQU	_DRV_BUTTONS_FL_HOLD								= 0x06;Удерживание
 	.EQU	_DRV_BUTTONS_FL_STATE							= 0x07;Текущее состояние порта
@@ -57,7 +58,7 @@
 	.EQU	DRV_BUTTONS_OP_GET								= 0x01
 	.EQU	DRV_BUTTONS_OP_WAIT								= 0x02
 
-	.EQU	_DRV_BUTTONS_RAM_SIZE							= 0x03+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
+	.EQU	_DRV_BUTTONS_RAM_SIZE							= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
 ;--------------------------------------------------------
 DRV_BUTTONS_INIT:
 ;--------------------------------------------------------
@@ -82,14 +83,14 @@ DRV_BUTTONS_INIT:
 	STD Z+_DRV_BUTTONS_CNTR,TEMP
 
 	LDI LOOP_CNTR,_DRV_BUTTONS_QUEUE_MAX_SIZE*2
-	CLR XH
-	LDI XL,_DRV_BUTTONS_QUEUE
-	ADD XL,ZL
-	ADC XH,ZH
+	MOV XH,ZH
+	MOV XL,ZL
+	ADIW XL,_DRV_BUTTONS_QUEUE
 	MCALL RAM_FILL8
 
 	;Инициализирую таймер с периодом в 0.002*_DRV_BUTTONS_TIMER_PERIOD
 	MOV TEMP,ACCUM
+	STD Z+_DRV_BUTTONS_TIMER_ID,TEMP
 	LDI TEMP_H,high(DRV_BUTTONS_TIMER_EVENT)
 	LDI TEMP_L,low(DRV_BUTTONS_TIMER_EVENT)
 	LDI ACCUM,_DRV_BUTTONS_TIMER_PERIOD|0x80
@@ -241,14 +242,13 @@ DRV_BUTTONS_TIMER_EVENT:
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
-	PUSH_X
-	PUSH_Y
 	PUSH_Z
-	PUSH TEMP_H
-	PUSH TEMP_L
 
 	MCALL C5_RAM_OFFSET
 	LDD LOOP_CNTR,Z+_DRV_BUTTONS_BUTTONS_QNT
+	CPI LOOP_CNTR,0x00
+	BRNE PC+0x02
+	RJMP DRV_BUTTONS_TIMER_EVENT__END
 
 	;Инкрементирую счетчик опроса
 	LDD TEMP,Z+_DRV_BUTTONS_CNTR
@@ -267,11 +267,11 @@ DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
 	BRCS DRV_BUTTONS_TIMER_EVENT__LO_STATE
 	;Инкрементирую счетчик
 	LDD TEMP,Z+_DRV_BUTTONS_CNTR_N_FLAGS
-	MOV TEMP_L,TEMP
+	MOV ACCUM,TEMP
 	ANDI TEMP,0xf0
-	ANDI TEMP_L,0x0f
-	INC TEMP_L
-	OR TEMP,TEMP_L
+	ANDI ACCUM,0x0f
+	INC ACCUM
+	OR TEMP,ACCUM
 	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
 DRV_BUTTONS_TIMER_EVENT__LO_STATE:
 
@@ -281,7 +281,20 @@ DRV_BUTTONS_TIMER_EVENT__LO_STATE:
 	RJMP DRV_BUTTONS_TIMER_EVENT__END
 
 DRV_BUTTONS_TIMER_EVENT__ANALYZE:
-	;Сбрасываю счетчик, если отсчет завершен
+	;Останавливаю таймер, пока не выполню анализ
+	LDD TEMP,Z+_DRV_BUTTONS_TIMER_ID
+	MCALL C5_TIMER_STOP
+	;Разрешаю прерывания, так как процедура медленная
+	LDS TEMP,SREG
+	PUSH TEMP
+	SEI
+
+	PUSH_X
+	PUSH_Y
+	PUSH TEMP_H
+	PUSH TEMP_L
+
+	;Сбрасываю счетчик, т.к. отсчет завершен
 	LDI TEMP,0x00
 	STD Z+_DRV_BUTTONS_CNTR,TEMP
 
@@ -296,6 +309,9 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
 	;Проверяю на только что добавленную кнопку
 	LDD TEMP_H,Z+_DRV_BUTTONS_CNTR_N_FLAGS
 	;Считываем предыдущее состояние порта в T
+	CLR FLAGS
+	SBCI TEMP_H,_DRV_BUTTONS_FL_STATE
+	ORI FLAGS,0x01
 	BST TEMP_H,_DRV_BUTTONS_FL_STATE
 	MOV TEMP_L,TEMP_H
 	;Сбрасываем счетчик и состояние в 0
@@ -436,14 +452,19 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT:
 	ADIW ZL,_DRV_BUTTONS_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BREQ PC+0x02
-	RJMP DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP
+DRV_BUTTONS_TIMER_EVENT__ANALYZE_END:
+	;Заново запускаю таймер
+	LDD TEMP,Y+_DRV_BUTTONS_TIMER_ID
+	MCALL C5_TIMER_STOP
 
-DRV_BUTTONS_TIMER_EVENT__END:
 	POP TEMP_L
 	POP TEMP_H
-	POP_Z
 	POP_Y
 	POP_X
+	POP TEMP
+	STS SREG,TEMP
+DRV_BUTTONS_TIMER_EVENT__END:
+	POP_Z
 	POP LOOP_CNTR
 	POP ACCUM
 	POP TEMP
