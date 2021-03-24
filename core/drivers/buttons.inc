@@ -1,9 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.03.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
-;28.10.2020  w5277c@gmail.com        Корректировка таймингов
+;02.03.2020  w5277c@gmail.com			Начало
+;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;28.10.2020  w5277c@gmail.com			Корректировка таймингов
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_BUTTONS
 .else
@@ -293,6 +293,7 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	PUSH_Y
 	PUSH TEMP_H
 	PUSH TEMP_L
+	PUSH FLAGS
 
 	;Сбрасываю счетчик, т.к. отсчет завершен
 	LDI TEMP,0x00
@@ -306,13 +307,12 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	ADIW ZL,_DRV_BUTTONS_DATA
 
 DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
-	;Проверяю на только что добавленную кнопку
+	;Считываю счетчик и флаги
 	LDD TEMP_H,Z+_DRV_BUTTONS_CNTR_N_FLAGS
 	;Считываем предыдущее состояние порта в T
 	CLR FLAGS
 	SBCI TEMP_H,_DRV_BUTTONS_FL_STATE
-	ORI FLAGS,0x01
-	BST TEMP_H,_DRV_BUTTONS_FL_STATE
+	ORI FLAGS,(1<<_DRV_BUTTONS_FL_STATE)
 	MOV TEMP_L,TEMP_H
 	;Сбрасываем счетчик и состояние в 0
 	ANDI TEMP_H,low(~((1<<_DRV_BUTTONS_FL_STATE)|0x0f))
@@ -341,7 +341,7 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT:
 	SBRS TEMP_H,_DRV_BUTTONS_FL_FIRST_SCAN
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN
 	;Если кнопка нажата, то остаемся в режиме первого сканирования
-	BRCC PC+0x02
+	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	;Иначе, конпка не нажата, сбрасываем флаг первого сканирования
 	CLR TEMP_H
@@ -349,29 +349,26 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT:
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN:
-	;Флаг T хранит старое значение, флаг C хранит новое(true-нажата)
-	ROL TEMP
-	BLD TEMP_L,0x00
-	;Записываем в флаг T новое состояние
-	BST TEMP,0x00
-	EOR TEMP,TEMP_L
-	SBRC TEMP,0x00
+	;_DRV_BUTTONS_FL_STATE бит FLAGS хранит старое значение, в TEMP_H хранит новое(true-нажата)
+	EOR FLAGS,TEMP_H
+	SBRC FLAGS,_DRV_BUTTONS_FL_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED
 
 	;Увеличиваем время нахождения в одном и том-же состоянии
 	LDD TEMP_L,Z+_DRV_BUTTONS_TIME
 	CPI TEMP_L,0xff
-	BREQ PC+0x02
+	BREQ PC+0x03
 	INC TEMP_L
 	STD Z+_DRV_BUTTONS_TIME,TEMP_L
 
 	;Проверка на таймауты
 	;Считываем результат
-	LDD TEMP_H,Z+_DRV_BUTTONS_RESULT
+	LDD ACCUM,Z+_DRV_BUTTONS_RESULT
 	;Переходим, если кнопка нажата
-	BRTS _DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED
+	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED
 	;Кнопка не нажата, проверяем таймаут если нажатия были
-	MOV TEMP,TEMP_H
+	MOV TEMP,ACCUM
 	ANDI TEMP,0b01110000
 	;Если нажатий не было, проверяем следующую кнопку
 	BRNE PC+0x02
@@ -391,10 +388,10 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED:
 	BRCC PC+0x02
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	;Пропускаем блок, если r уже установлен
-	SBRC TEMP_H,0x07
+	SBRC ACCUM,0x07
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_LONG_PRESS_REPEATE
 	;Заполняем переменные и вызываем обработчик
-	MOV TEMP,TEMP_H
+	MOV TEMP,ACCUM
 	;Инкрементируем количество нажатий
 	SWAP TEMP
 	ANDI TEMP,0b00000111
@@ -402,11 +399,11 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED:
 	SWAP TEMP
 	;Добавляем длинное нажатие
 	SEC
-	ROL TEMP_H
-	ANDI TEMP_H,0b00001111
-	OR TEMP_H,TEMP
+	ROL ACCUM
+	ANDI ACCUM,0b00001111
+	OR ACCUM,TEMP
 	;Включаем r(повтор)
-	ORI TEMP_H,0b10000000
+	ORI ACCUM,0b10000000
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_LONG_PRESS_REPEATE:
 	MCALL _DRV_BUTTONS__QUEUE_ADD
@@ -422,15 +419,13 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
 	CLR TEMP
 	STD Z+_DRV_BUTTONS_TIME,TEMP
 	;Если кнопку нажали, то просто выходим
-	BRTS _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
-	;Получаем результат
-	LDD TEMP_H,Z+_DRV_BUTTONS_RESULT
-	;Получаем количество нажатых кнопок
+	;Проверяем количество нажатых кнопок
 	MOV TEMP,TEMP_H
 	SWAP TEMP
 	ANDI TEMP,0x0f
-
 	;Проверяем на максимальное занчение
 	CPI TEMP,0x04
 	;Ничего не делаем, если достигнут максимум
@@ -438,10 +433,8 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
 	;Увеличиваем счетчик нажатий
 	INC TEMP
 	;Добавяем новое нажатие в результат
-	PUSH TEMP
-	LDI TEMP,_DRV_BUTTONS_SHORT_PRESS_MAX_TIME
-	CP TEMP,TEMP_L
-	POP TEMP
+	LDI ACCUM,_DRV_BUTTONS_SHORT_PRESS_MAX_TIME
+	CP ACCUM,TEMP_L
 	ROL TEMP_H
 	ANDI TEMP_H,0b00001111
 	SWAP TEMP
@@ -452,11 +445,13 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT:
 	ADIW ZL,_DRV_BUTTONS_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BREQ PC+0x02
+	RJMP DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP
 DRV_BUTTONS_TIMER_EVENT__ANALYZE_END:
 	;Заново запускаю таймер
 	LDD TEMP,Y+_DRV_BUTTONS_TIMER_ID
-	MCALL C5_TIMER_STOP
+	MCALL C5_TIMER_START
 
+	POP FLAGS
 	POP TEMP_L
 	POP TEMP_H
 	POP_Y
@@ -475,10 +470,11 @@ _DRV_BUTTONS__QUEUE_ADD:
 ;--------------------------------------------------------
 ;Добавляем элемент в очередь
 ;IN: Y - Адрес основных переменных, Z - адрес данных
-;кнопки, TEMP_H - результат обработки кнопки
+;кнопки, ACCUM - результат обработки кнопки
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
+	PUSH_X
 
 	;Достигнут таймаут, добавляем событие в очередь
 	LDD TEMP,Y+_DRV_BUTTONS_QUEUE_SIZE
@@ -506,12 +502,13 @@ _DRV_BUTTONS__QUEUE_ADD:
 	;Записываю кнопку в очередь
 	LDD TEMP,Z+_DRV_BUTTONS_PORT
 	ST X+,TEMP															;Порт кнопки
-	ST X,TEMP_H															;Результат
+	ST X,ACCUM															;Результат
 	STS SREG,TEMP_L
 	;Очищаю данные кнопки
 	CLR TEMP
 	STD Z+_DRV_BUTTONS_TIME,TEMP
 _DRV_BUTTONS__QUEUE_ADD_END:
+	POP_X
 	POP TEMP_L
 	POP TEMP
 	RET
