@@ -15,15 +15,16 @@
 
 ;Шина на базе serial(19200-8N1+BREAK)
 ;  addr     size     code     data0        dataN     crc
-; |eaaaaaaa|rrssssss|qccccccc|dddddddd|...|dddddddd|wwwwwwww|
+; |eaaaaaaa|rrssssss|qucccccc|dddddddd|...|dddddddd|wwwwwwww|
 ; где:
 ; e - бит extrascan, если включен, то пакет состоит из 2 байт(addr+crc)(если а=0 - режим таймингов)
-; a - адрес ведомого устройства (1-127, 0-ведущее устройство)
+; a - адрес ведомого устройства (1-127, 0-новое или ведущее устройство)
 ; r - заразервировано
 ; s - размер всего пакета(40B максимум, длина данных = s-4)
 ; q - бит 0-запрос, 1-ответ
 ; с - код функции или ответа
-; d - данные функции
+; u - признак адресации по UID (значение a игнорируется)
+; d - данные функции (при включенном u, первые 8 байт = UID)
 ; w - crc8(1wire)
 
 	.include	"./core/ram/ram_offset.inc"
@@ -82,6 +83,10 @@
 	.EQU	BUS5277_FUNC_BTLDR_MODE							= 0x0d;Перейти в режим бутлоадера
 	.EQU	BUS5277_FUNC_BTLDR_WRITE						= 0x0e;Записать блок данных во FLASH
 	.EQU	BUS5277_FUNC_BTLDR_DONE							= 0x0f;Выйти из режима бутлоадера
+	;---																	;Блок комманд с адресацией по UID
+	.EQU	BUS5277_FUNC_SEARCH								= 0x40;Поиск устройства (определение UID устройств)
+	.EQU	BUS5277_FUNC_INFO_BY_UID						= 0x41;Чтение исномации об устройстве (аналогично BUS5277_FUNC_INFO, но адресация по UID)
+	.EQU	BUS5277_FUNC_ADDR_SET_BY_UID					= 0x42;Установка адреса на шине (аналогично BUS5277_FUNC_ADDR_SET, но адресация по UID)
 	;---
 	.EQU	BUS5277_FUNC_SOFT_RESET							= 0x7c;Перезагрузка устройства
 	.EQU	BUS5277_FUNC_RESET								= 0x7d;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
