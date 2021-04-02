@@ -15,6 +15,21 @@
 
 	;---SPECIFY-DEVICE---
 	.DEVICE ATmega328P
+;	#pragma AVRPART ADMIN PART_NAME ATmega328P
+;	.equ	SIGNATURE_000	= 0x1e
+;	.equ	SIGNATURE_001	= 0x95
+;	.equ	SIGNATURE_002	= 0x0f
+
+;	#pragma AVRPART CORE CORE_VERSION V2E
+
+	.equ	FLASHEND	= 0x3fff	; Note: Word address
+	.equ	IOEND	= 0x00ff
+	.equ	SRAM_START	= 0x0100
+	.equ	SRAM_SIZE	= 2048
+	.equ	XRAMEND	= 0x0000
+	.equ	E2END	= 0x03ff
+	.equ	EEPROMEND	= 0x03ff
+	.equ	EEADRBITS	= 10
 
 	#pragma AVRPART MEMORY PROG_FLASH 32768
 	#pragma AVRPART MEMORY INT_SRAM SIZE 2048
