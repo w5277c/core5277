@@ -17,6 +17,8 @@
 
 .ORG BOOT_512W_ADDR
 	;---CONSTANTS---
+;TODO НЕ ВЕРНО! Для работы с портами нужен PORTS_TABLE(из PROGRAM FLASH)
+;Похоже порт и пин придется хранить в EEPROM (можно отказаться от громоздких процедур)
 .ifdef	ACT_LED_PORT
 .else
 	.SET	ACT_LED_PORT									= 0xff
