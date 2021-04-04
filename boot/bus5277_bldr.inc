@@ -4,6 +4,7 @@
 ;21.02.2021  w5277c@gmail.com			Начало
 ;11.03.2021  w5277c@gmail.com			Относительные переходы, но осталась зависимость от типа МК
 ;03.04.2021  w5277c@gmail.com			Багфиксинг
+;04.04.2021  w5277c@gmail.com			Багфиксинг
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_BOOTLADER
 .error "Bootloader already included!"
@@ -50,7 +51,6 @@
 	.EQU	_BLDR_BOCKS_QNT								= _APPLICATION_FLASH_SIZE/FLASH_PAGESIZE
 	;---регистры---
 ;	.DEF	B00												= r2
-;	.DEF	FLASH_CUR_BLOCK								= r4
 ;	.EQU	BUS_ADDR											= r25		;PID
 ;	.EQU	ERR_CNTR											= r23		;TRY_CNTR
 
@@ -77,23 +77,24 @@ BLDR_START:
 ;--------------------------------------------------------
 	RJMP PC+0x03
 .dw 0x5277,0xb100
-
-	;Запрет прерываний
-	CLI
 	;Инициализация стека
 	LDI TEMP,high(RAMEND)
 	STS SPH,TEMP
 	LDI TEMP,low(RAMEND)
 	STS SPL,TEMP
 
-	LDI TEMP,0x00
-	MOV r2,TEMP
-
 	LDI_X EEPROM_BLDR_ENABLED
 	RCALL _BLDR__EEPROM_READ_BYTE
 	CPI TEMP,0x52
 	BREQ PC+0x03
 	MJMP 0x0000
+
+BLDR_UNCONDITIONAL_START:
+	;Запрет прерываний
+	CLI
+
+	LDI TEMP,0x00
+	MOV r2,TEMP
 
 	LDI_X EEPROM_BUS_ADDR
 	RCALL _BLDR__EEPROM_READ_BYTE
@@ -149,10 +150,6 @@ BLDR_START:
 	STS UBRR0L,TEMP
 	STS UBRR0H,r2
 
-_BLDR_START__REINIT:
-	LDI TEMP,_BLDR_BOCKS_QNT
-	MOV r4,TEMP
-
 _BLDR_START__RX_START:
 	;Прием UART
 	LDI TEMP,0x00
@@ -204,12 +201,13 @@ _BLDR_START__RX_TIMEOUT:
 	LD TEMP,Z
 	CP TEMP,ACCUM
 	BRNE _BLDR_START__RX_START
+	INC TEMP_L
+	LDI_Y RAMSTART
 
 	;Анализ на код функции
 	CPI TEMP_H,_BLDR_BUS5277_FUNC_INFO
-	BRNE _BLDR_START__NOT_MODE
+	BRNE _BLDR_START__NOT_INFO
 
-		LDI_Y RAMSTART
 		ST Y+,r2
 		LDI TEMP,0x04+0x10											;MAGIC(2)+TYPE(2)+SERIAL(8)+PCB_VER(1)+FW_VER(1)+BUS_ADDR(1)+ERR_CNTR(1)+_BLDR_BOCKS_QNT(1)+FLASH_PAGESIZE/8(1)
 		ST Y+,TEMP
@@ -242,19 +240,27 @@ _BLDR_START__MODE_LOOP:
 		RCALL _BLDR__UART_TX_START
 		RJMP _BLDR_START__RX_START
 
-_BLDR_START__NOT_MODE:
+_BLDR_START__NOT_INFO:
 	CPI TEMP_H,_BLDR_BUS5277_FUNC_BTLDR_WRITE
 	BRNE _BLDR_START__NOT_WRITE
 		CPI TEMP_L,0x03+0x01+0x01+0x20+0x01						;HEADER(3)+FLASH_BLOCK(1)+BUFFER BLOCK(1)+DATA(32)+CRC(1)
 		BRNE _BLDR_RESP__ILLEGAL_DATA_ADDR
 
 		LDD ACCUM,Y+_BLDR_BUS5277_PACKET_DATA+0x00			;FLASH BLOCK NUM
-		CP ACCUM,r4
-		BRNE _BLDR_RESP__ILLEGAL_DATA_ADDR
+		CPI ACCUM,_BLDR_BOCKS_QNT
+		BRCC _BLDR_RESP__ILLEGAL_DATA_ADDR
 
 		LDD TEMP_L,Y+_BLDR_BUS5277_PACKET_DATA+0x01			;BUFFER BLOCK 0-3 или 0-7
 		CPI TEMP_L,FLASH_PAGESIZE/32
 		BRCC _BLDR_RESP__ILLEGAL_DATA_ADDR
+
+		CPI ACCUM,0x00
+		BRNE PC+0x04
+		CPI TEMP_L,0x00
+		BRNE PC+0x02
+		NOP
+
+
 
 		ADIW YL,_BLDR_BUS5277_PACKET_DATA+0x02
 
@@ -264,8 +270,6 @@ _BLDR_START__NOT_MODE:
 		CLR TEMP_H
 		SWAP TEMP_L
 		ANDI TEMP_L,0xf0
-		LSL TEMP_L
-		ROL TEMP_H
 		LSL TEMP_L
 		ROL TEMP_H
 		ADD ZL,TEMP_L
@@ -331,22 +335,44 @@ _BLDR_START__NOT_DONE:
 _BLDR__WRITE_PAGE_TO_FLASH:
 ;--------------------------------------------------------
 ;Блок процедуры записи страницы FLASH
-;IN: Z-адрес на выделенную память, ACCUM-комер страницы
+;IN: ACCUM-комер страницы
 ;--------------------------------------------------------
+		LDI_Z _BLDR_FLASH_BUFFER
+		PUSH ACCUM
+		;Влючаем признак бутлоадера, теперь выход возможен только после полной прошивки
+		LDI XH,high(EEPROM_BLDR_ENABLED)
+		LDI XL,low(EEPROM_BLDR_ENABLED)
+		RCALL _BLDR__EEPROM_READ_BYTE
+		CPI TEMP,0x52
+		BREQ PC+0x03
+		LDI TEMP,0x52
+		RCALL _BLDR__EEPROM_WRITE_BYTE
+
 		;LED TURN ON
 .if	ACT_LED_PORT != 0xff
-		PUSH ACCUM
 		LDI ACCUM,ACT_LED_PORT
 		RCALL _BLDR__PORT_OFFSETS
 		MOV TEMP,TEMP_H
 		RCALL _BLDR__PORT_SET_HI
-		POP ACCUM
 .endif
 
 .ifdef DEF_BOOTLADER_SECURE
 		LDI_X EEPROM_BLDR_SECURE_DATA
 		_BLDR_SECURE
 .endif
+
+		;Вычисляем адрес в FLASH
+		POP ZH
+		CLR ZL
+		LDI TEMP,(0x100-FLASH_PAGESIZE)/0x40
+		DEC TEMP
+		BRCS _BLDR__WRITE_PAGE_TO_FLASH__Z_COMP_SKIP
+_BLDR__WRITE_PAGE_TO_FLASH__Z_COMP_LOOP:
+		LSR ZH
+		ROR ZL
+		DEC TEMP
+		BRNE _BLDR__WRITE_PAGE_TO_FLASH__Z_COMP_LOOP
+_BLDR__WRITE_PAGE_TO_FLASH__Z_COMP_SKIP:
 
 		LDI TEMP,(1<<PGERS)|(1<<SPMEN)
 		RCALL _BLDR__DO_SMP
@@ -364,8 +390,10 @@ _BLDR__WRITE_PAGE_TO_FLASH__WLOOP:
 		ADIW ZL,0x02
 		DEC LOOP_CNTR
 		BRNE _BLDR__WRITE_PAGE_TO_FLASH__WLOOP
-		POP_Z
+		POP_Z		
 
+		LDI TEMP,(1<<PGWRT)|(1<<SPMEN)
+		RCALL _BLDR__DO_SMP
 		LDI TEMP,(1<<RWWSRE)|(1<<SPMEN)
 		RCALL _BLDR__DO_SMP
 
@@ -375,7 +403,9 @@ _BLDR__WRITE_PAGE_TO_FLASH__RLOOP:
 		LPM r0,Z+
 		LD r1,Y+
 		CP r0,r1
-		BREQ PC+0x04
+		BREQ PC+0x06
+		LDI TEMP,(1<<RWWSRE)|(1<<SPMEN)
+		RCALL _BLDR__DO_SMP
 		LDI TEMP_H,_BLDR_BUS5277_RESP_REJECT
 		RCALL _BLDR__MAKE_RESP
 		RJMP _BLDR_START__RX_START
@@ -398,8 +428,6 @@ _BLDR__WRITE_PAGE_TO_FLASH__DONE:
 		MOV TEMP,TEMP_H
 		RCALL _BLDR__PORT_SET_LO
 .endif
-
-		DEC r4
 
 		LDI TEMP_H,_BLDR_BUS5277_RESP_OK
 		RCALL _BLDR__MAKE_RESP
@@ -424,6 +452,7 @@ _BLDR__MAKE_RESP:
 	DEC TEMP_L
 	RCALL _BLDR_CRC8_BLOCK
 	ST Y,ACCUM
+	INC TEMP_L
 ;--------------------------------------------------------
 _BLDR__UART_TX_START:
 ;--------------------------------------------------------
@@ -635,14 +664,20 @@ _BLDR_CRC8__LOOP:
 _BLDR__DO_SMP:
 ;--------------------------------------------------------
 ;Выполняю команду SPM
-;IN: Z-адрес FLAHS,r1/r0-слово,TEMP-значение SPMCSR
+;IN: Z-адрес FLASH,r1/r0-слово,TEMP-значение SPMCSR
 ;--------------------------------------------------------
 	PUSH TEMP
+_BLDR__DO_SMP_WAIT_SPM:
 	LDS TEMP,SPMCSR
 	SBRC TEMP,SPMEN
-	RJMP PC-0x03
-	POP TEMP
+	RJMP _BLDR__DO_SMP_WAIT_SPM
 
+_BLDR__DO_SMP_WAIT_EE:
+	LDS TEMP,EECR
+	SBRC TEMP,EEPE
+	RJMP _BLDR__DO_SMP_WAIT_EE
+
+	POP TEMP
 	STS SPMCSR,TEMP
 	SPM
 	RET
