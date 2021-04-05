@@ -5,6 +5,7 @@
 ;11.03.2021  w5277c@gmail.com			Относительные переходы, но осталась зависимость от типа МК
 ;03.04.2021  w5277c@gmail.com			Багфиксинг
 ;04.04.2021  w5277c@gmail.com			Багфиксинг
+;05.04.2021  w5277c@gmail.com			Багфиксинг(не тестировано)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_BOOTLADER
 .error "Bootloader already included!"
@@ -16,19 +17,8 @@
 .endif
 
 .ORG BOOT_512W_ADDR
-	;---CONSTANTS---
-;TODO НЕ ВЕРНО! Для работы с портами нужен PORTS_TABLE(из PROGRAM FLASH)
-;Похоже порт и пин придется хранить в EEPROM (можно отказаться от громоздких процедур)
-.ifdef	ACT_LED_PORT
-.else
-	.SET	ACT_LED_PORT									= 0xff
-.endif
-.ifdef	BUS_DR_PORT
-.else
-	.SET	BUS_DR_PORT										= 0xff
-.endif
 	;---
-	.SET	EEPROM_MSETS_OFFSET							= 0x08						;Смещение на основные настройки
+	.SET	EEPROM_MSETS_OFFSET							= 0x08	;Смещение на основные настройки
 	;---
 	.EQU	EEPROM_RESERVED1								= 0x00	;8Б зарезервировано, первая страница, не безопасна
 	.SET	EEPROM_DEV_TYPE								= 0x08	;2B тип устройства
@@ -38,12 +28,16 @@
 	.SET	EEPROM_BUS_ADDR								= 0x14	;1Б Адрес устройства на шине
 	.SET	EEPROM_BLDR_ERR_CNTR							= 0x15	;1Б Счетчик ошибок, изначально равен 64, при нуле блокируем работу загрузчика
 	.SET	EEPROM_BLDR_ENABLED							= 0x16	;1Б Признак работы бутлоадера(0x52)
+	;--адреса портоа---
+	.SET	EEPROM_BLDR_TX_PORT							= 0x17	;Адрес DDR, адрес PORT и значение байта для порта TX
+	.SET	EEPROM_BLDR_RX_PORT							= 0x1a	;Адрес DDR, адрес PORT и значение байта для порта RX
+	.SET	EEPROM_BLDR_DR_PORT							= 0x1d	;Адрес DDR, адрес PORT и значение байта(0xff-не используется) для порта DR
 	;---выравниваем по размеру страницы 8Б---
 .ifdef EEPROM_BLDR_SECURE_DATA_SIZE
-	.EQU	EEPROM_BLDR_SECURE_DATA						= 0x18	;Смещение для опциональных данных процедуры расшифровки данных прошивки
+	.EQU	EEPROM_BLDR_SECURE_DATA						= 0x20	;Смещение для опциональных данных процедуры расшифровки данных прошивки
 	.SET	EEPROM_ESETS_OFFSET							= EEPROM_BLDR_SECURE_DATA+EEPROM_BLDR_SECURE_DATA_SIZE	;Смещение доступное для нужд основной программы
 .else
-	.SET	EEPROM_ESETS_OFFSET							= 0x18	;Смещение доступное для нужд основной программы
+	.SET	EEPROM_ESETS_OFFSET							= 0x20	;Смещение доступное для нужд основной программы
 .endif
 
 	.EQU	_BLDR_UART_BUFFER_LEN						= 0x28	;40B - максимальная длина буфера UART
@@ -97,6 +91,63 @@ BLDR_UNCONDITIONAL_START:
 
 	LDI TEMP,0x00
 	MOV r2,TEMP
+	LDI TEMP,0xff
+	MOV r3,TEMP
+
+	CLR ZH
+	;TX-OUT,HI
+	LDI_X EEPROM_BLDR_TX_PORT+0x02
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ACCUM,TEMP
+	LDI_X EEPROM_BLDR_TX_PORT+0x01
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ZL,TEMP
+	LD TEMP,Z
+	OR TEMP,ACCUM
+	ST Z,TEMP
+	LDI_X EEPROM_BLDR_TX_PORT+0x00
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ZL,TEMP
+	LD TEMP,Z
+	OR TEMP,ACCUM
+	ST Z,TEMP
+	;RX-IN,HI
+	LDI_X EEPROM_BLDR_RX_PORT+0x02
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ACCUM,TEMP
+	LDI_X EEPROM_BLDR_RX_PORT+0x01
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ZL,TEMP
+	LD TEMP,Z
+	OR TEMP,ACCUM
+	ST Z,TEMP
+	LDI_X EEPROM_BLDR_RX_PORT+0x00
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ZL,TEMP
+	LD TEMP,Z
+	AND TEMP,ACCUM
+	ST Z,TEMP
+
+	;DR-OUT,LO
+	LDI_X EEPROM_BLDR_DR_PORT+0x02
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV r6,TEMP
+	CP r6,r3
+	BREQ PC+0x0f
+	LDI_X EEPROM_BLDR_DR_PORT+0x01
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ZL,TEMP
+	MOV r5,TEMP
+	LD TEMP,Z
+	AND TEMP,r6
+	ST Z,TEMP
+	LDI_X EEPROM_BLDR_DR_PORT+0x00
+	RCALL _BLDR__EEPROM_READ_BYTE
+	MOV ZL,TEMP
+	MOV r4,TEMP
+	LD TEMP,Z
+	OR TEMP,r6
+	ST Z,TEMP
 
 	LDI_X EEPROM_BUS_ADDR
 	RCALL _BLDR__EEPROM_READ_BYTE
@@ -107,40 +158,6 @@ BLDR_UNCONDITIONAL_START:
 	MOV r23,TEMP
 	CP r23,r2
 	BREQ PC+0x00
-
-	;Инициализация портов
-	;DR-OUT,LO
-.if	BUS_DR_PORT != 0xff
-	LDI ACCUM,BUS_DR_PORT
-	RCALL _BLDR__PORT_OFFSETS
-	MOV TEMP,TEMP_H
-	RCALL _BLDR__PORT_SET_LO
-	MOV TEMP,TEMP_L
-	RCALL _BLDR__PORT_SET_HI
-.endif
-	;LED-OUT,LO
-.if	ACT_LED_PORT != 0xff
-	LDI ACCUM,ACT_LED_PORT
-	RCALL _BLDR__PORT_OFFSETS
-	MOV TEMP,TEMP_H
-	RCALL _BLDR__PORT_SET_LO
-	MOV TEMP,TEMP_L
-	RCALL _BLDR__PORT_SET_HI
-.endif
-	;RX-IN,HI
-	LDI ACCUM,RXD
-	RCALL _BLDR__PORT_OFFSETS
-	MOV TEMP,TEMP_H
-	RCALL _BLDR__PORT_SET_HI
-	MOV TEMP,TEMP_L
-	RCALL _BLDR__PORT_SET_LO
-	;TX-OUT,HI
-	LDI ACCUM,TXD
-	RCALL _BLDR__PORT_OFFSETS
-	MOV TEMP,TEMP_H
-	RCALL _BLDR__PORT_SET_HI
-	MOV TEMP,TEMP_L
-	RCALL _BLDR__PORT_SET_HI
 
 	;Инициализация UART
 	LDI TEMP,(1<<RXC0)|(1<<TXC0)
@@ -262,8 +279,6 @@ _BLDR_START__NOT_INFO:
 		BRNE PC+0x02
 		NOP
 
-
-
 		ADIW YL,_BLDR_BUS5277_PACKET_DATA+0x02
 
 		;Вычисляю смещение в буфере с учетом номера блока
@@ -350,14 +365,6 @@ _BLDR__WRITE_PAGE_TO_FLASH:
 		LDI TEMP,0x52
 		RCALL _BLDR__EEPROM_WRITE_BYTE
 
-		;LED TURN ON
-.if	ACT_LED_PORT != 0xff
-		LDI ACCUM,ACT_LED_PORT
-		RCALL _BLDR__PORT_OFFSETS
-		MOV TEMP,TEMP_H
-		RCALL _BLDR__PORT_SET_HI
-.endif
-
 .ifdef DEF_BOOTLADER_SECURE
 		LDI_X EEPROM_BLDR_SECURE_DATA
 		_BLDR_SECURE
@@ -392,7 +399,7 @@ _BLDR__WRITE_PAGE_TO_FLASH__WLOOP:
 		ADIW ZL,0x02
 		DEC LOOP_CNTR
 		BRNE _BLDR__WRITE_PAGE_TO_FLASH__WLOOP
-		POP_Z		
+		POP_Z
 
 		LDI TEMP,(1<<PGWRT)|(1<<SPMEN)
 		RCALL _BLDR__DO_SMP
@@ -423,13 +430,6 @@ _BLDR__WRITE_PAGE_TO_FLASH__RWWLOOP:
 		RJMP _BLDR__WRITE_PAGE_TO_FLASH__RWWLOOP
 
 _BLDR__WRITE_PAGE_TO_FLASH__DONE:
-		;LED TURN OFF
-.if	ACT_LED_PORT != 0xff
-		LDI ACCUM,ACT_LED_PORT
-		RCALL _BLDR__PORT_OFFSETS
-		MOV TEMP,TEMP_H
-		RCALL _BLDR__PORT_SET_LO
-.endif
 
 		LDI TEMP_H,_BLDR_BUS5277_RESP_OK
 		RCALL _BLDR__MAKE_RESP
@@ -461,14 +461,14 @@ _BLDR__UART_TX_START:
 ;IN:TEMP_L-длина данных
 ;--------------------------------------------------------
 	;DR TURN ON
-.if	BUS_DR_PORT != 0xff
-	PUSH TEMP_L
-	LDI ACCUM,BUS_DR_PORT
-	RCALL _BLDR__PORT_OFFSETS
-	MOV TEMP,TEMP_H
-	RCALL _BLDR__PORT_SET_HI
-	POP TEMP_L
-.endif
+	CP r6,r3
+	BREQ PC+0x06
+	CLR YH
+	MOV YL,r5
+	LD TEMP,Y
+	OR TEMP,r6
+	ST Y,TEMP
+
 	LDI TEMP,(1<<TXEN0)
 	STS UCSR0B,TEMP
 	LDI_Y RAMSTART
@@ -487,15 +487,16 @@ _BLDR__UART_TX_STOP:
 _BLDR__UART_TX_STOP_WAIT:
 	SBIW YL,0x01
 	BRNE _BLDR__UART_TX_STOP_WAIT
-	
+
 	STS UCSR0B,r2
 	;DR TURN OFF
-.if	BUS_DR_PORT != 0xff
-	LDI ACCUM,BUS_DR_PORT
-	RCALL _BLDR__PORT_OFFSETS
-	MOV TEMP,TEMP_H
-	RCALL _BLDR__PORT_SET_LO
-.endif
+	CP r6,r3
+	BREQ PC+0x06
+	CLR YH
+	MOV YL,r5
+	LD TEMP,Y
+	AND TEMP,r6
+	ST Y,TEMP
 	RET
 
 ;--------------------------------------------------------
@@ -540,86 +541,6 @@ _BLDR__EEPROM_WRITE_BYTE__LOOP:
 	STS EECR,TEMP
 	POP TEMP
 	RET
-;--------------------------------------------------------
-_BLDR__PORT_OFFSETS:
-;--------------------------------------------------------
-;Возвращаем адреса для PORTx, DDRx,
-;а также пин в виде числа(1,2,4,8,16,32,64,128)
-;IN: ACCUM сдвоенный порт и пин (PA0, PC7 и т.п.)
-;OUT: TEMP_H-адрес регистра PORTx,
-;TEMP_L-адрес регистра DDRx,
-;ACCUM-пин в виде числа
-;--------------------------------------------------------
-	PUSH_Z
-	PUSH TEMP
-
-	LDI ZH,high(PORTS_TABLE*2)
-	LDI ZL,low(PORTS_TABLE*2)
-	MOV TEMP,ACCUM
-	SWAP ACCUM
-	ANDI ACCUM,0x0f
-	MOV TEMP_H,ACCUM
-	LSL ACCUM
-	ADD ACCUM,TEMP_H
-	ADD ZL,ACCUM
-	CLR ACCUM
-	ADC ZH,ACCUM
-	LPM TEMP_H,Z+
-	LPM TEMP_L,Z
-	ANDI TEMP,0x0f
-
-	;TODO надо проверить
-	RJMP PC+0x05
-	.db	0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80
-	LDI ZH,high((PC-0x04)*2)
-	LDI ZL,low((PC-0x05)*2)
-
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
-	LPM ACCUM,Z
-
-	POP TEMP
-	POP_Z
-	RET
-
-
-;--------------------------------------------------------
-_BLDR__PORT_SET_HI:
-;--------------------------------------------------------
-;Устанавливаем порт в HI
-;IN: TEMP-адрес порта, ACCUM-пин в виде числа
-;--------------------------------------------------------
-	PUSH_Z
-	PUSH TEMP
-	CLR ZH
-	MOV ZL,TEMP
-	LD TEMP,Z
-	OR TEMP,ACCUM
-	ST Z,TEMP
-	POP TEMP
-	POP_Z
-	RET
-;--------------------------------------------------------
-_BLDR__PORT_SET_LO:
-;--------------------------------------------------------
-;Устанавливаем порт в LO
-;IN: TEMP-адрес порта, ACCUM-пин в виде числа
-;--------------------------------------------------------
-	PUSH_Z
-	PUSH TEMP
-	PUSH ACCUM
-	CLR ZH
-	MOV ZL,TEMP
-	LD TEMP,Z
-	COM ACCUM
-	AND TEMP,ACCUM
-	ST Z,TEMP
-	POP ACCUM
-	POP TEMP
-	POP_Z
-	RET
-;--------------------------------------------------------
 
 ;--------------------------------------------------------
 _BLDR_CRC8_BLOCK:
