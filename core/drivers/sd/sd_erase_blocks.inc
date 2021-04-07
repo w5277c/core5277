@@ -18,7 +18,8 @@ _DRV_SD_OP_ERASE_BLOCKS:
 ;--------------------------------------------------------
 ;Стираем несколько блоков
 ;IN: Z-адрес на переменные
-;TEMP_EH/EL/H/L-номер 1-го блока, Y-количество блоков
+;TEMP_EH/EL/H/L-номер 1-го блока,
+;Y-количество блоков(0==65536 блоков)!!!
 ;OUT: ACCUM-R1 ответ
 ;--------------------------------------------------------
 	PUSH TEMP
@@ -48,8 +49,7 @@ _DRV_SD_OP_ERASE_BLOCKS:
 	RJMP _DRV_SD_OP_ERASE_BLOCKS__END
 
 	CLR TEMP
-	SUBI YL,0x01
-	SBCI YH,0x00
+	SBIW YL,0x01
 	ADD TEMP_L,YL
 	ADC TEMP_H,YH
 	ADC TEMP_EL,TEMP

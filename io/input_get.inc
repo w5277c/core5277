@@ -51,6 +51,7 @@ INPUT_GET_CHAR:
 ;Загружаем считанный символ
 ;OUT: TEMP-символ
 ;--------------------------------------------------------
+.if	INPUT_PORT == INT0_PORT || INPUT_PORT == INT1_PORT || INPUT_PORT == INT2_PORT || INPUT_PORT == INT3_PORT || INPUT_PORT == INT4_PORT || INPUT_PORT == INT5_PORT || INPUT_PORT == INT6_PORT || INPUT_PORT == INT7_PORT
 	LDS TEMP,_C5_INPUT_CHAR
 	CPI TEMP,0x00
 	BREQ INPUT_GET_CHAR__END
@@ -59,12 +60,19 @@ INPUT_GET_CHAR:
 	STS _C5_INPUT_CHAR,TEMP
 	POP TEMP
 INPUT_GET_CHAR__END:
+.else
+	PUSH FLAGS
+	LDI FLAGS,0x02
+	MCALL _INPUT_GET_CHAR
+	POP FLAGS
+.endif
 	RET
 
 ;--------------------------------------------------------
 INPUT_LISTEN:
-;Считываем с символ в виде UART RX
+;Инициализируем прослушивание порта INT0,INT1...
 ;--------------------------------------------------------
+.if	INPUT_PORT == INT0_PORT || INPUT_PORT == INT1_PORT || INPUT_PORT == INT2_PORT || INPUT_PORT == INT3_PORT || INPUT_PORT == INT4_PORT || INPUT_PORT == INT5_PORT || INPUT_PORT == INT6_PORT || INPUT_PORT == INT7_PORT
 	PUSH FLAGS
 	PUSH TEMP
 
@@ -75,6 +83,7 @@ INPUT_LISTEN:
 	MCALL _INPUT_GET_CHAR
 	POP TEMP
 	POP FLAGS
+.endif
 	RET
 
 ;--------------------------------------------------------
@@ -82,7 +91,7 @@ _INPUT_GET_CHAR:
 ;--------------------------------------------------------
 ;Считываем с символ в виде UART RX (основной код)
 ;IN: FLAGS-режим работы(0x00-ждем нажатия,
-;0x01-работаем в фоне)
+;0x01-работаем в фоне, 0x02-ждем нажатие некоторое время)
 ;OUT: TEMP-символ
 ;--------------------------------------------------------
 .ifdef INPUT_PORT
@@ -114,8 +123,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -158,8 +167,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -202,8 +211,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -246,8 +255,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -290,8 +299,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -334,8 +343,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -378,8 +387,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -422,8 +431,8 @@ _INPUT_GET_CHAR__REPEATE:
 	STS _C5_INPUT_CHAR,TEMP
 	STS SREG,ACCUM
 
-	CPI FLAGS,0x01
-	BREQ PC+0x18	;24 16+8(8 команд с двойными словами)
+	CPI FLAGS,0x00
+	BRNE PC+0x18	;24 16+8(8 команд с двойными словами)
 	MCALL C5_WAIT
 	LDS TEMP,_C5_INPUT_CHAR
 	TST TEMP
@@ -449,13 +458,29 @@ _INPUT_GET_CHAR__REPEATE:
 	CLR ZH
 
 	CLI
+	PUSH_Y
+	LDI_Y 0xffff
+	LDI ACCUM,0x00
 _INPUT_GET_CHAR__WAIT_START:
+	CPI FLAGS,0x02
+	BRNE _INPUT_GET_CHAR__WAIT_START_NO_TIMEOUT
+	NOP
+	NOP
+	NOP
+	NOP
+	SBIW YL,0x01
+	BRNE _INPUT_GET_CHAR__WAIT_START_NO_TIMEOUT
+	POP_Y
+	POP_Z
+	RJMP _INPUT_GET_CHAR__TIMEOUT
+_INPUT_GET_CHAR__WAIT_START_NO_TIMEOUT:
 	LD TEMP,Z
 	ANDI TEMP,EXP2 (INPUT_PORT & 0x0f)
 	BRNE _INPUT_GET_CHAR__WAIT_START
+	POP_Y
 	POP_Z
 
-	LDI ACCUM,0x13;0x08
+	LDI ACCUM,0x12;0x08
 	DEC ACCUM
 	BRNE PC-0x01
 	POP ACCUM
@@ -502,7 +527,9 @@ _INPUT_GET_CHAR__BITES_LOOP:
 .else
 	MOV ACCUM,TEMP
 	POP TEMP
-	BREQ _INPUT_GET_CHAR__REPEATE
+	BRNE PC+0x02
+	RJMP _INPUT_GET_CHAR__REPEATE
+_INPUT_GET_CHAR__TIMEOUT:
 	STS _C5_INPUT_CHAR,ACCUM
 
 	SEI
