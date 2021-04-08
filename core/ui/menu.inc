@@ -9,7 +9,6 @@
 
 .include "./core/log/log_char.inc"
 .include "./core/log/log_str_el.inc"
-.include	"./io/input_get.inc"
 
 ;--------------------------------------------------------
 C5_MENU:
@@ -51,7 +50,7 @@ _MENU_EXEC__LOOP:
 	MCALL C5_LOG_CHAR
 
 _MENU_EXEC__WAIT:
-	MCALL INPUT_WAIT_CHAR
+	MCALL C5_IN_WAIT
 	MOV FLAGS,TEMP
 	CPI TEMP,0x31
 	BRCS _MENU_EXEC__WAIT
