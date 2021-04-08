@@ -9,7 +9,6 @@
 
 .include	"./core/time32_mark.inc"
 .include	"./core/time32_delta.inc"
-.endif
 
 ;--------------------------------------------------------
 _DRV_SD_GET_DUMMY_BLOCK:

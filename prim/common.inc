@@ -36,7 +36,8 @@
 		STD Z+0x00,TEMP
 		LDI TEMP,(@2 & 0xff)
 		STD Z+0x01,TEMP
-	.ELSE IF @0 == PRIM_INT
+	.ENDIF
+	.IF @0 == PRIM_INT
 		LDI TEMP,(@2>>0x18) & 0xff
 		STD Z+0x00,TEMP
 		LDI TEMP,(@2>>0x10) & 0xff
@@ -45,7 +46,8 @@
 		STD Z+0x02,TEMP
 		LDI TEMP,(@2 & 0xff)
 		STD Z+0x03,TEMP
-	.ELSEIF @0 == PRIM_UPTIME
+	.ENDIF
+	.IF @0 == PRIM_UPTIME
 		LDI TEMP,(@2>>0x20) & 0xff
 		STD Z+0x00,TEMP
 		LDI TEMP,(@2>>0x18) & 0xff
@@ -56,7 +58,8 @@
 		STD Z+0x03,TEMP
 		LDI TEMP,(@2 & 0xff)
 		STD Z+0x04,TEMP
-	.ELSEIF @0 == PRIM_LONG
+	.ENDIF
+	.IF @0 == PRIM_LONG
 		LDI TEMP,(@2>>0x38) & 0xff
 		STD Z+0x00,TEMP
 		LDI TEMP,(@2>>0x30) & 0xff
@@ -73,7 +76,6 @@
 		STD Z+0x06,TEMP
 		LDI TEMP,(@2 & 0xff)
 		STD Z+0x07,TEMP
-	.ELSE
 	.ENDIF
 	POP ZL
 	POP ZH
