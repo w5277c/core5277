@@ -502,6 +502,9 @@ _DRV_SD_BYTE_SEND__LOOP:
 	CBI PORTB,SCK & 0x0f
 	MCALL _DRV_SD_WAIT
 
+	;Низкий уровень приводил к боям в логике некотороых SD после записи блока
+	SBI PORTB,MOSI & 0x0f
+
 	POP TEMP
 	POP LOOP_CNTR
 	RET

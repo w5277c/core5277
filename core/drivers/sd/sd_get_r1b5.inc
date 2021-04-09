@@ -2,10 +2,11 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;18.01.2021  w5277c@gmail.com			Начало
+;09.04.2021  w5277c@gmail.com			Что это вообще?
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_DRIVER_SD_GET_R1B5
+.ifdef DEF_DRIVER_SD_GET_R1B
 .else
-.set DEF_DRIVER_SD_GET_R1B5 = 1
+.set DEF_DRIVER_SD_GET_R1B = 1
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
@@ -16,43 +17,36 @@
 .endif
 
 ;--------------------------------------------------------
-_DRV_SD_GET_R1b5:
+_DRV_SD_GET_R1b:
 ;--------------------------------------------------------
-;Прием R1b5
+;Прием R1b
 ;OUT: ACCUM
 ;--------------------------------------------------------
-	PUSH TRY_CNTR
 	PUSH TEMP
-	PUSH LOOP_CNTR
+	PUSH_Y
 
 	LDI TRY_CNTR,0x00
-_DRV_SD_GET_R1b5__LOOP:
+_DRV_SD_GET_R1b__LOOP:
 	MCALL _DRV_SD_BYTE_RECV
 	SBRS TEMP,0x07
-	RJMP _DRV_SD_GET_R1b5__DONE1
+	RJMP _DRV_SD_GET_R1b__DONE1
 	DEC TRY_CNTR
-	BRNE _DRV_SD_GET_R1b5__LOOP
-	RJMP _DRV_SD_GET_R1b5__FAIL
-_DRV_SD_GET_R1b5__DONE1:
-	MOV ACCUM,TEMP
+	BRNE _DRV_SD_GET_R1b__LOOP
+	RJMP _DRV_SD_GET_R1b__FAIL
+_DRV_SD_GET_R1b__DONE1:
 
-
-	LDI LOOP_CNTR,0x00
-_DRV_SD_GET_R1b5__LOOP2:
-	LDI TRY_CNTR,0x00
-_DRV_SD_GET_R1b5__LOOP3:
+	LDI_Y 0xffff
+_DRV_SD_GET_R1b__LOOP2:
 	MCALL _DRV_SD_BYTE_RECV
-	CPI TEMP,0xff
-	BREQ _DRV_SD_GET_R1b5__DONE
-	DEC TRY_CNTR
-	BRNE _DRV_SD_GET_R1b5__LOOP3
-	DEC LOOP_CNTR
-	BRNE _DRV_SD_GET_R1b5__LOOP2
+	CPI TEMP,0x00
+	BREQ PC+0x03
+	LDI ACCUM,0x00
+	RJMP _DRV_SD_GET_R1b__DONE
+	SBIW YL,0x01
+	BRNE _DRV_SD_GET_R1b__LOOP2
+_DRV_SD_GET_R1b__FAIL:
 	LDI ACCUM,0xff
-	RJMP _DRV_SD_GET_R1b5__DONE
-_DRV_SD_GET_R1b5__FAIL:
-	LDI ACCUM,0xff
-_DRV_SD_GET_R1b5__DONE:
+_DRV_SD_GET_R1b__DONE:
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
 		PUSH_Y
@@ -65,8 +59,7 @@ _DRV_SD_GET_R1b5__DONE:
 	.endif
 .endif
 
-	POP LOOP_CNTR
+	POP_Y
 	POP TEMP
-	POP TRY_CNTR
 	RET
 .endif
