@@ -11,7 +11,7 @@
 .include	"./core/time32_delta.inc"
 .include	"./core/drivers/sd/sd_get_status.inc"
 .include	"./core/drivers/sd/sd_get_r1.inc"
-.include	"./core/drivers/sd/sd_get_r1b5.inc"
+.include	"./core/drivers/sd/sd_get_r1b.inc"
 
 ;--------------------------------------------------------
 _DRV_SD_OP_ERASE_BLOCKS:

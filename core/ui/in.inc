@@ -4,6 +4,7 @@
 ;29.01.2021  w5277c@gmail.com			Начало
 ;09.02.2021  w5277c@gmail.com			Поддержка фонового режима (буфер в 1 байт)
 ;08.04.2021  w5277c@gmail.com			Новая реализация, использую буфер ввода, не оттестировано
+;09.04.2021  w5277c@gmail.com			Оттестирвано на INT0 и исправлены баги
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_IN
 .else
@@ -228,7 +229,7 @@ C5_IN_CLEAR:
 .ENDIF
 _C5_IN_CLEAR__LOOP:
 	ST Z+,TEMP
-.IF INPUT_BUFFER_SIZE > 0x02
+.IF INPUT_BUFFER_SIZE > 0x01
 	DEC LOOP_CNTR
 	BRNE _C5_IN_CLEAR__LOOP
 	POP ACCUM
@@ -265,9 +266,11 @@ _C5_IN_SHIFT__LOOP:
 .IF INPUT_BUFFER_SIZE > 0x02
 	DEC LOOP_CNTR
 	BRNE _C5_IN_SHIFT__LOOP
-	POP LOOP_CNTR
 .ENDIF
 	POP ACCUM
+.IF INPUT_BUFFER_SIZE > 0x02
+	POP LOOP_CNTR
+.ENDIF
 	STS SREG,ACCUM
 .ENDIF
 	LDI ACCUM,0x00
@@ -323,10 +326,9 @@ _IN_SOFT_START_DETECT__DONE:
 	POP ACCUM
 	POP TEMP
 	RET
-
 .ENDIF
 .ENDIF
-
+	RET
 ;--------------------------------------------------------
 _IN_READ_BYTE:
 ;--------------------------------------------------------
@@ -395,13 +397,32 @@ _IN_INT_HANDLER:
 	CLR ZH
 	MCALL _IN_READ_BYTE
 
-
-.IF	INPUT_PORT == INT0_PORT
 	LDS TEMP,EIFR
+.IF	INPUT_PORT == INT0_PORT
 	ORI TEMP,(1<<INTF0)
-	STS EIFR,TEMP
 .ENDIF
-
+.IF	INPUT_PORT == INT1_PORT
+	ORI TEMP,(1<<INTF1)
+.ENDIF
+.IF	INPUT_PORT == INT2_PORT
+	ORI TEMP,(1<<INTF2)
+.ENDIF
+.IF	INPUT_PORT == INT3_PORT
+	ORI TEMP,(1<<INTF3)
+.ENDIF
+.IF	INPUT_PORT == INT4_PORT
+	ORI TEMP,(1<<INTF4)
+.ENDIF
+.IF	INPUT_PORT == INT5_PORT
+	ORI TEMP,(1<<INTF5)
+.ENDIF
+.IF	INPUT_PORT == INT6_PORT
+	ORI TEMP,(1<<INTF6)
+.ENDIF
+.IF	INPUT_PORT == INT7_PORT
+	ORI TEMP,(1<<INTF7)
+.ENDIF
+	STS EIFR,TEMP
 
 	POP TEMP
 	POP_Z
