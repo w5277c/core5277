@@ -111,12 +111,15 @@
 	.EQU	_C5_CORE_STACK							= RAMSTART+0x05;2B - хранит смещение стека ядра
 	.EQU	_C5_TOP_OF_STACK						= RAMSTART+0x07;2B - хранит вершину стека
 	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B - хранит вершину свободной памяти
-	.EQU	_C5_INPUT_CHAR							= RAMSTART+0x0b;1B - хранит полученный из ввода символ
-	.EQU	_C5_FLAGS								= RAMSTART+0x0c;4B - флагов (32 флага)
-	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x10;1B - счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x11;1B - порог срабатывания таймера ядра
-	.EQU	_C5_TIMERS								= RAMSTART+0x12;XB - таблица таймеров(TIMERS*5)
-																			;TIMERS*5
+	.EQU	_C5_FLAGS								= RAMSTART+0x0b;4B - флагов (32 флага)
+	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x0f;1B - счетчик таймера ядра (каждые 0.000050с)
+	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x10;1B - порог срабатывания таймера ядра
+.IFDEF INPUT_PORT
+	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01				;XB - буфер ввода
+	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE	;XB - таблица таймеров(TIMERS*5)
+.ELSE
+	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01				;XB - таблица таймеров(TIMERS*5)
+.ENDIF																	;TIMERS*5
 	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS+TIMERS*5
 																			;XB - таблица прерываний (_C5_IR_QNT*3 для каждгого прерывания, исключая RESET)
 	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3
@@ -179,6 +182,7 @@
 	.INCLUDE "./mem/ram_copy8_desc.inc"
 	.INCLUDE "./mem/ram_copy16_desc.inc"
 	.INCLUDE "./conv/bitnum_to_num.inc"
+	.INCLUDE "./core/ui/in.inc"
 
 	.MACRO _C5_MACRO__PUSH_RDS
 		PUSH r16
@@ -237,7 +241,6 @@
 	.INCLUDE "./core/log/log_fake.inc"
 .ENDIF
 .IFDEF INPUT_PORT
-	.INCLUDE "./io/input_init.inc"
 	.MESSAGE "######## INPUT ENABLED"
 .ENDIF
 .IF REALTIME == 1
@@ -477,9 +480,6 @@ C5_INIT:
 .ifdef LOGGING_PORT
 	MCALL C5_LOG_INIT
 .endif
-.ifdef INPUT_PORT
-	MCALL INPUT_INIT
-.endif
 .ifdef LOGGING_PORT
 	MCALL C5_LOG_TASKSDUMP
 .endif
@@ -548,6 +548,11 @@ C5_REINIT:
 	STS _C5_MAIN_TIMER_CNTR,TEMP
 	LDI TEMP,_C5_TIMER_PERIOD
 	STS _C5_MAIN_TIMER_TRHLD,TEMP
+
+.IFDEF INPUT_PORT
+	MCALL C5_IN_INIT
+.ENDIF
+
 .IF TIMERS > 0x00
 	;Установка таймеров как не используемых
 	LDI TEMP_H,high(TIMERS*0x05)
