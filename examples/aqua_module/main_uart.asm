@@ -1,30 +1,34 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;19.09.2020  w5277c@gmail.com        Начало
-;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;19.09.2020  w5277c@gmail.com			Начало
+;28.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 1	;0-4
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.include	"./inc/drivers/uart_h.inc"
+	.include	"./core/drivers/uart_h.inc"
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_bytes.inc"
-	.include	"./inc/io/logstr_new_line.inc"
-	.include	"./inc/mem/eeprom_write_byte.inc"
-	.include	"./inc/mem/eeprom_read_byte.inc"
-	.include	"./inc/core/wait_1s.inc"
-	.include	"./inc/mem/ram_fill8.inc"
+	.include	"./core/log/log_bytes.inc"
+	.include	"./core/log/log_cr.inc"
+	.include	"./mem/eeprom_write_byte.inc"
+	.include	"./mem/eeprom_read_byte.inc"
+	.include	"./core/wait_1s.inc"
+	.include	"./mem/ram_fill8.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -48,13 +52,13 @@ MAIN:
 
 	;Инициализация UART
 	LDI PID,PID_UART_DRV
-	LDI ZH,high(DRV_HUART_INIT)
-	LDI ZL,low(DRV_HUART_INIT)
+	LDI ZH,high(DRV_UART_H_INIT)
+	LDI ZL,low(DRV_UART_H_INIT)
 	LDI TEMP_H,PD4
 	LDI TEMP_L,0xff
 	LDI ACCUM,TID_UART
-	LDI FLAGS,(1<<DRV_HUART_OPT_BREAK)
-	LDI YH,DRV_HUART_BAUDRATE_9600
+	LDI FLAGS,(1<<DRV_UART_OPT_BREAK)
+	LDI YH,DRV_UART_H_BAUDRATE_9600
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
@@ -80,7 +84,7 @@ TASK__INFINITE_LOOP:
 	LDI TEMP,0x00
 	MOV XH,ZH
 	MOV XL,ZL
-	MCALL C5_RAM_FILL8
+	MCALL RAM_FILL8
 
 	LDI TEMP,PID_UART_DRV
 	LDI YH,high(TASK_DATA)|0x80
@@ -90,7 +94,7 @@ TASK__INFINITE_LOOP:
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
-	CPI TEMP_H,DRV_HUART_ST_READY
+	CPI TEMP_H,DRV_UART_ST_READY
 	BRNE TASK__INFINITE_LOOP
 
 	MOV YH,ZH

@@ -1,27 +1,31 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.10.2020  w5277c@gmail.com        Начало
+;03.10.2020  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
-	.SET	REALTIME									= 1	;0-1
+	.INCLUDE "./devices/atmega328.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	AVRA										= 1	;0-1
+	.SET	REALTIME									= 0	;0-1
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	TIMERS									= 1	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.INCLUDE "./inc/drivers/pcint_h.inc"
-	.INCLUDE "./inc/drivers/am2301.inc"
+	.INCLUDE "./core/drivers/pcint_h.inc"
+	.INCLUDE "./core/drivers/am2301.inc"
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_char.inc"
-	.include	"./inc/io/log_sdnf.inc"
-	.include	"./inc/io/log_romstr.inc"
-	.include	"./inc/io/logstr_new_line.inc"
+	.include	"./core/log/log_char.inc"
+	.include	"./core/log/log_sdnf.inc"
+	.include	"./core/log/log_romstr.inc"
+	.include	"./core/log/log_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -47,8 +51,8 @@ MAIN:
 
 	;Инициализация PCINT
 	LDI PID,PID_PCINT_DRV
-	LDI ZH,high(DRV_HPCINT_INIT)
-	LDI ZL,low(DRV_HPCINT_INIT)
+	LDI ZH,high(DRV_PCINT_H_INIT)
+	LDI ZL,low(DRV_PCINT_H_INIT)
 	MCALL C5_CREATE
 
 	;Инициализация AM2301
@@ -91,7 +95,7 @@ TASK__INFINITE_LOOP:
 	MOV TEMP_H,TEMP_EH
 	MOV TEMP_L,TEMP_EL
 	MCALL C5_LOG_SDNF
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 	RJMP TASK__INFINITE_LOOP
 
 TASK__ERROR:

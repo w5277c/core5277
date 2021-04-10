@@ -6,22 +6,26 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 0	;0-4
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_bytes.inc"
-	.include	"./inc/io/logstr_new_line.inc"
-	.include	"./inc/mem/eeprom_write_byte.inc"
-	.include	"./inc/mem/eeprom_read_byte.inc"
+	.include	"./core/log/log_bytes.inc"
+	.include	"./core/log/log_cr.inc"
+	.include	"./mem/eeprom_write_byte.inc"
+	.include	"./mem/eeprom_read_byte.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -59,26 +63,26 @@ TASK__INFINITE_LOOP:
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	LDI TEMP,0x56
-	MCALL C5_EEPROM_WRITE_BYTE
+	MCALL EEPROM_WRITE_BYTE
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x01
 	LDI TEMP,0x67
-	MCALL C5_EEPROM_WRITE_BYTE
+	MCALL EEPROM_WRITE_BYTE
 
 
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
-	MCALL C5_EEPROM_READ_BYTE
+	MCALL EEPROM_READ_BYTE
 	PUSH TEMP
 
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x01
-	MCALL C5_EEPROM_READ_BYTE
+	MCALL EEPROM_READ_BYTE
 	MOV TEMP_L,TEMP
 	POP TEMP_H
 
 	MCALL C5_LOG_WORD
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 
 	RET
 

@@ -4,7 +4,7 @@
 ;18.09.2020  w5277c@gmail.com        Первая версия шаблона
 ;11.11.2020  w5277c@gmail.com        Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
@@ -24,20 +24,19 @@
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	;.INCLUDE "./inc/drivers/xxx.inc"
+	;.INCLUDE "./core/drivers/xxx.inc"
 	;---
 	;Блок задач
 	;---
 	;Дополнительно (по мере использования)
-	.include "./inc/io/port_mode_out.inc"
-	.include "./inc/io/port_set_hi.inc"
-	.include "./inc/io/port_set_lo.inc"
-	.include	"./inc/core/wait_1s.inc"
-	.include	"./inc/io/log_bytes.inc"
-	.include	"./inc/io/log_romstr.inc"
-	.include	"./inc/io/logstr_new_line.inc"
+	.include "./io/port_mode_out.inc"
+	.include "./io/port_set_hi.inc"
+	.include "./io/port_set_lo.inc"
+	.include	"./core/wait_1s.inc"
+	.include	"./core/log/log_bytes.inc"
+	.include	"./core/log/log_romstr.inc"
 	;---
 
 
@@ -54,10 +53,10 @@ MAIN:
 	MCALL C5_INIT
 
 	;Инициализация драйвера
-	LDI PID,PID_XXX_DRV
-	LDI ZH,high(DRV_XXX_INIT)
-	LDI ZL,low(DRV_XXX_INIT)
-	MCALL C5_CREATE
+;	LDI PID,PID_XXX_DRV
+;	LDI ZH,high(DRV_XXX_INIT)
+;	LDI ZL,low(DRV_XXX_INIT)
+;	MCALL C5_CREATE
 
 
 	;Инициализация задачи
@@ -79,4 +78,3 @@ TASK__INFINITE_LOOP:
 	LDI TEMP,0x01														;Пауза в 1 сеунду
 	MCALL C5_WAIT_1S
 	RJMP TASK__INFINITE_LOOP
-

@@ -1,26 +1,30 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;31.10.2020  w5277c@gmail.com        Начало
+;31.10.2020  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega16.inc"
+	.INCLUDE "./devices/atmega16.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 0	;0-4
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/port_mode_out.inc"
-	.include	"./inc/io/port_set_hi.inc"
-	.include	"./inc/io/port_set_lo.inc"
-	.include	"./inc/core/wait_1s.inc"
+	.include	"./io/port_mode_out.inc"
+	.include	"./io/port_set_hi.inc"
+	.include	"./io/port_set_lo.inc"
+	.include	"./core/wait_1s.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -53,35 +57,35 @@ MAIN:
 ;--------------------------------------------------------;Задача
 TASK__INIT:
 	LDI ACCUM,PA0
-	MCALL C5_PORT_MODE_OUT
+	MCALL PORT_MODE_OUT
 ;	LDI ACCUM,PD5
-;	MCALL C5_PORT_MODE_OUT
+;	MCALL PORT_MODE_OUT
 ;	LDI ACCUM,PD6
-;	MCALL C5_PORT_MODE_OUT
+;	MCALL PORT_MODE_OUT
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI ACCUM,PA0
-	MCALL C5_PORT_SET_LO
+	MCALL PORT_SET_LO
 	LDI ACCUM,PA0
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
-	MCALL C5_PORT_SET_HI
+	MCALL PORT_SET_HI
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
 
 ;	LDI ACCUM,PD4
-;	MCALL C5_PORT_SET_LO
+;	MCALL PORT_SET_LO
 ;	LDI ACCUM,PD5
-;	MCALL C5_PORT_SET_HI
+;	MCALL PORT_SET_HI
 ;	LDI TEMP,0x01
 ;	MCALL C5_WAIT_1S
 
 ;	LDI ACCUM,PD5
-;	MCALL C5_PORT_SET_LO
+;	MCALL PORT_SET_LO
 ;	LDI ACCUM,PD6
-;	MCALL C5_PORT_SET_HI
+;	MCALL PORT_SET_HI
 ;	LDI TEMP,0x01
 ;	MCALL C5_WAIT_1S
 

@@ -5,10 +5,10 @@
 ;30.08.2020  w5277c@gmail.com        Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.include	"./inc/core/wait_1s.inc"
-.include	"./inc/io/log_byte.inc"
-.include	"./inc/io/log_char.inc"
-.include	"./inc/io/log_sdnf.inc"
+.include	"./core/wait_1s.inc"
+.include	"./core/log/log_byte.inc"
+.include	"./core/log/log_char.inc"
+.include	"./core/log/log_sdnf.inc"
 
 DS18B20_TEST_INIT:
 	MCALL C5_READY
@@ -28,10 +28,10 @@ DS18B20_TEST_LOOP:
 	MCALL C5_LOG_CHAR
 	MOV TEMP,TEMP_H
 	MCALL C5_LOG_BYTE
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 	RJMP DS18B20_TEST_LOOP
 DS18B20_TEST_NO_ERROR:
 	MCALL C5_LOG_SDNF
-	C5_LOG_ROMSTR LOGSTR_NEW_LINE
+	MCALL C5_LOG_CR
 	RJMP DS18B20_TEST_LOOP
 

@@ -1,28 +1,32 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.10.2020  w5277c@gmail.com        Начало
-;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;08.10.2020  w5277c@gmail.com			Начало
+;28.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 0	;0-4
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_numx8.inc"
-	.include	"./inc/io/log_romstr.inc"
-	.include	"./inc/io/logstr_new_line.inc"
-	.include	"./inc/math/div10.inc"
-	.include	"./inc/math/div100.inc"
+	.include	"./core/log/log_numx8.inc"
+	.include	"./core/log/log_romstr.inc"
+	.include	"./core/log/log_cr.inc"
+	.include	"./math/div10.inc"
+	.include	"./math/div100.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -31,6 +35,9 @@
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
 	;---
+
+	.dw	C5_LOG_NUMx8,DIV10
+
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
@@ -68,7 +75,7 @@ TASK__INIT:
 ;	MOV TEMP,LOOP_CNTR
 ;	MCALL C5_LOG_NUMx8
 ;	C5_LOG_ROMSTR TASK__LOGSTR1
-;	MCALL C5_DIV10
+;	MCALL DIV10
 ;	MOV TEMP,TEMP_L
 ;	MCALL C5_LOG_NUMx8
 ;	C5_LOG_ROMSTR TASK__LOGSTR2
@@ -80,7 +87,7 @@ TASK__INIT:
 
 	LDI TEMP_H,high(59942);=600
 	LDI TEMP_L,low(59942);=600
-	MCALL C5_DIV100
+	MCALL DIV100
 	MCALL C5_LOG_WORD
 
 	RET

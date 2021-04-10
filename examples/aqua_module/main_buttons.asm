@@ -1,26 +1,29 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;19.09.2020  w5277c@gmail.com        Начало
-;28.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;19.09.2020  w5277c@gmail.com			Начало
+;28.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./inc/devices/atmega328.inc"
+	.INCLUDE "./devices/atmega328.inc"
+	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 1	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+
 ;---INCLUDES---------------------------------------------
-	.INCLUDE "core5277.asm"
+	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.include	"./inc/drivers/buttons.inc"
+	.include	"./core/drivers/buttons.inc"
 	;---
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./inc/io/log_word.inc"
+	.include	"./core/log/log_word.inc"
 ;	;---
 
 ;---CONSTANTS--------------------------------------------
