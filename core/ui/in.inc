@@ -5,6 +5,7 @@
 ;09.02.2021  w5277c@gmail.com			Поддержка фонового режима (буфер в 1 байт)
 ;08.04.2021  w5277c@gmail.com			Новая реализация, использую буфер ввода, не оттестировано
 ;09.04.2021  w5277c@gmail.com			Оттестирвано на INT0 и исправлены баги
+;12.04.2021  w5277c@gmail.com			Оттестирвана программаня часть и исправлены баги
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_IN
 .else
@@ -306,20 +307,22 @@ _IN_READ_BYTES__LOOP:
 	ANDI TEMP,EXP2 (INPUT_PORT & 0x0f)
 	BRNE _IN_READ_BYTES__LOOP
 
-	LDI_Y 0x0080
+	LDI_Y 0x0020
 
-	LDI ACCUM,0x10;0x12
+	LDI ACCUM,0x11
 	DEC ACCUM
 	BRNE PC-0x01
 
+	PUSH_Z
 	MCALL _IN_READ_BYTE
+	POP_Z
 
 	CPI TEMP,0x00
 	BREQ _IN_READ_BYTES__DONE
 	LDS ACCUM,_C5_INPUT_BUFFER+INPUT_BUFFER_SIZE-0x01
 	CPI ACCUM,0x00
-	BREQ _IN_READ_BYTES_LOOP
-_IN_SOFT_START_DETECT__DONE:
+	BREQ _IN_READ_BYTES__LOOP
+_IN_READ_BYTES__DONE:
 
 	POP_Y
 	POP_Z
