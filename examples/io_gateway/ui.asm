@@ -33,9 +33,10 @@
 	;Блок задач
 	;---
 	;Дополнительно
+	.include "./core/ram/ram_realloc.inc"
 	.include "./core/ui/menu.inc"
 	.include	"./core/ui/hex32_input.inc"
-
+	.include "./core/ui/text_input.inc"
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
 	;Идентификаторы задач(0-3|0-15)
@@ -64,16 +65,22 @@ MAIN:
 	MJMP C5_START
 
 TASK__MENU:
-	.db	"Select action:",0x00,"Action 1",0x00,"Action 2",0x00,"Action 3",0x00
+	.db	"Select action:",0x00,"HEX32 input",0x00,"Text input",0x00
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
+	LDI ACCUM,0x80
+	MCALL C5_RAM_REALLOC
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
 	LDI_Y TASK__MENU|0x8000
-	LDI ACCUM,0x03
+	LDI ACCUM,0x02
 	MCALL C5_MENU
+
+	CPI ACCUM,0x01
+	BRNE _TASK__N1
 
 	LDI TEMP_EH,0x12
 	LDI TEMP_EL,0x34
@@ -82,3 +89,15 @@ TASK:
 	MCALL C5_HEX32_INPUT
 	RJMP TASK
 
+_TASK__N1:
+	CPI ACCUM,0x02
+	BRNE _TASK__N2
+
+	MOV YH,ZH
+	MOV YL,ZL
+	LDI ACCUM,0x32
+	MCALL C5_TEXT_INPUT
+	RJMP TASK
+
+_TASK__N2:
+	RJMP TASK

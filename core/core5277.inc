@@ -182,8 +182,9 @@
 	.INCLUDE "./mem/ram_copy8_desc.inc"
 	.INCLUDE "./mem/ram_copy16_desc.inc"
 	.INCLUDE "./conv/bitnum_to_num.inc"
+.IFDEF INPUT_PORT
 	.INCLUDE "./core/ui/in.inc"
-
+.ENDIF
 	.MACRO _C5_MACRO__PUSH_RDS
 		PUSH r16
 		PUSH r17

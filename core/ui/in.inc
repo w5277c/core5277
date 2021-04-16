@@ -7,7 +7,7 @@
 ;09.04.2021  w5277c@gmail.com			Оттестирвано на INT0 и исправлены баги
 ;12.04.2021  w5277c@gmail.com			Оттестирвана программаня часть и исправлены баги
 ;-----------------------------------------------------------------------------------------------------------------------
-.IFDEF INPUT PORT
+.ifdef INPUT_PORT
 .ifdef DEF_IN
 .else
 .set DEF_IN = 1
@@ -181,10 +181,8 @@ C5_IN_GET:
 	BRNE _C5_IN_GET__END
 	MCALL _IN_READ_BYTES
 	MCALL _C5_IN_SHIFT
-.ENDIF
-.ELSE
-	LDI TEMP,0x00
 _C5_IN_GET__END:
+.ENDIF
 	RET
 
 ;--------------------------------------------------------
@@ -204,9 +202,6 @@ _C5_IN_WAIT__LOOP:
 .ENDIF
 	RJMP _C5_IN_WAIT__LOOP
 _C5_IN_WAIT_DONE:
-	RET
-.ELSE
-	LDI TEMP,0x00
 	RET
 
 ;--------------------------------------------------------
