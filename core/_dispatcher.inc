@@ -5,9 +5,9 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;22.12.2020	w5277c@gmail.com			Исправлена работа TIMER-TASK
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_WAIT_2MS
+.ifdef DEF_C5_DISPATCHER
 .else
-.set DEF_C5_WAIT_2MS = 1
+.set DEF_C5_DISPATCHER = 1
 
 .include "./core/log/log_corefault.inc"
 
@@ -183,45 +183,6 @@ _C5_DISPATCHER_EVENT__SKIP_TASKS:
 	POP LOOP_CNTR
 	POP ZL
 	POP ZH
-	RET
-
-
-;TODO TIMER_MARK?
-;--------------------------------------------------------
-C5_WAIT_2MS:
-;--------------------------------------------------------
-;Ждем истечения времени с момента прошлого сна или
-;с момента вызова C5_TIMER_MARK
-;IN TEMP_H,TEMP_L,TEMP - время в 0.002s
-;--------------------------------------------------------
-	LDS r2,SREG															;Запоминаем регистр флагов
-	MCALL C5_DISPATCHER_LOCK
-	_C5_MACRO__PUSH_RDS												;Пмещаем в стек рабочие регистры задачи
-	PUSH r2																;Помещаем в стек регистр флагов
-
-	MOV PID,_PID														;Затираю PID, так как он уже записан в стек
-	MCALL _C5_PROC_HEADER_GET
-
-	MOV r3,ACCUM														;Точно необходимо?
-	;Записываем время окончания паузы
-	LDS ACCUM,SREG
-	PUSH ACCUM
-	CLI
-	LDS ACCUM,_C5_UPTIME+0x04
-	ADD ACCUM,TEMP
-	STD Z+_C5_TASK_EXECTIME+0x02,ACCUM
-	LDS ACCUM,_C5_UPTIME+0x03
-	ADC ACCUM,TEMP_L
-	STD Z+_C5_TASK_EXECTIME+0x01,ACCUM
-	LDS ACCUM,_C5_UPTIME+0x02
-	ADC ACCUM,TEMP_H
-	STD Z+_C5_TASK_EXECTIME+0x00,ACCUM
-	POP ACCUM
-	STS SREG,ACCUM
-	MOV ACCUM,r3
-
-	LDI TEMP,_C5_PROC_STATE_TIME_WAIT
-	MCALL _C5_SUSPEND__BODY
 	RET
 
 ;--------------------------------------------------------

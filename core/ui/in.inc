@@ -5,7 +5,9 @@
 ;09.02.2021  w5277c@gmail.com			Поддержка фонового режима (буфер в 1 байт)
 ;08.04.2021  w5277c@gmail.com			Новая реализация, использую буфер ввода, не оттестировано
 ;09.04.2021  w5277c@gmail.com			Оттестирвано на INT0 и исправлены баги
+;12.04.2021  w5277c@gmail.com			Оттестирвана программаня часть и исправлены баги
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef INPUT_PORT
 .ifdef DEF_IN
 .else
 .set DEF_IN = 1
@@ -173,18 +175,14 @@ C5_IN_GET:
 ;Извлекаем символ из буфера
 ;OUT: TEMP-символ
 ;--------------------------------------------------------
-.IFDEF INPUT_PORT
 	MCALL _C5_IN_SHIFT
 .IF	INPUT_PORT != INT0_PORT && INPUT_PORT != INT1_PORT && INPUT_PORT != INT2_PORT && INPUT_PORT != INT3_PORT && INPUT_PORT != INT4_PORT && INPUT_PORT != INT5_PORT && INPUT_PORT != INT6_PORT && INPUT_PORT != INT7_PORT
 	CPI TEMP,0x00
 	BRNE _C5_IN_GET__END
 	MCALL _IN_READ_BYTES
 	MCALL _C5_IN_SHIFT
-.ENDIF
-.ELSE
-	LDI TEMP,0x00
-.ENDIF
 _C5_IN_GET__END:
+.ENDIF
 	RET
 
 ;--------------------------------------------------------
@@ -193,7 +191,6 @@ C5_IN_WAIT:
 ;Ожидаем и извлекаем символ из буфера
 ;OUT: TEMP-символ
 ;--------------------------------------------------------
-.IFDEF INPUT_PORT
 _C5_IN_WAIT__LOOP:
 	MCALL _C5_IN_SHIFT
 	CPI TEMP,0x00
@@ -205,10 +202,6 @@ _C5_IN_WAIT__LOOP:
 .ENDIF
 	RJMP _C5_IN_WAIT__LOOP
 _C5_IN_WAIT_DONE:
-	RET
-.ELSE
-	LDI TEMP,0x00
-.ENDIF
 	RET
 
 ;--------------------------------------------------------
@@ -285,7 +278,6 @@ _IN_READ_BYTES:
 ;--------------------------------------------------------
 ;Ожидаем бит START UART'а
 ;--------------------------------------------------------
-.IFDEF INPUT_PORT
 .IF	INPUT_PORT != INT0_PORT && INPUT_PORT != INT1_PORT && INPUT_PORT != INT2_PORT && INPUT_PORT != INT3_PORT && INPUT_PORT != INT4_PORT && INPUT_PORT != INT5_PORT && INPUT_PORT != INT6_PORT && INPUT_PORT != INT7_PORT
 	PUSH TEMP
 	PUSH ACCUM
@@ -306,27 +298,28 @@ _IN_READ_BYTES__LOOP:
 	ANDI TEMP,EXP2 (INPUT_PORT & 0x0f)
 	BRNE _IN_READ_BYTES__LOOP
 
-	LDI_Y 0x0080
+	LDI_Y 0x0020
 
-	LDI ACCUM,0x10;0x12
+	LDI ACCUM,0x11
 	DEC ACCUM
 	BRNE PC-0x01
 
+	PUSH_Z
 	MCALL _IN_READ_BYTE
+	POP_Z
 
 	CPI TEMP,0x00
 	BREQ _IN_READ_BYTES__DONE
 	LDS ACCUM,_C5_INPUT_BUFFER+INPUT_BUFFER_SIZE-0x01
 	CPI ACCUM,0x00
-	BREQ _IN_READ_BYTES_LOOP
-_IN_SOFT_START_DETECT__DONE:
+	BREQ _IN_READ_BYTES__LOOP
+_IN_READ_BYTES__DONE:
 
 	POP_Y
 	POP_Z
 	POP ACCUM
 	POP TEMP
 	RET
-.ENDIF
 .ENDIF
 	RET
 ;--------------------------------------------------------
@@ -430,4 +423,5 @@ _IN_INT_HANDLER:
 	STS SREG,TEMP
 	POP TEMP
 	RET
+.ENDIF
 .ENDIF

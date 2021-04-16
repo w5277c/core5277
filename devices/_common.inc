@@ -21,7 +21,9 @@
 	.EQU	LOGGING_LVL_INF						= 0x03
 	.EQU	LOGGING_LVL_DBG						= 0x04
 	.EQU	LOGGING_LVL_PNC						= 0x05
-	.SET	LOGGING_LEVEL							=	LOGGING_LVL_INF
+	.SET	LOGGING_LEVEL							= LOGGING_LVL_INF
+
+	.SET	BUFFER_SIZE										= 0x0000
 
 	.SET	REPORT_INCLUDES						= 0x00
 
@@ -128,6 +130,44 @@
 	.DEF	YH											= r29
 	.DEF	ZL											= r30
 	.DEF	ZH											= r31
+
+	.MACRO _C5_MACRO__PUSH_RDS
+		PUSH r16
+		PUSH r17
+		PUSH r18
+		PUSH r19
+		PUSH r20
+		PUSH r21
+		PUSH r22
+		PUSH r23
+		PUSH r24
+		PUSH r25
+		PUSH r26
+		PUSH r27
+		PUSH r28
+		PUSH r29
+		PUSH r30
+		PUSH r31
+	.ENDMACRO
+
+	.MACRO _C5_MACRO__POP_RDS
+		POP r31
+		POP r30
+		POP r29
+		POP r28
+		POP r27
+		POP r26
+		POP r25
+		POP r24
+		POP r23
+		POP r22
+		POP r21
+		POP r20
+		POP r19
+		POP r18
+		POP r17
+		POP r16
+	.ENDMACRO
 
 .MACRO PUSH_X
 	PUSH XH
