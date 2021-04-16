@@ -16,6 +16,7 @@
 ;22.01.2021	w5277c@gmail.com			v0.3.0	Различные мелкие (и не очень) изменения
 ;01.02.2021	w5277c@gmail.com			v0.3.1	Учтено разное начало RAM, мелкие доработки
 ;06.02.2021	w5277c@gmail.com			v0.3.2	Примитивы и проверка на отсутствие драйверов
+;16.04.2021	w5277c@gmail.com			v0.3.3	Вынесен C5_WAIT_2MS из диспетчера, дефолтное значение для BUFFER_SIZE
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -185,43 +186,6 @@
 .IFDEF INPUT_PORT
 	.INCLUDE "./core/ui/in.inc"
 .ENDIF
-	.MACRO _C5_MACRO__PUSH_RDS
-		PUSH r16
-		PUSH r17
-		PUSH r18
-		PUSH r19
-		PUSH r20
-		PUSH r21
-		PUSH r22
-		PUSH r23
-		PUSH r24
-		PUSH r25
-		PUSH r26
-		PUSH r27
-		PUSH r28
-		PUSH r29
-		PUSH r30
-		PUSH r31
-	.ENDMACRO
-
-	.MACRO _C5_MACRO__POP_RDS
-		POP r31
-		POP r30
-		POP r29
-		POP r28
-		POP r27
-		POP r26
-		POP r25
-		POP r24
-		POP r23
-		POP r22
-		POP r21
-		POP r20
-		POP r19
-		POP r18
-		POP r17
-		POP r16
-	.ENDMACRO
 
 ;---OPTIONS-ANALYZE--------------------------------------
 .IF AVRA == 0x01
@@ -232,7 +196,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.3.2",0x0d,0x0a,0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.3",0x0d,0x0a,0x00,0x00
 	.INCLUDE "./core/log/log_init.inc"
 	.INCLUDE	"./core/log/log_romstr.inc"
 	.INCLUDE	"./core/log/log_tasksdump.inc"
