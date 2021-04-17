@@ -110,6 +110,15 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR;
+	;--FAKE-PRR---
+	.EQU	PRR										= 0xff
+	.EQU		PRTWI									= 0x00
+	.EQU		PRTIM2								= 0x00
+	.EQU		PRTIM0								= 0x00
+	.EQU		PRTIM1								= 0x00
+	.EQU		PRSPI									= 0x00
+	.EQU		PRUSART0								= 0x00
+	.EQU		PRADC									= 0x00
 	;---TWI---
 	.EQU	TWCR										= 0x56
 	.EQU	TWDR										= 0x23
@@ -127,7 +136,7 @@
 	.EQU	TWPS0										= 0x00
 	.EQU	TWPS1										= 0x01
 	;---TIMERS---
-	.EQU	TIMSK1									= 0x59
+	.EQU	TIMSK										= 0x59
 	.EQU	TCCR1A									= 0x4f
 	.EQU	TCCR1B									= 0x4e
 	.EQU	TCNT1H									= 0x4d
@@ -136,7 +145,7 @@
 	.EQU	OCR1AL									= 0x4a
 	.EQU	OCR1BH									= 0x49
 	.EQU	OCR1BL									= 0x48
-	.EQU	TIFR1										= 0x58
+	.EQU	TIFR										= 0x58
 	;---
 	.EQU	OCIE1A									= 0x04
 	.EQU	WGM13										= 0x04
@@ -149,6 +158,7 @@
 	.EQU	OCF1A										= 0x04
 	.EQU	OCF1B										= 0x03
 	.EQU	OCIE1B									= 0x03
+	;TODO дополнить
 	;---UART---
 	.EQU	UDR0										= 0x2c
 	.EQU	UCSR0A									= 0x2b
@@ -262,7 +272,7 @@
 	JMP	MAIN															; Reset
 	CALL	_C5_IR														; External Interrupt0
 	CALL	_C5_IR														; External Interrupt1
-	CALL	_C5_IR														; Timer/Counter2 Compare
+	CALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event
 	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A
@@ -310,13 +320,13 @@ APPLICATION_BLOCK:
 	LDI TEMP,0x00
 	STS OCR1AH,TEMP
 	LDI TEMP,(1<<OCF1A)
-	STS TIFR1,TEMP
+	STS TIFR,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_START
-	LDS TEMP,TIMSK1
+	LDS TEMP,TIMSK
 	ORI TEMP,(1<<OCIE1A)
-	STS TIMSK1,TEMP
+	STS TIMSK,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_CORRECTOR
@@ -331,7 +341,7 @@ APPLICATION_BLOCK:
 	STS OCR1AH,TEMP_H
 	STS OCR1AL,TEMP_L
 	LDI TEMP,(1<<OCF1A)
-	STS TIFR1,TEMP
+	STS TIFR,TEMP
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
@@ -346,22 +356,56 @@ APPLICATION_BLOCK:
 	ADC TEMP_H,TEMP
 	STS OCR1BH,TEMP_H
 	STS OCR1BL,TEMP_L
-	LDS TEMP,TIFR1
+
+	LDS TEMP_H,SREG
+	CLI
+	LDS TEMP,TIFR
 	ORI TEMP,(1<<OCF1B)
-	STS TIFR1,TEMP
+	STS TIFR,TEMP
 	;Установка флага
 	LDI TEMP,(1<<_CFL_TIMER_B_USE)
 	OR _C5_COREFLAGS,TEMP
 	;Запуск таймера
-	LDS TEMP,TIMSK1
+	LDS TEMP,TIMSK
 	ORI TEMP,(1<<OCIE1B)
-	STS TIMSK1,TEMP
+	STS TIMSK,TEMP
+	STS SREG,TEMP_H
+
 	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
-	LDS TEMP,TIMSK1
+	LDS TEMP_H,SREG
+	CLI
+	LDS TEMP,TIMSK
 	ANDI TEMP,~(1<<OCIE1B)
-	STS TIMSK1,TEMP
+	STS TIMSK,TEMP
+	STS SREG,TEMP_H
+.ENDMACRO
+
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS22)|(1<<CS21)|(0<<CS20);/8
+	STS TCCR2,TEMP
+	STS TCNT2,TEMP_H
+	STS OCR2,TEMP_L
+	LDS TEMP_H,SREG
+	CLI
+	LDS TEMP,TIMSK
+	ORI TEMP,(1<<OCIE2A)
+	STS TIMSK,TEMP
+	LDS TEMP,TIFR
+	ORI TEMP,(1<<OCF2)
+	STS TIFR,TEMP
+	STS SREG,TEMP_H
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDS TEMP,SREG
+	CLI
+	PUSH TEMP
+	LDS TEMP,TIFR
+	ANDI TEMP,~(1<<OCF2)
+	STS TIFR,TEMP
+	POP TEMP
+	STS SREG,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON

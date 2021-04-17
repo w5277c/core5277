@@ -388,7 +388,7 @@
 	RCALL	_C5_IR														; Pin Change Interrupt Request 1
 	RCALL	_C5_IR														; Pin Change Interrupt Request 2
 	RCALL	_C5_IR														; Watchdog Time-out Interrupt
-	RCALL	_C5_IR														; Timer/Counter2 Compare Match A
+	RCALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match A
 	RCALL	_C5_IR														; Timer/Counter2 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter2 Overflow
 	RCALL	_C5_IR														; Timer/Counter1 Capture Event
@@ -479,6 +479,23 @@ APPLICATION_BLOCK:
 	LDS TEMP,TIMSK0
 	ANDI TEMP,~(1<<OCIE0B)
 	STS TIMSK0,TEMP
+.ENDMACRO
+
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS22)|(1<<CS21)|(0<<CS20);/8
+	STS TCCR2A,TEMP
+	STS TCNT2,TEMP_H
+	STS OCR2A,TEMP_L
+	LDI TEMP,(1<<OCIE2A)
+	STS TIMSK2,TEMP
+	LDS TEMP,TIFR2
+	ORI TEMP,(1<<OCF2A)
+	STS TIFR2,TEMP
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDS TEMP,TIFR2
+	ANDI TEMP,~(1<<OCF2A)
+	STS TIFR2,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON

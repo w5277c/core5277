@@ -113,8 +113,9 @@
 	.EQU	_C5_TOP_OF_STACK						= RAMSTART+0x07;2B - хранит вершину стека
 	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B - хранит вершину свободной памяти
 	.EQU	_C5_FLAGS								= RAMSTART+0x0b;4B - флагов (32 флага)
-	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x0f;1B - счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x10;1B - порог срабатывания таймера ядра
+	.EQU	_C5_TIMER_C_VECTOR					= RAMSTART+0x0f;2B - адрес обработчика для таймера C
+	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x11;1B - счетчик таймера ядра (каждые 0.000050с)
+	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x12;1B - порог срабатывания таймера ядра
 .IFDEF INPUT_PORT
 	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01				;XB - буфер ввода
 	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE	;XB - таблица таймеров(TIMERS*5)
@@ -163,7 +164,9 @@
 		.ENDIF
 	.ENDIF
 .ENDIF
-
+.IF TIMER_C_ENABLE == 0x01
+	.MESSAGE "######## TIMER C ENABLED"
+.ENDIF
 
 ;---REGISTERS--------------------------------------------;r0-r14 выделено под нужды ядра
 	.DEF	_RESULT_L								= r0
@@ -296,18 +299,18 @@ _C5_IR__END:
 ;--------------------------------------------------------
 _C5_TIMER_A_IR:
 ;--------------------------------------------------------
-;Обработчик прерывания таймера
+;Обработчик прерывания основного таймера
 ;--------------------------------------------------------
 	PUSH TEMP
 	LDS TEMP,SREG
 	PUSH TEMP
 
-	SEI
-
 	LDI TEMP,TIMERS_SPEED-0x02
 	SBRC _C5_COREFLAGS,_CFL_TIMER_UART_CORRECTION
 	LDI TEMP,TIMERS_SPEED+0x02
 	_CORRE5277_TIMERA_CORRECTOR TEMP
+
+	SEI
 
 	PUSH_Z
 
@@ -429,6 +432,48 @@ _C5_TIMER_A_IR__END:
 	STS SREG,TEMP
 	POP TEMP
 	RETI
+
+
+.IF TIMER_C_ENABLE == 0x01
+;--------------------------------------------------------
+_C5_TIMER_C_IR:
+;--------------------------------------------------------
+;Обработчик прерывания таймера C
+;--------------------------------------------------------
+	_C5_POWER_ON PRTIM1
+	PUSH_Z
+	LDS ZH,SREG
+	PUSH ZH
+	LDS ZH,_C5_TIMER_C_VECTOR+0x00
+	LDS ZL,_C5_TIMER_C_VECTOR+0x01
+	ICALL
+	POP ZH
+	STS SREG,ZH
+	POP_Z
+	RET
+;--------------------------------------------------------
+C5_TIMER_C_START:
+;--------------------------------------------------------
+;Запуск таймера C
+;IN: TEMP_L-начало отсчета, TEMP_H-порог
+;Y-адрес обработчика
+;--------------------------------------------------------
+	PUSH TEMP
+	STS _C5_TIMER_C_VECTOR+0x00,YH
+	STS _C5_TIMER_C_VECTOR+0x01,YL
+	_C5_TIMERC_START
+	POP TEMP
+	RET
+;--------------------------------------------------------
+C5_TIMER_C_STOP:
+;--------------------------------------------------------
+;Останов таймера C
+;--------------------------------------------------------
+	PUSH TEMP
+	_C5_TIMERC_STOP
+	POP TEMP
+	RET
+.ENDIF
 
 ;========================================================================
 ;===Базовые процедуры ядра===============================================

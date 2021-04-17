@@ -27,6 +27,8 @@
 
 	.SET	REPORT_INCLUDES						= 0x00
 
+	.SET	TIMER_C_ENABLE							= 0x00
+
 	.SET	AVRA										= 0x00
 .ifdef CORE_FREQ
 .else

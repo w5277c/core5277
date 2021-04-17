@@ -6,11 +6,12 @@
 ;26.02.2021  w5277c@gmail.com			Исправляю баги(в процессе)
 ;26.02.2021  w5277c@gmail.com			Починил прием с использованием EINT
 ;18.03.2021  w5277c@gmail.com			Багфикс
+;17.04.2021  w5277c@gmail.com			Поддержка таймера C
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
 .set DEF__C5_DRV_UART_S = 1
-.message "Included driver software UART v0.3"
+.message "Included driver software UART v0.4"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -57,13 +58,16 @@
 	.EQU	_DRV_UART_S_RAM_SIZE					= 0x15			;21 байт необходимо выделить
 
 	;---BAUDRATE_IDS---
-	.EQU	DRV_UART_S_50NS_BAUDRATE_4800		= 0x04
-	.EQU	DRV_UART_S_50NS_BAUDRATE_9600		= 0x02
-	.EQU	DRV_UART_S_50NS_BAUDRATE_19200	= 0x01			;Только совместно с C5_IR_INTn
-	.EQU	DRV_UART_S_25NS_BAUDRATE_4800		= 0x08
-	.EQU	DRV_UART_S_25NS_BAUDRATE_9600		= 0x04
-	.EQU	DRV_UART_S_25NS_BAUDRATE_19200	= 0x02			;Только совместно с C5_IR_INTn
-	;.EQU	DRV_UART_S_25NS_BAUDRATE_38400	= 0x01			;Только совместно с C5_IR_INTn НЕ УСПЕВАЕМ на 16мГц
+.IF TIMERS_SPEED == TIMERS_SPEED_50NS
+	.EQU	DRV_UART_S_BAUDRATE_4800		= 0x04
+	.EQU	DRV_UART_S_BAUDRATE_9600		= 0x02
+	.EQU	DRV_UART_S_BAUDRATE_19200		= 0x01			;Только совместно с C5_IR_INTn
+.ENDIF
+.IF TIMERS_SPEED == TIMERS_SPEED_25NS
+	.EQU	DRV_UART_S_BAUDRATE_4800		= 0x08
+	.EQU	DRV_UART_S_BAUDRATE_9600		= 0x04
+	.EQU	DRV_UART_S_BAUDRATE_19200		= 0x02			;Только совместно с C5_IR_INTn
+.ENDIF
 
 ;--------------------------------------------------------
 DRV_UART_S_INIT:
@@ -74,7 +78,7 @@ DRV_UART_S_INIT:
 ;(0xff-не используется),
 ;TEMP_EL-порт индикации передачи
 ;(0xff-не используется)
-;ACCUM-ид таймера
+;ACCUM-ид таймера(0x83 - используем таймер C)
 ;FLAGS-опции
 ;YH-скорость передачи данных
 ;YL-ид драйвера PCINT или

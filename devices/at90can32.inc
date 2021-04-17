@@ -431,7 +431,7 @@
 	CALL	_C5_IR														; External Interrupt5 Handler
 	CALL	_C5_IR														; External Interrupt6 Handler
 	CALL	_C5_IR														; External Interrupt7 Handler
-	CALL	_C5_IR														; Timer/Counter2 Compare Match
+	CALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event
 	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A
@@ -542,6 +542,21 @@ APPLICATION_BLOCK:
 	LDS TEMP,TIMSK1
 	ANDI TEMP,~(1<<OCIE1B)
 	STS TIMSK1,TEMP
+.ENDMACRO
+
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS22)|(1<<CS21)|(0<<CS20);/8
+	STS TCCR2A,TEMP
+	STS TCNT2,TEMP_H
+	STS OCR2A,TEMP_L
+	LDI TEMP,(1<<OCIE2A)
+	STS TIMSK2,TEMP
+	LDI TEMP,(1<<OCF2A)
+	STS TIFR2,TEMP
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDI TEMP,~(1<<OCF2A)
+	STS TIFR2,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON
