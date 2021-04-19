@@ -2,7 +2,13 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;17.04.2021  w5277c@gmail.com			Начало
+;20.04.2021  w5277c@gmail.com			Отказался от драйвера PCINT
 ;-----------------------------------------------------------------------------------------------------------------------
+;Програмный UART 8n1, более быстрый, упрощенный (работает только с портом B) и использует TIMER C
+;-----------------------------------------------------------------------------------------------------------------------
+;TODO добавить поддержку внешний прерываний
+;TODO реализовать вычисление таймаута между передачей байт
+
 .ifdef DEF__C5_DRV_UART_F
 .else
 .set DEF__C5_DRV_UART_F = 1
@@ -31,22 +37,21 @@
 	.EQU	_DRV_UART_F_TX_PORT					= 0x01			;1B - Порт для передачи данных
 	.EQU	_DRV_UART_F_DR_PORT					= 0x02			;1B - Порт для задания направления прием/передача
 	.EQU	_DRV_UART_F_STATE						= 0x03			;1B - Статус драйвера
-	.EQU	_DRV_UART_F_PCINT_DRV_ID			= 0x04			;1B - ИД драйвера PCINT F
 	;---
-	.EQU	_DRV_UART_F_SRC_ADDR					= 0x05			;2B - адрес блока данных для передачи
-	.EQU	_DRV_UART_F_DST_ADDR					= 0x07			;2B - адрес блока данных для приема
+	.EQU	_DRV_UART_F_SRC_ADDR					= 0x04			;2B - адрес блока данных для передачи
+	.EQU	_DRV_UART_F_DST_ADDR					= 0x06			;2B - адрес блока данных для приема
 	;---
-	.EQU	_DRV_UART_F_BUFFER_POS				= 0x09			;1B - Позиция в буфере
-	.EQU	_DRV_UART_F_TX_LEN					= 0x0a			;1B - Длина данных для передачи
-	.EQU	_DRV_UART_F_RX_LEN					= 0x0b			;1B - Максимальный размер данных для приема
-	.EQU	_DRV_UART_F_BIT_NUM					= 0x0c			;1B - Номер текущего бита
-	.EQU	_DRV_UART_F_ACCUM						= 0x0d			;1B - аккумулятор (байт подготовленный для передачи/приема)
+	.EQU	_DRV_UART_F_BUFFER_POS				= 0x08			;1B - Позиция в буфере
+	.EQU	_DRV_UART_F_TX_LEN					= 0x09			;1B - Длина данных для передачи
+	.EQU	_DRV_UART_F_RX_LEN					= 0x0a			;1B - Максимальный размер данных для приема
+	.EQU	_DRV_UART_F_BIT_NUM					= 0x0b			;1B - Номер текущего бита
+	.EQU	_DRV_UART_F_ACCUM						= 0x0c			;1B - аккумулятор (байт подготовленный для передачи/приема)
 		;---
-	.EQU	_DRV_UART_F_TIMER_PERIOD			= 0x0e			;1B - период работы таймера для приема/передачи битов
-	.EQU	_DRV_UART_F_FIRST_TIMEOUT			= 0x0f			;2B - Таймаут ожидания первого байта (2ms)
-	.EQU	_DRV_UART_F_NEXT_TIMEOUT			= 0x11			;1B - Таймаут ожидания последующего байта(0.050ms)
+	.EQU	_DRV_UART_F_TIMER_PERIOD			= 0x0d			;1B - период работы таймера для приема/передачи битов
+	.EQU	_DRV_UART_F_FIRST_TIMEOUT			= 0x0e			;2B - Таймаут ожидания первого байта (2ms)
+	.EQU	_DRV_UART_F_NEXT_TIMEOUT			= 0x10			;1B - Таймаут ожидания последующего байта(0.050ms)
 
-	.EQU	_DRV_UART_F_RAM_SIZE					= 0x12			;18 байт необходимо выделить
+	.EQU	_DRV_UART_F_RAM_SIZE					= 0x11			;17 байт необходимо выделить
 
 	;---BAUDRATE_IDS---
 	.EQU	DRV_UART_F_BAUDRATE_9600		= CORE_FREQ*125000/9600-1
@@ -128,17 +133,11 @@ _DRV_UART_F_INIT__NO_DR_PORT:
 	;TODO!!!
 	STD Z+_DRV_UART_F_NEXT_TIMEOUT,TEMP_EL
 
-	STD Z+_DRV_UART_F_PCINT_DRV_ID,FLAGS
-	MOV TEMP,TEMP_H
-	ANDI TEMP,0x0f
-	MCALL BITNUM_TO_NUM
-	MOV TEMP_H,TEMP
-	MOV TEMP,FLAGS
-	LDI ACCUM,0x01														;Порт A=0,B=1,C=2,...
-	MOV TEMP_L,PID
-	LDI_Y _DRV_UART_F_PCINT_EVENT
-	LDI FLAGS,DRV_PCINT_F_OP_SET
-	MCALL C5_EXEC
+	;Устанавливаем адрес прерывания
+	LDI ACCUM,C5_IR_PCINT0
+	LDI TEMP_H,high(_DRV_UART_F_PCINT_EVENT)
+	LDI TEMP_L,low(_DRV_UART_F_PCINT_EVENT)
+	MCALL C5_IR_VECTOR_SET
 
 	POP TEMP_L
 	POP TEMP_H
@@ -240,6 +239,12 @@ _DRV_UART_F_PROC__TX_SKIP:
 	BRNE PC+0x02
 	RJMP _DRV_UART_F_PROC__RX_SKIP
 
+	;Устанавливаю бит маски PCINT
+	LDD TEMP,Z+_DRV_UART_F_RX_PORT
+	LDS ACCUM,PCMSK0
+	OR ACCUM,TEMP
+	STS PCMSK0,ACCUM
+
 	;Запоминаем DST
 	STD Z+_DRV_UART_F_DST_ADDR+0x00,XH
 	STD Z+_DRV_UART_F_DST_ADDR+0x01,XL
@@ -249,10 +254,7 @@ _DRV_UART_F_PROC__TX_SKIP:
 	STD Z+_DRV_UART_F_STATE,TEMP
 
 	;Включаю прерывание для RX порта
-	LDD TEMP,Z+_DRV_UART_F_PCINT_DRV_ID
-	LDI FLAGS,DRV_PCINT_F_OP_ENABLE
-	LDI ACCUM,0x00
-	MCALL C5_EXEC
+	MCALL _DRV_UART_F__INT_ENABLE
 	;TODO проверить на возможность использования C5_WAIT при ожидании начала данных
 	;Запоминаем текущий UPTIME
 	LDS YH,_C5_UPTIME+0x03
@@ -286,11 +288,13 @@ _DRV_UART_F_PROC__RECEIVING_WAIT:
 		MCALL C5_TIMER_C_STOP
 
 		;Выключаю прерывание для RX порта
-		LDD TEMP,Z+_DRV_UART_F_PCINT_DRV_ID
-		LDI FLAGS,DRV_PCINT_F_OP_DISABLE
-		LDI ACCUM,0x00
-		MCALL C5_EXEC
-
+		MCALL _DRV_UART_F__INT_DISABLE
+		;Снимаю бит в маске PCINT
+		LDD TEMP,Z+_DRV_UART_F_RX_PORT
+		COM TEMP
+		LDS ACCUM,PCMSK0
+		AND ACCUM,TEMP
+		STS PCMSK0,ACCUM
 
 _DRV_UART_F_PROC__RX_SKIP:
 _DRV_UART_F_PROC__DONE:
@@ -323,7 +327,6 @@ _DRV_UART_F_EVENT:
 	PUSH TEMP_L
 	PUSH ACCUM
 	PUSH FLAGS
-
 
 	MCALL C5_RAM_OFFSET
 	LDD TEMP,Z+_DRV_UART_F_STATE
@@ -366,7 +369,6 @@ __DRV_UART_F_SEND_EVENT__NO_START:
 		;Останавливаю таймер
 		MCALL C5_TIMER_C_STOP
 
-
 		LDI TEMP,DRV_UART_ST_READY
 		STD Z+_DRV_UART_F_STATE,TEMP
 		RJMP __DRV_UART_F_SEND_EVENT__END
@@ -383,7 +385,7 @@ __DRV_UART_F_SEND_EVENT__DATA:
 		BRCS PC+0x03
 		COM ACCUM
 		AND TEMP_L,ACCUM
-		OUT PORTB,TEMP_L
+		OUT PORTB,TEMP_L												;Перерывания должны быть отключены
 		RJMP __DRV_UART_F_SEND_EVENT__NEXT
 __DRV_UART_F_SEND_EVENT__STOP:
 		;STOP (TX=HI)
@@ -443,7 +445,7 @@ __DRV_UART_F_RECV_EVENT__DATA:
 		LDD TEMP,Z+_DRV_UART_F_ACCUM
 		LSR TEMP
 		CPI FLAGS,0x00
-		BREQ PC+0x04
+		BREQ PC+0x02
 		ORI TEMP,0x01
 		STD Z+_DRV_UART_F_ACCUM,TEMP
 		RJMP __DRV_UART_F_RECV_EVENT__NEXT_BIT
@@ -453,10 +455,7 @@ __DRV_UART_F_RECV_EVENT__STOP:
 		BREQ __DRV_UART_F_RECV_EVENT__ERROR
 
 		;Включаю прерывание для RX порта
-		LDD TEMP,Z+_DRV_UART_F_PCINT_DRV_ID
-		LDI FLAGS,DRV_PCINT_F_OP_ENABLE
-		LDI ACCUM,0x00
-		MCALL C5_EXEC
+		MCALL _DRV_UART_F__INT_ENABLE
 
 		LDD TEMP_L,Z+_DRV_UART_F_BUFFER_POS
 		LDD ACCUM,Z+_DRV_UART_F_RX_LEN
@@ -538,10 +537,7 @@ _DRV_UART_F_PCINT_EVENT:
 	LDD TEMP_L,Z+_DRV_UART_F_TIMER_PERIOD
 	MCALL C5_TIMER_C_START
 
-	LDD TEMP,Z+_DRV_UART_F_PCINT_DRV_ID
-	LDI FLAGS,DRV_PCINT_F_OP_DISABLE
-	LDI ACCUM,0x00
-	MCALL C5_EXEC
+	MCALL _DRV_UART_F__INT_DISABLE
 
 __DRV_UART_F_PCINT_EVENT__END:
 	POP TEMP_L
@@ -552,4 +548,36 @@ __DRV_UART_F_PCINT_EVENT__END:
 	POP_Z
 	RET
 .endif
+
+;--------------------------------------------------------
+_DRV_UART_F__INT_ENABLE:
+;--------------------------------------------------------
+;Включаем обработку прерывания INT0-1/PCINT0-7
+;--------------------------------------------------------
+	LDS TEMP,SREG
+	PUSH TEMP
+	CLI
+	LDI ACCUM,(1<<PCIE0)
+	LDS TEMP,PCICR
+	OR TEMP,ACCUM
+	STS PCICR,TEMP
+	POP TEMP
+	STS SREG,TEMP
+	RET
+
+;--------------------------------------------------------
+_DRV_UART_F__INT_DISABLE:
+;--------------------------------------------------------
+;Выключаем обработку прерывания
+;--------------------------------------------------------
+	LDS TEMP,SREG
+	PUSH TEMP
+	CLI
+	LDI ACCUM,~(1<<PCIE0)
+	LDS TEMP,PCICR
+	AND TEMP,ACCUM
+	STS PCICR,TEMP
+	POP TEMP
+	STS SREG,TEMP
+	RET
 

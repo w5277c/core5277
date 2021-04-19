@@ -22,14 +22,12 @@
 	.EQU	HC05_RX_PORT									= PB1		;UART порт для приема данных с BL(HC-05)
 
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_PCINT_DRV									= 0|(1<<C5_PROCID_OPT_DRV)
-	.EQU	PID_HC05_UART_DRV								= 1|(1<<C5_PROCID_OPT_DRV)
-	.EQU	PID_HC05_DRV									= 2|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_HC05_UART_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_HC05_DRV									= 1|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK											= 0
 	;Идентификаторы таймеров
-	.EQU	TID_TIMER_C										= 0x83
-
+	;---
 ;---CORE-SETTINGS----------------------------------------
 	.SET	AVRA												= 1	;0-1
 	.SET	REALTIME											= 0	;0-1
@@ -43,7 +41,6 @@
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов
-	.INCLUDE "./core/drivers/pcint_f.inc"
 	.INCLUDE "./core/drivers/uart_f.inc"
 	.INCLUDE "./core/drivers/hc05.inc"
 	;---
@@ -81,12 +78,6 @@ MAIN:
 	;Инициализация ядра
 	MCALL C5_INIT
 
-	;Инициализация драйвера PCINT
-	LDI PID,PID_PCINT_DRV
-	LDI ZH,high(DRV_PCINT_F_INIT)
-	LDI ZL,low(DRV_PCINT_F_INIT)
-	MCALL C5_CREATE
-
 	;Инициализация драйвера HC05 UART(программный)
 	LDI PID,PID_HC05_UART_DRV
 	LDI_Z DRV_UART_F_INIT
@@ -94,7 +85,6 @@ MAIN:
 	LDI TEMP_L,HC05_TX_PORT
 	LDI TEMP_EH,0xff
 	LDI TEMP_EL,DRV_UART_F_BAUDRATE_38400
-	LDI FLAGS,PID_PCINT_DRV
 	MCALL C5_CREATE
 
 	;Инициализация драйвера HC-05
