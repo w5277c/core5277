@@ -117,8 +117,9 @@
 	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x11;1B - счетчик таймера ядра (каждые 0.000050с)
 	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x12;1B - порог срабатывания таймера ядра
 .IFDEF INPUT_PORT
-	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01				;XB - буфер ввода
-	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE	;XB - таблица таймеров(TIMERS*5)
+	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01					;XB - буфер ввода
+	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE		;1B - пзиция в буфере на свободный элемент
+	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE+0x01	;XB - таблица таймеров(TIMERS*5)
 .ELSE
 	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01				;XB - таблица таймеров(TIMERS*5)
 .ENDIF																	;TIMERS*5
@@ -301,10 +302,6 @@ _C5_TIMER_A_IR:
 ;--------------------------------------------------------
 ;Обработчик прерывания основного таймера
 ;--------------------------------------------------------
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
 	SEI
 	PUSH TEMP
 	LDS TEMP,SREG
@@ -435,13 +432,6 @@ _C5_TIMER_A_IR__END:
 	POP TEMP
 	STS SREG,TEMP
 	POP TEMP
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-
 	RETI
 
 

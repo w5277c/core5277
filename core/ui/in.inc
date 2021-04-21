@@ -6,6 +6,15 @@
 ;08.04.2021  w5277c@gmail.com			Новая реализация, использую буфер ввода, не оттестировано
 ;09.04.2021  w5277c@gmail.com			Оттестирвано на INT0 и исправлены баги
 ;12.04.2021  w5277c@gmail.com			Оттестирвана программаня часть и исправлены баги
+;22.04.2021  w5277c@gmail.com			Реализовано чтение непрерывного блока данных(COPY/PASTE), оттестировано на INT0
+;-----------------------------------------------------------------------------------------------------------------------
+;Читаем с порта UART последовательность, BAUDRATE идентичен логированию.
+;Если порт поддержтвает внешние прерывания(INT0,...), то при ожидании старта прерывания будут разрешены,
+;диспетчер также не блокируется, т.е. многопоточность не нарушается.
+;Если порт не поддерживает внешние прерывания, то периодически выполняется проверка на UART START.
+;Механизм без прерываний не надежен, может пропускать некоторые символы.
+;Функционал имеет наивысший приоритет, т.е. при передаче по UART последовательности без пауз не выполняется ни одно
+;прерывание, в качестве решения можно задать 2 для INPUT_BUFFER_SIZE(при TIMERS_SPEED_25NS теряем 1 тик).
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef INPUT_PORT
 .ifdef DEF_IN
@@ -13,25 +22,10 @@
 .set DEF_IN = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included IN"
+.message "included IN v0.2"
 .endif
 
 .include	"./core/wait.inc"
-
-;Ожидает символ с порта по методу UART.
-;BAUDRATE идентичен логированию.
-;Если порт поддержтвает внешние прерывания(INT0,...),
-;то при ожидании старта прерывания будут разрешены,
-;диспетчер также не блокируется. Т.е. многопоточность
-;не нарушается.
-;Во время приема октета все прерывания запрещаются.
-;Полученный символ записывается в буфер ввода
-;Если порт не поддерживает внешние прерывания,
-;то вся деятельность ядра будет полностью остановлена
-;пока не будет получен символ.
-;Для корректной работы все остальные обработчики
-;прерываний должны разрешать внешние прерывания,
-;что бы попасть в данный обработчик максимально быстро.
 
 ;--------------------------------------------------------
 C5_IN_INIT:
@@ -209,28 +203,12 @@ C5_IN_CLEAR:
 ;--------------------------------------------------------
 ;Очищаем буфер
 ;--------------------------------------------------------
-	PUSH_Z
 	PUSH TEMP
+
 	LDI TEMP,0x00
-	LDI_Z _C5_INPUT_BUFFER
-.IF INPUT_BUFFER_SIZE > 0x01
-	PUSH LOOP_CNTR
-	LDI LOOP_CNTR,INPUT_BUFFER_SIZE
-	PUSH ACCUM
-	LDS ACCUM,SREG
-	CLI
-.ENDIF
-_C5_IN_CLEAR__LOOP:
-	ST Z+,TEMP
-.IF INPUT_BUFFER_SIZE > 0x01
-	DEC LOOP_CNTR
-	BRNE _C5_IN_CLEAR__LOOP
-	POP ACCUM
-	STS SREG,ACCUM
-	POP LOOP_CNTR
-.ENDIF
+	STS _C5_INPUT_BUFFER_POS,TEMP
+
 	POP TEMP
-	POP_Z
 	RET
 
 ;--------------------------------------------------------
@@ -241,34 +219,31 @@ _C5_IN_SHIFT:
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
-	LDI_Z _C5_INPUT_BUFFER
-	LD TEMP,Z
-	CPI TEMP,0x00
-	BREQ _C5_IN_SHIFT__END
-.IF INPUT_BUFFER_SIZE > 0x01
-.IF INPUT_BUFFER_SIZE > 0x02
 	PUSH LOOP_CNTR
-	LDI LOOP_CNTR,INPUT_BUFFER_SIZE-0x01
-.ENDIF
+
 	LDS ACCUM,SREG
 	PUSH ACCUM
 	CLI
+
+	LDI TEMP,0x00
+	LDS LOOP_CNTR,_C5_INPUT_BUFFER_POS
+	CPI LOOP_CNTR,0x00
+	BREQ _C5_IN_SHIFT__END
+	MOV ACCUM,LOOP_CNTR
+	DEC ACCUM
+	STS _C5_INPUT_BUFFER_POS,ACCUM
+	LDI_Z _C5_INPUT_BUFFER
+	LD TEMP,Z
 _C5_IN_SHIFT__LOOP:
 	LDD ACCUM,Z+0x01
 	ST Z+,ACCUM
-.IF INPUT_BUFFER_SIZE > 0x02
 	DEC LOOP_CNTR
 	BRNE _C5_IN_SHIFT__LOOP
-.ENDIF
-	POP ACCUM
-.IF INPUT_BUFFER_SIZE > 0x02
-	POP LOOP_CNTR
-.ENDIF
-	STS SREG,ACCUM
-.ENDIF
-	LDI ACCUM,0x00
-	ST Z,ACCUM
+
 _C5_IN_SHIFT__END:
+	POP ACCUM
+	STS SREG,ACCUM
+	POP LOOP_CNTR
 	POP ACCUM
 	POP_Z
 	RET
@@ -330,13 +305,15 @@ _IN_READ_PACKET:
 ;--------------------------------------------------------
 	PUSH LOOP_CNTR
 	PUSH ACCUM
+	PUSH TRY_CNTR
 
+	LDS TRY_CNTR,_C5_INPUT_BUFFER_POS
 _IN_READ_PACKET__BYTES_LOOP:
 	;DATA BITS
 	LDI LOOP_CNTR,0x08
 _IN_READ_PACKET__BITES_LOOP:
-	LSR TEMP
 	LD ACCUM,Z
+	LSR TEMP
 	NOP
 	NOP
 	NOP
@@ -354,32 +331,41 @@ _IN_READ_PACKET__BITES_LOOP:
 	;STOP BIT
 	LD ACCUM,Z
 	ANDI ACCUM,EXP2 (INPUT_PORT & 0x0f)
-	BREQ _IN_READ_PACKET__ERROR
+	BREQ _IN_READ_PACKET__DONE
 
+	CPI TRY_CNTR,INPUT_BUFFER_SIZE
+	BREQ _IN_READ_PACKET__ERROR
 	LDI_Z _C5_INPUT_BUFFER
-	LDI LOOP_CNTR,INPUT_BUFFER_SIZE
-_IN_READ_PACKET__LOOP2:
-	LD ACCUM,Z+
-	CPI ACCUM,0x00
-	BREQ _IN_READ_PACKET__GOT_ZERO
-	DEC LOOP_CNTR
-	BRNE _IN_READ_PACKET__LOOP2
-	RJMP _IN_READ_PACKET__ERROR
-_IN_READ_PACKET__GOT_ZERO:
-	SBIW ZL,0x01
+	ADD ZL,TRY_CNTR
+	CLR ACCUM
+	ADC ZH,ACCUM
 	ST Z,TEMP
+	INC TRY_CNTR
 
 	LDI ZH,high(PORTS_TABLE*2+(((INPUT_PORT>>4)*0x03)+0x02))
 	LDI ZL,low(PORTS_TABLE*2+(((INPUT_PORT>>4)*0x03)+0x02))
 	LPM ZL,Z
 	CLR ZH
+
+	LDI LOOP_CNTR,0x0a
+_IN_READ_PACKET__NEXT_START_WAIT:
 	LD ACCUM,Z
 	ANDI ACCUM,EXP2 (INPUT_PORT & 0x0f)
-	BREQ _IN_READ_PACKET__BYTES_LOOP
+	BREQ _IN_READ_PACKET__GOT_NEXT_START
+	DEC LOOP_CNTR
+	BRNE _IN_READ_PACKET__NEXT_START_WAIT
 	RJMP _IN_READ_PACKET__DONE
+_IN_READ_PACKET__GOT_NEXT_START:
+	;WAIT
+	LDI ACCUM,0x16;0x13
+	DEC ACCUM
+	BRNE PC-0x01
+	RJMP _IN_READ_PACKET__BYTES_LOOP
 _IN_READ_PACKET__ERROR:
 	LDI TEMP,0x00
 _IN_READ_PACKET__DONE:
+	STS _C5_INPUT_BUFFER_POS,TRY_CNTR
+	POP TRY_CNTR
 	POP ACCUM
 	POP LOOP_CNTR
 	RET
@@ -389,8 +375,6 @@ _IN_INT_HANDLER:
 ;--------------------------------------------------------
 ;Обработчик внешнего прерывания
 ;--------------------------------------------------------
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
 
 	PUSH TEMP
 	LDS TEMP,SREG

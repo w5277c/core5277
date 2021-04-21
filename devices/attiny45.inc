@@ -39,7 +39,7 @@
 	.EQU	_C5_STACK_SIZE							= 0x28			;Стек ядра - 40B
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x015f
-
+	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
 	.EQU	C5_IR_PCINT0							= 0x02
