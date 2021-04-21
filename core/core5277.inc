@@ -301,6 +301,11 @@ _C5_TIMER_A_IR:
 ;--------------------------------------------------------
 ;Обработчик прерывания основного таймера
 ;--------------------------------------------------------
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+	SEI
 	PUSH TEMP
 	LDS TEMP,SREG
 	PUSH TEMP
@@ -310,7 +315,6 @@ _C5_TIMER_A_IR:
 	LDI TEMP,TIMERS_SPEED+0x02
 	_CORRE5277_TIMERA_CORRECTOR TEMP
 
-	SEI
 
 	PUSH_Z
 
@@ -431,6 +435,13 @@ _C5_TIMER_A_IR__END:
 	POP TEMP
 	STS SREG,TEMP
 	POP TEMP
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+
 	RETI
 
 

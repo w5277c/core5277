@@ -51,6 +51,7 @@
 	.include "./core/ui/menu.inc"
 	.include	"./core/ui/hex32_input.inc"
 	.include "./core/ui/text_input.inc"
+	.include "./core/log/log_ramdump.inc"
 	;---
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
@@ -70,7 +71,7 @@ MAIN:
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 
-	LDI ACCUM,MISO
+	LDI ACCUM,PC4
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
 
@@ -136,12 +137,19 @@ TASK:
 	LDI TEMP,PID_HC05_DRV
 	LDI ACCUM,DRV_HC05_OP_RAW
 	MCALL C5_EXEC
+	RJMP TASK
 
 	CPI TEMP_H,DRV_HC05_RESULT_OK
 	BRNE TASK
 	CPI TEMP_L,0x00
 	BREQ TASK
+	LDI TEMP,'['
+	MCALL C5_LOG_CHAR
 	MOV TEMP,TEMP_L
+	MOV YH,ZH
+	MOV YL,ZL
 	MCALL C5_LOG_STRN
+	LDI TEMP,']'
+	MCALL C5_LOG_CHAR
 	MCALL C5_LOG_CR
 	RJMP TASK
