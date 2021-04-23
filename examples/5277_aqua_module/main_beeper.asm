@@ -6,8 +6,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	AVRA										= 0	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
@@ -64,9 +64,9 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 	TASK__DATA:
-	.db N8D,C3,D3,D3d,C3,D3,D3d,D3d,F3,G3,D3d,F3,G3,F3,G3,A3,F3,G3,A3,G3d,A3d,C4,G3d,A3d,C4,C4,P,C4,C4,C4,C4,E
-	;.db N16,D1,D2,D3,D4,D5,E
-;	.db N16,C4,C4d,D4,D4d,E4,E4d,F4,F4d,G4,G4d,A4,A4d,H4,H4d,C5,C5d,D5,D5d,E5,E5d,F5,F5d,G5,G5d,A5,A5d,H5,H5d,E
+	.db N16T,C3,D3,D3d,C3,D3,D3d,D3d,F3,G3,D3d,F3,G3,F3,G3,A3,F3,G3,A3,G3d,A3d,C4,G3d,A3d,C4,C4,P,C4,C4,C4,C4,E
+	;.db N16,D1,D2,D3,D4,D5,E,0x00
+	;.db N8,C4,C4d,D4,D4d,E4,E4d,F4,F4d,G4,G4d,A4,A4d,H4,H4d,C5,C5d,D5,D5d,E5,E5d,F5,F5d,G5,G5d,A5,A5d,H5,H5d,E
 
 TASK__INIT:
 	MCALL C5_READY

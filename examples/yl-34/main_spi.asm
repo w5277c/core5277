@@ -7,8 +7,8 @@
 
 ;TODO наблюдаются проблемы с TIMER_B
 
-	.INCLUDE "./devices/atmega16.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega16.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4

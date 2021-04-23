@@ -5,9 +5,9 @@
 ;30.01.2021  w5277c@gmail.com			Тест, отработано корректно.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
-
-	.INCLUDE "./devices/atmega328.inc"
+	
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	AVRA										= 0	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
