@@ -29,6 +29,8 @@
 
 	.SET	TIMER_C_ENABLE							= 0x00
 
+	.SET	REALTIME									= 0x00
+	.SET	TIMERS									= 0x00
 	.SET	AVRA										= 0x00
 .ifdef CORE_FREQ
 .else

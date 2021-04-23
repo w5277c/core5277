@@ -15,7 +15,7 @@
     <Name>5277_aqua_module</Name>
     <RootNamespace>5277_aqua_module</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
-    <EntryFile>$(MSBuildProjectDirectory)\main_buttons.asm</EntryFile>
+    <EntryFile>$(MSBuildProjectDirectory)\main_blink.asm</EntryFile>
     <KeepTimersRunning>false</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
     <CacheFlash>true</CacheFlash>
@@ -47,14 +47,14 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
       <AvrAssembler>
-  <avrasm.assembler.general.WrapRelativeJumps>True</avrasm.assembler.general.WrapRelativeJumps>
-  <avrasm.assembler.general.AdditionalIncludeDirectories>
-    <ListValues>
-      <Value>C:\repos\w5277c\core5277</Value>
-    </ListValues>
-  </avrasm.assembler.general.AdditionalIncludeDirectories>
-  <avrasm.assembler.general.IncludeFile />
-</AvrAssembler>
+        <avrasm.assembler.general.WrapRelativeJumps>True</avrasm.assembler.general.WrapRelativeJumps>
+        <avrasm.assembler.general.AdditionalIncludeDirectories>
+          <ListValues>
+            <Value>C:\repos\w5277c\core5277</Value>
+          </ListValues>
+        </avrasm.assembler.general.AdditionalIncludeDirectories>
+        <avrasm.assembler.general.IncludeFile />
+      </AvrAssembler>
     </ToolchainSettings>
     <OutputType>Executable</OutputType>
   </PropertyGroup>
@@ -82,6 +82,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="main_beeper.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_blink.asm">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="main_buttons.asm">
