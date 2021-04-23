@@ -273,7 +273,11 @@
 	JMP	MAIN															; Reset
 	CALL	_C5_IR														; External Interrupt0
 	CALL	_C5_IR														; External Interrupt1
+.IF TIMER_C_ENABLE == 0x01
 	CALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare
+.ELSE
+	CALL	_C5_IR														; Timer/Counter2 Compare
+.ENDIF
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event
 	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A

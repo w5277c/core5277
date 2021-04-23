@@ -253,7 +253,11 @@
 	RJMP	MAIN															; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
 	RCALL	_C5_IR														; Pin Change Interrupt Request 0
+.IF TIMER_C_ENABLE == 0x01
 	RCALL	_C5_TIMER_C_IR												; Timer/Counter1 Compare Match A
+.ELSE
+	RCALL	_C5_IR														; Timer/Counter1 Compare Match A
+.ENDIF
 	RCALL	_C5_IR														; Timer/Counter1 Overflow
 	RCALL	_C5_IR														; Timer/Counter0 Overflow
 	RCALL	_C5_IR														; EEPROM Ready

@@ -386,7 +386,11 @@
 	CALL	_C5_IR														; Pin Change Interrupt Request 1
 	CALL	_C5_IR														; Pin Change Interrupt Request 2
 	CALL	_C5_IR														; Watchdog Time-out Interrupt
+.IF TIMER_C_ENABLE == 0x01
 	CALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match A
+.ELSE
+	CALL	_C5_IR														; Timer/Counter2 Compare Match A
+.ENDIF
 	CALL	_C5_IR														; Timer/Counter2 Compare Match B
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event

@@ -432,7 +432,11 @@
 	CALL	_C5_IR														; External Interrupt5 Handler
 	CALL	_C5_IR														; External Interrupt6 Handler
 	CALL	_C5_IR														; External Interrupt7 Handler
+.IF TIMER_C_ENABLE == 0x01
 	CALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match
+.ELSE
+	CALL	_C5_IR														; Timer/Counter2 Compare Match
+.ENDIF
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event
 	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A

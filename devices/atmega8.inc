@@ -220,7 +220,11 @@
 	RCALL	_C5_IR														; Pin Change Interrupt Request 1
 	RCALL	_C5_IR														; Pin Change Interrupt Request 2
 	RCALL	_C5_IR														; Watchdog Time-out Interrupt
+.IF TIMER_C_ENABLE == 0x01
 	RCALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match A
+.ELSE
+	RCALL	_C5_IR														; Timer/Counter2 Compare Match A
+.ENDIF
 	RCALL	_C5_IR														; Timer/Counter2 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter2 Overflow
 	RCALL	_C5_IR														; Timer/Counter1 Capture Event
