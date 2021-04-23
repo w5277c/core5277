@@ -17,9 +17,9 @@
 ;прерывание, в качестве решения можно задать 2 для INPUT_BUFFER_SIZE(при TIMERS_SPEED_25NS теряем 1 тик).
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef INPUT_PORT
-.ifdef DEF_IN
+.ifdef DEF_INPUT
 .else
-.set DEF_IN = 1
+.set DEF_INPUT = 1
 
 .if REPORT_INCLUDES == 0x01
 .message "included IN v0.2"
@@ -28,12 +28,12 @@
 .include	"./core/wait.inc"
 
 ;--------------------------------------------------------
-C5_IN_INIT:
+C5_INPUT_INIT:
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH_Z
 
-	RCALL C5_IN_CLEAR
+	RCALL C5_INPUT_CLEAR
 
 	LDI ZH,high(PORTS_TABLE*2+((INPUT_PORT>>4)*0x03+0x01))
 	LDI ZL,low(PORTS_TABLE*2+((INPUT_PORT>>4)*0x03+0x01))
@@ -55,8 +55,8 @@ C5_IN_INIT:
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
-	LDI TEMP_H,high(_IN_INT_HANDLER)
-	LDI TEMP_L,low(_IN_INT_HANDLER)
+	LDI TEMP_H,high(_C5_INPUT_INT_HANDLER)
+	LDI TEMP_L,low(_C5_INPUT_INT_HANDLER)
 .IF	INPUT_PORT == INT0_PORT
 	LDI ACCUM,C5_IR_INT0
 	MCALL C5_IR_VECTOR_SET
@@ -164,42 +164,42 @@ C5_IN_INIT:
 	RET
 
 ;--------------------------------------------------------
-C5_IN_GET:
+C5_INPUT_GET:
 ;--------------------------------------------------------
 ;Извлекаем символ из буфера
 ;OUT: TEMP-символ
 ;--------------------------------------------------------
-	MCALL _C5_IN_SHIFT
+	MCALL _C5_INPUT_SHIFT
 .IF	INPUT_PORT != INT0_PORT && INPUT_PORT != INT1_PORT && INPUT_PORT != INT2_PORT && INPUT_PORT != INT3_PORT && INPUT_PORT != INT4_PORT && INPUT_PORT != INT5_PORT && INPUT_PORT != INT6_PORT && INPUT_PORT != INT7_PORT
 	CPI TEMP,0x00
-	BRNE _C5_IN_GET__END
-	MCALL _IN_READ_BYTES
-	MCALL _C5_IN_SHIFT
-_C5_IN_GET__END:
+	BRNE _C5_INPUT_GET__END
+	MCALL _C5_INPUT_READ_BYTES
+	MCALL _C5_INPUT_SHIFT
+_C5_INPUT_GET__END:
 .ENDIF
 	RET
 
 ;--------------------------------------------------------
-C5_IN_WAIT:
+C5_INPUT_WAIT:
 ;--------------------------------------------------------
 ;Ожидаем и извлекаем символ из буфера
 ;OUT: TEMP-символ
 ;--------------------------------------------------------
-_C5_IN_WAIT__LOOP:
-	MCALL _C5_IN_SHIFT
+_C5_INPUT_WAIT__LOOP:
+	MCALL _C5_INPUT_SHIFT
 	CPI TEMP,0x00
-	BRNE _C5_IN_WAIT_DONE
+	BRNE _C5_INPUT_WAIT_DONE
 .IF	INPUT_PORT == INT0_PORT || INPUT_PORT == INT1_PORT || INPUT_PORT == INT2_PORT || INPUT_PORT == INT3_PORT || INPUT_PORT == INT4_PORT || INPUT_PORT == INT5_PORT || INPUT_PORT == INT6_PORT || INPUT_PORT == INT7_PORT
 	MCALL C5_WAIT
 .ELSE
-	MCALL _IN_READ_BYTES
+	MCALL _C5_INPUT_READ_BYTES
 .ENDIF
-	RJMP _C5_IN_WAIT__LOOP
-_C5_IN_WAIT_DONE:
+	RJMP _C5_INPUT_WAIT__LOOP
+_C5_INPUT_WAIT_DONE:
 	RET
 
 ;--------------------------------------------------------
-C5_IN_CLEAR:
+C5_INPUT_CLEAR:
 ;--------------------------------------------------------
 ;Очищаем буфер
 ;--------------------------------------------------------
@@ -212,7 +212,7 @@ C5_IN_CLEAR:
 	RET
 
 ;--------------------------------------------------------
-_C5_IN_SHIFT:
+_C5_INPUT_SHIFT:
 ;--------------------------------------------------------
 ;Сдвигаем данные в буфере
 ;OUT: TEMP-первый символ
@@ -228,19 +228,19 @@ _C5_IN_SHIFT:
 	LDI TEMP,0x00
 	LDS LOOP_CNTR,_C5_INPUT_BUFFER_POS
 	CPI LOOP_CNTR,0x00
-	BREQ _C5_IN_SHIFT__END
+	BREQ _C5_INPUT_SHIFT__END
 	MOV ACCUM,LOOP_CNTR
 	DEC ACCUM
 	STS _C5_INPUT_BUFFER_POS,ACCUM
 	LDI_Z _C5_INPUT_BUFFER
 	LD TEMP,Z
-_C5_IN_SHIFT__LOOP:
+_C5_INPUT_SHIFT__LOOP:
 	LDD ACCUM,Z+0x01
 	ST Z+,ACCUM
 	DEC LOOP_CNTR
-	BRNE _C5_IN_SHIFT__LOOP
+	BRNE _C5_INPUT_SHIFT__LOOP
 
-_C5_IN_SHIFT__END:
+_C5_INPUT_SHIFT__END:
 	POP ACCUM
 	STS SREG,ACCUM
 	POP LOOP_CNTR
@@ -249,7 +249,7 @@ _C5_IN_SHIFT__END:
 	RET
 
 ;--------------------------------------------------------
-_IN_READ_BYTES:
+_C5_INPUT_READ_BYTES:
 ;--------------------------------------------------------
 ;Ожидаем бит START UART'а
 ;--------------------------------------------------------
@@ -266,12 +266,12 @@ _IN_READ_BYTES:
 
 	CLI
 	LDI_Y 0xffff
-_IN_READ_BYTES__LOOP:
+_C5_INPUT_READ_BYTES__LOOP:
 	SBIW YL,0x01
-	BREQ _IN_READ_BYTES__DONE
+	BREQ _C5_INPUT_READ_BYTES__DONE
 	LD TEMP,Z
 	ANDI TEMP,EXP2 (INPUT_PORT & 0x0f)
-	BRNE _IN_READ_BYTES__LOOP
+	BRNE _C5_INPUT_READ_BYTES__LOOP
 
 	LDI_Y 0x0020
 
@@ -280,15 +280,15 @@ _IN_READ_BYTES__LOOP:
 	BRNE PC-0x01
 
 	PUSH_Z
-	MCALL _IN_READ_PACKET
+	MCALL _C5_INPUT_READ_PACKET
 	POP_Z
 
 	CPI TEMP,0x00
-	BREQ _IN_READ_BYTES__DONE
+	BREQ _C5_INPUT_READ_BYTES__DONE
 	LDS ACCUM,_C5_INPUT_BUFFER+INPUT_BUFFER_SIZE-0x01
 	CPI ACCUM,0x00
-	BREQ _IN_READ_BYTES__LOOP
-_IN_READ_BYTES__DONE:
+	BREQ _C5_INPUT_READ_BYTES__LOOP
+_C5_INPUT_READ_BYTES__DONE:
 
 	POP_Y
 	POP_Z
@@ -298,7 +298,7 @@ _IN_READ_BYTES__DONE:
 .ENDIF
 	RET
 ;--------------------------------------------------------
-_IN_READ_PACKET:
+_C5_INPUT_READ_PACKET:
 ;--------------------------------------------------------
 ;Читаем биты данных и проверям STOP бит UART'а
 ;OUT:TEMP последний считанный символ
@@ -308,10 +308,10 @@ _IN_READ_PACKET:
 	PUSH TRY_CNTR
 
 	LDS TRY_CNTR,_C5_INPUT_BUFFER_POS
-_IN_READ_PACKET__BYTES_LOOP:
+_C5_INPUT_READ_PACKET__BYTES_LOOP:
 	;DATA BITS
 	LDI LOOP_CNTR,0x08
-_IN_READ_PACKET__BITES_LOOP:
+_C5_INPUT_READ_PACKET__BITES_LOOP:
 	LD ACCUM,Z
 	LSR TEMP
 	NOP
@@ -327,14 +327,14 @@ _IN_READ_PACKET__BITES_LOOP:
 	BRNE PC-0x01
 
 	DEC LOOP_CNTR
-	BRNE _IN_READ_PACKET__BITES_LOOP
+	BRNE _C5_INPUT_READ_PACKET__BITES_LOOP
 	;STOP BIT
 	LD ACCUM,Z
 	ANDI ACCUM,EXP2 (INPUT_PORT & 0x0f)
-	BREQ _IN_READ_PACKET__DONE
+	BREQ _C5_INPUT_READ_PACKET__DONE
 
 	CPI TRY_CNTR,INPUT_BUFFER_SIZE
-	BREQ _IN_READ_PACKET__ERROR
+	BREQ _C5_INPUT_READ_PACKET__ERROR
 	LDI_Z _C5_INPUT_BUFFER
 	ADD ZL,TRY_CNTR
 	CLR ACCUM
@@ -348,22 +348,22 @@ _IN_READ_PACKET__BITES_LOOP:
 	CLR ZH
 
 	LDI LOOP_CNTR,0x0a
-_IN_READ_PACKET__NEXT_START_WAIT:
+_C5_INPUT_READ_PACKET__NEXT_START_WAIT:
 	LD ACCUM,Z
 	ANDI ACCUM,EXP2 (INPUT_PORT & 0x0f)
-	BREQ _IN_READ_PACKET__GOT_NEXT_START
+	BREQ _C5_INPUT_READ_PACKET__GOT_NEXT_START
 	DEC LOOP_CNTR
-	BRNE _IN_READ_PACKET__NEXT_START_WAIT
-	RJMP _IN_READ_PACKET__DONE
-_IN_READ_PACKET__GOT_NEXT_START:
+	BRNE _C5_INPUT_READ_PACKET__NEXT_START_WAIT
+	RJMP _C5_INPUT_READ_PACKET__DONE
+_C5_INPUT_READ_PACKET__GOT_NEXT_START:
 	;WAIT
 	LDI ACCUM,0x16;0x13
 	DEC ACCUM
 	BRNE PC-0x01
-	RJMP _IN_READ_PACKET__BYTES_LOOP
-_IN_READ_PACKET__ERROR:
+	RJMP _C5_INPUT_READ_PACKET__BYTES_LOOP
+_C5_INPUT_READ_PACKET__ERROR:
 	LDI TEMP,0x00
-_IN_READ_PACKET__DONE:
+_C5_INPUT_READ_PACKET__DONE:
 	STS _C5_INPUT_BUFFER_POS,TRY_CNTR
 	POP TRY_CNTR
 	POP ACCUM
@@ -371,7 +371,7 @@ _IN_READ_PACKET__DONE:
 	RET
 
 ;--------------------------------------------------------
-_IN_INT_HANDLER:
+_C5_INPUT_INT_HANDLER:
 ;--------------------------------------------------------
 ;Обработчик внешнего прерывания
 ;--------------------------------------------------------
@@ -386,7 +386,7 @@ _IN_INT_HANDLER:
 	LPM ZL,Z
 	CLR ZH
 
-	MCALL _IN_READ_PACKET
+	MCALL _C5_INPUT_READ_PACKET
 
 	LDS TEMP,EIFR
 .IF	INPUT_PORT == INT0_PORT

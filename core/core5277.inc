@@ -188,7 +188,7 @@
 	.INCLUDE "./mem/ram_copy16_desc.inc"
 	.INCLUDE "./conv/bitnum_to_num.inc"
 .IFDEF INPUT_PORT
-	.INCLUDE "./core/ui/in.inc"
+	.INCLUDE "./core/ui/input.inc"
 .ENDIF
 
 ;---OPTIONS-ANALYZE--------------------------------------
@@ -572,7 +572,7 @@ C5_REINIT:
 	STS _C5_MAIN_TIMER_TRHLD,TEMP
 
 .IFDEF INPUT_PORT
-	MCALL C5_IN_INIT
+	MCALL C5_INPUT_INIT
 .ENDIF
 
 .IF TIMERS > 0x00
