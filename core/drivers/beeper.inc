@@ -1,13 +1,15 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;09.03.2020  w5277c@gmail.com        Начало
-;26.10.2020  w5277c@gmail.com        Переход на программный таймер
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;09.03.2020	w5277c@gmail.com			Начало
+;26.10.2020	w5277c@gmail.com			Переход на программный таймер
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;24.04.2021	w5277c@gmail.com			Оптимизация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DRIVER_BEEPER
 .else
 .set DEF_DRIVER_BEEPER = 1
+.message "Included driver Beeper v0.2"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -238,10 +240,19 @@ _DRV_BEEPER_PROC__NO_TEMP:
 
 _DRV_BEEPER_PROC__END:
 	POP_Z
-	LDD ACCUM,Z+_DRV_BEEPER_PORT
-	;Отключаем порт переводя его как вход без подтяжки
-	MCALL PORT_MODE_IN
-	MCALL PORT_SET_LO
+
+	;SET LO
+	LDD TEMP,Z+_DRV_BEEPER_PORT+0x00
+	LDD ACCUM,Z+_DRV_BEEPER_PORT+0x01
+	COM ACCUM
+	LDS FLAGS,SREG
+	CLI
+	MOV ZL,TEMP
+	CLR ZH
+	LD TEMP,Z
+	AND TEMP,ACCUM
+	ST Z,TEMP
+	STS SREG,FLAGS
 
 	POP FLAGS
 	POP LOOP_CNTR

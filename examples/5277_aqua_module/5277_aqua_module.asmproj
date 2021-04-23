@@ -15,7 +15,7 @@
     <Name>5277_aqua_module</Name>
     <RootNamespace>5277_aqua_module</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
-    <EntryFile>$(MSBuildProjectDirectory)\main_blink.asm</EntryFile>
+    <EntryFile>$(MSBuildProjectDirectory)\main_realtime.asm</EntryFile>
     <KeepTimersRunning>false</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
     <CacheFlash>true</CacheFlash>
