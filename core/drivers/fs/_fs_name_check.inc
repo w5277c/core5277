@@ -1,33 +1,29 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019	w5277c@gmail.com			Начало
-;01.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;05.12.2020	w5277c@gmail.com			-с5
+;29.04.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_RAM_COPY8
+.ifdef DEF_DRIVER_FS_NAME_CHECK
 .else
-.set DEF_RAM_COPY8 = 1
+.set DEF_DRIVER_FS_NAME_CHECK = 1
 
-.if REPORT_INCLUDES == 0x01
-.message "included RAM_COPY8"
-.endif
-
-.include	"./mem/ram_copy16.inc"
+.include	"./str/str_len.inc"
 
 ;--------------------------------------------------------
-RAM_COPY8:
+_DRV_FS_NAME_CHECK:
 ;--------------------------------------------------------
-;Копирование блока памяти
-;IN: X-SRC адрес, Z-DST адрес, LOOP_CNTR-длина
+;Создаем директорию
+;IN: Y-адрес на название
+;OUT: TEMP-длина строки,FLAGS-результат DRV_FS_RESULT_...
 ;--------------------------------------------------------
-	PUSH TEMP_H
-	PUSH TEMP_L
-	CLR TEMP_H
-	MOV TEMP_L,LOOP_CNTR
-	MCALL RAM_COPY16
-	POP TEMP_L
-	POP TEMP_H
+	;Проверка имени
+	LDI FLAGS,DRV_FS_RESULT_INVALID_NAME
+	MCALL STR_LEN
+	CPI TEMP,0x00
+	BREQ _DRV_FS_NAME_CHECK__END
+	CPI TEMP,DRV_FS_NAME_SIZE+0x01
+	BRCC _DRV_FS_NAME_CHECK__END
+	LDI FLAGS,DRV_FS_RESULT_OK
+
 	RET
 .endif
