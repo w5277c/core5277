@@ -262,12 +262,159 @@ _EMUL_C5_H7x:
 	MCALL _EMUL_C5_SET_REG8
 	RET
 
+;--------------------------------------------------------
 _EMUL_C5_H8x:
-	RET
-_EMUL_C5_H9x:
-	RET
+	LDI TEMP_EL,0x00
+	RJMP PC+0x02
+;--------------------------------------------------------
 _EMUL_C5_Hax:
+	LDI TEMP_EL,0x20
+	;10q0 qqSd dddd Yqqq (Y=Y/Z,q-offset,d-direction(S=ST/LD))
+	SBRS ACCUM,0x00
+	RJMP _EMUL_C5_FAULT
+	SBRC ACCUM,0x03
+	ORI TEMP_EL,10
+	SBRC ACCUM,0x02
+	ORI TEMP_EL,0x08
+
+	LD TEMP,Y+
+	MOV TEMP_EH,TEMP
+	ANDI TEMP_EH,0x07
+	OR TEMP_EL,TEMP_EH
+	PUSH_Z
+	ADIW ZL,0x0c
+	SBRS TEMP,0x03
+	ADIW ZL,0x02
+	SWAP TEMP
+	ANDI TEMP,0x0f
+
+	LDD ACCUM,Z+0x01
+	LDD ZL,Z+0x00
+	MOV ZH,ACCUM
+	ADD ZL,TEMP_EL
+	CLR TEMP_EL
+	ADC ZH,TEMP_EL
+
+	SBRC ACCUM,0x01
+	RJMP _EMUL_C5_H8x__ST
+	LD TEMP_L,Z
+	MCALL _EMUL_C5_SET_REG8
+	RJMP _EMUL_C5_H8x__DONE
+_EMUL_C5_H8x__ST:
+	MCALL _EMUL_C5_GET_REG8
+	ST Z,TEMP_L
+_EMUL_C5_H8x__DONE:
+	POP_Z
 	RET
+
+;--------------------------------------------------------
+_EMUL_C5_H9x:
+	MOV TEMP,ACCUM
+	ANDI TEMP,0x0c
+	CPI TEMP,0x00
+	BRNE _EMUL_C5_H9x__NOT_00
+
+	;(O:00=NO OP,01=+,10=-,Y:11=X,10=Y,00=Z,S=ST/LD)
+	;1001 00Sr rrrr YYOO
+	;1001 001r rrrr 1100 st x,rr
+	;1001 001r rrrr 1101 st x+,rr
+	;1001 001r rrrr 1110 st -x,rr
+	;1001 001r rrrr 1001 st y+,rr
+	;1001 001r rrrr 1010 st -y,rr
+	;1001 001r rrrr 0001 st z+,rr
+	;1001 001r rrrr 0010 st -z,rr
+	;ld -//-
+	;1001 001d dddd 1111 push
+	;1001 001d dddd 0000 sts k,rr + word
+	;1001 000d dddd 0000	lds rd,k
+	;1001 000d dddd 1111 pop
+
+	;NO SUPPORT
+	;1001 001r rrrr 0110 lac z,rd
+	;1001 001r rrrr 0101 las z,rd
+	;1001 001r rrrr 0111 lat z,rd
+	;1001 001r rrrr 0100 xch z,rd
+	;1001 000d dddd 0110 elpm rd,z
+	;1001 000d dddd 0111 elpm rd,z+
+	;1001 000d dddd 0100 lpm rd,z
+	;1001 000d dddd 0101 lpm rd,z+
+	;1001 0101 1101 1000 elpm
+
+	SBRS ACCUM,0x00
+	RJMP _EMUL_C5_FAULT
+
+	LD TEMP,Y+
+	MOV TEMP_L,TEMP
+	ANDI TEMP_L,0x0f
+	BREQ _EMUL_C5_H9x__STSLDS
+	CPI TEMP_L,0x0f
+	BREQ _EMUL_C5_H9x__POPPUSH
+	ANDI TEMP_L,0x0c
+	CPI TEMP_L,0x04
+	BREQ _EMUL_C5_FAULT
+	CPI TEMP_L,0x08
+	BREQ _EMUL_C5_FAULT
+	MOV TEMP_L,TEMP
+	ANDI TEMP_L,0x0f
+
+	PUSH_Z
+	ADIW ZL,0x0e
+	SBRS TEMP,0x03
+	RJMP _EMUL_C5_H9x_Z
+	SBIW ZL,0x02
+	SBRC TEMP,0x02
+	SBIW ZL,0x02
+_EMUL_C5_H9x_Z:
+
+	SWAP TEMP
+	ANDI TEMP,0x0f
+
+	PUSH_Z
+	LDD ACCUM,Z+0x01
+	LDD ZL,Z+0x00
+	MOV ZH,ACCUM
+
+	SBRC ACCUM,0x01
+	RJMP _EMUL_C5_H9x__ST
+	SBRC TEMP_L,0x03
+	SBIW ZL,0x01
+	LD TEMP_L,Z
+	SBRC TEMP_L,0x02
+	ADIW ZL,0x01
+	MCALL _EMUL_C5_SET_REG8
+	RJMP _EMUL_C5_H8x__DONE
+_EMUL_C5_H9x__ST:
+	RCALL _EMUL_C5_DET_REG8
+	ST Z,TEMP_L
+_EMUL_C5_H9x__DONE:
+	MOV TEMP_H,ZH
+	MOV TEMP_L,ZL
+	POP_Z
+	ST Z+0x01,TEMP_H
+	ST Z+0x00,TEMP_L
+	POP_Z
+	RET
+
+_EMUL_C5_H9x__POPPUSH:
+
+
+_EMUL_C5_H9x__STSLDS:
+
+
+_EMUL_C5_H9x__NOT_00:
+	CPI TEMP,0x04
+	BRNE _EMUL_C5_H9x__NOT_04
+
+
+
+_EMUL_C5_H9x__NOT_04:
+	CPI TEMP,0x08
+	BRNE _EMUL_C5_H9x__NOT_08
+
+
+_EMUL_C5_H9x__NOT_08:
+	RJMP _EMUL_C5_FAULT
+
 _EMUL_C5_Hbx:
 	RET
 _EMUL_C5_Hcx:
@@ -342,7 +489,6 @@ _EMUL_C5_SET_REG8:
 	POP_Z
 	RET
 
-
 ;--------------------------------------------------------
 _EMUL_C5_GET_KD:
 ;--------------------------------------------------------
@@ -365,7 +511,7 @@ _EMUL_C5_GET_KD:
 ;--------------------------------------------------------
 _EMUL_C5_GET_RD:
 ;--------------------------------------------------------
-;Считываем байт из регистра
+;Считываем слово из регистров
 ;IN:Z-адрес переменных
 ;OUT: TEMP_H-знач.R,TEMP_L-знач.D,TEMP-D
 ;--------------------------------------------------------
