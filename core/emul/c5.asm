@@ -5,7 +5,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Первые наброски эмулятора AVR(для core5277), необходим для выполнения программы из RAM
 ;Быстрого выполнения не требуется, так как все вызовы подпрограмм будут реальные.
+;Эмулятор не использует память, программа сама выделяет для себя память.
+;16 регистров хранятся в стеке, стек общий для эмулятора и программы
+;Часть кодов не актуально, как например SPM, RETI, SEI, MULL, SLEEP, BREAK, WDR, IN, OUT и прочее
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO Исполльзвание стека по минимуму, учитывать что стек программы и эмулятора общий
+;TODO После реализации основной логики провести оптимизацию.
 
 .ifdef DEF_EMUL_C5
 .else
@@ -18,12 +23,6 @@
 ;.include	"./mem/ram_copy16.inc"
 
 ;---CONSTANTS--------------------------------------------
-	;---VARS---
-	.EQU	_EMUL_C5_REGS							= 0x00			;10B - REG16-REG32
-	.EQU	_EMUL_C5_PROG_RAM						= 0x10			;0x80 размер памяти доступной для программы
-	;---
-	.EQU	_EMUL_C5									= 0x10+0x80
-
 C5_CODE_HANDLERS:
 	.dw	_EMUL_C5_H0x,_EMUL_C5_H1x,_EMUL_C5_H2x,_EMUL_C5_H3x,_EMUL_C5_H4x,_EMUL_C5_H5x,_EMUL_C5_H6x,_EMUL_C5_H7x
 	.dw	_EMUL_C5_H8x,_EMUL_C5_H9x,_EMUL_C5_Hax,_EMUL_C5_Hbx,_EMUL_C5_Hcx,_EMUL_C5_Hdx,_EMUL_C5_Hex,_EMUL_C5_Hfx
@@ -35,22 +34,19 @@ EMUL_C5_INIT:
 ;Инициализация эмулятора
 ;IN:Y-адрес на программу
 ;--------------------------------------------------------
-	LDI ACCUM,_EMUL_C5
-	MCALL C5_RAM_REALLOC
-
-	MOV XH,ZH
-	MOV XL,ZL
 	LDI TEMP,0x00
-	LDI LOOP_CNTR,_EMUL_C5
-	MCALL RAM_FILL16
+	LDI LOOP_CNTR,0x10
+EMUL_C5_INIT__LOOP:
+	PUSH TEMP
+	DEC LOOP_CNTR
+	BRNE EMUL_C5_INIT__LOOP
+	LDS ZL,SPL
+	LDS ZH,SPH
+	ADIW ZL,0x01
 
-	STD Z+_EMUL_C5_PROG_ADDR+0x00,YH
-	STD Z+_EMUL_C5_PROG_ADDR+0x01,YL
 ;--------------------------------------------------------
 ;Основной код
-;Z-адрес переменных, Y-адрес программы,
-;TRY_CNT-смещение стека от начала выделенной памяти,
-;FLAGS-SREG
+;Z-адрес 16 регистров, Y-адрес программы, FLAGS-SREG
 ;--------------------------------------------------------
 EMUL_C5__MAIN_LOOP:
 	LD ACCUM,Y+
@@ -60,14 +56,11 @@ EMUL_C5__MAIN_LOOP:
 	ANDI TEMP,0x0f
 	;TODO необходимо проеверить адресацию и порядок записи в стек
 	LDI TEMP_H,high(C5_CODE_HANDLERS*2)
+
 	LDI TEMP_L,low(C5_CODE_HANDLERS*2)
 	ADD TEMP_L,TEMP
 	CLR TEMP
 	ADC TEMP_H,TEMP
-	LDI TEMP,high(EMUL_C5__MAIN_LOOP*2)
-	PUSH TEMP
-	LDI TEMP,low(EMUL_C5__MAIN_LOOP*2)
-	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 	RET
@@ -78,7 +71,7 @@ _EMUL_C5_H0x:
 	CPI ACCUM,0x00
 	BRNE _EMUL_C5_H0x__NOT_NOP
 	LD TEMP,Y+
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_NOP:
 	;0x01-MOVW
 	CPI ACCUM,0x01
@@ -106,7 +99,7 @@ _EMUL_C5_H0x__NOT_MOVW:
 		STS SREG,FLAGS
 		CPC TEMP_L,TEMP_H
 		LDS FLAGS,SREG
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_CPC:
 	;0x0b-SBC
 	CPI ACCUM,0x0b
@@ -116,7 +109,7 @@ _EMUL_C5_H0x__NOT_CPC:
 		SBC TEMP_L,TEMP_H
 		LDS FLAGS,SREG
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_SBC:
 	;0x0f-ADD
 	CPI ACCUM,0x0f
@@ -126,7 +119,7 @@ _EMUL_C5_H0x__NOT_SBC:
 		ADD TEMP_L,TEMP_H
 		LDS FLAGS,SREG
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_ADD:
 	RJMP _EMUL_C5_FAULT
 
@@ -137,8 +130,9 @@ _EMUL_C5_H1x:
 	BRNE _EMUL_C5_H0x__NOT_CPSE
 		MCALL _EMUL_C5_GET_RD
 		CP TEMP_L,TEMP_H
-		BREQ _EMUL_C5_SKIP
-		RET
+		BRNE PC+0x03
+		MCALL _EMUL_C5_SKIP
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_CPSE:
 	;000101rd-CP
 	CPI ACCUM,0x17
@@ -147,7 +141,7 @@ _EMUL_C5_H0x__NOT_CPSE:
 		STS SREG,FLAGS
 		CP TEMP_L,TEMP_H
 		LDS FLAGS,SREG
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_CP:
 	;000110rd-SUB
 	CPI ACCUM,0x1B
@@ -157,7 +151,7 @@ _EMUL_C5_H0x__NOT_CP:
 		SUB TEMP_L,TEMP_H
 		LDS FLAGS,SREG
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_SUB:
 	;000111rd-ADC
 	CPI ACCUM,0x1f
@@ -167,7 +161,7 @@ _EMUL_C5_H0x__NOT_SUB:
 		ADC TEMP_L,TEMP_H
 		LDS FLAGS,SREG
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_ADC:
 	RJMP _EMUL_C5_FAULT
 
@@ -181,7 +175,7 @@ _EMUL_C5_H2x:
 		AND TEMP_L,TEMP_H
 		LDS FLAGS,SREG
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_AND:
 	;001001rd-EOR
 	CPI ACCUM,0x27
@@ -191,7 +185,7 @@ _EMUL_C5_H0x__NOT_AND:
 		EOR TEMP_L,TEMP_H
 		LDS FLAGS,SREG
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_EOR:
 	;001010rd-EOR
 	CPI ACCUM,0x2b
@@ -201,7 +195,7 @@ _EMUL_C5_H0x__NOT_EOR:
 		OR TEMP_L,TEMP_H
 		LDS FLAGS,SREG
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_OR:
 	;001011rd-MOV
 	CPI ACCUM,0x2f
@@ -209,7 +203,7 @@ _EMUL_C5_H0x__NOT_OR:
 		MCALL _EMUL_C5_GET_RD
 		MOV TEMP_L,TEMP_H
 		MCALL _EMUL_C5_SET_REG8
-		RET
+		RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_H0x__NOT_MOV:
 	RJMP _EMUL_C5_FAULT
 
@@ -220,7 +214,7 @@ _EMUL_C5_H3x:
 	STS SREG,FLAGS
 	CP TEMP_L,TEMP_H
 	LDS FLAGS,SREG
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 
 ;--------------------------------------------------------
 _EMUL_C5_H4x:
@@ -230,7 +224,7 @@ _EMUL_C5_H4x:
 	SBC TEMP_L,TEMP_H
 	LDS FLAGS,SREG
 	MCALL _EMUL_C5_SET_REG8
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 
 ;--------------------------------------------------------
 _EMUL_C5_H5x:
@@ -240,7 +234,7 @@ _EMUL_C5_H5x:
 	SUB TEMP_L,TEMP_H
 	LDS FLAGS,SREG
 	MCALL _EMUL_C5_SET_REG8
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 
 ;--------------------------------------------------------
 _EMUL_C5_H6x:
@@ -250,7 +244,7 @@ _EMUL_C5_H6x:
 	OR TEMP_L,TEMP_H
 	LDS FLAGS,SREG
 	MCALL _EMUL_C5_SET_REG8
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 
 ;--------------------------------------------------------
 _EMUL_C5_H7x:
@@ -260,7 +254,7 @@ _EMUL_C5_H7x:
 	AND TEMP_L,TEMP_H
 	LDS FLAGS,SREG
 	MCALL _EMUL_C5_SET_REG8
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 
 ;--------------------------------------------------------
 _EMUL_C5_H8x:
@@ -281,32 +275,33 @@ _EMUL_C5_Hax:
 	MOV TEMP_EH,TEMP
 	ANDI TEMP_EH,0x07
 	OR TEMP_EL,TEMP_EH
-	PUSH_Z
-	ADIW ZL,0x0c
+	MOVW XL,ZL
+	ADIW XL,0x0c
 	SBRS TEMP,0x03
-	ADIW ZL,0x02
+	ADIW XL,0x02
 	SWAP TEMP
 	ANDI TEMP,0x0f
 
-	LDD ACCUM,Z+0x01
-	LDD ZL,Z+0x00
-	MOV ZH,ACCUM
-	ADD ZL,TEMP_EL
+	LDD ACCUM,X+
+	LDD XH,X
+	MOV XL,ACCUM
+	ADD XL,TEMP_EL
 	CLR TEMP_EL
-	ADC ZH,TEMP_EL
+	ADC XH,TEMP_EL
 
 	SBRC ACCUM,0x01
 	RJMP _EMUL_C5_H8x__ST
-	LD TEMP_L,Z
+	LD TEMP_L,X
 	MCALL _EMUL_C5_SET_REG8
 	RJMP _EMUL_C5_H8x__DONE
 _EMUL_C5_H8x__ST:
 	MCALL _EMUL_C5_GET_REG8
-	ST Z,TEMP_L
+	ST X,TEMP_L
 _EMUL_C5_H8x__DONE:
-	POP_Z
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 
+
+;TODO использовать X вместо PUSH_Z/POP_Z
 ;--------------------------------------------------------
 _EMUL_C5_H9x:
 	MOV TEMP,ACCUM
@@ -357,54 +352,114 @@ _EMUL_C5_H9x:
 	MOV TEMP_L,TEMP
 	ANDI TEMP_L,0x0f
 
-	PUSH_Z
-	ADIW ZL,0x0e
+	PUSH_Y
+	MOVW YL,ZL
+	ADIW YL,0x0e
 	SBRS TEMP,0x03
 	RJMP _EMUL_C5_H9x_Z
-	SBIW ZL,0x02
+	SBIW YL,0x02
 	SBRC TEMP,0x02
-	SBIW ZL,0x02
+	SBIW YL,0x02
 _EMUL_C5_H9x_Z:
 
 	SWAP TEMP
 	ANDI TEMP,0x0f
 
-	PUSH_Z
-	LDD ACCUM,Z+0x01
-	LDD ZL,Z+0x00
-	MOV ZH,ACCUM
+	PUSH_Y
+	LDD ACCUM,Y+0x01
+	LDD YL,Y+0x00
+	MOV YH,ACCUM
+	ADD YL,ZL
+	ADC YH,ZH
+	ADIW YL,_EMUL_C5_PROG_RAM
 
 	SBRC ACCUM,0x01
 	RJMP _EMUL_C5_H9x__ST
 	SBRC TEMP_L,0x03
-	SBIW ZL,0x01
-	LD TEMP_L,Z
+	SBIW YL,0x01
+	LD TEMP_L,Y
 	SBRC TEMP_L,0x02
-	ADIW ZL,0x01
+	ADIW YL,0x01
 	MCALL _EMUL_C5_SET_REG8
 	RJMP _EMUL_C5_H8x__DONE
 _EMUL_C5_H9x__ST:
 	RCALL _EMUL_C5_DET_REG8
-	ST Z,TEMP_L
+	ST Y,TEMP_L
 _EMUL_C5_H9x__DONE:
-	MOV TEMP_H,ZH
-	MOV TEMP_L,ZL
-	POP_Z
-	ST Z+0x01,TEMP_H
-	ST Z+0x00,TEMP_L
-	POP_Z
-	RET
+	SUB YL,ZL
+	SBC YH,ZH
+	SBIW YL,_EMUL_C5_PROG_RAM
+	MOV TEMP_H,YH
+	MOV TEMP_L,YL
+	POP_Y
+	ST Y+0x01,TEMP_H
+	ST Y+0x00,TEMP_L
+	POP_Y
+	RJMP EMUL_C5__MAIN_LOOP
 
 _EMUL_C5_H9x__POPPUSH:
+	SWAP TEMP
+	ANDI TEMP,0x0f
 
+	MOVW XL,ZL
+	ADD XL,TEMP
+	CLR TEMP
+	ADC XH,TEMP
+
+	SBRS ACCUM,0x01
+	RJMP _EMUL_C5_H9x__POP
+_EMUL_C5_H9x__PUSH:
+	LD TEMP_L,X
+	PUSH TEMP_L
+	RJMP EMUL_C5__MAIN_LOOP
+_EMUL_C5_H9x__POP:
+	POP TEMP_L
+	ST X,TEMP_L
+_EMUL_C5_H9x__POPPUSH_DONE:
+	RJMP EMUL_C5__MAIN_LOOP
 
 _EMUL_C5_H9x__STSLDS:
-
+	SWAP TEMP
+	ANDI TEMP,0x0f
+	SBRS ACCUM,0x01
+	RJMP _EMUL_C5_H9x__LDS
+_EMUL_C5_H9x__STS:
+	PUSH_Z
+	ADD ZL,TEMP
+	CLR TEMP
+	ADC ZH,TEMP
+	LD TEMP_L,Z
+	POP_Z
+	PUSH_Y
+	LD ACCUM,Y+
+	LD YH,Y+
+	MOV YL,ACCUM
+	ADD YL,ZL
+	ADC YH,ZH
+	ADIW YL,_EMUL_C5_PROG_RAM
+	ST Y,TEMP_L
+	RJMP _EMUL_C5_H9x__STSLDS_DONE
+_EMUL_C5_H9x__LDS:
+	PUSH_Y
+	LD ACCUM,Y+
+	LD YH,Y+
+	MOV YL,ACCUM
+	ADD YL,ZL
+	ADC YH,ZH
+	ADIW YL,_EMUL_C5_PROG_RAM
+	LD TEMP_L,Y
+	POP_Y
+	PUSH_Z
+	ADD ZL,TEMP
+	CLR TEMP
+	ADC ZH,TEMP
+	ST Z,TEMP_L
+_EMUL_C5_H9x__STSLDS_DONE:
+	RJMP EMUL_C5__MAIN_LOOP
 
 _EMUL_C5_H9x__NOT_00:
 	CPI TEMP,0x04
 	BRNE _EMUL_C5_H9x__NOT_04
-
 
 
 _EMUL_C5_H9x__NOT_04:
@@ -415,16 +470,17 @@ _EMUL_C5_H9x__NOT_04:
 _EMUL_C5_H9x__NOT_08:
 	RJMP _EMUL_C5_FAULT
 
+;--------------------------------------------------------
 _EMUL_C5_Hbx:
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_Hcx:
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_Hdx:
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_Hex:
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 _EMUL_C5_Hfx:
-	RET
+	RJMP EMUL_C5__MAIN_LOOP
 
 ;--------------------------------------------------------
 _EMUL_C5_GET_REG16:
@@ -485,6 +541,43 @@ _EMUL_C5_SET_REG8:
 	CLR TEMP
 	ADC ZH,TEMP
 	ST Z,TEMP_L
+	POP TEMP
+	POP_Z
+	RET
+
+
+
+;--------------------------------------------------------
+_EMUL_C5_POP8:
+;--------------------------------------------------------
+;Считываем байт из стека
+;IN:Z-адрес переменных,TRY_CNTR-смещение стека
+;OUT:TEMP_L-значение
+;--------------------------------------------------------
+	PUSH_Z
+	PUSH TEMP
+	ADD ZL,TRY_CNTR
+	CLR TEMP
+	ADC ZH,TEMP
+	LD TEMP_L,Z
+	INC TRY_CNTR
+	POP TEMP
+	POP_Z
+	RET
+;--------------------------------------------------------
+_EMUL_C5_PUSH8:
+;--------------------------------------------------------
+;Записываем байт в стек
+;IN:Z-адрес переменных,TRY_CNTR-смещение стека
+;TEMP_L-значение
+;--------------------------------------------------------
+	PUSH_Z
+	PUSH TEMP
+	ADD ZL,TRY_CNTR
+	CLR TEMP
+	ADC ZH,TEMP
+	ST Z,TEMP_L
+	DEC TRY_CNTR
 	POP TEMP
 	POP_Z
 	RET
