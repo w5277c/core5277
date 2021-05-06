@@ -27,6 +27,7 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
 	.MESSAGE "######## DEVICE ATtiny45"
+.ifdef CORE_FREQ
 	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x03			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
@@ -37,9 +38,12 @@
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x00			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.EQU	_C5_STACK_SIZE							= 0x28			;Стек ядра - 40B
+	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
+.endif
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x015f
-	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
+
+.ifdef CORE_FREQ
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
 	.EQU	C5_IR_PCINT0							= 0x02
@@ -58,6 +62,7 @@
 	;Отсутствуют
 	.EQU	C5_IR_PCINT1							= 0x00
 	.EQU	C5_IR_PCINT2							= 0x00
+.endif
 
 	;SBI/CBI/SBIS/SBIC port defines
 	.EQU	PORTA										= 0xff
@@ -250,6 +255,7 @@
 	.SET	INT0_PORT								= PB2
 
 .ORG 0x0000
+.ifdef CORE_FREQ
 	RJMP	MAIN															; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
 	RCALL	_C5_IR														; Pin Change Interrupt Request 0
@@ -278,15 +284,6 @@ INT_TABLE:
 	.db	(1<<INT0)
 
 APPLICATION_BLOCK:
-
-.MACRO MCALL
-	RCALL @0
-	NOP
-.ENDMACRO
-.MACRO MJMP
-	RJMP @0
-	NOP
-.ENDMACRO
 
 .MACRO _C5_TIMERA_INIT
 	LDS TEMP,PRR
@@ -380,7 +377,6 @@ APPLICATION_BLOCK:
 	STS SREG,TEMP
 .ENDMACRO
 
-
 .MACRO _C5_POWER_ON
 	PUSH TEMP
 	LDS TEMP,PRR
@@ -399,4 +395,14 @@ APPLICATION_BLOCK:
 
 .MACRO _C5_TIMER_TCNT
 	LDS @0,TCNT0
+.ENDMACRO
+.endif
+
+.MACRO MCALL
+	RCALL @0
+	NOP
+.ENDMACRO
+.MACRO MJMP
+	RJMP @0
+	NOP
 .ENDMACRO
