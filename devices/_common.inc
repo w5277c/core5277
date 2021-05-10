@@ -13,6 +13,7 @@
 	.EQU	ATMEGA8									= 0x01
 	.EQU	ATMEGA16									= 0x02
 	.EQU	ATMEGA48									= 0x03
+	.EQU	ATTINY13A								= 0x04
 
 ;---LOGGING----------------------------------------------;Параметры логирования
 	.EQU	LOGGING_LVL_DIS						= 0x00
