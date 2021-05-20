@@ -26,6 +26,7 @@
 	.include	"./core/log/log_bytes.inc"
 	.include	"./core/log/log_romstr.inc"
 	.include	"./core/log/log_cr.inc"
+	.include	"./core/wait_2ms.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------

@@ -13,6 +13,7 @@
 	.EQU	ATMEGA8									= 0x01
 	.EQU	ATMEGA16									= 0x02
 	.EQU	ATMEGA48									= 0x03
+	.EQU	ATTINY13A								= 0x04
 
 ;---LOGGING----------------------------------------------;Параметры логирования
 	.EQU	LOGGING_LVL_DIS						= 0x00
@@ -32,10 +33,8 @@
 	.SET	REALTIME									= 0x00
 	.SET	TIMERS									= 0x00
 	.SET	AVRA										= 0x00
+
 .ifdef CORE_FREQ
-.else
-	.SET	CORE_FREQ								= 0x08
-.endif
 	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	TIMERS_SPEED_50NS						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
 	.EQU	TIMERS_SPEED_25NS						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
@@ -46,6 +45,7 @@
 	.EQU	C5_PROCID_OPT_TIMER					= 0x05			;Таймер, повторяет выполнение с указанным периодом
 	.EQU	C5_PROCID_OPT_RESERV2				= 0x06			;Зарезервировано
 	.EQU	C5_PROCID_OPT_DRV						= 0x07			;Драйвер
+.endif
 
 	.EQU	PA0										= (0x00<<4)|0x00
 	.EQU	PA1										= (0x00<<4)|0x01
@@ -198,6 +198,7 @@
 	POP ZH
 .ENDMACRO
 
+.ifdef CORE_FREQ
 .MACRO C5_WAIT_500NS
 	PUSH TEMP
 	LDI TEMP,low((@0-36)/(16/CORE_FREQ))
@@ -206,6 +207,7 @@
 	.endif
 	POP TEMP
 .ENDMACRO
+.endif
 
 .MACRO LDI_X
 	LDI XH,high(@0)
