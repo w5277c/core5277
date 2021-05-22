@@ -50,16 +50,15 @@
 	.EQU	C5_IR_RESERVED_CORE_TIMER2			= 0x07
 	.EQU	C5_IR_TIMER1_OVF						= 0x08
 	.EQU	C5_IR_TIMER0_OVF						= 0x09
-	.EQU	C5_IR_RESERVED_CORE_TIMER			= 0x0a
-	.EQU	C5_IR_SPI								= 0x0b
-	.EQU	C5_IR_UART_RX							= 0x0c
-	.EQU	C5_IR_UART_UDRE						= 0x0d
-	.EQU	C5_IR_UART_TX							= 0x0e
-	.EQU	C5_IR_ADC								= 0x0f
-	.EQU	C5_IR_EE_READY							= 0x10
-	.EQU	C5_IR_ANALOG_COMP						= 0x11
-	.EQU	C5_IR_TWI								= 0x12
-	.EQU	C5_IR_SPM_READY						= 0x13
+	.EQU	C5_IR_SPI								= 0x0a
+	.EQU	C5_IR_UART_RX							= 0x0b
+	.EQU	C5_IR_UART_UDRE						= 0x0c
+	.EQU	C5_IR_UART_TX							= 0x0d
+	.EQU	C5_IR_ADC								= 0x0e
+	.EQU	C5_IR_EE_READY							= 0x0f
+	.EQU	C5_IR_ANALOG_COMP						= 0x10
+	.EQU	C5_IR_TWI								= 0x11
+	.EQU	C5_IR_SPM_READY						= 0x12
 
 	;SBI/CBI/SBIS/SBIC port defines
 	.EQU	PORTA										= 0xff
@@ -104,6 +103,8 @@
 	.EQU	SREG										= 0x5f
 	.EQU	SPH										= 0x5e
 	.EQU	SPL										= 0x5d
+	.EQU	MCUCSR									= 0x54
+	.EQU	MCUSR										= MCUCSR;
 	;--FAKE-PRR---
 	.EQU	PRR										= 0xff
 	.EQU		PRTWI									= 0x00
@@ -114,11 +115,21 @@
 	.EQU		PRUSART0								= 0x00
 	.EQU		PRADC									= 0x00
 	;---TWI---
-	.EQU	TWCR										= 0xbc
-	.EQU	TWDR										= 0xbb
-	.EQU	TWAR										= 0xba
-	.EQU	TWSR										= 0xb9
-	.EQU	TWBR										= 0xb8
+	.EQU	TWCR										= 0x56
+	.EQU	TWDR										= 0x23
+	.EQU	TWAR										= 0x22
+	.EQU	TWSR										= 0x21
+	.EQU	TWBR										= 0x20
+	;---
+	.EQU	TWINT										= 0x07
+	.EQU	TWEA										= 0x06
+	.EQU	TWSTA										= 0x05
+	.EQU	TWSTO										= 0x04
+	.EQU	TWWC										= 0x03
+	.EQU	TWEN										= 0x02
+	.EQU	TWIE										= 0x00
+	.EQU	TWPS0										= 0x00
+	.EQU	TWPS1										= 0x01
 	;---TIMERS---
 	.EQU	TIMSK										= 0x59
 	.EQU	TCCR1A									= 0x4f
@@ -143,6 +154,54 @@
 	.EQU	OCF1B										= 0x03
 	.EQU	OCIE1B									= 0x03
 	;TODO дополнить
+	;---UART---
+	.EQU	UDR0										= 0x2c
+	.EQU	UCSR0A									= 0x2b
+	.EQU	UCSR0B									= 0x2a
+	.EQU	UCSR0C									= 0x40
+	.EQU	UBRR0H									= 0x40
+	.EQU	UBRR0L									= 0x29
+	.EQU	UCSZ00									= 0x01
+	.EQU	UCSZ01									= 0x02
+	.EQU	UCSZ02									= 0x02
+	.EQU	URSEL0									= 0x07
+	.EQU	UMSEL0									= 0x06
+	.EQU	UPM00										= 0x04
+	.EQU	UPM01										= 0x05
+	.EQU	USBS0										= 0x03
+	.EQU	RXC0										= 0x07
+	.EQU	TXC0										= 0x06
+	.EQU	RXCIE0									= 0x07
+	.EQU	TXCIE0									= 0x06
+	.EQU	RXEN0										= 0x04
+	.EQU	TXEN0										= 0x03
+	;---PCINT---
+	.EQU	PCMSK0									= 0x00
+	.EQU	PCMSK1									= 0x00
+	.EQU	PCMSK2									= 0x00
+	;---INT---
+	.EQU	MCUCR										= 0x55
+	.EQU		SM2									= 0x07
+	.EQU		SE										= 0x06
+	.EQU		SM1									= 0x05
+	.EQU		SM0									= 0x04
+	.EQU		ISC11									= 0x03
+	.EQU		ISC10									= 0x02
+	.EQU		ISC01									= 0x01
+	.EQU		ISC00									= 0x00
+	.EQU	GICR										= 0x5b
+	.EQU		INT0									= 0x06
+	.EQU		INT1									= 0x07
+	.EQU		INT2									= 0x05
+	.EQU		IVSEL									= 0x01
+	.EQU		IVCE									= 0x00
+	.EQU	GIFR										= 0x5a
+	.EQU		INTF0									= 0x06
+	.EQU		INTF1									= 0x07
+	.EQU		INTF2									= 0x05
+	.EQU	EICRA										= MCUCR
+	.EQU	EIMSK										= GICR
+	.EQU	EIFR										= GIFR
 	;---EEPROM---
 	.EQU	EEARH										= 0x3F
 	.EQU	EEARL										= 0x3E
@@ -183,27 +242,18 @@
 	.EQU	ADC6										= 0x06
 	.EQU	ADC7										= 0x07
 	.EQU	ADCT										= 0x08
-	;---INT---
-	.EQU	MCUCR										= 0x55
-	.EQU		SE										= 0x07
-	.EQU		SM2									= 0x06
-	.EQU		SM1									= 0x05
-	.EQU		SM0									= 0x04
-	.EQU		ISC11									= 0x03
-	.EQU		ISC10									= 0x02
-	.EQU		ISC01									= 0x01
-	.EQU		ISC00									= 0x00
-	.EQU	GICR										= 0x5b
-	.EQU		INT0									= 0x06
-	.EQU		INT1									= 0x07
-	.EQU		IVSEL									= 0x01
-	.EQU		IVCE									= 0x00
-	.EQU	GIFR										= 0x5a
-	.EQU		INTF0									= 0x06
-	.EQU		INTF1									= 0x07
-	.EQU	EICRA										= MCUCR
-	.EQU	EIMSK										= GICR
-	.EQU	EIFR										= GIFR
+	;--SPM---
+	.EQU	SPMCSR									= 0x57
+	.EQU	SPMCR										= SPMCSR
+	.EQU		SPMIE									= 0x07
+	.EQU		RWWSB									= 0x06
+	.EQU		SIGRD									= 0x05
+	.EQU		RWWSRE								= 0x04
+	.EQU		BLBSET								= 0x03
+	.EQU		PGWRT									= 0x02
+	.EQU		PGERS									= 0x01
+	.EQU		SPMEN									= 0x00
+
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
 	.EQU	ADC_VREF_AVCC							= (0<<REFS1)|(1<<REFS0)
@@ -213,26 +263,19 @@
 	.SET	INT1_PORT								= PD3
 
 .ORG 0x0000
-	RJMP	MAIN															; Reset Handler
-	RCALL	_C5_IR														; External Interrupt0 Handler
-	RCALL	_C5_IR														; External Interrupt1 Handler
-	RCALL	_C5_IR														; Pin Change Interrupt Request 0
-	RCALL	_C5_IR														; Pin Change Interrupt Request 1
-	RCALL	_C5_IR														; Pin Change Interrupt Request 2
-	RCALL	_C5_IR														; Watchdog Time-out Interrupt
+	RJMP	MAIN															; Reset
+	RCALL	_C5_IR														; External Interrupt0
+	RCALL	_C5_IR														; External Interrupt1
 .IF TIMER_C_ENABLE == 0x01
-	RCALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match A
+	RCALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare
 .ELSE
-	RCALL	_C5_IR														; Timer/Counter2 Compare Match A
+	RCALL	_C5_IR														; Timer/Counter2 Compare
 .ENDIF
-	RCALL	_C5_IR														; Timer/Counter2 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter2 Overflow
 	RCALL	_C5_IR														; Timer/Counter1 Capture Event
-	RCALL	_C5_IR														; Timer/Counter1 Compare Match A
-	RCALL	_C5_IR														; Timer/Counter1 Compare Match B
+	RJMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A
+	RJMP	_C5_TIMER_B_IR												; Timer/Counter1 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter1 Overflow
-	RJMP	_C5_TIMER_A_IR												; Timer/Counter0 Compare Match A
-	RJMP	_C5_TIMER_B_IR												; Timer/Counter0 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter0 Overflow
 	RCALL	_C5_IR														; SPI Serial Transfer Complete
 	RCALL	_C5_IR														; USART Rx Complete

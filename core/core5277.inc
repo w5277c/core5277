@@ -502,11 +502,9 @@ C5_INIT:
 	MCALL C5_LOG_TASKSDUMP
 .endif
 
-.ifdef MCUSR
 	;Сбрасываем флаги причины сброса
 	CLR TEMP
 	STS MCUSR,TEMP
-.endif
 
 .IF TIMER_C_ENABLE == 0x01
 	_C5_TIMERC_INIT

@@ -12,14 +12,16 @@
 	;Важные, но не обязательные параметры ядра
 	.SET	AVRA												= 0	;0-1
 	.SET	REALTIME											= 0	;0-1
+	.SET	TIMERS_SPEED									= TIMERS_SPEED_50NS
 	.SET	C5_DRIVERS_QNT									= 2
 	.SET	C5_TASKS_QNT									= 1
-	.SET	TIMERS											= 1	;0-4
-
+	.SET	TIMERS											= 2	;0-4
+	.SET	LOGGING_PORT									= MISO
 	;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов (дополнительные включения должны быть перед основным)
 	.include	"./core/drivers/buttons.inc"
+	.include	"./core/drivers/beeper.inc"
 	;---
 	;Блок задач
 	;---
@@ -42,16 +44,17 @@
 	.EQU	BATTERY_PORT									= PC5		;Порт для анализа уровня заряда батареи
 	.EQU	BUTTON_PORT										= PB1		;Порт для кнопки
 	.EQU	INT_PORT											= PB0		;Порт ввода
-	.EQU	BEEPER_PORT1									= PD5		;Порт бипера
-	.EQU	BEEPER_PORT2									= PD6		;Порт бипера
-	.EQU	BEEPER_PORT3									= PD7		;Порт бипера
+	.EQU	BEEPER_PORT										= PD5		;Порт бипера (PD5/PD6/PD7)
 
 	;Идентификаторы драйверов(0-7|0-15)
 	.EQU	PID_BUTTONS_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_BEEPER_DRV									= 1|(1<<C5_PROCID_OPT_DRV)
+
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK											= 0
 	;Идентификаторы таймеров
 	.EQU	TID_BUTTONS										= 0
+	.EQU	TID_BEEPER										= 1
 	;---
 
 	;Дополнительно (по мере использования)
@@ -61,6 +64,8 @@
 	.include "./core/wait_2ms.inc"
 	;---
 
+BEEPER_SND1:
+	.db N64,H3,H4,H5,E,0x00
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
 	CLI
@@ -79,9 +84,9 @@ MAIN:
 	OUT DDRC,TEMP
 	LDI TEMP,(0<<(SEGA_PORT&0x0f))|(0<<(SEGB_PORT&0x0f))|(0<<(SEGD_PORT&0x0f))|(0<<(SEGE_PORT&0x0f))|(0<<(SEGF_PORT&0x0f))|(0<<(BATTERY_PORT&0x0f))
 	OUT PORTC,TEMP
-	LDI TEMP,(1<<(DIG1_PORT&0x0f))|(1<<(DIG2_PORT&0x0f))|(1<<(DIG3_PORT&0x0f))|(1<<(SEGC_PORT&0x0f))|(1<<(SEGG_PORT&0x0f))|(1<<(BEEPER_PORT1&0x0f))|(1<<(BEEPER_PORT2&0x0f))|(1<<(BEEPER_PORT3&0x0f))
+	LDI TEMP,(1<<(DIG1_PORT&0x0f))|(1<<(DIG2_PORT&0x0f))|(1<<(DIG3_PORT&0x0f))|(1<<(SEGC_PORT&0x0f))|(1<<(SEGG_PORT&0x0f))
 	OUT DDRD,TEMP
-	LDI TEMP,(0<<(DIG1_PORT&0x0f))|(0<<(DIG2_PORT&0x0f))|(0<<(DIG3_PORT&0x0f))|(0<<(SEGC_PORT&0x0f))|(0<<(SEGG_PORT&0x0f))|(0<<(BEEPER_PORT1&0x0f))|(0<<(BEEPER_PORT2&0x0f))|(0<<(BEEPER_PORT3&0x0f))
+	LDI TEMP,(0<<(DIG1_PORT&0x0f))|(0<<(DIG2_PORT&0x0f))|(0<<(DIG3_PORT&0x0f))|(0<<(SEGC_PORT&0x0f))|(0<<(SEGG_PORT&0x0f))
 	OUT PORTD,TEMP
 
 	;Инициализация ядра
@@ -94,6 +99,14 @@ MAIN:
 	LDI ACCUM,TID_BUTTONS
 	MCALL C5_CREATE
 
+	;Инициализация BEEPER
+	LDI PID,PID_BEEPER_DRV
+	LDI ZH,high(DRV_BEEPER_INIT)
+	LDI ZL,low(DRV_BEEPER_INIT)
+	LDI ACCUM,BEEPER_PORT
+	LDI FLAGS,TID_BEEPER
+	MCALL C5_CREATE
+
 	;Инициализация задачи тестирования
 	LDI PID,PID_TASK
 	LDI ZH,high(TASK__INIT)
@@ -104,10 +117,10 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
-	LDI TEMP,PID_BUTTONS_DRV
-	LDI ACCUM,BUTTON_PORT
-	LDI FLAGS,DRV_BUTTONS_OP_ADD
-	MCALL C5_EXEC
+;	LDI TEMP,PID_BUTTONS_DRV
+;	LDI ACCUM,BUTTON_PORT
+;	LDI FLAGS,DRV_BUTTONS_OP_ADD
+;	MCALL C5_EXEC
 
 	LDI TEMP,0x01
 	LDI ACCUM,DIG1_PORT
@@ -124,6 +137,10 @@ TASK__INIT:
 ;--------------------------------------------------------
 TASK:
 
+	LDI_Y BEEPER_SND1|0x8000
+	LDI TEMP,PID_BEEPER_DRV
+	MCALL C5_EXEC
+
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	LDI TEMP,0x32
@@ -135,7 +152,7 @@ TASK:
 	MCALL C5_WAIT_2MS
 	LDI ACCUM,SEGB_PORT
 	MCALL PORT_INVERT
-	
+
 	MCALL C5_WAIT_2MS
 	LDI ACCUM,SEGC_PORT
 	MCALL PORT_INVERT

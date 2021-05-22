@@ -262,9 +262,9 @@
 	.EQU		SPMEN									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
-	.EQU	ADC_VREF_AREF						= (0<<REFS1)|(0<<REFS0)
-	.EQU	ADC_VREF_AVCC						= (0<<REFS1)|(1<<REFS0)
-	.EQU	ADC_VREF_2_56_CAP					= (1<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
+	.EQU	ADC_VREF_AVCC							= (0<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_2_56_CAP						= (1<<REFS1)|(1<<REFS0)
 
 	.SET	INT0_PORT								= PD2
 	.SET	INT1_PORT								= PD3
