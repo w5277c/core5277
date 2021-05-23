@@ -3,8 +3,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;22.05.2021	w5277c@gmail.com			Начало
 ;23.05.2021	w5277c@gmail.com			Готов общий код, не тестировано
+;23.05.2021	w5277c@gmail.com			Исправлены основные ошибки
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер 7 сегментного цифрового индикатора типа kem-3461ar
+;-----------------------------------------------------------------------------------------------------------------------
+;TODO: Выключать сегменты перед включением следующей цифры.
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF__C5_DRV_7SEGLD
@@ -46,7 +49,7 @@ DRV_7SEGLD_INIT:
 ;Инициализация
 ;IN: ACCUM-ид таймера, LOOP_CNTR-кол-во цифр,
 ;FLAGS-режим работы DRV_7SEGLD_MODE_...
-;TEMP_EH/EL/H/L,XH/L,YH/L-порты сегментов(pABCDEFG)
+;TEMP_EH/EL/H/L,XH/L,YH/L-порты сегментов(ABCDEFGp)
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_X
@@ -57,6 +60,14 @@ DRV_7SEGLD_INIT:
 	PUSH ACCUM
 
 	PUSH ACCUM
+	;_DRV_7SEGLD_SIZE*0x03+_DRV_7SEGLD_DIG_DATA
+	MOV ACCUM,LOOP_CNTR
+	MOV TEMP,LOOP_CNTR
+	LSL TEMP
+	ADD ACCUM,TEMP
+	SUBI ACCUM,(0x0100-_DRV_7SEGLD_DIG_DATA)
+	MCALL C5_RAM_REALLOC
+
 	MOV ACCUM,TEMP_EH
 	LDI TEMP,0x00
 	MCALL _DRV_7SEGLD_SEGPORT_INIT
@@ -82,29 +93,24 @@ DRV_7SEGLD_INIT:
 	LDI TEMP,0x07
 	MCALL _DRV_7SEGLD_SEGPORT_INIT
 
-	;_DRV_7SEGLD_SIZE*0x03+_DRV_7SEGLD_DIG_DATA
-	MOV ACCUM,LOOP_CNTR
-	MOV TEMP,LOOP_CNTR
-	LSL TEMP
-	ADD ACCUM,TEMP
-	SUBI ACCUM,(0x0100-_DRV_7SEGLD_DIG_DATA)
-	MCALL C5_RAM_REALLOC
+	STD Z+_DRV_7SEGLD_SIZE,LOOP_CNTR
+	LDI TEMP,0x00
+	STD Z+_DRV_7SEGLD_POS,TEMP
+	STD Z+_DRV_7SEGLD_FLAGS,FLAGS
 
+	PUSH LOOP_CNTR
 	MOV LOOP_CNTR,ACCUM
 	MOV XH,ZH
 	MOV XL,ZL
 	ADIW XL,0x12
 	LDI TEMP,0xff
 	MCALL RAM_FILL8
+	POP LOOP_CNTR
 
-	STD Z+_DRV_7SEGLD_SIZE,LOOP_CNTR
-	LDI TEMP,0x00
-	STD Z+_DRV_7SEGLD_POS,TEMP
-
-	;Инициализирую таймер с периодом в 100Hz для всех цифр
-	;200/_DRV_7SEGLD_SIZE
+	;Инициализирую таймер с периодом в 120Hz для всех цифр
+	;120/_7SEGLD_SIZE
 	LDI TEMP_H,0x00
-	LDI TEMP_L,0xc8
+	LDI TEMP_L,0x78
 	MOV TEMP,LOOP_CNTR
 	MCALL DIV16X8
 	MOV ACCUM,TEMP_L
@@ -163,10 +169,10 @@ _DRV_7SEGLD_OP_SET_PORT:
 
 	LDD FLAGS,Z+_DRV_7SEGLD_FLAGS
 
-	MCALL _DRV_7SEGLD_GET_OFFSET
+	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
 
 	CPI ACCUM,0xff
-	BRNE PC+0x08
+	BRNE PC+0x07
 	LDI TEMP_H,0xff
 	MCALL PORT_MODE_IN
 	MCALL PORT_SET_LO
@@ -203,13 +209,15 @@ _DRV_7SEGLD_OP_SET_VAL:
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH FLAGS
+	PUSH ACCUM
 
 	LDD FLAGS,Z+_DRV_7SEGLD_FLAGS
-	MCALL _DRV_7SEGLD_GET_OFFSET
+	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
 	SBRS FLAGS,0x01
 	COM ACCUM
 	ST Y,ACCUM
 
+	POP ACCUM
 	POP FLAGS
 	POP_Y
 	RET
@@ -230,16 +238,17 @@ DRV_7SEGLD_TIMER_EVENT:
 	PUSH_Z
 
 	MCALL C5_RAM_OFFSET
+
 	LDD FLAGS,Z+_DRV_7SEGLD_FLAGS
 	LDD TEMP_H,Z+_DRV_7SEGLD_SIZE
 	LDD TEMP_L,Z+_DRV_7SEGLD_POS
 
-	MCALL _DRV_7SEGLD_GET_OFFSET
-
 	;Выключаем текущую цифру
+	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
 	LDI XH,0x00
 	LDD XL,Y+0x01														;PORT addr
 	LDD ACCUM,Y+0x02													;PIN num
+	COM ACCUM
 	CPI XL,0xff
 	BREQ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG
 	LD TEMP,X
@@ -258,36 +267,40 @@ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG:
 	STD Z+_DRV_7SEGLD_POS,TEMP_L
 
 	;Включаем цифру
-	LDD XL,Y+0x03+0x01												;PORT addr
-	LDD ACCUM,Y+0x03+0x02											;PIN num
+	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
+	LDD XL,Y+0x01														;PORT addr
+	LDD ACCUM,Y+0x02													;PIN num
 	CPI XL,0xff
 	BREQ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG
 	LD TEMP,X
-	SBRC FLAGS,0x01
-	AND TEMP,ACCUM
 	SBRS FLAGS,0x01
+	AND TEMP,ACCUM
+	SBRC FLAGS,0x01
 	OR TEMP,ACCUM
 	ST X,TEMP
 DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG:
 
-	LDD ACCUM,Y+0x03+0x00											;Value
+	LDD ACCUM,Y+0x00													;Value
 	;Устанавливаем новое значение
 	ADIW ZL,_DRV_7SEGLD_SEG_PORTS
 	LDI XH,0x00
 	LDI LOOP_CNTR,0x08
 _DRV_7SEGLD_TIMER_EVENT__LOOP:
 	LD XL,Z+
-	LD TEMP,Z+
+	LD TEMP_H,Z+
 	LD FLAGS,X
-	SBRS ACCUM,0x00
-	AND FLAGS,TEMP
-	SBRC ACCUM,0x00
-	OR FLAGS,TEMP
+	MOV TEMP_L,TEMP_H
+	COM TEMP_L
+	SBRS ACCUM,0x07
+	AND FLAGS,TEMP_L
+	SBRC ACCUM,0x07
+	OR FLAGS,TEMP_H
 	ST X,FLAGS
-	LSR ACCUM
+	LSL ACCUM
 	DEC LOOP_CNTR
 	BRNE _DRV_7SEGLD_TIMER_EVENT__LOOP
 
+_DRV_7SEGLD_TIMER_EVENT__END:
 	POP_Z
 	POP_Y
 	POP_X
@@ -313,26 +326,27 @@ _DRV_7SEGLD_SEGPORT_INIT:
 	PUSH ACCUM
 
 	CPI ACCUM,0xff
-	BRNE _DRV_7SEGLD_SEGPORT_INIT__HAVE_PORT
+	BRNE PC+0x03
 	LDI TEMP_H,0xff
-	RJMP _DRV_7SEGLD_SEGPORT_INIT__STORE
+	RJMP _DRV_7SEGLD_SEGPORT_INIT__SET
 
-_DRV_7SEGLD_SEGPORT_INIT__HAVE_PORT:
 	MCALL PORT_MODE_OUT
 	MOV TEMP_H,FLAGS
 	LSR TEMP_H
 	MCALL PORT_SET
 
+	PUSH TEMP
 	MCALL PORT_OFFSETS
+	POP TEMP
 	SBRS FLAGS,0x00
 	COM ACCUM
 
+_DRV_7SEGLD_SEGPORT_INIT__SET:
+	LSL TEMP
 	SUBI TEMP,(0x100-_DRV_7SEGLD_SEG_PORTS)
 	ADD ZL,TEMP
 	CLR TEMP
 	ADC ZH,TEMP
-
-_DRV_7SEGLD_SEGPORT_INIT__STORE:
 	ST Z+,TEMP_H
 	ST Z,ACCUM
 
@@ -344,7 +358,7 @@ _DRV_7SEGLD_SEGPORT_INIT__STORE:
 	RET
 
 ;--------------------------------------------------------
-_DRV_7SEGLD_GET_OFFSET:
+_DRV_7SEGLD_GET_DIG_OFFSET:
 ;--------------------------------------------------------
 ;Вычисление смещения на данные цифры
 ;IN: TEMP_L-порядковый номер,
