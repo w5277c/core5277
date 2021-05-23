@@ -22,6 +22,7 @@
 	;Блок драйверов (дополнительные включения должны быть перед основным)
 	.include	"./core/drivers/buttons.inc"
 	.include	"./core/drivers/beeper.inc"
+	.include	"./core/drivers/7segld.inc"
 	;---
 	;Блок задач
 	;---

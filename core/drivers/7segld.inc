@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;22.05.2021	w5277c@gmail.com			Начало
+;23.05.2021	w5277c@gmail.com			Готов общий код, не тестировано
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер 7 сегментного цифрового индикатора типа kem-3461ar
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -20,23 +21,32 @@
 .include	"./io/port_mode_in.inc"
 .include	"./io/port_set_hi.inc"
 .include	"./io/port_set_lo.inc"
+.include	"./io/port_set.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---OFFSETS---
 	.EQU	_DRV_7SEGLD_SIZE								= 0x00	;1B - Количество цифр
 	.EQU	_DRV_7SEGLD_POS								= 0x01	;1B - Текущая цифра
-	.EQU	_DRV_7SEGLD_SEG_PORTS						= 0x02	;16B - Порты для 8 сегментов
-	.EQU	_DRV_7SEGLD_DIG_DATA							= 0x12	;SIZE*3B - Size*(1B значение + 2B порт цифры)
+	.EQU	_DRV_7SEGLD_FLAGS								= 0x02	;1B - Режим работы
+	.EQU	_DRV_7SEGLD_SEG_PORTS						= 0x03	;16B - Порты для 8 сегментов
+	.EQU	_DRV_7SEGLD_DIG_DATA							= 0x13	;SIZE*3B - SIZE*(1B значение + 2B порт цифры)
+	;---MODES---
+	.EQU	DRV_7SEGLD_MODE_LDIG_LSEG					= 0x00	;- на пины цифр и - для сегментов
+	.EQU	DRV_7SEGLD_MODE_LDIG_HSEG					= 0x01	;- на пины цифр и + для сегментов
+	.EQU	DRV_7SEGLD_MODE_HDIG_LSEG					= 0x02	;+ на пины цифр и - для сегментов
+	.EQU	DRV_7SEGLD_MODE_HDIG_HSEG					= 0x03	;+ на пины цифр и + для сегментов
+
 	;---OPERATIONS---
-	.EQU	DRV_7SEGLD_OP_SET_PORT						= 0x00	;Устанавливаем порт для цифры
-	.EQU	DRV_7SEGLD_OP_SET								= 0x01	;Устанавливаем значение цифры
+	.EQU	DRV_7SEGLD_OP_SET_PORT						= 0x00	;Устанавливаем порт цифры
+	.EQU	DRV_7SEGLD_OP_SET_VAL						= 0x01	;Устанавливаем значение цифры
 
 ;--------------------------------------------------------
 DRV_7SEGLD_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM-ид таймера, LOOP_CNTR-кол-во цифр
-;TEMP_EH,EL,H,L,XH,XL,YH,YL-порты сегментов(pABCDEFG)
+;IN: ACCUM-ид таймера, LOOP_CNTR-кол-во цифр,
+;FLAGS-режим работы DRV_7SEGLD_MODE_...
+;TEMP_EH/EL/H/L,XH/L,YH/L-порты сегментов(pABCDEFG)
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_X
@@ -72,12 +82,12 @@ DRV_7SEGLD_INIT:
 	LDI TEMP,0x07
 	MCALL _DRV_7SEGLD_SEGPORT_INIT
 
-	;_DRV_7SEGLD_SIZE*0x03+0x12
+	;_DRV_7SEGLD_SIZE*0x03+_DRV_7SEGLD_DIG_DATA
 	MOV ACCUM,LOOP_CNTR
 	MOV TEMP,LOOP_CNTR
 	LSL TEMP
 	ADD ACCUM,TEMP
-	SUBI ACCUM,(0x0100-0x12)
+	SUBI ACCUM,(0x0100-_DRV_7SEGLD_DIG_DATA)
 	MCALL C5_RAM_REALLOC
 
 	MOV LOOP_CNTR,ACCUM
@@ -127,9 +137,9 @@ DRV_7SEGLD_INIT:
 	BRNE PC+0x04
 	MCALL _DRV_7SEGLD_OP_SET_PORT
 	RJMP _DRV_7SEGLD_PROC_END
-	CPI FLAGS,DRV_7SEGLD_OP_SET
+	CPI FLAGS,DRV_7SEGLD_OP_SET_VAL
 	BRNE PC+0x04
-	MCALL _DRV_7SEGLD_OP_SET
+	MCALL _DRV_7SEGLD_OP_SET_VAL
 	RJMP _DRV_7SEGLD_PROC_END
 
 _DRV_7SEGLD_PROC_END:
@@ -138,24 +148,155 @@ _DRV_7SEGLD_PROC_END:
 	RET
 
 
-;TODO
+;--------------------------------------------------------
+_DRV_7SEGLD_OP_SET_PORT:
+;--------------------------------------------------------
+;Установка порта цифры
+;IN: ACCUM-порт,TEMP_L-номер(0-...)
+;--------------------------------------------------------
+	PUSH_Y
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH TEMP
+	PUSH ACCUM
+	PUSH FLAGS
+
+	LDD FLAGS,Z+_DRV_7SEGLD_FLAGS
+
+	MCALL _DRV_7SEGLD_GET_OFFSET
+
+	CPI ACCUM,0xff
+	BRNE PC+0x08
+	LDI TEMP_H,0xff
+	MCALL PORT_MODE_IN
+	MCALL PORT_SET_LO
+	RJMP _DRV_7SEGLD_OP_SET_PORT__SET
+
+	MCALL PORT_MODE_OUT
+	MOV TEMP_H,FLAGS
+	LSR TEMP_H
+	LSR TEMP_H
+	MCALL PORT_SET
+	MCALL PORT_OFFSETS
+	SBRS FLAGS,0x01
+	COM ACCUM
+
+_DRV_7SEGLD_OP_SET_PORT__SET:
+	LDI TEMP,0x00
+	ST Y+,TEMP
+	ST Y+,TEMP_H
+	ST Y,ACCUM
+
+	POP FLAGS
+	POP ACCUM
+	POP TEMP
+	POP TEMP_L
+	POP TEMP_H
+	POP_Y
+	RET
+
+;--------------------------------------------------------
+_DRV_7SEGLD_OP_SET_VAL:
+;--------------------------------------------------------
+;Установка значения цифры
+;IN: ACCUM-значение,TEMP_L-номер(0-...)
+;--------------------------------------------------------
+	PUSH_Y
+	PUSH FLAGS
+
+	LDD FLAGS,Z+_DRV_7SEGLD_FLAGS
+	MCALL _DRV_7SEGLD_GET_OFFSET
+	SBRS FLAGS,0x01
+	COM ACCUM
+	ST Y,ACCUM
+
+	POP FLAGS
+	POP_Y
+	RET
 
 ;--------------------------------------------------------
 DRV_7SEGLD_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по таймеру(переключение цифр)
 ;--------------------------------------------------------
+	PUSH FLAGS
+	PUSH TEMP_H
+	PUSH TEMP_L
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
+	PUSH_X
+	PUSH_Y
 	PUSH_Z
 
-	;TODO
+	MCALL C5_RAM_OFFSET
+	LDD FLAGS,Z+_DRV_7SEGLD_FLAGS
+	LDD TEMP_H,Z+_DRV_7SEGLD_SIZE
+	LDD TEMP_L,Z+_DRV_7SEGLD_POS
+
+	MCALL _DRV_7SEGLD_GET_OFFSET
+
+	;Выключаем текущую цифру
+	LDI XH,0x00
+	LDD XL,Y+0x01														;PORT addr
+	LDD ACCUM,Y+0x02													;PIN num
+	CPI XL,0xff
+	BREQ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG
+	LD TEMP,X
+	SBRC FLAGS,0x01
+	AND TEMP,ACCUM
+	SBRS FLAGS,0x01
+	OR TEMP,ACCUM
+	ST X,TEMP
+DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG:
+
+	;Следующая цифра
+	INC TEMP_L
+	CP TEMP_L,TEMP_H
+	BRNE PC+0x02
+	CLR TEMP_L
+	STD Z+_DRV_7SEGLD_POS,TEMP_L
+
+	;Включаем цифру
+	LDD XL,Y+0x03+0x01												;PORT addr
+	LDD ACCUM,Y+0x03+0x02											;PIN num
+	CPI XL,0xff
+	BREQ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG
+	LD TEMP,X
+	SBRC FLAGS,0x01
+	AND TEMP,ACCUM
+	SBRS FLAGS,0x01
+	OR TEMP,ACCUM
+	ST X,TEMP
+DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG:
+
+	LDD ACCUM,Y+0x03+0x00											;Value
+	;Устанавливаем новое значение
+	ADIW ZL,_DRV_7SEGLD_SEG_PORTS
+	LDI XH,0x00
+	LDI LOOP_CNTR,0x08
+_DRV_7SEGLD_TIMER_EVENT__LOOP:
+	LD XL,Z+
+	LD TEMP,Z+
+	LD FLAGS,X
+	SBRS ACCUM,0x00
+	AND FLAGS,TEMP
+	SBRC ACCUM,0x00
+	OR FLAGS,TEMP
+	ST X,FLAGS
+	LSR ACCUM
+	DEC LOOP_CNTR
+	BRNE _DRV_7SEGLD_TIMER_EVENT__LOOP
 
 	POP_Z
+	POP_Y
+	POP_X
 	POP LOOP_CNTR
 	POP ACCUM
 	POP TEMP
+	POP TEMP_L
+	POP TEMP_H
+	POP FLAGS
 	RET
 
 ;--------------------------------------------------------
@@ -163,7 +304,7 @@ _DRV_7SEGLD_SEGPORT_INIT:
 ;--------------------------------------------------------
 ;Инициализация порта сегмента
 ;IN: ACCUM-потр, TEMP-порядковый номер, Z-адрес на
-;выделенную память
+;выделенную память, FLAGS-режим работы
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP_H
@@ -174,14 +315,18 @@ _DRV_7SEGLD_SEGPORT_INIT:
 	CPI ACCUM,0xff
 	BRNE _DRV_7SEGLD_SEGPORT_INIT__HAVE_PORT
 	LDI TEMP_H,0xff
-	LDI TEMP_L,0xff
 	RJMP _DRV_7SEGLD_SEGPORT_INIT__STORE
 
 _DRV_7SEGLD_SEGPORT_INIT__HAVE_PORT:
 	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_LO
+	MOV TEMP_H,FLAGS
+	LSR TEMP_H
+	MCALL PORT_SET
 
 	MCALL PORT_OFFSETS
+	SBRS FLAGS,0x00
+	COM ACCUM
+
 	SUBI TEMP,(0x100-_DRV_7SEGLD_SEG_PORTS)
 	ADD ZL,TEMP
 	CLR TEMP
@@ -189,11 +334,37 @@ _DRV_7SEGLD_SEGPORT_INIT__HAVE_PORT:
 
 _DRV_7SEGLD_SEGPORT_INIT__STORE:
 	ST Z+,TEMP_H
-	ST Z,TEMP_L
+	ST Z,ACCUM
 
 	POP ACCUM
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
 	POP_Z
+	RET
+
+;--------------------------------------------------------
+_DRV_7SEGLD_GET_OFFSET:
+;--------------------------------------------------------
+;Вычисление смещения на данные цифры
+;IN: TEMP_L-порядковый номер,
+;Z-адрес на выделенную память
+;OUT: Y-адрес на данные цифры
+;--------------------------------------------------------
+	PUSH TEMP_H
+	PUSH TEMP_L
+
+	;_DRV_7SEGLD_DIG_DATA+TEMP*0x03
+	MOV TEMP_H,TEMP_L
+	LSL TEMP_L
+	ADD TEMP_L,TEMP_H
+	MOV YH,ZH
+	MOV YL,ZL
+	ADD YL,TEMP_L
+	CLR TEMP_L
+	ADC YH,TEMP_L
+	ADIW YL,_DRV_7SEGLD_DIG_DATA
+
+	POP TEMP_L
+	POP TEMP_H
 	RET
