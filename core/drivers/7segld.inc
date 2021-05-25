@@ -4,11 +4,11 @@
 ;22.05.2021	w5277c@gmail.com			Начало
 ;23.05.2021	w5277c@gmail.com			Готов общий код, не тестировано
 ;23.05.2021	w5277c@gmail.com			Исправлены основные ошибки
+;25.05.2021	w5277c@gmail.com			Мелкая доработка
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер 7 сегментного цифрового индикатора типа kem-3461ar
 ;-----------------------------------------------------------------------------------------------------------------------
-;TODO: Выключать сегменты перед включением следующей цифры.
-;-----------------------------------------------------------------------------------------------------------------------
+
 
 .ifdef DEF__C5_DRV_7SEGLD
 .else
@@ -266,6 +266,28 @@ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG:
 	CLR TEMP_L
 	STD Z+_DRV_7SEGLD_POS,TEMP_L
 
+	PUSH_Z
+	LDD ACCUM,Y+0x00													;Value
+	;Устанавливаем новое значение
+	ADIW ZL,_DRV_7SEGLD_SEG_PORTS
+	LDI XH,0x00
+	LDI LOOP_CNTR,0x08
+_DRV_7SEGLD_TIMER_EVENT__LOOP:
+	LD XL,Z+
+	LD TEMP_H,Z+
+	LD FLAGS,X
+	MOV TEMP,TEMP_H
+	COM TEMP
+	SBRS ACCUM,0x07
+	AND FLAGS,TEMP
+	SBRC ACCUM,0x07
+	OR FLAGS,TEMP_H
+	ST X,FLAGS
+	LSL ACCUM
+	DEC LOOP_CNTR
+	BRNE _DRV_7SEGLD_TIMER_EVENT__LOOP
+	POP_Z
+
 	;Включаем цифру
 	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
 	LDD XL,Y+0x01														;PORT addr
@@ -280,27 +302,6 @@ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG:
 	ST X,TEMP
 DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG:
 
-	LDD ACCUM,Y+0x00													;Value
-	;Устанавливаем новое значение
-	ADIW ZL,_DRV_7SEGLD_SEG_PORTS
-	LDI XH,0x00
-	LDI LOOP_CNTR,0x08
-_DRV_7SEGLD_TIMER_EVENT__LOOP:
-	LD XL,Z+
-	LD TEMP_H,Z+
-	LD FLAGS,X
-	MOV TEMP_L,TEMP_H
-	COM TEMP_L
-	SBRS ACCUM,0x07
-	AND FLAGS,TEMP_L
-	SBRC ACCUM,0x07
-	OR FLAGS,TEMP_H
-	ST X,FLAGS
-	LSL ACCUM
-	DEC LOOP_CNTR
-	BRNE _DRV_7SEGLD_TIMER_EVENT__LOOP
-
-_DRV_7SEGLD_TIMER_EVENT__END:
 	POP_Z
 	POP_Y
 	POP_X
