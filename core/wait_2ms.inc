@@ -22,7 +22,7 @@ C5_WAIT_2MS:
 ;с момента вызова C5_TIMER_MARK
 ;IN TEMP_H,TEMP_L,TEMP - время в 0.002s
 ;--------------------------------------------------------
-.IF REALTIME == 1
+.IF TS_MODE == TS_MODE_TIME
 	LDS r2,SREG															;Запоминаем регистр флагов
 	MCALL C5_DISPATCHER_LOCK
 	_C5_MACRO__PUSH_RDS												;Пмещаем в стек рабочие регистры задачи

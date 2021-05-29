@@ -18,6 +18,7 @@
 ;06.02.2021	w5277c@gmail.com			v0.3.2	Примитивы и проверка на отсутствие драйверов
 ;16.04.2021	w5277c@gmail.com			v0.3.3	Вынесен C5_WAIT_2MS из диспетчера, дефолтное значение для BUFFER_SIZE
 ;24.05.2021	w5277c@gmail.com			v0.3.4	Исправлена ошибка в работе программных таймеров
+;29.05.2021	w5277c@gmail.com			v0.3.5	Ввод TS_MODE, выделены константы C0x00,X0xff и прочее.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -37,6 +38,15 @@
 ;TODO TIMER-TASK отрабатывает немного чаще, почему?
 ;TODO нужна еще одна модель динамической памяти но с 16 битным размером. Плюс возможность задавать модель в main-е.
 ;-----------------------------------------------------------------------------------------------------------------------
+
+.ifdef TSM
+.else
+	.ifdef REALTIME
+		.SET	TS_MODE									= REALTIME
+	.else
+		.SET	TS_MODE									= TS_MODE_EVENT
+	.endif
+.endif
 
 ;---CORE-PUBLIC-PROCS------------------------------------;Доступные процедуры ядра
 	.EQU	C5_PROC_EXEC							= 0x01			;Запуск процедуры драйвера
@@ -137,7 +147,6 @@
 	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
 	.MESSAGE "######## STACK END OFFSET:",_C5_STACK_END
-	.MESSAGE "######## TASK ENDPOINT OFFSET:",_C5_TASK_ENDPOINT
 	.MESSAGE "######## CORE FREQ:",CORE_FREQ
 	.IF TIMERS_SPEED == TIMERS_SPEED_50NS
 		.MESSAGE "######## TIMERS NORMAL SPEED (",TIMERS_SPEED,")"
@@ -164,7 +173,9 @@
 ;---REGISTERS--------------------------------------------;r0-r14 выделено для нужд ядра
 	.DEF	_RESULT_L								= r0
 	.DEF	_RESULT_H								= r1
-	;...r2-r8 используются в процедуре SUSPEND
+	;...r2-r6 используются в диспетчере
+	.DEF	C0x00										= r7				;Константа 0x00
+	.DEF	C0xff										= r8				;Константа 0xff
 	.DEF	_C5_DISPATCHER_LOCK_CNTR			= r9				;Счетчик вложенных блокировок диспетчера
 	.DEF	_C5_DRIVER_EXEC_ZH					= r10
 	.DEF	_C5_DRIVER_EXEC_ZL					= r11
@@ -176,8 +187,10 @@
 
 	.INCLUDE	"./mem/ram_copy8.inc"
 	.INCLUDE	"./mem/ram_fill16.inc"
+.if TS_MODE != TS_MODE_NO
 	.INCLUDE "./mem/ram_copy8_desc.inc"
 	.INCLUDE "./mem/ram_copy16_desc.inc"
+.endif
 	.INCLUDE "./conv/bitnum_to_num.inc"
 .IFDEF INPUT_PORT
 	.INCLUDE "./core/ui/input.inc"
@@ -192,7 +205,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.3.4",0x0d,0x0a,0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.5",0x0d,0x0a,0x00,0x00
 	.INCLUDE "./core/log/log_init.inc"
 	.INCLUDE	"./core/log/log_romstr.inc"
 	.INCLUDE	"./core/log/log_tasksdump.inc"
@@ -204,7 +217,7 @@
 .IFDEF INPUT_PORT
 	.MESSAGE "######## INPUT ENABLED"
 .ENDIF
-.IF REALTIME == 1
+.IF TS_MODE == TS_MODE_TIME
 	.MESSAGE "######## DISPATCHER ENABLED"
 	.INCLUDE "./core/_dispatcher.inc"
 .ELSE
@@ -416,7 +429,7 @@ _C5_TIMER_A_IR__LF_NEXT:
 .ENDIF
 
 	POP_Z
-.IF REALTIME == 1
+.IF TS_MODE == TS_MODE_TIME
 	MCALL _C5_DISPATCHER_EVENT
 .ENDIF
 _C5_TIMER_A_IR__END:
@@ -701,6 +714,10 @@ C5_START:
 	_CORRE5277_TIMERA_START
 	;Разрешаем прерывания
 	SEI
+.if TS_MODE == TS_MODE_NO
+	;TODO простая реализаия переключения стека и переход на первую задачу
+.endif
+.if TS_MODE != TS_MODE_NO
 _C5_START__LOOP:
 	CLT
 	LDI PID,0x00													;Счетчик задач
@@ -722,7 +739,7 @@ _C5_START__NEXT_TASK:
 	BRTS _C5_START__LOOP
 	SLEEP
 	RJMP _C5_START__LOOP
-
+.endif
 ;========================================================================
 ;===Процедуры работы с задачами и драйверами=============================
 ;========================================================================
@@ -817,9 +834,19 @@ C5_CREATE__TIMER_CODE_SKIP2:
 
 	;Помещаем точку возврата
 	MOV r0,TEMP
+.if TS_MODE == TS_MODE_NO
+	LDI TEMP,low(SRAM_START)
+.endif
+.if TS_MODE != TS_MODE_NO
 	LDI TEMP,low(_C5_TASK_ENDPOINT)
+.endif
 	PUSH TEMP
+.if TS_MODE == TS_MODE_NO
+	LDI TEMP,high(SRAM_START)
+.endif
+.if TS_MODE != TS_MODE_NO
 	LDI TEMP,high(_C5_TASK_ENDPOINT)
+.endif
 	PUSH TEMP
 	MOV TEMP,r0
 	RJMP C5_CREATE__DRIVER_CODE_SKIP
@@ -955,6 +982,50 @@ _C5_EXEC__DONE:
 
 	RET
 
+;--------------------------------------------------------
+_C5_PROC_HEADER_GET:
+;--------------------------------------------------------
+;Возвращает смещение на заголовок процесса
+;IN:PID-ид процеса
+;OUT:Z-смещение
+;--------------------------------------------------------
+	PUSH TEMP_H
+	PUSH TEMP_L
+
+	SBRS PID,C5_PROCID_OPT_DRV
+	RJMP _C5_PROC_HEADER_GET__TASK
+_C5_PROC_HEADER_GET__DRIVER:
+	LDI ZH,high(_C5_DRIVERS_HEADER)
+	LDI ZL,low(_C5_DRIVERS_HEADER)
+	MOV TEMP_H,PID													;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
+	ANDI TEMP_H,0x0f
+	LSL TEMP_H
+	MOV TEMP_L,TEMP_H
+	LSL TEMP_H
+	ADD TEMP_L,TEMP_H
+	RJMP _C5_PROC_HEADER_GET__END
+_C5_PROC_HEADER_GET__TASK:
+	LDI ZL,low(_C5_TASKS_HEADER)
+	LDI ZH,high(_C5_TASKS_HEADER)
+	MOV TEMP_H,PID													;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
+	ANDI TEMP_H,0x0f
+	MOV TEMP_L,TEMP_H
+	LSL TEMP_L
+	ADD TEMP_H,TEMP_L
+	LSL TEMP_L
+	LSL TEMP_L
+	ADD TEMP_L,TEMP_H
+_C5_PROC_HEADER_GET__END:
+	ADD ZL,TEMP_L
+	CLR TEMP_H
+	ADC ZH,TEMP_H
+
+	POP TEMP_L
+	POP TEMP_H
+	RET
+
+
+.if TS_MODE != TS_MODE_NO
 ;--------------------------------------------------------
 _C5_RESUME:
 ;--------------------------------------------------------
@@ -1127,48 +1198,6 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	RET
 
 ;--------------------------------------------------------
-_C5_PROC_HEADER_GET:
-;--------------------------------------------------------
-;Возвращает смещение на заголовок процесса
-;IN:PID-ид процеса
-;OUT:Z-смещение
-;--------------------------------------------------------
-	PUSH TEMP_H
-	PUSH TEMP_L
-
-	SBRS PID,C5_PROCID_OPT_DRV
-	RJMP _C5_PROC_HEADER_GET__TASK
-_C5_PROC_HEADER_GET__DRIVER:
-	LDI ZH,high(_C5_DRIVERS_HEADER)
-	LDI ZL,low(_C5_DRIVERS_HEADER)
-	MOV TEMP_H,PID													;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
-	ANDI TEMP_H,0x0f
-	LSL TEMP_H
-	MOV TEMP_L,TEMP_H
-	LSL TEMP_H
-	ADD TEMP_L,TEMP_H
-	RJMP _C5_PROC_HEADER_GET__END
-_C5_PROC_HEADER_GET__TASK:
-	LDI ZL,low(_C5_TASKS_HEADER)
-	LDI ZH,high(_C5_TASKS_HEADER)
-	MOV TEMP_H,PID													;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
-	ANDI TEMP_H,0x0f
-	MOV TEMP_L,TEMP_H
-	LSL TEMP_L
-	ADD TEMP_H,TEMP_L
-	LSL TEMP_L
-	LSL TEMP_L
-	ADD TEMP_L,TEMP_H
-_C5_PROC_HEADER_GET__END:
-	ADD ZL,TEMP_L
-	CLR TEMP_H
-	ADC ZH,TEMP_H
-
-	POP TEMP_L
-	POP TEMP_H
-	RET
-
-;--------------------------------------------------------
 _C5_STACK_TO_TOP:
 ;--------------------------------------------------------
 ;Переносим стек задачи наверх
@@ -1265,3 +1294,4 @@ _C5_STACK_TO_TOP__END:
 	POP PID
 	POP_Z
 	RET
+.endif

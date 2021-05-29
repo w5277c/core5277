@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.08.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;19.01.2021  w5277c@gmail.com			Обновлен блок EEPROM
-;21.01.2021  w5277c@gmail.com			Дбавлены порты для инструкций SBI,CBI...
+;08.08.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;19.01.2021	w5277c@gmail.com			Обновлен блок EEPROM
+;21.01.2021	w5277c@gmail.com			Дбавлены порты для инструкций SBI,CBI...
+;29.05.2021	w5277c@gmail.com			Исправлен .DEVICE, ввод параметра MUL_SUPPORT
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -16,7 +17,17 @@
 ;;;;;avrdude -p m8 -c avrispmkII -U lfuse:w:0xef:m -U hfuse:w:0xdc:m -U efuse:w:0xf9:m
 
 	;---SPECIFY-DEVICE---
-	.DEVICE ATtiny45
+	.DEVICE ATtiny85
+
+	.equ	FLASHEND		= 0x0fff	; Note: Word address
+	.equ	IOEND			= 0x003f
+	.equ	SRAM_START	= 0x0060
+	.equ	SRAM_SIZE	= 512
+	.equ	XRAMEND		= 0x0000
+	.equ	E2END			= 0x01ff
+	.equ	EEPROMEND	= 0x01ff
+	.equ	EEADRBITS	= 9
+
 
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY EEPROM 512
@@ -24,6 +35,8 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
 	#include "/devices/_common.inc"
+
+	.SET	MUL_SUPPORT								= 0x00
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
@@ -108,6 +121,7 @@
 	.EQU		PRADC									= 0x00
 	;---TIMERS---
 	.EQU	TIMSK										= 0x59
+	.EQU	TIMSK0									= TIMSK
 	.EQU		OCIE1A								= 0x06
 	.EQU		OCIE1B								= 0x05
 	.EQU		OCIE0A								= 0x04
@@ -115,6 +129,7 @@
 	.EQU		TOIE1									= 0x02
 	.EQU		TOIE0									= 0x01
 	.EQU	TIFR										= 0x58
+	.EQU	TIFR0										= TIFR
 	.EQU		OCF1A									= 0x06
 	.EQU		OCF1B									= 0x05
 	.EQU		OCF0A									= 0x04
