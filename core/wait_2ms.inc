@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019  w5277c@gmail.com			Начало
-;09.08.2020  w5277c@gmail.com			Разбиение на файлы
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;22.01.2020  w5277c@gmail.com			Учет CORE_FREQ
+;07.10.2019	w5277c@gmail.com			Начало
+;09.08.2020	w5277c@gmail.com			Разбиение на файлы
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;22.01.2020	w5277c@gmail.com			Учет CORE_FREQ
+;31.05.2021	w5277c@gmail.com			Реализация на таймере
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_WAIT_2MS
 .else
@@ -55,31 +56,23 @@ C5_WAIT_2MS:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
-C5_WAIT_2MS__LOOP1:
-	PUSH TEMP_H
-	PUSH TEMP_L
-	LDI TEMP_H,(59*CORE_FREQ)/10
-C5_WAIT_2MS__LOOP2:
-	LDI TEMP_L,0x4f
-C5_WAIT_2MS__LOOP3:
-	NOP
-	DEC TEMP_L
-	BRNE C5_WAIT_2MS__LOOP3
-	DEC TEMP_H
-	BRNE C5_WAIT_2MS__LOOP2
-	POP TEMP_L
-	POP TEMP_H
+	PUSH ACCUM
+	PUSH FLAGS
 
-	SUBI TEMP,0x01
-	SBCI TEMP_L,0x00
-	SBCI TEMP_H,0x00
-	CPI TEMP,0x00
-	BRNE C5_WAIT_2MS__LOOP1
-	CPI TEMP_L,0x00
-	BRNE C5_WAIT_2MS__LOOP1
-	CPI TEMP_H,0x00
-	BRNE C5_WAIT_2MS__LOOP1
+	LDS ACCUM,_C5_UPTIME+0x04	
+C5_WAIT_2MS__LOOP:
+	LDS FLAGS,_C5_UPTIME+0x04
+	SUB FLAGS,ACCUM
+	BREQ C5_WAIT_2MS__LOOP
 
+	LDS ACCUM,_C5_UPTIME+0x04	
+	SUB TEMP,FLAGS
+	SBC TEMP_L,C0x00
+	SBC TEMP_H,C0x00
+	BRCC C5_WAIT_2MS__LOOP
+
+	POP FLAGS
+	POP ACCUM
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
