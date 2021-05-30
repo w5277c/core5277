@@ -5,6 +5,7 @@
 ;23.05.2021	w5277c@gmail.com			Готов общий код, не тестировано
 ;23.05.2021	w5277c@gmail.com			Исправлены основные ошибки
 ;25.05.2021	w5277c@gmail.com			Мелкая доработка
+;30.05.2021	w5277c@gmail.com			Исправление ошибок
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер 7 сегментного цифрового индикатора типа kem-3461ar
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -180,8 +181,10 @@ _DRV_7SEGLD_OP_SET_PORT:
 
 	MCALL PORT_MODE_OUT
 	MOV TEMP_H,FLAGS
+	COM TEMP_H
 	LSR TEMP_H
 	LSR TEMP_H
+
 	MCALL PORT_SET
 	MCALL PORT_OFFSETS
 	SBRS FLAGS,0x01
@@ -243,7 +246,7 @@ DRV_7SEGLD_TIMER_EVENT:
 	LDD TEMP_H,Z+_DRV_7SEGLD_RAM_DIG_QNT
 	LDD TEMP_L,Z+_DRV_7SEGLD_RAM_POS
 
-	;Выключаем текущую цифру
+	;Выключаем предыдущую цифру
 	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
 	LDI XH,0x00
 	LDD XL,Y+0x01														;PORT addr
@@ -252,20 +255,23 @@ DRV_7SEGLD_TIMER_EVENT:
 	CPI XL,0xff
 	BREQ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG
 	LD TEMP,X
-	SBRC FLAGS,0x01
+;	SBRC FLAGS,0x01
 	AND TEMP,ACCUM
-	SBRS FLAGS,0x01
-	OR TEMP,ACCUM
+;	SBRS FLAGS,0x01
+;	OR TEMP,ACCUM
 	ST X,TEMP
 DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_OFF_DIG:
 
 	;Следующая цифра
 	INC TEMP_L
-	CP TEMP_L,TEMP_H
-	BRNE PC+0x02
+	CP TEMP_H,TEMP_L
+	BRCC PC+0x02
 	CLR TEMP_L
 	STD Z+_DRV_7SEGLD_RAM_POS,TEMP_L
 
+	;Устанавливаю значения для текущей цифры
+	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
+	PUSH TEMP_H
 	PUSH_Z
 	LDD ACCUM,Y+0x00													;Value
 	;Устанавливаем новое значение
@@ -287,17 +293,17 @@ _DRV_7SEGLD_TIMER_EVENT__LOOP:
 	DEC LOOP_CNTR
 	BRNE _DRV_7SEGLD_TIMER_EVENT__LOOP
 	POP_Z
+	POP TEMP_H
 
 	;Включаем цифру
-	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
 	LDD XL,Y+0x01														;PORT addr
 	LDD ACCUM,Y+0x02													;PIN num
 	CPI XL,0xff
 	BREQ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG
 	LD TEMP,X
-	SBRS FLAGS,0x01
-	AND TEMP,ACCUM
-	SBRC FLAGS,0x01
+;	SBRS FLAGS,0x01
+;	AND TEMP,ACCUM
+;	SBRC FLAGS,0x01
 	OR TEMP,ACCUM
 	ST X,TEMP
 DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG:
@@ -383,3 +389,4 @@ _DRV_7SEGLD_GET_DIG_OFFSET:
 	POP TEMP_L
 	POP TEMP_H
 	RET
+.endif

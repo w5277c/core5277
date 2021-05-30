@@ -11,12 +11,12 @@
 
 	;Важные, но не обязательные параметры ядра
 	.SET	AVRA												= 0	;0-1
-	.SET	REALTIME											= 0	;0-1
+	.SET	TS_MODE											= TS_MODE_TIME
 	.SET	TIMERS_SPEED									= TIMERS_SPEED_50NS
 	.SET	C5_DRIVERS_QNT									= 3
 	.SET	C5_TASKS_QNT									= 1
 	.SET	TIMERS											= 3	;0-4
-	;.SET	LOGGING_PORT									= MISO
+	.SET	LOGGING_PORT									= MISO
 	;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов (дополнительные включения должны быть перед основным)
@@ -35,18 +35,18 @@
 	.EQU	DIG1_PORT										= PD0		;Порт управления анодом цифры 1
 	.EQU	DIG2_PORT										= PD1		;Порт управления анодом цифры 2
 	.EQU	DIG3_PORT										= PD2		;Порт управления анодом цифры 3
-	.EQU	DIG4_PORT										= PB6		;Порт управления анодом цифры 4
+	.EQU	DIG4_PORT										= PB1		;Порт управления анодом цифры 4
 	.EQU	SEGA_PORT										= PC4		;Порт управления катодом сегмента A
 	.EQU	SEGB_PORT										= PC0		;Порт управления катодом сегмента B
-	.EQU	SEGC_PORT										= PD3		;Порт управления катодом сегмента C
+	.EQU	SEGC_PORT										= PD4		;Порт управления катодом сегмента C
 	.EQU	SEGD_PORT										= PC1		;Порт управления катодом сегмента D
 	.EQU	SEGE_PORT										= PC2		;Порт управления катодом сегмента E
 	.EQU	SEGF_PORT										= PC3		;Порт управления катодом сегмента F
-	.EQU	SEGG_PORT										= PD4		;Порт управления катодом сегмента Q
+	.EQU	SEGG_PORT										= PB2		;Порт управления катодом сегмента Q !!!
 	.EQU	BATTERY_PORT									= PC5		;Порт для анализа уровня заряда батареи
-	.EQU	BUTTON_PORT										= PB1		;Порт для кнопки
+	.EQU	BUTTON_PORT										= PD3		;Порт для кнопки		!!!
 	.EQU	INT_PORT											= PB0		;Порт ввода
-	.EQU	BEEPER_PORT										= PD5		;Порт бипера (PD5/PD6/PD7)
+	.EQU	BEEPER_PORT										= PD5		;Порт бипера
 
 	;Идентификаторы драйверов(0-7|0-15)
 	.EQU	PID_BUTTONS_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
@@ -135,8 +135,6 @@ MAIN:
 	LDI ZL,low(TASK__INIT)
 	MCALL C5_CREATE
 
-SBI DDRB,MISO&0x0f
-
 	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
@@ -144,12 +142,12 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
-
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
 	LDI ACCUM,0b01100000
 	LDI TEMP_L,0x01
 	MCALL C5_EXEC
+
 	LDI ACCUM,0b11011010
 	LDI TEMP_L,0x02
 	MCALL C5_EXEC
