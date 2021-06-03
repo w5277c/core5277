@@ -5,8 +5,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
@@ -73,31 +73,42 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 	TASK__LOGSTR_ERROR:
-	.db   "error",0x0d,0x0a,0x00
+	.db   "Error:",0x00,0x00
 
 TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
-	LDI TEMP_H,0x00
-	LDI TEMP_L,high(1000/2)
-	LDI TEMP,low(1000/2)
-	MCALL C5_WAIT_2MS											;Ждем 1000мс
-
 	LDI TEMP,PID_AM2301_DRV
 	MCALL C5_EXEC
 	CPI TEMP,DRV_AM2301_RESULT_OK
 	BRNE TASK__ERROR
 
+	LDI TEMP,'T'
+	MCALL C5_LOG_CHAR
+	LDI TEMP,':'
+	MCALL C5_LOG_CHAR
 	MCALL C5_LOG_SDNF
-	LDI TEMP,'/'
+	LDI TEMP,' '
+	MCALL C5_LOG_CHAR
+	LDI TEMP,'H'
+	MCALL C5_LOG_CHAR
+	LDI TEMP,':'
 	MCALL C5_LOG_CHAR
 	MOV TEMP_H,TEMP_EH
 	MOV TEMP_L,TEMP_EL
 	MCALL C5_LOG_SDNF
 	MCALL C5_LOG_CR
-	RJMP TASK__INFINITE_LOOP
+	RJMP TASK__DONE
 
 TASK__ERROR:
 	C5_LOG_ROMSTR TASK__LOGSTR_ERROR
+	MCALL C5_LOG_BYTE
+	MCALL C5_LOG_CR
+
+TASK__DONE:
+	LDI TEMP_H,0x00
+	LDI TEMP_L,high(1000/2)
+	LDI TEMP,low(1000/2)
+	MCALL C5_WAIT_2MS											;Ждем 1с
 	RJMP TASK__INFINITE_LOOP

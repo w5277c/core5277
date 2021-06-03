@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019  w5277c@gmail.com			Начало
-;01.08.2020  w5277c@gmail.com			Разбиение на файлы
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;10.12.2020  w5277c@gmail.com			-с5
+;07.10.2019	w5277c@gmail.com			Начало
+;01.08.2020	w5277c@gmail.com			Разбиение на файлы
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;10.12.2020	w5277c@gmail.com			-с5
+;29.05.2021	w5277c@gmail.com			Использование MUL8X8 (необходимо проверить!)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_MUL16X8
 .else
@@ -14,27 +15,33 @@
 .message "included MUL16X8"
 .endif
 
+.include	"./math/mul8x8.inc"
+
 ;--------------------------------------------------------
 MUL16X8:
 ;--------------------------------------------------------
 ;Умножение 16б числа на 8б число
-;IN: TEMP_H,TEMP_L-16б число, TEMP - 8б число
-;OUT: TEMP_EL, TEMP_H, TEMP_L - 16б результат
-;-START--------------------------------------------------
-	PUSH _RESULT_H
-	PUSH _RESULT_L
+;IN: TEMP_H/L-16б число, TEMP-8б число
+;OUT: TEMP_EL/H/L-24б результат
+;--------------------------------------------------------
+	PUSH ACCUM
 
+	MOV ACCUM,TEMP_H
+	MCALL MUL8X8
 	PUSH TEMP_H
-	MUL TEMP_L,TEMP
-	MOV TEMP_L,_RESULT_L
-	MOV TEMP_H,_RESULT_H
-	POP TEMP_EL
-	MUL TEMP_EL,TEMP
-	ADD TEMP_H,_RESULT_L
-	LDI TEMP_EL,0x00
-	ADC TEMP_EL,_RESULT_H
+	PUSH TEMP_L
 
-	POP _RESULT_L
-	POP _RESULT_H
+	MOV TEMP_L,ACCUM
+	MCALL MUL8X8
+	MOV TEMP_EL,TEMP_H
+	MOV TEMP_H,TEMP_L
+
+	POP TEMP_L
+	POP ACCUM
+	ADD TEMP_H,ACCUM
+	CLR ACCUM
+	ADC TEMP_EL,ACCUM
+
+	POP ACCUM
 	RET
 .endif

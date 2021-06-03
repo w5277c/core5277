@@ -38,6 +38,7 @@
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMSTART									= 0x0100
 	.EQU	RAMEND									= 0x08ff
+	.SET	INPUT_BUFFER_SIZE						= 0x80			;Размер буфера ввода (не менее 2)
 
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
@@ -431,7 +432,11 @@
 	CALL	_C5_IR														; External Interrupt5 Handler
 	CALL	_C5_IR														; External Interrupt6 Handler
 	CALL	_C5_IR														; External Interrupt7 Handler
+.IF TIMER_C_ENABLE == 0x01
+	CALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match
+.ELSE
 	CALL	_C5_IR														; Timer/Counter2 Compare Match
+.ENDIF
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event
 	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A
@@ -519,6 +524,7 @@ APPLICATION_BLOCK:
 
 .MACRO _C5_TIMERB
 	;SUBI TEMP,0x08														;Подобрано вручную, не должно быть вообще
+	PUSH TEMP
 	LDS TEMP_L,TCNT1L
 	LDS TEMP_H,TCNT1H
 	ADD TEMP_L,TEMP
@@ -542,6 +548,25 @@ APPLICATION_BLOCK:
 	LDS TEMP,TIMSK1
 	ANDI TEMP,~(1<<OCIE1B)
 	STS TIMSK1,TEMP
+	POP TEMP
+.ENDMACRO
+
+.MACRO _C5_TIMERC_SET_PERIOD
+	STS TCNT2,TEMP_H
+	STS OCR2A,TEMP_L
+.ENDMACRO
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS22)|(1<<CS21)|(0<<CS20);/8
+	STS TCCR2A,TEMP
+	_C5_TIMERC_SET_PERIOD
+	LDI TEMP,(1<<OCIE2A)
+	STS TIMSK2,TEMP
+	LDI TEMP,(1<<OCF2A)
+	STS TIFR2,TEMP
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDI TEMP,~(1<<OCF2A)
+	STS TIFR2,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON

@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.08.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;19.01.2021  w5277c@gmail.com			Обновлен блок EEPROM
-;21.01.2021  w5277c@gmail.com			Дбавлены порты для инструкций SBI,CBI...
+;08.08.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;19.01.2021	w5277c@gmail.com			Обновлен блок EEPROM
+;21.01.2021	w5277c@gmail.com			Дбавлены порты для инструкций SBI,CBI...
+;29.05.2021	w5277c@gmail.com			Ввод параметра MUL_SUPPORT
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -24,9 +25,12 @@
 
 	#include "/devices/_common.inc"
 
+	.SET	MUL_SUPPORT								= 0x00
+
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
 	.MESSAGE "######## DEVICE ATtiny45"
+.ifdef CORE_FREQ
 	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x03			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
@@ -37,9 +41,12 @@
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x00			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.EQU	_C5_STACK_SIZE							= 0x28			;Стек ядра - 40B
+	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
+.endif
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x015f
 
+.ifdef CORE_FREQ
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
 	.EQU	C5_IR_PCINT0							= 0x02
@@ -58,6 +65,7 @@
 	;Отсутствуют
 	.EQU	C5_IR_PCINT1							= 0x00
 	.EQU	C5_IR_PCINT2							= 0x00
+.endif
 
 	;SBI/CBI/SBIS/SBIC port defines
 	.EQU	PORTA										= 0xff
@@ -250,10 +258,15 @@
 	.SET	INT0_PORT								= PB2
 
 .ORG 0x0000
+.ifdef CORE_FREQ
 	RJMP	MAIN															; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
 	RCALL	_C5_IR														; Pin Change Interrupt Request 0
+.IF TIMER_C_ENABLE == 0x01
+	RCALL	_C5_TIMER_C_IR												; Timer/Counter1 Compare Match A
+.ELSE
 	RCALL	_C5_IR														; Timer/Counter1 Compare Match A
+.ENDIF
 	RCALL	_C5_IR														; Timer/Counter1 Overflow
 	RCALL	_C5_IR														; Timer/Counter0 Overflow
 	RCALL	_C5_IR														; EEPROM Ready
@@ -274,15 +287,6 @@ INT_TABLE:
 	.db	(1<<INT0)
 
 APPLICATION_BLOCK:
-
-.MACRO MCALL
-	RCALL @0
-	NOP
-.ENDMACRO
-.MACRO MJMP
-	RJMP @0
-	NOP
-.ENDMACRO
 
 .MACRO _C5_TIMERA_INIT
 	LDS TEMP,PRR
@@ -321,22 +325,59 @@ APPLICATION_BLOCK:
 	LDS TEMP_L,TCNT0
 	ADD TEMP_L,TEMP
 	STS OCR0B,TEMP_L
-	LDS TEMP,TIFR
-	ORI TEMP,(1<<OCF0B)
-	STS TIFR,TEMP
+
+	LDS TEMP_L,SREG
+	CLI
+	LDS TEMP_H,TIFR
+	ORI TEMP_H,(1<<OCF0B)
+	STS TIFR,TEMP_H
 	;Установка флага
-	LDI TEMP,(1<<_CFL_TIMER_B_USE)
-	OR _C5_COREFLAGS,TEMP
+	LDI TEMP_H,(1<<_CFL_TIMER_B_USE)
+	OR _C5_COREFLAGS,TEMP_H
 	;Запуск таймера
-	LDS TEMP,TIMSK
-	ORI TEMP,(1<<OCIE0B)
-	STS TIMSK,TEMP
+	LDS TEMP_H,TIMSK
+	ORI TEMP_H,(1<<OCIE0B)
+	STS TIMSK,TEMP_H
+	STS SREG,TEMP_L
+
 	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
+	LDS TEMP_L,SREG
+	CLI
+	LDS TEMP_H,TIMSK
+	ANDI TEMP_H,~(1<<OCIE0B)
+	STS TIMSK,TEMP_H
+	STS SREG,TEMP_L
+.ENDMACRO
+
+.MACRO _C5_TIMERC_SET_PERIOD
+	STS TCNT1,TEMP_H
+	STS OCR1A,TEMP_L
+.ENDMACRO
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS13)|(1<<CS12)|(0<<CS21)|(0<<CS20);/8
+	STS TCCR1,TEMP
+	_C5_TIMERC_SET_PERIOD
+	LDS TEMP_H,SREG
+	CLI
 	LDS TEMP,TIMSK
-	ANDI TEMP,~(1<<OCIE0B)
+	ORI TEMP,(1<<OCIE1A)
 	STS TIMSK,TEMP
+	LDS TEMP,TIFR
+	ORI TEMP,(1<<OCF1A)
+	STS TIFR,TEMP
+	STS SREG,TEMP_H
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDS TEMP,SREG
+	CLI
+	PUSH TEMP
+	LDS TEMP,TIFR
+	ANDI TEMP,~(1<<OCF2A)
+	STS TIFR2,TEMP
+	POP TEMP
+	STS SREG,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON
@@ -357,4 +398,14 @@ APPLICATION_BLOCK:
 
 .MACRO _C5_TIMER_TCNT
 	LDS @0,TCNT0
+.ENDMACRO
+.endif
+
+.MACRO MCALL
+	RCALL @0
+	NOP
+.ENDMACRO
+.MACRO MJMP
+	RJMP @0
+	NOP
 .ENDMACRO

@@ -43,6 +43,7 @@
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMSTART									= 0x0100
 	.EQU	RAMEND									= 0x04ff
+	.SET	INPUT_BUFFER_SIZE						= 0x40			;Размер буфера ввода (не менее 2)
 
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
@@ -388,7 +389,11 @@
 	RCALL	_C5_IR														; Pin Change Interrupt Request 1
 	RCALL	_C5_IR														; Pin Change Interrupt Request 2
 	RCALL	_C5_IR														; Watchdog Time-out Interrupt
+.IF TIMER_C_ENABLE == 0x01
+	RCALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare Match A
+.ELSE
 	RCALL	_C5_IR														; Timer/Counter2 Compare Match A
+.ENDIF
 	RCALL	_C5_IR														; Timer/Counter2 Compare Match B
 	RCALL	_C5_IR														; Timer/Counter2 Overflow
 	RCALL	_C5_IR														; Timer/Counter1 Capture Event
@@ -463,22 +468,42 @@ APPLICATION_BLOCK:
 	LDS TEMP_L,TCNT0
 	ADD TEMP_L,TEMP
 	STS OCR0B,TEMP_L
-	LDS TEMP,TIFR0
-	ORI TEMP,(1<<OCF0B)
-	STS TIFR0,TEMP
+	LDS TEMP_H,TIFR0
+	ORI TEMP_H,(1<<OCF0B)
+	STS TIFR0,TEMP_H
 	;Установка флага
-	LDI TEMP,(1<<_CFL_TIMER_B_USE)
-	OR _C5_COREFLAGS,TEMP
+	LDI TEMP_H,(1<<_CFL_TIMER_B_USE)
+	OR _C5_COREFLAGS,TEMP_H
 	;Запуск таймера
-	LDS TEMP,TIMSK0
-	ORI TEMP,(1<<OCIE0B)
-	STS TIMSK0,TEMP
+	LDS TEMP_H,TIMSK0
+	ORI TEMP_H,(1<<OCIE0B)
+	STS TIMSK0,TEMP_H
 	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
-	LDS TEMP,TIMSK0
-	ANDI TEMP,~(1<<OCIE0B)
-	STS TIMSK0,TEMP
+	LDS TEMP_H,TIMSK0
+	ANDI TEMP_H,~(1<<OCIE0B)
+	STS TIMSK0,TEMP_H
+.ENDMACRO
+
+.MACRO _C5_TIMERC_SET_PERIOD
+	STS TCNT2,TEMP_H
+	STS OCR2A,TEMP_L
+.ENDMACRO
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS22)|(1<<CS21)|(0<<CS20);/8
+	STS TCCR2A,TEMP
+	_C5_TIMERC_SET_PERIOD
+	LDI TEMP,(1<<OCIE2A)
+	STS TIMSK2,TEMP
+	LDS TEMP,TIFR2
+	ORI TEMP,(1<<OCF2A)
+	STS TIFR2,TEMP
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDS TEMP,TIFR2
+	ANDI TEMP,~(1<<OCF2A)
+	STS TIFR2,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON

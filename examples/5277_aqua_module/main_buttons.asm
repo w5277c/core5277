@@ -6,9 +6,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
-	.SET	AVRA										= 1	;0-1
+	.INCLUDE "./devices/atmega328.inc"
+	.SET	AVRA										= 0	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 1	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
@@ -74,5 +74,6 @@ TASK__INFINITE_LOOP:
 	LDI FLAGS,DRV_BUTTONS_OP_WAIT
 	MCALL C5_EXEC
 	MCALL C5_LOG_WORD
+	MCALL C5_LOG_CR
 	RJMP TASK__INFINITE_LOOP
 

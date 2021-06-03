@@ -1,9 +1,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;26.10.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;21.01.2020  w5277c@gmail.com			Вынесен блок определений пинов для процедур PORT_...
+;26.10.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;21.01.2020	w5277c@gmail.com			Вынесен блок определений пинов для процедур PORT_...
+;29.05.2021	w5277c@gmail.com			Ввод параметров TS_MODE и MUL_SUPPORT
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DEVICES_COMMON
 .else
@@ -13,7 +14,12 @@
 	.EQU	ATMEGA8									= 0x01
 	.EQU	ATMEGA16									= 0x02
 	.EQU	ATMEGA48									= 0x03
+	.EQU	ATTINY13A								= 0x04
 
+;---TASK-SWITCHING-MODES---------------------------------;Режимы работы ядра
+	.EQU	TS_MODE_NO								= 0xff			;Простое переключение, механизмы ядра для переключения задач отсутствуют
+	.EQU	TS_MODE_EVENT							= 0x00			;Кооперативная
+	.EQU	TS_MODE_TIME							= 0x01			;Вытесняющая многозадачность
 ;---LOGGING----------------------------------------------;Параметры логирования
 	.EQU	LOGGING_LVL_DIS						= 0x00
 	.EQU	LOGGING_LVL_ERR						= 0x01
@@ -23,25 +29,29 @@
 	.EQU	LOGGING_LVL_PNC						= 0x05
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_INF
 
-	.SET	BUFFER_SIZE										= 0x0000
+	.SET	BUFFER_SIZE								= 0x0000
 
 	.SET	REPORT_INCLUDES						= 0x00
 
+	.SET	TIMER_C_ENABLE							= 0x00
+
+	.SET	REALTIME									= 0x00
+	.SET	TIMERS									= 0x00
 	.SET	AVRA										= 0x00
+	.SET	MUL_SUPPORT								= 0x01
+
 .ifdef CORE_FREQ
-.else
-	.SET	CORE_FREQ								= 0x08
-.endif
 	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	TIMERS_SPEED_50NS						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
 	.EQU	TIMERS_SPEED_25NS						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
-	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
+	.SET	INPUT_BUFFER_SIZE						= 0x80			;Размер буфера ввода (не менее 2)
 ;---PROC-ID-OPTIONS--------------------------------------;Не изменяемые опции процесса размещаемые в идентификаторе процесса
 	.EQU	C5_PROCID_OPT_NOSUSP					= 0x04			;Запрещено диспетчеру прерывать выполнение
 	.EQU	C5_PROCID_OPT_TIMER					= 0x05			;Таймер, повторяет выполнение с указанным периодом
 	.EQU	C5_PROCID_OPT_RESERV2				= 0x06			;Зарезервировано
 	.EQU	C5_PROCID_OPT_DRV						= 0x07			;Драйвер
+.endif
 
 	.EQU	PA0										= (0x00<<4)|0x00
 	.EQU	PA1										= (0x00<<4)|0x01
@@ -194,6 +204,7 @@
 	POP ZH
 .ENDMACRO
 
+.ifdef CORE_FREQ
 .MACRO C5_WAIT_500NS
 	PUSH TEMP
 	LDI TEMP,low((@0-36)/(16/CORE_FREQ))
@@ -202,6 +213,7 @@
 	.endif
 	POP TEMP
 .ENDMACRO
+.endif
 
 .MACRO LDI_X
 	LDI XH,high(@0)

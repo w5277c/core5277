@@ -4,13 +4,13 @@
 ;02.03.2020  w5277c@gmail.com			Начало
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;28.10.2020  w5277c@gmail.com			Корректировка таймингов
+;23.04.2021  w5277c@gmail.com			Багфиксинг и успешный первый тест
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_BUTTONS
 .else
 .set DEF__C5_DRV_BUTTONS = 1
-.message "Included driver Buttons v0.1"
+.message "Included driver Buttons v0.2"
 
-;TODO реализовать обработчики для переключаетеля и сенсора
 ;TODO Фиксируется 5-ое длинное нажатие (вероятно с потерей первого значения) из 4 допустимых
 
 
@@ -47,7 +47,7 @@
 	;---
 	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME			= 300/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
 	.EQU	_DRV_BUTTONS_HOLD_TIME							= 1000/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
-	.EQU	_DRV_BUTTONS_TIMEOUT								= 400/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_TIMEOUT								= 800/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
 	;---Флаги---
 	.EQU	_DRV_BUTTONS_FL_INIT								= 0x04;Ожидание начала цикла опроса
 	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN						= 0x05;Первый опрос(нет предыдущего занчения)
@@ -311,7 +311,7 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
 	LDD TEMP_H,Z+_DRV_BUTTONS_CNTR_N_FLAGS
 	;Считываем предыдущее состояние порта в T
 	CLR FLAGS
-	SBCI TEMP_H,_DRV_BUTTONS_FL_STATE
+	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	ORI FLAGS,(1<<_DRV_BUTTONS_FL_STATE)
 	MOV TEMP_L,TEMP_H
 	;Сбрасываем счетчик и состояние в 0
@@ -423,6 +423,7 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 	;Проверяем количество нажатых кнопок
+	LDD TEMP_H,Z+_DRV_BUTTONS_RESULT
 	MOV TEMP,TEMP_H
 	SWAP TEMP
 	ANDI TEMP,0x0f

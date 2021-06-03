@@ -1,9 +1,15 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;04.07.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;04.07.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;26.04.2021	w5277c@gmail.com			Исправлена ошибка чтения первого бита
+;03.06.2021	w5277c@gmail.com			Скорректирована модель анализа таймингов
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_AM2301
+.else
+.set DEF__C5_DRV_AM2301 = 1
+.message "Included driver AM2301 v0.3"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -25,10 +31,11 @@
 	.EQU	_DRV_AM2301_PORT						= 0x05			;1B - порт
 	.EQU	_DRV_AM2301_PCI_DRV					= 0x06			;1B - драйвер PCI
 	.EQU	_DRV_AM2301_TCNT						= 0x07			;1B - счетчик
-	.EQU	_DRV_AM2301_ACCUM						= 0x08			;1B - аккумклятор
-	.EQU	_DRV_AM2301_OFFSET					= 0x09			;1B - смещение
+	.EQU	_DRV_AM2301_TLOW						= 0x08			;1B - время низкого уровня
+	.EQU	_DRV_AM2301_ACCUM						= 0x09			;1B - аккумклятор
+	.EQU	_DRV_AM2301_OFFSET					= 0x0a			;1B - смещение
 	;---
-	.EQU	_DRV_AM2301_RAM_SIZE					= 0x0a			;10 байт необходимо выделить
+	.EQU	_DRV_AM2301_RAM_SIZE					= 0x0b			;11 байт необходимо выделить
 
 ;---RESULTS---
 	.EQU	DRV_AM2301_RESULT_OK					= 0x00
@@ -49,12 +56,9 @@ DRV_AM2301_INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, опрос датчика
-;OUT: TEMP_H,TEMP_L - значение температуры в SDNF формате
-;TEMP_EH,TEMP_EL - значение влажности в SDNF формате
-;TEMP - код результата
-;0x00 - ok,
-;0x01 - датчик не обнаружен
-;0x02 - ошибка PARITY
+;OUT: TEMP_H,TEMP_L-значение температуры в SDNF формате
+;TEMP_EH,TEMP_EL-значение влажности в SDNF формате
+;TEMP - код результата DRV_AM2301_RESULT_...
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
@@ -97,7 +101,7 @@ DRV_AM2301_INIT:
 	MCALL C5_WAIT_2MS
 
 	LDD TEMP,Z+_DRV_AM2301_OFFSET
-	CPI TEMP,40
+	CPI TEMP,41
 	LDI TEMP,DRV_AM2301_RESULT_ABSENT
 	BREQ PC+0x02
 	RJMP _DRV_AM2301_PROC__END
@@ -173,9 +177,11 @@ _DRV_AM2301_PROC__END:
 ;--------------------------------------------------------
 _DRV_AM2301_EVENT:
 ;--------------------------------------------------------
-;Обработчик прерывания PCINT
+;Обработчик прерывания PCINT,
+;IN: FLAGS(бит 0)-состояние порта
 ;--------------------------------------------------------
 	PUSH TEMP_H
+	PUSH TEMP_L
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH_Z
@@ -185,35 +191,52 @@ _DRV_AM2301_EVENT:
 	LDD ACCUM,Z+_DRV_AM2301_TCNT
 	MCALL C5_TCNT_GET
 	STD Z+_DRV_AM2301_TCNT,TEMP
-	SBRC FLAGS,0x00
-	RJMP _DRV_AM2301_EVENT__END
+	SBRS FLAGS,0x00
+	RJMP _DRV_AM2301_EVENT__HI
 	SUB TEMP,ACCUM
-	COM TEMP
-	CPI TEMP,(256-145)
+	;Надо проверить:
+	SUBI TEMP,CORE_FREQ
+	STD Z+_DRV_AM2301_TLOW,TEMP
+	RJMP _DRV_AM2301_EVENT__END
+
+_DRV_AM2301_EVENT__HI:
+	LDD TEMP_H,Z+_DRV_AM2301_OFFSET
+	CPI TEMP_H,0x00
+	BREQ _DRV_AM2301_EVENT__NEXT
+	CPI TEMP_H,41
+	BRCC _DRV_AM2301_EVENT__END
+
+	SUB TEMP,ACCUM
+	LDD ACCUM,Z+_DRV_AM2301_TLOW
+	CP ACCUM,TEMP
 	LDD ACCUM,Z+_DRV_AM2301_ACCUM
 	ROL ACCUM
 	STD Z+_DRV_AM2301_ACCUM,ACCUM
-	LDD TEMP,Z+_DRV_AM2301_OFFSET
-	CPI TEMP,40
-	BREQ _DRV_AM2301_EVENT__END
-	MOV TEMP_H,TEMP
-	INC TEMP
-	STD Z+_DRV_AM2301_OFFSET,TEMP
-MOV TEMP,TEMP_H
+
+	MOV TEMP,TEMP_H
 	ANDI TEMP,0x07
-CPI TEMP,0x07
-	BRNE _DRV_AM2301_EVENT__END
-	LSR TEMP_H
-	LSR TEMP_H
-	LSR TEMP_H
-	ADD ZL,TEMP_H
+	BRNE _DRV_AM2301_EVENT__NEXT
+	MOV TEMP_L,TEMP_H
+	DEC TEMP_L
+	LSR TEMP_L
+	LSR TEMP_L
+	LSR TEMP_L
+	PUSH_Z
+	ADD ZL,TEMP_L
 	CLR TEMP
 	ADC ZH,TEMP
 	ST Z,ACCUM
+	POP_Z
+
+_DRV_AM2301_EVENT__NEXT:
+	INC TEMP_H
+	STD Z+_DRV_AM2301_OFFSET,TEMP_H
 _DRV_AM2301_EVENT__END:
 
 	POP_Z
 	POP ACCUM
 	POP TEMP
+	POP TEMP_L
 	POP TEMP_H
 	RET
+.endif

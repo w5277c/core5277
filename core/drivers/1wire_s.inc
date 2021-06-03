@@ -1,11 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;24.03.2020  w5277c@gmail.com        Начало
-;30.08.2020  w5277c@gmail.com        Адаптировано под изменения ядра
-;13.09.2020  w5277c@gmail.com        Добавлена дополнительная проверка на присутствие датчика
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;24.03.2020	w5277c@gmail.com			Начало
+;30.08.2020	w5277c@gmail.com			Адаптировано под изменения ядра
+;13.09.2020	w5277c@gmail.com			Добавлена дополнительная проверка на присутствие датчика
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;25.04.2021	w5277c@gmail.com			Подправлены тайминги, учтен CORE_FREQ
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_1WIRE
+.else
+.set DEF__C5_DRV_1WIRE = 1
+.message "Included driver 1Wire v0.2"
 
 .include	"./io/port_mode_in.inc"
 .include	"./io/port_mode_out.inc"
@@ -75,20 +80,20 @@ DRV_1WIRE_INIT:
 	;Проверка на присутствие
 	MCALL PORT_SET_LO
 	MCALL PORT_MODE_OUT
-	C5_WAIT_500NS (540*2)/6											;500us(480-960) по факту получл 489мс
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
+	LDI TEMP,low((250-10)/(16/CORE_FREQ))						;500us(480-960) по факту получл 489мс
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
 	MCALL PORT_MODE_IN
 	C5_WAIT_500NS 60*2												;60us
 	MCALL PORT_GET														;Читаем состояние порта
 	BRCS _DRV_1WIRE_PROC__ERROR
-	C5_WAIT_500NS (440*2)/4											;440us(420 min)
-	C5_WAIT_500NS (440*2)/4
-	C5_WAIT_500NS (440*2)/4
-	C5_WAIT_500NS (440*2)/4
+	LDI TEMP,low((220-10)/(16/CORE_FREQ))						;440us(420 min)
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
 	MCALL PORT_GET														;Читаем состояние порта
 	BRCC _DRV_1WIRE_PROC__ERROR
 	CPI TEMP_H,0x00
@@ -193,12 +198,19 @@ _DRV_1WIRE_DELAY_1US:
 ;--------------------------------------------------------
 ;Пауза в 16 тактов
 ;--------------------------------------------------------
+;TODO необходимо проверить тайминги на частотах !=16
+.IF CORE_FREQ > 16
+	NOP
+.ENDIF
+.if CORE_FREQ > 8
 	NOP
 	NOP
 	NOP
+.ENDIF
+.if CORE_FREQ > 4
 	NOP
 	NOP
-	NOP
+.ENDIF
 	RET
 
 ;--------------------------------------------------------
@@ -207,8 +219,9 @@ _DRV_1WIRE_DELAY_4US:
 ;Пауза в 64 такта
 ;--------------------------------------------------------
 	PUSH TEMP
-	LDI TEMP,14
+	LDI TEMP,CORE_FREQ-1
 	DEC TEMP
 	BRNE PC-0x01
 	POP TEMP
-   RET
+	RET
+.endif

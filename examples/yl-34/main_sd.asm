@@ -6,7 +6,6 @@
 ;BUILD: avra  -I ../../ main.asm
 
 	.SET	CORE_FREQ								= 8	;2-20Mhz
-
 	.INCLUDE "./devices/atmega16.inc"
 	;Важные, но не обязательные параметры ядра
 	.SET	AVRA										= 1	;0-1

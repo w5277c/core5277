@@ -10,7 +10,6 @@
 ;FLASH: avrdude -p m16 -c avrispmkII -U flash:w:main.hex
 
 	.SET	CORE_FREQ								= 16	;Max: 8-ATMega16, 10-ATMega382
-
 	.INCLUDE "./devices/atmega328.inc"
 	.SET	REPORT_INCLUDES						= 0x01
 

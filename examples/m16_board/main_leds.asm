@@ -5,8 +5,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
+	.SET	CORE_FREQ								= 8	;2-20Mhz
 	.INCLUDE "./devices/atmega16.inc"
-	.SET	CORE_FREQ								= 16	;2-20Mhz
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 0	;0-4

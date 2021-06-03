@@ -6,8 +6,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
@@ -26,6 +26,7 @@
 	.include	"./core/log/log_bytes.inc"
 	.include	"./core/log/log_romstr.inc"
 	.include	"./core/log/log_cr.inc"
+	.include	"./core/wait_2ms.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
