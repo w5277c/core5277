@@ -3,11 +3,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;05.06.2021  w5277c@gmail.com			Начало (не тестировано)
 ;-----------------------------------------------------------------------------------------------------------------------
-;Драйвер аппаратного SPI (режим мастера)
+;Драйвер аппаратного SPI
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF__C5_DRV_SPI_MH
+.ifdef DEF__C5_DRV_SPI_H
 .else
-.set DEF__C5_DRV_SPI_MH = 1
+.set DEF__C5_DRV_SPI_H = 1
 .message "Included driver hardware SPI master v0.1"
 
 .include	"./core/ram/ram_offset.inc"
@@ -18,64 +18,88 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
-	.EQU	_DRV_SPI_MH_SRC_ADDR						= 0x00		;2B - адрес блока данных для передачи
-	.EQU	_DRV_SPI_MH_DST_ADDR						= 0x02		;2B - адрес блока данных для приема
+	.EQU	_DRV_SPI_H_SRC_ADDR						= 0x00		;2B - адрес блока данных для передачи
+	.EQU	_DRV_SPI_H_DST_ADDR						= 0x02		;2B - адрес блока данных для приема
 	;---
-	.EQU	_DRV_SPI_MH_POS							= 0x04		;1B - Позиция
-	.EQU	_DRV_SPI_MH_TX_LEN						= 0x05		;1B - Длина данных для передачи
-	.EQU	_DRV_SPI_MH_RX_LEN						= 0x06		;1B - Длина данных для приема
+	.EQU	_DRV_SPI_H_POS								= 0x04		;1B - Позиция
+	.EQU	_DRV_SPI_H_TX_LEN							= 0x05		;1B - Длина данных для передачи
+	.EQU	_DRV_SPI_H_RX_LEN							= 0x06		;1B - Длина данных для приема
 	;---
 
 	;---MODE-(LEADING-EDGE)---
-	.EQU	DRV_SPI_MH_MODE_SM_RI					= (0<<CPOL)|(0<<CPHA)
-	.EQU	DRV_SPI_MH_MODE_ST_RI					= (0<<CPOL)|(1<<CPHA)
-	.EQU	DRV_SPI_MH_MODE_SM_FL					= (1<<CPOL)|(0<<CPHA)
-	.EQU	DRV_SPI_MH_MODE_ST_FL					= (1<<CPOL)|(1<<CPHA)
+	.EQU	DRV_SPI_H_MODE_MASTER					= (1<<MSTR)
+	.EQU	DRV_SPI_H_MODE_SLAVE						= (0<<MSTR)
+	.EQU	DRV_SPI_H_MODE_SM_RI						= (0<<CPOL)|(0<<CPHA)
+	.EQU	DRV_SPI_H_MODE_ST_RI						= (0<<CPOL)|(1<<CPHA)
+	.EQU	DRV_SPI_H_MODE_SM_FL						= (1<<CPOL)|(0<<CPHA)
+	.EQU	DRV_SPI_H_MODE_ST_FL						= (1<<CPOL)|(1<<CPHA)
 	;---PRESCALLER---
-	.EQU	DRV_SPI_MH_PRESC_4						= (0<<SPR1)|(0<<SPR0)
-	.EQU	DRV_SPI_MH_PRESC_16						= (0<<SPR1)|(1<<SPR0)
-	.EQU	DRV_SPI_MH_PRESC_64						= (1<<SPR1)|(0<<SPR0)
-	.EQU	DRV_SPI_MH_PRESC_128						= (1<<SPR1)|(1<<SPR0)
+	.EQU	DRV_SPI_H_PRESC_4							= (0<<SPR1)|(0<<SPR0)
+	.EQU	DRV_SPI_H_PRESC_16						= (0<<SPR1)|(1<<SPR0)
+	.EQU	DRV_SPI_H_PRESC_64						= (1<<SPR1)|(0<<SPR0)
+	.EQU	DRV_SPI_H_PRESC_128						= (1<<SPR1)|(1<<SPR0)
 	;---DATA-ORDER---
-	.EQU	DRV_SPI_MH_DO_LSB_FIRST					= (1<<DORD)
-	.EQU	DRV_SPI_MH_DO_MSB_FIRST					= (0<<DORD)
+	.EQU	DRV_SPI_H_DO_LSB_FIRST					= (1<<DORD)
+	.EQU	DRV_SPI_H_DO_MSB_FIRST					= (0<<DORD)
 
-	.EQU	_DRV_SPI_MH_RAM_SIZE						= 0x07		;7 байт необходимо выделить
+	.EQU	_DRV_SPI_H_RAM_SIZE						= 0x07		;7 байт необходимо выделить
 
 ;--------------------------------------------------------
-DRV_SPI_MH_INIT:
+DRV_SPI_H_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: TEMP-DRV_SPI_MH_MODE_x|DRV_SPI_MH_PRESC_x|
-;DRV_SPI_MH_DO_x
+;IN: DRV_SPI_H_MODE_MASTER/SLAVE|TEMP-DRV_SPI_H_MODE_x|
+;DRV_SPI_H_PRESC_x|DRV_SPI_H_DO_x
 ;--------------------------------------------------------
 	PUSH_Z
+	PUSH TEMP_H
+	PUSH TEMP_L
 	PUSH TEMP
 	PUSH ACCUM
-
-	LDI ACCUM,_DRV_SPI_MH_RAM_SIZE
+	
+	LDI ACCUM,_DRV_SPI_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
 	;Задаем режим работы
-	ORI TEMP,(1<<MSTR)|(1<<SPIE)
+	ORI TEMP,(1<<SPIE)
 	STS SPCR,TEMP
 
+	;Устанавливаю вектор прерывания
+	LDI ACCUM,C5_IR_SPI
+	LDI TEMP_H,high(_DRV_SPI_H_EVENT)
+	LDI TEMP_L,low(_DRV_SPI_H_EVENT)
+	MCALL C5_IR_VECTOR_SET
+
 	;Настраиваем порты
+	SBRS TEMP,MSTR
+	RJMP DRV_SPI_H_INIT__SLAVE
+DRV_SPI_H_INIT__MASTER:
 	LDI ACCUM,MISO
 	MCALL PORT_MODE_IN
+	MCALL PORT_SET_HI
 	LDI ACCUM,MOSI
 	MCALL PORT_MODE_OUT
 	LDI ACCUM,SCK
 	MCALL PORT_MODE_OUT
+	RJMP DRV_SPI_H_INIT__END
+DRV_SPI_H_INIT__SLAVE:
+	LDI ACCUM,MISO
+	MCALL PORT_MODE_OUT
+	LDI ACCUM,MOSI
+	MCALL PORT_MODE_IN
+	MCALL PORT_SET_HI
+	LDI ACCUM,SCK
+	MCALL PORT_MODE_IN
+	MCALL PORT_SET_HI
+	LDI ACCUM,SS
+	MCALL PORT_MODE_IN
+	MCALL PORT_SET_HI
 
-	;Устанавливаю вектор прерывания
-	LDI ACCUM,C5_IR_SPI
-	LDI TEMP_H,high(_DRV_SPI_MH_EVENT)
-	LDI TEMP_L,low(_DRV_SPI_MH_EVENT)
-	MCALL C5_IR_VECTOR_SET
-
+DRV_SPI_H_INIT__END:
 	POP ACCUM
 	POP TEMP
+	POP TEMP_L
+	POP TEMP_H
 	POP_Z
 	MCALL C5_READY
 ;--------------------------------------------------------
@@ -96,17 +120,17 @@ DRV_SPI_MH_INIT:
 	LSL YL
 	ROL YH
 	ORI YH,0x80
-	STD Z+_DRV_SPI_MH_SRC_ADDR+0x00,YH
-	STD Z+_DRV_SPI_MH_SRC_ADDR+0x01,YL
+	STD Z+_DRV_SPI_H_SRC_ADDR+0x00,YH
+	STD Z+_DRV_SPI_H_SRC_ADDR+0x01,YL
 	;Запоминаем DST
-	STD Z+_DRV_SPI_MH_DST_ADDR+0x00,XH
-	STD Z+_DRV_SPI_MH_DST_ADDR+0x01,XL
+	STD Z+_DRV_SPI_H_DST_ADDR+0x00,XH
+	STD Z+_DRV_SPI_H_DST_ADDR+0x01,XL
 	;Запминаем длину TX и RX
-	STD Z+_DRV_SPI_MH_TX_LEN,TEMP_H
-	STD Z+_DRV_SPI_MH_RX_LEN,TEMP_L
+	STD Z+_DRV_SPI_H_TX_LEN,TEMP_H
+	STD Z+_DRV_SPI_H_RX_LEN,TEMP_L
 	;Сброс позиции
 	CLR TEMP
-	STD Z+_DRV_SPI_MH_POS,TEMP
+	STD Z+_DRV_SPI_H_POS,TEMP
 	;Включаем SPI
 	CLI
 	LDS TEMP,SPCR
@@ -114,15 +138,15 @@ DRV_SPI_MH_INIT:
 	STS SPCR,TEMP
 	SEI
 	;Жду окончания передачи
-_DRV_SPI_MH_PROC__WAIT:
-	LDD TEMP,Z+_DRV_SPI_MH_POS
+_DRV_SPI_H_PROC__WAIT:
+	LDD TEMP,Z+_DRV_SPI_H_POS
 	CP TEMP_H,TEMP
 	BRCC PC+0x03
 	CP TEMP_L,TEMP
-	BRCS _DRV_SPI_MH_PROC__DONE
+	BRCS _DRV_SPI_H_PROC__DONE
 	MCALL C5_WAIT
-	RJMP _DRV_SPI_MH_PROC__WAIT
-_DRV_SPI_MH_PROC__DONE:
+	RJMP _DRV_SPI_H_PROC__WAIT
+_DRV_SPI_H_PROC__DONE:
 	;Выключаем SPI
 	CLI
 	LDS TEMP,SPCR
@@ -136,7 +160,7 @@ _DRV_SPI_MH_PROC__DONE:
 	RET
 
 ;--------------------------------------------------------
-_DRV_SPI_MH_EVENT:
+_DRV_SPI_H_EVENT:
 ;--------------------------------------------------------
 ;Обработчик прерывания
 ;--------------------------------------------------------
@@ -148,15 +172,15 @@ _DRV_SPI_MH_EVENT:
 
 	MCALL C5_RAM_OFFSET
 	;Считываю позицию в буфере
-	LDD TEMP,Z+_DRV_SPI_MH_POS
-	LDD TEMP_H,Z+_DRV_SPI_MH_TX_LEN
-	LDD TEMP_L,Z+_DRV_SPI_MH_RX_LEN
+	LDD TEMP,Z+_DRV_SPI_H_POS
+	LDD TEMP_H,Z+_DRV_SPI_H_TX_LEN
+	LDD TEMP_L,Z+_DRV_SPI_H_RX_LEN
 
 	CP TEMP_H,TEMP
-	BRCS _DRV_SPI_MH_EVENT__TX_SKIP
+	BRCS _DRV_SPI_H_EVENT__TX_SKIP
 	PUSH_Z
-	LDD ACCUM,Z+_DRV_SPI_MH_SRC_ADDR+0x00
-  	LDD ZL,Z+_DRV_SPI_MH_SRC_ADDR+0x01
+	LDD ACCUM,Z+_DRV_SPI_H_SRC_ADDR+0x00
+  	LDD ZL,Z+_DRV_SPI_H_SRC_ADDR+0x01
 	MOV ZH,ACCUM
 	ANDI ZH,0x7f
 	ADD ZL,TEMP
@@ -167,19 +191,19 @@ _DRV_SPI_MH_EVENT:
 	LPM ZL,Z
 	STS SPDR,ZL
 	POP_Z
-_DRV_SPI_MH_EVENT__TX_SKIP:
+_DRV_SPI_H_EVENT__TX_SKIP:
 	CP TEMP_L,TEMP
-	BRCS _DRV_SPI_MH_EVENT__RX_SKIP
+	BRCS _DRV_SPI_H_EVENT__RX_SKIP
 	LDS TEMP_L,SPDR
 	PUSH_Z
-	LDD ACCUM,Z+_DRV_SPI_MH_DST_ADDR+0x00
-  	LDD ZL,Z+_DRV_SPI_MH_DST_ADDR+0x01
+	LDD ACCUM,Z+_DRV_SPI_H_DST_ADDR+0x00
+  	LDD ZL,Z+_DRV_SPI_H_DST_ADDR+0x01
 	MOV ZH,ACCUM
 	ADD ZL,TEMP
 	ADC ZH,C0x00
 	ST Z,TEMP_L
 	POP_Z
-_DRV_SPI_MH_EVENT__RX_SKIP:
+_DRV_SPI_H_EVENT__RX_SKIP:
 
 	;Инкрементируем позицию
 	CP TEMP_H,TEMP
@@ -188,7 +212,7 @@ _DRV_SPI_MH_EVENT__RX_SKIP:
 	BRCS PC+0x02
 	INC TEMP
 
-_DRV_SPI_MH_EVENT__END:
+_DRV_SPI_H_EVENT__END:
 	POP ACCUM
 	POP TEMP
 	POP TEMP_L
