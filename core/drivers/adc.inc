@@ -16,6 +16,15 @@
 	.EQU	_DRV_ADC_RAM_SIZE									= 0x0a;Размер используемой памяти
 	.EQU	_DRV_ADC_ST_DONE									= 0x00;Завершено
 	.EQU	_DRV_ADC_ST_BUSY									= 0x01;Занято
+	;---PRESCALLER---
+	.EQU	DRV_ADC_PRESC_2									= 0x01
+	.EQU	DRV_ADC_PRESC_4									= 0x02
+	.EQU	DRV_ADC_PRESC_8									= 0x03
+	.EQU	DRV_ADC_PRESC_16									= 0x04
+	.EQU	DRV_ADC_PRESC_32									= 0x05
+	.EQU	DRV_ADC_PRESC_64									= 0x06
+	.EQU	DRV_ADC_PRESC_128									= 0x07
+	.EQU	DRV_ADC_PRESC_AUTO								= CORE_FREQ/0x08+0x05	;0.2мс каждый опрос максимум
 	;---DATA---
 	.EQU	_DRV_ADC_TIMER_ID									= 0x00;1B - ид таймера
 	.EQU	_DRV_ADC_TIMER_PERIOD							= 0x01;1B - период таймера

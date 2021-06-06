@@ -63,6 +63,11 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
+
 	.EQU	PRR										= 0x45
 	.EQU		PRTIM0								= 0x01
 	.EQU		PRADC									= 0x00
@@ -109,7 +114,7 @@
 	.EQU		PUD									= 0x06
 	.EQU		SE										= 0x05
 	.EQU		SM1									= 0x04
-	.EQU		SMD									= 0x03
+	.EQU		SM0									= 0x03
 	.EQU		ISC01									= 0x01
 	.EQU		ISC00									= 0x00
 	.EQU	GIMSK										= 0x5b

@@ -4,11 +4,12 @@
 ;04.07.2020	w5277c@gmail.com			Начало
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;26.04.2021	w5277c@gmail.com			Исправлена ошибка чтения первого бита
+;03.06.2021	w5277c@gmail.com			Скорректирована модель анализа таймингов
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_AM2301
 .else
 .set DEF__C5_DRV_AM2301 = 1
-.message "Included driver AM2301 v0.2"
+.message "Included driver AM2301 v0.3"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -30,10 +31,11 @@
 	.EQU	_DRV_AM2301_PORT						= 0x05			;1B - порт
 	.EQU	_DRV_AM2301_PCI_DRV					= 0x06			;1B - драйвер PCI
 	.EQU	_DRV_AM2301_TCNT						= 0x07			;1B - счетчик
-	.EQU	_DRV_AM2301_ACCUM						= 0x08			;1B - аккумклятор
-	.EQU	_DRV_AM2301_OFFSET					= 0x09			;1B - смещение
+	.EQU	_DRV_AM2301_TLOW						= 0x08			;1B - время низкого уровня
+	.EQU	_DRV_AM2301_ACCUM						= 0x09			;1B - аккумклятор
+	.EQU	_DRV_AM2301_OFFSET					= 0x0a			;1B - смещение
 	;---
-	.EQU	_DRV_AM2301_RAM_SIZE					= 0x0a			;10 байт необходимо выделить
+	.EQU	_DRV_AM2301_RAM_SIZE					= 0x0b			;11 байт необходимо выделить
 
 ;---RESULTS---
 	.EQU	DRV_AM2301_RESULT_OK					= 0x00
@@ -189,9 +191,15 @@ _DRV_AM2301_EVENT:
 	LDD ACCUM,Z+_DRV_AM2301_TCNT
 	MCALL C5_TCNT_GET
 	STD Z+_DRV_AM2301_TCNT,TEMP
-	SBRC FLAGS,0x00
+	SBRS FLAGS,0x00
+	RJMP _DRV_AM2301_EVENT__HI
+	SUB TEMP,ACCUM
+	;Надо проверить:
+	SUBI TEMP,CORE_FREQ
+	STD Z+_DRV_AM2301_TLOW,TEMP
 	RJMP _DRV_AM2301_EVENT__END
 
+_DRV_AM2301_EVENT__HI:
 	LDD TEMP_H,Z+_DRV_AM2301_OFFSET
 	CPI TEMP_H,0x00
 	BREQ _DRV_AM2301_EVENT__NEXT
@@ -199,8 +207,8 @@ _DRV_AM2301_EVENT:
 	BRCC _DRV_AM2301_EVENT__END
 
 	SUB TEMP,ACCUM
-	COM TEMP
-	CPI TEMP,(256-145)
+	LDD ACCUM,Z+_DRV_AM2301_TLOW
+	CP ACCUM,TEMP
 	LDD ACCUM,Z+_DRV_AM2301_ACCUM
 	ROL ACCUM
 	STD Z+_DRV_AM2301_ACCUM,ACCUM

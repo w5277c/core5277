@@ -1,10 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;18.11.2020  w5277c@gmail.com        Начало
+;18.11.2020	w5277c@gmail.com			Начало
+;04.06.2021	w5277c@gmail.com			Исправлены смещения переходов
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO реализовать прием данных
 ;TODO объединить с кодом ведомого?
+
+.ifdef DEF__C5_DRV_SPI_MS
+.else
+.set DEF__C5_DRV_SPI_MS = 1
+.message "Included driver software SPI master v0.2"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -59,19 +65,19 @@ DRV_SPI_MS_INIT:
 	;Инициализируем порт MISO
 	MOV ACCUM,XL
 	CPI ACCUM,0xff
-	BREQ PC+0x07
+	BREQ PC+0x05
 	MCALL PORT_MODE_IN
 	MCALL PORT_SET_HI
 	;Инициализируем порт MOSI
 	MOV ACCUM,YH
 	CPI ACCUM,0xff
-	BREQ PC+0x07
+	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
 	;Инициализируем порт CS
 	MOV ACCUM,YL
 	CPI ACCUM,0xff
-	BREQ PC+0x07
+	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 
@@ -214,3 +220,4 @@ _DRV_SPI_MS_WAIT:
 	MCALL _C5_WAIT_500NS
 	POP TEMP
 	RET
+.endif

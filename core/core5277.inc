@@ -19,6 +19,7 @@
 ;16.04.2021	w5277c@gmail.com			v0.3.3	Вынесен C5_WAIT_2MS из диспетчера, дефолтное значение для BUFFER_SIZE
 ;24.05.2021	w5277c@gmail.com			v0.3.4	Исправлена ошибка в работе программных таймеров
 ;29.05.2021	w5277c@gmail.com			v0.3.5	Ввод TS_MODE, выделены константы C0x00,X0xff и прочее.
+;31.05.2021	w5277c@gmail.com			v0.3.6	Корректная проверка на выход стека в зону выделяемой памяти
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -39,7 +40,7 @@
 ;TODO нужна еще одна модель динамической памяти но с 16 битным размером. Плюс возможность задавать модель в main-е.
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.ifdef TSM
+.ifdef TS_MODE
 .else
 	.ifdef REALTIME
 		.SET	TS_MODE									= REALTIME
@@ -205,7 +206,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.3.5",0x0d,0x0a,0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.6",0x0d,0x0a,0x00,0x00
 	.INCLUDE "./core/log/log_init.inc"
 	.INCLUDE	"./core/log/log_romstr.inc"
 	.INCLUDE	"./core/log/log_tasksdump.inc"
@@ -509,6 +510,10 @@ C5_INIT:
 	;Сбрасываем флаги причины сброса
 	CLR TEMP
 	STS MCUSR,TEMP
+
+	EOR C0x00,C0x00
+	LDI TEMP,0xff
+	MOV C0xff,TEMP
 
 .IF TIMER_C_ENABLE == 0x01
 	_C5_TIMERC_INIT
@@ -1165,13 +1170,14 @@ _C5_SUSPEND__BODY:
 	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x00
 	CP TEMP,TEMP_H
 	BRCS _C5_SUSPEND__CORRECT_STACK_SIZE
-	LDI TEMP,_C5_FAULT_HUGE_STACK
-	MJMP C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
+	BRNE _C5_SUSPEND__HUGE_STACK
 	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x01
 	CP TEMP,TEMP_L
 	BRCS _C5_SUSPEND__CORRECT_STACK_SIZE
+_C5_SUSPEND__HUGE_STACK:
 	LDI TEMP,_C5_FAULT_HUGE_STACK
 	MJMP C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
+	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x01
 _C5_SUSPEND__CORRECT_STACK_SIZE:
 
 	;Получаем начало стека задачи
