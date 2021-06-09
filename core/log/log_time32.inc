@@ -1,8 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.02.2021  w5277c@gmail.com			Начало (не проверено)
-;03.03.2021  w5277c@gmail.com			PUSH/POP LOOP_CNTR
+;02.02.2021	w5277c@gmail.com			Начало (не проверено)
+;03.03.2021	w5277c@gmail.com			PUSH/POP LOOP_CNTR
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_TIME32
 .else
@@ -34,11 +34,9 @@ C5_LOG_TIME32:
 	LDS TEMP_L,SREG
 	PUSH TEMP_L
 
-
 	MCALL C5_RAM_OFFSET
 	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 
 	LDD TEMP_EH,Z+0x00
 	LDD TEMP_EL,Z+0x01
@@ -70,7 +68,6 @@ C5_LOG_TIME32__LOOP1:
 	PUSH TEMP_H
 	DEC LOOP_CNTR
 	BRNE C5_LOG_TIME32__LOOP1
-
 
 	CLT
 	LDI LOOP_CNTR,0x04
@@ -108,6 +105,7 @@ C5_LOG_TIME32__LOOP_US:
 	MCALL C5_LOG_CHAR
 	DEC LOOP_CNTR
 	BRNE C5_LOG_TIME32__LOOP_US
+
 	BRTS PC+0x04
 	LDI TEMP,'0'
 	MCALL C5_LOG_CHAR
