@@ -1,13 +1,17 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;15.10.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;15.10.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;09.06.2021	w5277c@gmail.com			Багфиксинг
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_ADC
+.else
+.set DEF__C5_DRV_ADC = 1
+.message "Included driver ADC v0.2"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./core/wait.inc"
 ;.include	"./core/res_lock.inc"
 ;.include	"./core/res_unlock.inc"
 .include	"./math/div32x16.inc"
@@ -138,16 +142,18 @@ DRV_ADC_INIT:
 	RJMP DRV_ADC__WAIT_RESULT
 DRV_ADC__NO_TIMER:
 	LDS TEMP,ADCSRA
-	ORI TEMP,(1<<ADEN)												;Запускаем ADC
+	ORI TEMP,(1<<ADEN)|(1<<ADSC)									;Запускаем ADC
 	STS ADCSRA,TEMP
-DRV_ADC__WAIT_RESULT:
 	;Ждем результат
-	MCALL C5_WAIT
+DRV_ADC__WAIT_RESULT:
 	LDD TEMP,Z+_DRV_ADC_STATE
 	CPI TEMP,_DRV_ADC_ST_DONE
 	BRNE DRV_ADC__WAIT_RESULT
 
 	;Выключаю ADC
+	LDS TEMP,ADCSRA
+	ANDI TEMP,~(0<<ADEN)
+	STS ADCSRA,TEMP
 	_C5_POWER_OFF PRADC
 
 	CLR XH
@@ -201,6 +207,8 @@ _DRV_ADC_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по завершенному вычислению ADC
 ;--------------------------------------------------------
+	PUSH TEMP_EH
+	PUSH TEMP_EL
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
@@ -262,4 +270,7 @@ _DRV_ADC_EVENT__NEXT:
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
+	POP TEMP_EL
+	POP TEMP_EH
 	RET
+.endif

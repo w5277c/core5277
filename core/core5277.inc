@@ -38,6 +38,9 @@
 
 ;TODO TIMER-TASK отрабатывает немного чаще, почему?
 ;TODO нужна еще одна модель динамической памяти но с 16 битным размером. Плюс возможность задавать модель в main-е.
+;TODO проверить использование _PID, специално введен, чтобы драйвер знал кто его вызвал (не нужно передавать отдельно
+;как параметр)
+;TODO добавить проверку на превышение максимального кол-ва задач и драйверов при создании процесса
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef TS_MODE
@@ -101,6 +104,7 @@
 	;---CORE-FAULTS---
 	.EQU	_C5_FAULT_HUGE_STACK					= 0x01			;Стек перешел границу выделяемой памяти
 	.EQU	_C5_FAULT_HUGE_TASK_STACK			= 0x02			;Размер стека задачи более 255 байт
+	.EQU	_C5_FAULT_HUGE_TASK_STACK2			= 0x03			;Размер стека задачи более 255 байт
 	;---CORE-RESOURCES---											;Идентфикаторы ресурсов, 0-127 отданы пользователю, старшие-ядру
 	.EQU	C5_RES_TIMER_B							= 0xFE			;Таймер B
 	.EQU	C5_RES_ADC								= 0xFD			;ADC
@@ -471,7 +475,7 @@ C5_TIMER_C_SET_VECTOR:
 C5_TIMER_C_START:
 ;--------------------------------------------------------
 ;Запуск таймера C
-;IN: TEMP-период
+;IN: TEMP_H,начальное значение, TEMP_L-длина периода
 ;--------------------------------------------------------
 	PUSH TEMP
 	_C5_TIMERC_START
@@ -584,22 +588,19 @@ C5_REINIT:
 	LDI TEMP_H,high(TIMERS*0x05)
 	LDI TEMP_L,low(TIMERS*0x05)
 	LDI TEMP,0xff
-	LDI XH,high(_C5_TIMERS)
-	LDI XL,low(_C5_TIMERS)
+	LDI_X _C5_TIMERS
 	MCALL RAM_FILL16
 .ENDIF
 	;Чистка заголовков драйверов
 .IF	0x00 != C5_DRIVERS_QNT
-	LDI XH,high(_C5_DRIVERS_HEADER)
-	LDI XL,low(_C5_DRIVERS_HEADER)
+	LDI_X _C5_DRIVERS_HEADER
 	LDI TEMP_H,high(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
 	LDI TEMP_L,low(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	MCALL RAM_FILL16
 .ENDIF
 	;Чистка заголовков задач
-	LDI XH,high(_C5_TASKS_HEADER)
-	LDI XL,low(_C5_TASKS_HEADER)
+	LDI_X _C5_TASKS_HEADER
 	LDI TEMP_H,high(_C5_TASK_HEADER_SIZE*C5_TASKS_QNT)
 	LDI TEMP_L,low(_C5_TASK_HEADER_SIZE*C5_TASKS_QNT)
 	LDI TEMP,_C5_PROC_STATE_ABSENT
@@ -1000,8 +1001,7 @@ _C5_PROC_HEADER_GET:
 	SBRS PID,C5_PROCID_OPT_DRV
 	RJMP _C5_PROC_HEADER_GET__TASK
 _C5_PROC_HEADER_GET__DRIVER:
-	LDI ZH,high(_C5_DRIVERS_HEADER)
-	LDI ZL,low(_C5_DRIVERS_HEADER)
+	LDI_Z _C5_DRIVERS_HEADER
 	MOV TEMP_H,PID													;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
 	ANDI TEMP_H,0x0f
 	LSL TEMP_H
@@ -1188,7 +1188,7 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	SBC TEMP_EH,TEMP_H
 	TST TEMP_EH
 	BREQ PC+0x04
-	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK
+	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK2
 	MCALL C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
 
 	;Обновляем длину стека задачи

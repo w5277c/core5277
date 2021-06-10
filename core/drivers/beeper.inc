@@ -143,7 +143,7 @@ _DRV_BEEPER_OCTAVS_TABLE:
 DRV_BEEPER_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM - порт, FLAGS - ид таймера
+;IN: ACCUM-порт, FLAGS-ид таймера
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH TEMP
@@ -162,7 +162,7 @@ DRV_BEEPER_INIT:
 	LDI TEMP_L,low(_DRV_BEEPER_TIMER_EVENT)
 	LDI ACCUM,0x01|(0<<0x07)
 	MCALL C5_TIMER_SET
-	
+
 	POP ACCUM
 	STD Z+_DRV_BEEPER_PORT,ACCUM
 	;Инициализация порта
