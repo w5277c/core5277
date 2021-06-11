@@ -39,7 +39,7 @@ DRV_PCD8544_INIT:
 ;--------------------------------------------------------
 ;Инициализация
 ;IN: TEMP_EH-RST порт, TEMP_EL-DC порт, TEMP_H-Din порт,
-;TEMP_L-Clk порт, ACCUM-ид таймера, FLAGS-ид бита ядра
+;TEMP_L-Clk порт, ACCUM-ид таймера
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
@@ -123,9 +123,12 @@ _DRV_PCD8544_OP_JUMP_TABLE:
 	MJMP _DRV_PCD8544_PROC_SET_MODE
 	MJMP _DRV_PCD8544_PROC_GET_SIZE
 	MJMP _DRV_PCD8544_PROC_SET_XY
-	MJMP _DRV_PCD8544_PROC_SET_TEXT
+	MJMP _DRV_PCD8544_PROC_UNSUPPORTED
 	;....
 
+_DRV_PCD8544_PROC_UNSUPPORTED:
+	LDI ACCUM,DRV_VIDEO_RESULT_UNSUPPORTED
+	RET
 ;--------------------------------------------------------
 _DRV_PCD8544_PROC_GET_MODES:
 ;--------------------------------------------------------

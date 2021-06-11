@@ -7,6 +7,9 @@
 .else
 .set DEF__DRV_FONT4X6 = 1
 
-	.EQU	FONT_DATA_SIZE									=	(128-32)*6/2
+;	.EQU	FONT_DATA_SIZE									=	(128-32)*6/2
 FONT_DATA:
-	.db b00001111,b00001111,b00001111...
+	.db b00001111,b00001111,b00001111;...
+
+
+.endif
