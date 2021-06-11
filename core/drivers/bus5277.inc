@@ -2,16 +2,21 @@
 ;Разработчиком и полноправным владельцем данного исходного кода является Удовиченко Константин Александрович,
 ;емайл:w5277c@gmail.com, по всем правовым вопросам обращайтесь на email.
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.05.2020  w5277c@gmail.com			Начало
-;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
-;17.02.2021  w5277c@gmail.com			Исправлены ошибки
-;19.02.2021  w5277c@gmail.com			Оптимизирован код, переделаны методы SLAVE, добавлена реализация SLAVE EXTRASCAN.
+;03.05.2020	w5277c@gmail.com			Начало
+;12.02.2020	w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
+;17.02.2021	w5277c@gmail.com			Исправлены ошибки
+;19.02.2021	w5277c@gmail.com			Оптимизирован код, переделаны методы SLAVE, добавлена реализация SLAVE EXTRASCAN.
 ;												Код не оттестирован!
+;12.06.2021	w5277c@gmail.com			Вынесен буфер пакета, не тестировно!
+;-----------------------------------------------------------------------------------------------------------------------
+;Драйвер шины BUS5277
+;-----------------------------------------------------------------------------------------------------------------------
+;TODO все константы должны начинаться с DRV_
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_BUS5277
 .else
 .set DEF__C5_DRV_BUS5277 = 1
-.message "Included driver Bus5277 v0.3"
+.message "Included driver Bus5277 v0.4"
 
 ;Шина на базе serial(19200-8N1+BREAK)
 ;  addr     size     code     data0        dataN     crc
@@ -43,96 +48,97 @@
 ;---CONSTANTS--------------------------------------------
 	;---VAR-OFFSETS---
 	;---DATA-OFFSETS---
-	.EQU	_DRV_BUS5277_PACKET_HEADER						= 0x00;3B - заголовок пакета
-	.EQU		_DRV_BUS5277_PACKET_HEADER_ADDR			= 0x00;
-	.EQU		_DRV_BUS5277_PACKET_HEADER_SIZE			= 0x01;
-	.EQU		_DRV_BUS5277_PACKET_HEADER_CODE			= 0x02;
+;	.EQU	_DRV_BUS5277_PACKET_HEADER						= 0x00;3B - заголовок пакета
+	.EQU		_DRV_BUS5277_PACKET_HEADER_ADDR		= 0x00;
+	.EQU		_DRV_BUS5277_PACKET_HEADER_SIZE		= 0x01;
+	.EQU		_DRV_BUS5277_PACKET_HEADER_CODE		= 0x02;
 
-	.EQU	DRV_BUS5277_PACKET_DATA							= 0x03;37B - тело пакета
-	.EQU	_DRV_BUS5277_BUS_ADDR							= 0x28;1B - адрес устройства на шине
-	.EQU	_DRV_BUS5277_UART_DRV_ID						= 0x29;1B - ид драйвера UART
-	.EQU	_DRV_BUS5277_EXTRASCAN_TIMER					= 0x2a;1B - ид таймера для EXTRASCAN_T
-	.EQU	_DRV_BUS5277_EXTRASCAN_CNTR					= 0x2b;1B - счетчик для EXTRASCAN_T
-	.EQU	_DRV_BUS5277_FLAGS								= 0x2c;1B - флаги драйвера
+	.EQU	_DRV_BUS5277_EXTRASCAN_T_BUFFER_ADDR	= 0x00	;2B - адрес буфера EXTRASCAN_T
+	.EQU	_DRV_BUS5277_EXTRASCAN_T_REQ_DATA		= 0x02	;2B - данные запроса EXTRASCAN_T
+	.EQU	_DRV_BUS5277_BUS_ADDR						= 0x04	;1B - адрес устройства на шине
+	.EQU	_DRV_BUS5277_UART_DRV_ID					= 0x05	;1B - ид драйвера UART
+	.EQU	_DRV_BUS5277_EXTRASCAN_TIMER				= 0x06	;1B - ид таймера для EXTRASCAN_T
+	.EQU	_DRV_BUS5277_EXTRASCAN_CNTR				= 0x07	;1B - счетчик для EXTRASCAN_T
+	.EQU	_DRV_BUS5277_FLAGS							= 0x08	;1B - флаги драйвера
 
 	;---FLAGS---
-	.EQU	DRV_BUS5277_FLAG_HAVE_DATA						= 0x00;Бит наличия данных
-	.EQU	DRV_BUS5277_FLAG_LOGGING						= 0x01;Бит логирования
-	.EQU	DRV_BUS5277_FLAG_MASTER							= 0x02;Режим 1-MASTER/0-SLAVE
+	.EQU	DRV_BUS5277_FLAG_HAVE_DATA					= 0x00	;Бит наличия данных
+	.EQU	DRV_BUS5277_FLAG_LOGGING					= 0x01	;Бит логирования
+	.EQU	DRV_BUS5277_FLAG_MASTER						= 0x02	;Режим 1-MASTER/0-SLAVE
 	;---OPERATIONS---
-	.EQU	DRV_BUS5277_OP_MASTER							= 0x00;Режим ведущего (запрос-ожидание ответа)
-	.EQU	DRV_BUS5277_OP_SLAVE_RECV						= 0x01;Режим ведомого ожидание запроса
-	.EQU	DRV_BUS5277_OP_SLAVE_SEND						= 0x02;Режим ведомого ответ на запрос
-	.EQU	DRV_BUS5277_OP_EXTRASCAN						= 0x03;Режим EXTRASCAN - опрос адресов на наличие новых данных
-	.EQU	DRV_BUS5277_OP_EXTRASCAN_T						= 0x04;Режим TIMING EXTRASCAN
-	.EQU	DRV_BUS5277_OP_HAVE_DATA						= 0x05;Устанавливаем флаг HAVE_DATA
+	.EQU	DRV_BUS5277_OP_MASTER						= 0x00	;Режим ведущего (запрос-ожидание ответа)
+	.EQU	DRV_BUS5277_OP_SLAVE_RECV					= 0x01	;Режим ведомого ожидание запроса
+	.EQU	DRV_BUS5277_OP_SLAVE_SEND					= 0x02	;Режим ведомого ответ на запрос
+	.EQU	DRV_BUS5277_OP_EXTRASCAN					= 0x03	;Режим EXTRASCAN - опрос адресов на наличие новых данных
+	.EQU	DRV_BUS5277_OP_EXTRASCAN_T					= 0x04	;Режим TIMING EXTRASCAN
+	.EQU	DRV_BUS5277_OP_HAVE_DATA					= 0x05	;Устанавливаем флаг HAVE_DATA
 	;---REQUEST-CODES---
-	.EQU	BUS5277_FUNC_INFO									= 0x00;Чтение исномации об устройстве (0x5277 + тип, серийниый номер, версия PCB, версия FW, адрес на шине, uptime)
-	.EQU	BUS5277_FUNC_ADDR_SET							= 0x01;Установка адреса на шине(1-126)
-	.EQU	BUS5277_FUNC_DATA_READ							= 0x02;Чтение данных(показаний)
-	.EQU	BUS5277_FUNC_SETTINGS_READ						= 0x03;Чтение блока расширенных настроек
-	.EQU	BUS5277_FUNC_SETTINGS_WRITE					= 0x04;Запись блока расширенных настроек (с изменением в EEPROM)
-	.EQU	BUS5277_FUNC_COMMAND_EXEC						= 0x05;Выполнение команды (таких как вкл/выкл/инвертировать)
-	.EQU	BUS5277_FUNC_HISTORY_PULL						= 0x06;Чтение первой записи истории или последующей с удалением первой
-	.EQU	BUS5277_FUNC_IFACE_OPEN							= 0x07;Инициализация доп. интерфейса (открытие соединения)
-	.EQU	BUS5277_FUNC_IFACE_COMM							= 0x08;Выполнить процедуру передачи и приема данных
-	.EQU	BUS5277_FUNC_IFACE_STATUS						= 0x09;Сообщить состояние интерфейса
-	.EQU	BUS5277_FUNC_IFACE_CLOSE						= 0x0a;Закрытие соединения
-	.EQU	BUS5277_FUNC_IFACE_BUFFER_READ				= 0x0b;Чтение блока данных буфера интерфейса
-	.EQU	BUS5277_FUNC_IFACE_BUFFER_WRITE				= 0x0c;Запись блока данных в буфер интерфейса
-	.EQU	BUS5277_FUNC_BTLDR_MODE							= 0x0d;Перейти в режим бутлоадера
-	.EQU	BUS5277_FUNC_BTLDR_WRITE						= 0x0e;Записать блок данных во FLASH
-	.EQU	BUS5277_FUNC_BTLDR_DONE							= 0x0f;Выйти из режима бутлоадера
+	.EQU	BUS5277_FUNC_INFO								= 0x00	;Чтение исномации об устройстве (0x5277 + тип, серийниый номер, версия PCB, версия FW, адрес на шине, uptime)
+	.EQU	BUS5277_FUNC_ADDR_SET						= 0x01	;Установка адреса на шине(1-126)
+	.EQU	BUS5277_FUNC_DATA_READ						= 0x02	;Чтение данных(показаний)
+	.EQU	BUS5277_FUNC_SETTINGS_READ					= 0x03	;Чтение блока расширенных настроек
+	.EQU	BUS5277_FUNC_SETTINGS_WRITE				= 0x04	;Запись блока расширенных настроек (с изменением в EEPROM)
+	.EQU	BUS5277_FUNC_COMMAND_EXEC					= 0x05	;Выполнение команды (таких как вкл/выкл/инвертировать)
+	.EQU	BUS5277_FUNC_HISTORY_PULL					= 0x06	;Чтение первой записи истории или последующей с удалением первой
+	.EQU	BUS5277_FUNC_IFACE_OPEN						= 0x07	;Инициализация доп. интерфейса (открытие соединения)
+	.EQU	BUS5277_FUNC_IFACE_COMM						= 0x08	;Выполнить процедуру передачи и приема данных
+	.EQU	BUS5277_FUNC_IFACE_STATUS					= 0x09	;Сообщить состояние интерфейса
+	.EQU	BUS5277_FUNC_IFACE_CLOSE					= 0x0a	;Закрытие соединения
+	.EQU	BUS5277_FUNC_IFACE_BUFFER_READ			= 0x0b	;Чтение блока данных буфера интерфейса
+	.EQU	BUS5277_FUNC_IFACE_BUFFER_WRITE			= 0x0c	;Запись блока данных в буфер интерфейса
+	.EQU	BUS5277_FUNC_BTLDR_MODE						= 0x0d	;Перейти в режим бутлоадера
+	.EQU	BUS5277_FUNC_BTLDR_WRITE					= 0x0e	;Записать блок данных во FLASH
+	.EQU	BUS5277_FUNC_BTLDR_DONE						= 0x0f	;Выйти из режима бутлоадера
 	;---																	;Блок комманд с адресацией по UID
-	.EQU	BUS5277_FUNC_SEARCH								= 0x40;Поиск устройства (определение UID устройств)
-	.EQU	BUS5277_FUNC_INFO_BY_UID						= 0x41;Чтение исномации об устройстве (аналогично BUS5277_FUNC_INFO, но адресация по UID)
-	.EQU	BUS5277_FUNC_ADDR_SET_BY_UID					= 0x42;Установка адреса на шине (аналогично BUS5277_FUNC_ADDR_SET, но адресация по UID)
+	.EQU	BUS5277_FUNC_SEARCH							= 0x40	;Поиск устройства (определение UID устройств)
+	.EQU	BUS5277_FUNC_INFO_BY_UID					= 0x41	;Чтение исномации об устройстве (аналогично BUS5277_FUNC_INFO, но адресация по UID)
+	.EQU	BUS5277_FUNC_ADDR_SET_BY_UID				= 0x42	;Установка адреса на шине (аналогично BUS5277_FUNC_ADDR_SET, но адресация по UID)
 	;---
-	.EQU	BUS5277_FUNC_SOFT_RESET							= 0x7c;Перезагрузка устройства
-	.EQU	BUS5277_FUNC_RESET								= 0x7d;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
-	.EQU	BUS5277_FUNC_FULL_RESET							= 0x7e;Сброс устройства к первоначальным настройкам
+	.EQU	BUS5277_FUNC_SOFT_RESET						= 0x7c	;Перезагрузка устройства
+	.EQU	BUS5277_FUNC_RESET							= 0x7d	;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
+	.EQU	BUS5277_FUNC_FULL_RESET						= 0x7e	;Сброс устройства к первоначальным настройкам
 	;---RESPONSE-CODES---
-	.EQU	BUS5277_RESP_OK									= 0x80;Все в порядке
-	.EQU	BUS5277_RESP_NO_ANSWER							= 0x81;Нет ответа
-	.EQU	BUS5277_RESP_INVALID_PACKET					= 0x82;Битый пакет, несоответствие ADDR, бит запрос/ответ или CRC
-	.EQU	BUS5277_RESP_ILLEGAL_FUNCTION					= 0x83;Неизвестная функция
-	.EQU	BUS5277_RESP_ILLEGAL_DATA_ADDR				= 0x84;Не корректно указан начальный адрес либо запрошенный блок выходит за рамки блока данных
-	.EQU	BUS5277_RESP_INVALIDATE							= 0x85;Не корректный формат данных
-	.EQU  BUS5277_RESP_REJECT								= 0x86;Отклонено, например из-за SOURCE_MODE запрещающего управление по MODBUS
-	.EQU	BUS5277_RESP_NO_DATA								= 0x87;Нечего возвращать
-	.EQU	BUS5277_RESP_RELAY_LOCK							= 0x88;Реле заблокировано тригерром
-	.EQU	BUS5277_RESP_ILLEGAL_CHANNEL					= 0x89;Некорректный номер канала
-	.EQU	BUS5277_RESP_ILLEGAL_COMMAND					= 0x8a;Некорректная комманда
-	.EQU	BUS5277_RESP_BLDR_MODE							= 0x8b;Режим бутлоадера
-	.EQU	BUS5277_RESP_UNSUPPORTED						= 0x8c;Функционал не поддерживается
+	.EQU	BUS5277_RESP_OK								= 0x80	;Все в порядке
+	.EQU	BUS5277_RESP_NO_ANSWER						= 0x81	;Нет ответа
+	.EQU	BUS5277_RESP_INVALID_PACKET				= 0x82	;Битый пакет, несоответствие ADDR, бит запрос/ответ или CRC
+	.EQU	BUS5277_RESP_ILLEGAL_FUNCTION				= 0x83	;Неизвестная функция
+	.EQU	BUS5277_RESP_ILLEGAL_DATA_ADDR			= 0x84	;Не корректно указан начальный адрес либо запрошенный блок выходит за рамки блока данных
+	.EQU	BUS5277_RESP_INVALIDATE						= 0x85	;Не корректный формат данных
+	.EQU  BUS5277_RESP_REJECT							= 0x86	;Отклонено, например из-за SOURCE_MODE запрещающего управление по MODBUS
+	.EQU	BUS5277_RESP_NO_DATA							= 0x87	;Нечего возвращать
+	.EQU	BUS5277_RESP_RELAY_LOCK						= 0x88	;Реле заблокировано тригерром
+	.EQU	BUS5277_RESP_ILLEGAL_CHANNEL				= 0x89	;Некорректный номер канала
+	.EQU	BUS5277_RESP_ILLEGAL_COMMAND				= 0x8a	;Некорректная комманда
+	.EQU	BUS5277_RESP_BLDR_MODE						= 0x8b	;Режим бутлоадера
+	.EQU	BUS5277_RESP_UNSUPPORTED					= 0x8c	;Функционал не поддерживается
 	;---COMMAND-CODES---
-	.EQU	BUS5277_CMD_CANCEL								= 0x00;Отмена текущей команды (не используется)
-	.EQU	BUS5277_CMD_TURN_ON								= 0x01;Включить
-	.EQU	BUS5277_CMD_TURN_OFF								= 0x02;Выключить
-	.EQU	BUS5277_CMD_SWITCH								= 0x03;Переключить
-	.EQU	BUS5277_CMD_INC_POWER							= 0x04;Увеличить мощность
-	.EQU	BUS5277_CMD_DEC_POWER							= 0x05;Уменьшить мощность
-	.EQU	BUS5277_CMD_SET_POWER							= 0x06;Установить мощность в процентах
-	.EQU	BUS5277_CMD_SET_MODE								= 0x07;Установить режим управления
-	.EQU	BUS5277_CMD_EXECUTE								= 0x08;Выполнить
-	.EQU	BUS5277_CMD_SET_VALUE							= 0x09;Задать значение
-	.EQU	BUS5277_CMD_SET_TIMER							= 0x0a;Запустить таймер
+	.EQU	BUS5277_CMD_CANCEL							= 0x00	;Отмена текущей команды (не используется)
+	.EQU	BUS5277_CMD_TURN_ON							= 0x01	;Включить
+	.EQU	BUS5277_CMD_TURN_OFF							= 0x02	;Выключить
+	.EQU	BUS5277_CMD_SWITCH							= 0x03	;Переключить
+	.EQU	BUS5277_CMD_INC_POWER						= 0x04	;Увеличить мощность
+	.EQU	BUS5277_CMD_DEC_POWER						= 0x05	;Уменьшить мощность
+	.EQU	BUS5277_CMD_SET_POWER						= 0x06	;Установить мощность в процентах
+	.EQU	BUS5277_CMD_SET_MODE							= 0x07	;Установить режим управления
+	.EQU	BUS5277_CMD_EXECUTE							= 0x08	;Выполнить
+	.EQU	BUS5277_CMD_SET_VALUE						= 0x09	;Задать значение
+	.EQU	BUS5277_CMD_SET_TIMER						= 0x0a	;Запустить таймер
 	;---COMMAND-SOURCE-CODES---
-	.EQU	BUS5277_CMD_SRC_MANUAL							= 0x01;Вручную
-	.EQU	BUS5277_CMD_SRC_BUS								= 0x02;Шина
-	.EQU	BUS5277_CMD_SRC_TIMER							= 0x04;Таймер
-	.EQU	BUS5277_CMD_SRC_TRIGGER							= 0x08;Триггер
-	.EQU	BUS5277_CMD_SRC_TRIGGER_ERR					= 0x88;Триггер, ошибка датчика(старший бит)
+	.EQU	BUS5277_CMD_SRC_MANUAL						= 0x01	;Вручную
+	.EQU	BUS5277_CMD_SRC_BUS							= 0x02	;Шина
+	.EQU	BUS5277_CMD_SRC_TIMER						= 0x04	;Таймер
+	.EQU	BUS5277_CMD_SRC_TRIGGER						= 0x08	;Триггер
+	.EQU	BUS5277_CMD_SRC_TRIGGER_ERR				= 0x88	;Триггер, ошибка датчика(старший бит)
 	;---REQUEST/RESPONSE-INTERNAL-ERROR-CODE
-	.EQU	BUS5277_FAULT										= 0xff;Сбой в логике
+	.EQU	BUS5277_FAULT									= 0xff	;Сбой в логике
 	;---
-	.EQU	DRV_BUS5277_MAX_PACKET_SIZE					= 0x28;Максимальный размер пакета 40B
-	.EQU	DRV_BUS5277_MIN_PACKET_SIZE					= 0x04;Минимальный размер пакета 4B
-	.EQU	_DRV_BUS5277_LISTEN_TIMEOUT					= 0x32;100 мс - таймаут для приема ответа
-	.EQU	_DRV_BUS5277_MASTER_ADDR						= 0x00;Адрес мастера
-	.EQU	_DRV_BUS5277_EXTRASCAN_T_PERIOD				= 0x02;Период чтения сигнала 0,0001с
+	.EQU	DRV_BUS5277_MAX_PACKET_SIZE				= 0x28	;Максимальный размер пакета 40B
+	.EQU	DRV_BUS5277_MIN_PACKET_SIZE				= 0x04	;Минимальный размер пакета 4B
+	.EQU	_DRV_BUS5277_LISTEN_TIMEOUT				= 0x32	;100 мс - таймаут для приема ответа
+	.EQU	_DRV_BUS5277_MASTER_ADDR					= 0x00	;Адрес мастера
+	.EQU	_DRV_BUS5277_EXTRASCAN_T_PERIOD			= 0x02	;Период чтения сигнала 0,0001с
 	;---
-	.EQU	_DRV_BUS5277_RAM_SIZE							= 0x2d;43B - буфер шины(40B) + переменные(5B)
+	.EQU	_DRV_BUS5277_RAM_SIZE						= 0x09	;
 
 ;--------------------------------------------------------
 DRV_BUS5277_INIT:
@@ -169,6 +175,12 @@ DRV_BUS5277_INIT:
 	LDI ACCUM,_DRV_BUS5277_EXTRASCAN_T_PERIOD/2+0x01
 	MCALL C5_TIMER_SET
 
+	;Формируем данные для запроса EXTRASCAN_T
+	LDI TEMP,0x80
+	STD Z+_DRV_BUS5277_EXTRASCAN_T_REQ_DATA+0x00,TEMP
+	LDI TEMP,0x8c
+	STD Z+_DRV_BUS5277_EXTRASCAN_T_REQ_DATA+0x01,TEMP
+
 	POP ACCUM
 	POP TEMP_L
 	POP TEMP_H
@@ -182,7 +194,6 @@ DRV_BUS5277_INIT:
 ;OUT: ACCUM-код функции/ответа(0xff - сбой)
 ;--------------------------------------------------------
 	PUSH_Z
-
 	LDI_Z _DRV_BUS5277_OP_END
 	PUSH ZL
 	PUSH ZH
@@ -213,43 +224,26 @@ _DRV_BUS5277_OP_JUMP_TABLE:
 ;--------------------------------------------------------
 _DRV_BUS5277_PROC_MASTER:
 ;--------------------------------------------------------
-;Режим MASTER
-;IN: Z-выделенная память, Y-адрес на данные, TEMP_H-код
-;функции, TEMP_L-длина данных, LOOP_CNTR-адрес устройства
-;OUT: ACCUM-код ответа,
-;Y - адрес на блок данных, TEMP - длина данных
+;Режим MASTER, передача и прием пакета,
+;пакет формируется и парсится отдельно процедурами
+;PACKET_PACK и PACKET_UNPACK.
+;IN: Z-выделенная память, Y-src адрес, X-dst адрес
+;OUT: ACCUM-код ответа
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH TEMP
-	PUSH ACCUM
-
-	;Проверяю на максимальный размер пакета
-	CPI TEMP_L,0x24+0x01
-	BRCS PC+0x03
-	LDI ACCUM,BUS5277_FAULT
-	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
+	PUSH_FT
 
 	;Режим ведущего
 	LDD TEMP,Z+_DRV_BUS5277_FLAGS
 	ORI TEMP,(1<<DRV_BUS5277_FLAG_MASTER)
 	STD Z+_DRV_BUS5277_FLAGS,TEMP
 
-	;Формирую пакет
-	MOV XH,ZH
-	MOV XL,ZL
-	MCALL DRV_BUS5277__PACKET_PACK
-
-	;Запускаем драйвер UART
-	LDI TEMP_EH,0x04													;Длина данных для передачи
-	ADD TEMP_EH,TEMP_L
-	MOV YH,ZH															;Адрес блока данных для передачи
-	MOV YL,ZL
 .ifdef LOGGING_PORT
 	MCALL _DRV_BUS5277__LOG_REQV
 .endif
+	;Запускаем драйвер UART
+	LDD TEMP_EH,Y+_DRV_BUS5277_PACKET_HEADER_SIZE			;Длина данных для передачи
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV XH,ZH															;Адрес блока данных для приема
-	MOV XL,ZL
 	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
 	LDI TEMP_H,high(100/2)											;Максимальное время ожидания данных
 	LDI TEMP_L,low(100/2)
@@ -257,42 +251,17 @@ _DRV_BUS5277_PROC_MASTER:
 	;Проверка ответа на ошибку
 	CPI TEMP_H,DRV_UART_ST_READY
 	LDI ACCUM,BUS5277_RESP_NO_ANSWER
-	BRNE _DRV_BUS5277_PROC_MASTER__ERROR
-	CPI TEMP_L,0x00
+	BRNE _DRV_BUS5277_PROC_MASTER__END
 	LDI ACCUM,BUS5277_RESP_NO_DATA
-	BREQ _DRV_BUS5277_PROC_MASTER__ERROR
+	BREQ _DRV_BUS5277_PROC_MASTER__END
 .ifdef LOGGING_PORT
 	MCALL _DRV_BUS5277__LOG_RESP
 .endif
-
-	;Распаковка ответа
-	MCALL DRV_BUS5277__PACKET_UNPACK
-	;Проверяю адрес на совпадение
-	MOV ACCUM,LOOP_CNTR
-	ANDI ACCUM,0x7f
-	LDD TEMP,Z+_DRV_BUS5277_BUS_ADDR
-	CP ACCUM,TEMP
-	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
-	BRNE _DRV_BUS5277_PROC_MASTER__ERROR
-	;Проверяю бит extrascan
-	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
-	SBRC LOOP_CNTR,0x07
-	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
-	;Проверяем бит ответа
-	LDI ACCUM,BUS5277_RESP_INVALID_PACKET
-	SBRS TEMP_H,0x07
-	RJMP _DRV_BUS5277_PROC_MASTER__ERROR
+	LDI ACCUM,BUS5277_RESP_OK
 	RJMP _DRV_BUS5277_PROC_MASTER__END
-_DRV_BUS5277_PROC_MASTER__ERROR:
-	LDI TEMP_H,BUS5277_RESP_INVALID_PACKET
-	LDI TEMP_L,0x00
 _DRV_BUS5277_PROC_MASTER__END:
 
-	MOV YH,ZH
-	MOV YL,ZL
-
-	POP ACCUM
-	POP TEMP
+	POP_FT
 	POP_X
 	RET
 
@@ -300,16 +269,12 @@ _DRV_BUS5277_PROC_MASTER__END:
 _DRV_BUS5277_PROC_SLAVE_RECV:
 ;--------------------------------------------------------
 ;Режим SLAVE, прием
-;IN: Z-выделенная память
-;OUT: TEMP_H-код ответа,TEMP_L-длина данных, Y-адрес на
-;блок данных
+;IN: Z-выделенная память, X-dst адрес
+;OUT: ACCUM-код ответа
 ;--------------------------------------------------------
-	PUSH_X
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP
+	PUSH_Z
+	PUSH_FT
 	PUSH LOOP_CNTR
-	PUSH ACCUM
 
 	;Режим ведомого
 	LDD TEMP,Z+_DRV_BUS5277_FLAGS
@@ -319,117 +284,59 @@ _DRV_BUS5277_PROC_SLAVE_RECV:
 _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	;Запускаем драйвер UART
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV YH,ZH															;Адрес блока данных для передачи
-	MOV YL,ZL
-	MOV XH,ZH															;Адрес блока данных для приема
-	MOV XL,ZL
 	LDI TEMP_EH,0x00													;Длина данных для передачи
 	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
 	LDI TEMP_H,0x00													;Максимальное время ожидания данных(0 - ждать постоянно)
 	LDI TEMP_L,0x00
 	LDI LOOP_CNTR,0x80												;Пара байт для определения EXTRASCAN T
 	LDI FLAGS,0x8c
-	PUSH_Z
 	LDI_Z _DRV_BUS5277_SLAVE_MAGIC_EVENT						;Адрес процедуры отклика на EXTRASCAN T
 	MCALL C5_EXEC
-	POP_Z
 	CPI TEMP_H,DRV_UART_ST_READY
 	BRNE _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
 	CPI TEMP_L,0x00
 	BREQ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
+.ifdef LOGGING_PORT
+	MCALL _DRV_BUS5277__LOG_RESP
+.endif
 
-	MCALL DRV_BUS5277__PACKET_UNPACK
-	;Проверяю бит extrascan
-	SBRC LOOP_CNTR,0x07
-	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__EXTRASCAN
-	;Проверяю адрес на совпадение
-	LDD TEMP,Z+_DRV_BUS5277_BUS_ADDR
-	ANDI LOOP_CNTR,0x7f
-	CP LOOP_CNTR,TEMP
-	BRNE _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
-	;Блок обычного режима(не EXTRASCAN)
-	;Проверяем бит ответа
-	SBRC TEMP_H,0x07
-	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
-	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__END
-_DRV_BUS5277_PROC_SLAVE_RECV__EXTRASCAN:
-	;Проверяем тип EXTRASCAN
-	CPI LOOP_CNTR,0x80
-	BREQ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP						;EXTRASCAN на базе таймингов, уже все сделали(MAGIC)
-	;Обычный EXTRASCAN
-	LDI TEMP_H,BUS5277_RESP_NO_DATA
-	MCALL C5_DISPATCHER_LOCK
-	LDD TEMP,Z+_DRV_BUS5277_FLAGS
-	ANDI TEMP,~(1<<DRV_BUS5277_FLAG_HAVE_DATA)
-	STD Z+_DRV_BUS5277_FLAGS,TEMP
-	MCALL C5_DISPATCHER_UNLOCK
-	CPI TEMP,0x00
-	BREQ PC+0x02
-	LDI TEMP_H,BUS5277_RESP_OK
-	LDI TEMP_L,0x00
-	MCALL _DRV_BUS5277_PROC_SLAVE_SEND
-	RJMP _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
+	LDI ACCUM,BUS5277_RESP_OK
 
-_DRV_BUS5277_PROC_SLAVE_RECV__END:
-	POP ACCUM
 	POP LOOP_CNTR
-	POP TEMP
-	POP TEMP_EL
-	POP TEMP_EH
-	POP_X
+	POP_FT
+	POP_Z
 	RET
 
 ;--------------------------------------------------------
 _DRV_BUS5277_PROC_SLAVE_SEND:
 ;--------------------------------------------------------
 ;Режим SLAVE, передача
-;IN: Z-выделенная память, Y-адрес на данные, TEMP_H-код
-;функции, TEMP_L-длина данных
-;OUT: TEMP_H-код ответа
+;IN: Z-выделенная память, Y-src адрес
+;OUT: ACCUM-код ответа
 ;--------------------------------------------------------
-	PUSH_X
-	PUSH_Y
-	PUSH TEMP_L
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH LOOP_CNTR
+	PUSH_FT
 
 	;Режим ведомого
-	LDD TEMP_EH,Z+_DRV_BUS5277_FLAGS
-	ANDI TEMP_EH,~(1<<DRV_BUS5277_FLAG_MASTER)
-	STD Z+_DRV_BUS5277_FLAGS,TEMP_EH
+	LDD TEMP,Z+_DRV_BUS5277_FLAGS
+	ANDI TEMP,~(1<<DRV_BUS5277_FLAG_MASTER)
+	STD Z+_DRV_BUS5277_FLAGS,TEMP
 
-	;Проверяю на максимальный размер пакета
-	CPI TEMP_L,0x24+0x01
-	BRCS PC+0x03
-	LDI TEMP_H,BUS5277_FAULT
-	RJMP _DRV_BUS5277_PROC_SLAVE_SEND__END
-
-	LDI LOOP_CNTR,_DRV_BUS5277_MASTER_ADDR
-	MCALL DRV_BUS5277__PACKET_PACK
+.ifdef LOGGING_PORT
+	MCALL _DRV_BUS5277__LOG_REQV
+.endif
 	;Запускаем драйвер UART
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
-	MOV YH,ZH															;Адрес блока данных для передачи
-	MOV YL,ZL
-	MOV XH,ZH
-	MOV XL,ZL
-	LDI TEMP_EH,0x04													;Длина данных для передачи
-	ADD TEMP_EH,TEMP_L
+	LDD TEMP_EH,Y+_DRV_BUS5277_PACKET_HEADER_SIZE			;Длина данных для передачи
 	LDI TEMP_EL,0x00													;Максимальная длина данных для приема(только передача)
 	MCALL C5_EXEC
 	;Проверка ответа на ошибку
 	CPI TEMP_H,DRV_UART_ST_READY
-	LDI TEMP_H,BUS5277_RESP_NO_ANSWER
+	LDI ACCUM,BUS5277_RESP_NO_ANSWER
 	RJMP _DRV_BUS5277_PROC_SLAVE_SEND__END
-	LDI TEMP_H,BUS5277_RESP_OK
+	LDI ACCUM,BUS5277_RESP_OK
 _DRV_BUS5277_PROC_SLAVE_SEND__END:
 
-	POP LOOP_CNTR
-	POP TEMP_EL
-	POP TEMP_EH
-	POP TEMP_L
-	POP_Y
-	POP_X
+	POP_FT
 	RET
 
 ;--------------------------------------------------------
@@ -442,51 +349,44 @@ _DRV_BUS5277_PROC_EXTRASCAN:
 _DRV_BUS5277_PROC_EXTRASCAN_T:
 ;Режим MASTER, экстрасканирования на базе таймингов
 ;128б ответа соответствуют номерам устройств с откликом
-;IN: Z-выделенная память
-;OUT: Y-адрес на блок данных, TEMP-длина данных(16 байт)
+;IN: Z-выделенная память, X-dst адрес
 ;--------------------------------------------------------
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP
+	PUSH_FT
+	PUSH_Y
 
 	;Режим ведущего
 	LDD TEMP,Z+_DRV_BUS5277_FLAGS
 	ORI TEMP,(1<<DRV_BUS5277_FLAG_MASTER)
 	STD Z+_DRV_BUS5277_FLAGS,TEMP
 
+	STD Z+_DRV_BUS5277_EXTRASCAN_T_BUFFER_ADDR+0x00,XH
+	STD Z+_DRV_BUS5277_EXTRASCAN_T_BUFFER_ADDR+0x01,XL
+	
 	;Обнуляем счетчик устройств
 	LDI TEMP,0x00
 	STD Z+_DRV_BUS5277_EXTRASCAN_CNTR,TEMP
 
-	LDI_Y _DRV_BUS5277_PACKET_HEADER
+	LDI_Y _DRV_BUS5277_EXTRASCAN_T_REQ_DATA
 	ADD YL,ZL
 	ADC YH,ZH
-	LDI TEMP,0x80														;Extrascanning by time
-	STD Z+_DRV_BUS5277_PACKET_HEADER+0x00,TEMP
-	LDI TEMP,0x8c														;CRC8
-	STD Z+_DRV_BUS5277_PACKET_HEADER+0x01,TEMP
 	MCALL C5_DISPATCHER_LOCK
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
 	LDI TEMP_EH,0x02
 	LDI TEMP_EL,0x00
 	MCALL C5_EXEC														;Необходимо, чтобы UART отработал фиксированное время
 
-	;Запускаем таймер отсчитвающий интервалы чтения сигналов от устройств
+	;Запускаем таймер отсчитывающий интервалы чтения сигналов от устройств
 	LDD TEMP,Z+_DRV_BUS5277_EXTRASCAN_TIMER
 	MCALL C5_TIMER_START
 	MCALL C5_DISPATCHER_UNLOCK
 
 _DRV_BUS5277_PROC_EXTRASCAN_T__LOOP:
-	MCALL C5_WAIT
 	LDD TEMP,Z+_DRV_BUS5277_EXTRASCAN_CNTR
 	CPI TEMP,0x80
 	BRNE _DRV_BUS5277_PROC_EXTRASCAN_T__LOOP
 
-	LDI_Y _DRV_BUS5277_PACKET_HEADER
-
-	POP TEMP
-	POP TEMP_EL
-	POP TEMP_EH
+	POP_Y
+	POP_FT
 	RET
 
 ;--------------------------------------------------------
@@ -515,6 +415,7 @@ _DRV_BUS5277_EXTRASCAN_TIMER_EVENT:
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP
+	PUSH_THL
 	PUSH ACCUM
 
 	;Получаю адрес выделенной памяти
@@ -529,9 +430,11 @@ _DRV_BUS5277_EXTRASCAN_TIMER_EVENT:
 	LDI ACCUM,0x01
 	STD Z+_DRV_BUS5277_EXTRASCAN_CNTR,ACCUM
 
+	PUSH PID
 	LDD PID,Z+_DRV_BUS5277_UART_DRV_ID
 	;Получаю адрес выделенной памяти драйвера UART
 	MCALL C5_RAM_OFFSET
+	POP PID
 	CPI TEMP_L,0x00
 	BRNE _DRV_BUS5277_EXTRASCAN_TIMER_EVENT__SLAVE_DONE
 	;Выставляю низкий уровень TX (DR->HI)
@@ -566,18 +469,20 @@ _DRV_BUS5277_EXTRASCAN_TIMER_EVENT__MASTER:
 	POP TEMP
 _DRV_BUS5277_EXTRASCAN_TIMER_EVENT__NOT_FIRST:
 
-	PUSH_Z
+	PUSH_X
+	LDD XH,Z+_DRV_BUS5277_EXTRASCAN_T_BUFFER_ADDR+0x00
+	LDD XL,Z+_DRV_BUS5277_EXTRASCAN_T_BUFFER_ADDR+0x01
 	LSR TEMP
 	ROR TEMP
 	ROR TEMP
-	ADD ZL,TEMP
-	ADC ZH,C0x00
-	LD ACCUM,Z
+	ADD XL,TEMP
+	ADC XH,C0x00
+	LD ACCUM,X
 	LSL ACCUM
 	SBIC PIND,RXD&0x0f
 	ORI ACCUM,0x00
-	ST Z,ACCUM
-	POP_Z
+	ST X,ACCUM
+	POP_X
 
 	INC TEMP
 	STD Z+_DRV_BUS5277_EXTRASCAN_CNTR,TEMP
@@ -588,6 +493,7 @@ _DRV_BUS5277_EXTRASCAN_TIMER_EVENT__NOT_FIRST:
 
 _DRV_BUS5277_EXTRASCAN_TIMER_EVENT__END:
 	POP ACCUM
+	POP_THL
 	POP TEMP
 	POP_Z
 	RET
@@ -741,7 +647,7 @@ _DRV_BUS5277__LOG_REQV:
 	RET
 	LDI TEMP,'>'
 	MCALL C5_LOG_CHAR
-	MOV TEMP,TEMP_EH
+	LDD TEMP,Y+_DRV_BUS5277_PACKET_HEADER_SIZE
 	MCALL C5_LOG_BYTES
 	MCALL C5_LOG_CR
 	RET
@@ -755,8 +661,11 @@ _DRV_BUS5277__LOG_RESP:
 	RET
 	LDI TEMP,'<'
 	MCALL C5_LOG_CHAR
-	MOV TEMP,TEMP_L
+	PUSH_Y
+	MOVW YL,XL
+	LDD TEMP,Y+_DRV_BUS5277_PACKET_HEADER_SIZE
 	MCALL C5_LOG_BYTES
+	POP_Y
 	MCALL C5_LOG_CR
 	RET
 .endif
