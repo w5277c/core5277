@@ -87,8 +87,7 @@ DRV_UART_H_INIT:
 
 	;Задаем скорость передачи данных
 	STS UBRR0L,YH
-	CLR TEMP
-	STS UBRR0H,TEMP
+	STS UBRR0H,C0x00
 	;Инициализирую и записываю программный таймер
 	PUSH TEMP_L
 	PUSH TEMP_H
@@ -133,8 +132,7 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 ;	LSR YH																;Увеличил в 2 раза, так как здесь работаем побайтно а не побитно
 	STD Z+_DRV_UART_H_NEXT_TIMEOUT,YH
 	;Отключаю прием и передачу
-	LDI TEMP,0x00
-	STS UCSR0B,TEMP
+	STS UCSR0B,C0x00
 	;Сбрасываю флаги
 	LDI TEMP,(1<<RXC0)|(1<<TXC0)
 	STS UCSR0A,TEMP
@@ -263,7 +261,6 @@ _DRV_UART_H_PROC__RECEIVING_WAIT:
 	LDD TEMP,Z+_DRV_UART_H_STATE
 	CPI TEMP,DRV_UART_ST_WAIT_DATA
 	BRNE _DRV_UART_H_PROC__RECEIVING_NOT_WAIT_DATA
-	MCALL C5_WAIT
 	CLI
 	LDS TEMP_H,_C5_UPTIME+0x03
 	LDS TEMP_L,_C5_UPTIME+0x04
