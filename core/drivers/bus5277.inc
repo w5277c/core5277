@@ -246,8 +246,8 @@ _DRV_BUS5277_PROC_MASTER:
 	LDD TEMP_EH,Y+_DRV_BUS5277_PACKET_HEADER_SIZE			;Длина данных для передачи
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
 	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
-	LDI TEMP_H,high(100/2)											;Максимальное время ожидания данных
-	LDI TEMP_L,low(100/2)
+	LDI TEMP_H,high(20/2)											;Максимальное время ожидания данных
+	LDI TEMP_L,low(20/2)
 	MCALL C5_EXEC
 	;Проверка ответа на ошибку
 	CPI TEMP_H,DRV_UART_ST_READY
@@ -275,13 +275,13 @@ _DRV_BUS5277_PROC_SLAVE_RECV:
 ;--------------------------------------------------------
 	PUSH_FT
 	PUSH LOOP_CNTR
+	PUSH FLAGS
 
 	;Режим ведомого
 	LDD TEMP,Z+_DRV_BUS5277_FLAGS
 	ANDI TEMP,~(1<<DRV_BUS5277_FLAG_MASTER)
 	STD Z+_DRV_BUS5277_FLAGS,TEMP
-	
-	PUSH_Z
+
 _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	;Запускаем драйвер UART
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
@@ -291,19 +291,23 @@ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	LDI TEMP_L,0x00
 	LDI LOOP_CNTR,0x80												;Пара байт для определения EXTRASCAN T
 	LDI FLAGS,0x8c
+	PUSH_Z
 	LDI_Z _DRV_BUS5277_SLAVE_MAGIC_EVENT						;Адрес процедуры отклика на EXTRASCAN T
 	MCALL C5_EXEC
+	POP_Z
+
 	CPI TEMP_H,DRV_UART_ST_READY
 	BRNE _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
 	CPI TEMP_L,0x00
 	BREQ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP
-	POP_Z
+
 .ifdef LOGGING_PORT
 	MCALL _DRV_BUS5277__LOG_RESP
 .endif
 
 	LDI ACCUM,BUS5277_RESP_OK
 
+	POP FLAGS
 	POP LOOP_CNTR
 	POP_FT
 	RET
