@@ -113,7 +113,8 @@
 	.EQU	_CFL_TIMER_B_USE						= 0x00			;Флаг запущенного таймера B
 	.EQU	_CFL_TIMER_UART_CORRECTION			= 0x01			;Корректировка таймера для соответствия частотам UART
 	.EQU	_CFL_DISPATCHER_ORDER				= 0x02			;Заявка на отработку диспетчера(формируется когда диспетчер заблокирован)
-	.EQU	CFL_VIDEO_SYNC							= 0x03			;Заявка на отработку диспетчера(формируется когда диспетчер заблокирован)
+	.EQU	_CFL_TIMERS_ACTIVE					= 0x03			;Обработчик программных таймеров выполняется
+	.EQU	CFL_VIDEO_SYNC							= 0x04			;Заявка на отработку диспетчера(формируется когда диспетчер заблокирован)
 
 ;---RAM-OFFSETS------------------------------------------
 	.EQU	_C5_UPTIME								= RAMSTART+0x00;5B-отсчет времени (~75 лет при тике каждые 0.002мс)
@@ -237,8 +238,8 @@ C5_DISPATCHER_UNLOCK:
 .IF TIMERS > 0x00
 	.MESSAGE "######## TIMERS ENABLED"
 	.INCLUDE "./core/timer_set.inc"
-	.INCLUDE "./core/timer_set_period.inc"
 	.INCLUDE "./core/timer_start.inc"
+	.INCLUDE "./core/timer_start_at.inc"
 	.INCLUDE "./core/timer_stop.inc"
 .ELSE
 	.MESSAGE "######## TIMERS DISABLED"
@@ -313,8 +314,10 @@ _C5_TIMER_A_IR:
 ;--------------------------------------------------------
 ;Обработчик прерывания основного таймера
 ;--------------------------------------------------------
-	SEI
 	PUSH TEMP
+	LDI TEMP,(1<<_CFL_TIMERS_ACTIVE)								;Обрабочик таймеров выполняется
+	OR _C5_COREFLAGS,TEMP
+	SEI
 	LDS TEMP,SREG
 	PUSH TEMP
 
@@ -335,23 +338,28 @@ _C5_TIMER_A_IR:
 	LDI LOOP_CNTR,TIMERS
 _C5_TIMER_A_IR__HF_LOOP:
 	LDD PID,Y+_C5_TIMER_PROC_ID
-	CPI PID,0xff
-	BREQ _C5_TIMER_A_IR__HF_NEXT
+	SBRC PID,0x07
+	RJMP _C5_TIMER_A_IR__HF_NEXT
 	LDD ACCUM,Y+_C5_TIMER_DEFAULT
 	SBRC ACCUM,0x07
 	RJMP _C5_TIMER_A_IR__HF_NEXT
+	LDS ACCUM,SREG
+	CLI
 	LDD TEMP,Y+_C5_TIMER_CNTR
 	DEC TEMP
-	BRNE _C5_TIMER_IR__DISPATCHER__TIMER_HF_SKIP
+	STD Y+_C5_TIMER_CNTR,TEMP
+	STS SREG,ACCUM
+	CPI TEMP,0x00
+	BRNE _C5_TIMER_A_IR__HF_NEXT
 	LDD ZH,Y+_C5_TIMER_HANDLER+0x00
 	LDD ZL,Y+_C5_TIMER_HANDLER+0x01
+	ICALL
+	LDS ACCUM,SREG
+	CLI
 	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
 	STD Y+_C5_TIMER_CNTR,TEMP
-	ICALL
-	RJMP _C5_TIMER_A_IR__HF_NEXT
-_C5_TIMER_IR__DISPATCHER__TIMER_HF_SKIP:
-	STD Y+_C5_TIMER_CNTR,TEMP
+	STS SREG,ACCUM
 _C5_TIMER_A_IR__HF_NEXT:
 	ADIW YL,0x05
 	DEC LOOP_CNTR
@@ -406,23 +414,28 @@ _C5_TIMER_IR__DISPATCHER:
 	LDI LOOP_CNTR,TIMERS
 _C5_TIMER_A_IR__LF_LOOP:
 	LDD PID,Y+_C5_TIMER_PROC_ID
-	CPI PID,0xff
-	BREQ _C5_TIMER_A_IR__LF_NEXT
+	SBRC PID,0x07
+	RJMP _C5_TIMER_A_IR__LF_NEXT
 	LDD ACCUM,Y+_C5_TIMER_DEFAULT
 	SBRS ACCUM,0x07
 	RJMP _C5_TIMER_A_IR__LF_NEXT
+	LDS ACCUM,SREG
+	CLI
 	LDD TEMP,Y+_C5_TIMER_CNTR
 	DEC TEMP
-	BRNE _C5_TIMER_IR__DISPATCHER__TIMER_LF_SKIP
+	STD Y+_C5_TIMER_CNTR,TEMP
+	STS SREG,ACCUM
+	CPI TEMP,0x00
+	BRNE _C5_TIMER_A_IR__LF_NEXT
 	LDD ZH,Y+_C5_TIMER_HANDLER+0x00
 	LDD ZL,Y+_C5_TIMER_HANDLER+0x01
+	ICALL
+	LDS ACCUM,SREG
+	CLI
 	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
 	STD Y+_C5_TIMER_CNTR,TEMP
-	ICALL
-	RJMP _C5_TIMER_A_IR__LF_NEXT
-_C5_TIMER_IR__DISPATCHER__TIMER_LF_SKIP:
-	STD Y+_C5_TIMER_CNTR,TEMP
+	STS SREG,ACCUM
 _C5_TIMER_A_IR__LF_NEXT:
 	ADIW YL,0x05
 	DEC LOOP_CNTR
@@ -435,13 +448,36 @@ _C5_TIMER_A_IR__LF_NEXT:
 .ENDIF
 
 	POP_Z
+
+.IF TIMERS > 0x00 
+	CLI
+	LDI_Y _C5_TIMERS
+	LDI LOOP_CNTR,TIMERS
+_C5_TIMER_A_IR__SB_LOOP:											;Выключаю биты пропуска
+	LDD TEMP,Y+_C5_TIMER_PROC_ID
+	CPI TEMP,0xff
+	BREQ _C5_TIMER_A_IR__SB_NEXT
+	SBRS TEMP,0x07
+	RJMP _C5_TIMER_A_IR__SB_NEXT
+	ANDI TEMP,0x7f
+	STD Y+_C5_TIMER_PROC_ID,TEMP
+_C5_TIMER_A_IR__SB_NEXT:
+	ADIW YL,0x05
+	DEC LOOP_CNTR
+	BRNE _C5_TIMER_A_IR__SB_LOOP
+.ENDIF
+	LDI TEMP,~(1<<_CFL_TIMERS_ACTIVE)							;Обрабочик таймеров выполнился
+	AND _C5_COREFLAGS,TEMP
+
 .IF TS_MODE == TS_MODE_TIME
 	MCALL _C5_DISPATCHER_EVENT
 .ENDIF
 _C5_TIMER_A_IR__END:
+
 	POP TEMP
 	STS SREG,TEMP
 	POP TEMP
+
 	RETI
 
 

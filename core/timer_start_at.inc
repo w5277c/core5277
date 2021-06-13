@@ -1,23 +1,24 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;20.10.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;20.10.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;13.06.2021	w5277c@gmail.com			Обновлена информация об авторских правах
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_TIMER_SET_PERIOD
+.ifdef DEF_C5_TIMER_START_AT
 .else
-.set DEF_C5_TIMER_SET_PERIOD = 1
+.set DEF_C5_TIMER_START_AT = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included C5_TIMER_SET_PERIOD"
+.message "included C5_TIMER_START_AT"
 .endif
 
 .include "./core/_timer_offset.inc"
 
 ;--------------------------------------------------------
-C5_TIMER_SET_PERIOD:
+C5_TIMER_START_AT:
 ;--------------------------------------------------------
-;переназначение периода таймера
+;Переназначение периода таймера и его запуск
 ;IN: TEMP - номер таймера(0-...),
 ;ACCUM - кол-во итераций:
 ;7-й бит включен - итерация по 0.002c иначе по 0.000 050с
@@ -25,14 +26,22 @@ C5_TIMER_SET_PERIOD:
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
+	PUSH TEMP
 
 	MCALL _C5_TIMER_OFFSET
 
-	STD Z+_C5_TIMER_PROC_ID,PID
+	LDS TEMP,SREG
+	CLI
 	STD Z+_C5_TIMER_DEFAULT,ACCUM
 	ANDI ACCUM,0x7f
 	STD Z+_C5_TIMER_CNTR,ACCUM
+	MOV ACCUM,PID	
+	SBRS _C5_COREFLAGS,_CFL_TIMERS_ACTIVE						;Если обработчик таймеров активен, то включаю бит пропуска, который будет
+	ORI ACCUM,0x80														;сброшен на выходе из процедуры обработчика таймеров
+	STD Z+_C5_TIMER_PROC_ID,ACCUM
+	STS SREG,TEMP
 
+	POP TEMP
 	POP ACCUM
 	POP_Z
 	RET

@@ -26,8 +26,8 @@
 .include	"./io/port_get.inc"
 .include	"./core/wait.inc"
 .include	"./core/timer_set.inc"
-.include	"./core/timer_set_period.inc"
 .include	"./core/timer_start.inc"
+.include	"./core/timer_start_at.inc"
 .include	"./core/timer_stop.inc"
 .include	"./core/eint_enable.inc"
 .include	"./core/eint_disable.inc"
@@ -337,6 +337,11 @@ _DRV_UART_S_EVENT:
 	PUSH_Z
 	PUSH TEMP
 
+SBI PINB,MISO&0x0f
+SBI PINB,MISO&0x0f
+SBI PINB,MISO&0x0f
+SBI PINB,MISO&0x0f
+
 	MCALL C5_RAM_OFFSET
 	LDD TEMP,Z+_DRV_UART_S_STATE
 	CPI TEMP,DRV_UART_ST_SENDING
@@ -531,7 +536,7 @@ __DRV_UART_S_RECV_EVENT__NEXT_BYTE:
 		;Задаю новый период таймеру для отсчета таймаута
 		LDD TEMP,Z+_DRV_UART_S_TIMER_ID
 		LDD ACCUM,Z+_DRV_UART_S_NEXT_TIMEOUT
-		MCALL C5_TIMER_SET_PERIOD
+		MCALL C5_TIMER_START_AT
 		RJMP __DRV_UART_S_RECV_EVENT__END
 __DRV_UART_S_RECV_EVENT__ERROR:
 	;Останавливаю таймер
@@ -572,17 +577,11 @@ _DRV_UART_S_EINT_EVENT:
 	CPI TEMP,0x00
 	BRNE __DRV_UART_S_PCINT_EVENT__END
 
-
 	LDI TEMP,0x01
 	STD Z+_DRV_UART_S_BIT_NUM,TEMP
 
 	LDI TEMP,DRV_UART_ST_RECEIVING
 	STD Z+_DRV_UART_S_STATE,TEMP
-
-	;Задаю новый период таймеру для отсчета битов
-	LDD TEMP,Z+_DRV_UART_S_TIMER_ID
-	LDD ACCUM,Z+_DRV_UART_S_TIMER_PERIOD
-	MCALL C5_TIMER_SET_PERIOD
 
 	;Выключаю прерывание для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID
@@ -611,7 +610,16 @@ __DRV_UART_S_PCINT_EVENT__END:
 	POP_Z
 	RET
 __DRV_UART_S_PCINT_EVENT__CORRECTOR:
+;	LDS FLAGS,SREG
+;	CLI
+SBI PINB,MISO&0x0f
+SBI PINB,MISO&0x0f
 	_CORRE5277_TIMERA_CORRECTOR TEMP
+	;Задаю новый период таймеру для отсчета битов
+	LDD TEMP,Z+_DRV_UART_S_TIMER_ID
+	;LDD ACCUM,Z+_DRV_UART_S_TIMER_PERIOD
+	LDI ACCUM,0x01
+	MCALL C5_TIMER_START_AT
+;	STS SREG,FLAGS
 	RET
 .endif
-
