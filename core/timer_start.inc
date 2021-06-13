@@ -24,21 +24,11 @@ C5_TIMER_START:
 ;IN: PID,TEMP - номер таймера(0-...),
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH ACCUM
-	PUSH TEMP
 
 	MCALL _C5_TIMER_OFFSET
 
-	LDS TEMP,SREG
-	CLI
-	MOV ACCUM,PID	
-	SBRS _C5_COREFLAGS,_CFL_TIMERS_ACTIVE						;Если обработчик таймеров активен, то включаю бит пропуска, который будет
-	ORI ACCUM,0x80														;сброшен на выходе из процедуры обработчика таймеров
-	STD Z+_C5_TIMER_PROC_ID,ACCUM
-	STS SREG,TEMP
+	STD Z+_C5_TIMER_PROC_ID,PID
 
-	POP TEMP
-	POP ACCUM
 	POP_Z
 	RET
 .endif
