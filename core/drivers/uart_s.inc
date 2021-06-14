@@ -1,19 +1,20 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.01.2021  w5277c@gmail.com			Начало
-;25.01.2021  w5277c@gmail.com			Добавлена поддержка eint(не проверено)
-;26.02.2021  w5277c@gmail.com			Исправляю баги(в процессе)
-;26.02.2021  w5277c@gmail.com			Починил прием с использованием EINT
-;18.03.2021  w5277c@gmail.com			Багфикс
-;17.04.2021  w5277c@gmail.com			Поддержка таймера C
+;02.01.2021	w5277c@gmail.com			Начало
+;25.01.2021	w5277c@gmail.com			Добавлена поддержка eint(не проверено)
+;26.02.2021	w5277c@gmail.com			Исправляю баги(в процессе)
+;26.02.2021	w5277c@gmail.com			Починил прием с использованием EINT
+;18.03.2021	w5277c@gmail.com			Багфикс
+;17.04.2021	w5277c@gmail.com			Поддержка таймера C
+;14.06.2021	w5277c@gmail.com			Локализация C5_SOFT_UART_MODE_SET/RESET
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO поддержка MAGIC?
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
 .set DEF__C5_DRV_UART_S = 1
-.message "Included driver software UART v0.4"
+.message "Included driver software UART v0.5"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -179,7 +180,6 @@ _DRV_UART_S_INIT__NO_LED_PORT:
 	LDD ACCUM,Z+_DRV_UART_S_TIMER_PERIOD
 	MCALL C5_TIMER_SET
 
-	MCALL C5_SOFT_UART_MODE_SET
 ;;;	MCALL C5_DISPATCHER_LOCK
 
 	;Блок передачи
@@ -214,6 +214,7 @@ _DRV_UART_S_INIT__NO_LED_PORT:
 	BREQ PC+0x03
 	MCALL PORT_SET_HI
 	;Запускаю таймер
+	MCALL C5_SOFT_UART_MODE_SET
 	LDD TEMP,Z+_DRV_UART_S_TIMER_ID
 	MCALL C5_TIMER_START
 	;Жду окончания передачи
@@ -221,7 +222,9 @@ _DRV_UART_S_PROC__SENDING_WAIT:
 	LDD TEMP,Z+_DRV_UART_S_STATE
 	CPI TEMP,DRV_UART_ST_READY
 	BRNE _DRV_UART_S_PROC__SENDING_WAIT
-
+	
+	MCALL C5_SOFT_UART_MODE_RESET
+	
 	;Порт направления в LO
 	LDD ACCUM,Z+_DRV_UART_S_DR_PORT
 	CPI ACCUM,0xff
@@ -314,7 +317,6 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 _DRV_UART_S_PROC__RX_SKIP:
 ;;;	MCALL C5_DISPATCHER_UNLOCK
 _DRV_UART_S_PROC__DONE:
-	MCALL C5_SOFT_UART_MODE_RESET
 
 	;Результат
 	LDD TEMP_H,Z+_DRV_UART_S_STATE
@@ -456,6 +458,8 @@ _DRV_UART_S_RECV_EVENT:
 		;Останавливаю таймер
 		LDD TEMP,Z+_DRV_UART_S_TIMER_ID
 		MCALL C5_TIMER_STOP
+		MCALL C5_SOFT_UART_MODE_RESET
+
 		;Прием данных завершен
 		LDI TEMP,DRV_UART_ST_READY
 		LDD TEMP_L,Z+_DRV_UART_S_BUFFER_POS
@@ -570,6 +574,8 @@ _DRV_UART_S_EINT_EVENT:
 	LDD TEMP,Z+_DRV_UART_S_BIT_NUM
 	CPI TEMP,0x00
 	BRNE __DRV_UART_S_PCINT_EVENT__END
+
+	MCALL C5_SOFT_UART_MODE_SET
 
 	;Выключаю прерывание для RX порта
 	LDD TEMP,Z+_DRV_UART_S_PCINT_DRV_ID

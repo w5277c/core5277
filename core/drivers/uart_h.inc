@@ -1,17 +1,18 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.04.2020  w5277c@gmail.com			Начало
-;19.04.2020  w5277c@gmail.com			Адаптировано под изменения ядра
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;16.03.2021  w5277c@gmail.com			Устранено несколько серьезных ошибок в логике приема данных
-;18.03.2021  w5277c@gmail.com			C5_WAIT используется только в ожидании начала приема данных
-;07.06.2021  w5277c@gmail.com			Ввод функционала MAGIC(незамедлительная реакция при получении определенных 2х байт)
+;03.04.2020	w5277c@gmail.com			Начало
+;19.04.2020	w5277c@gmail.com			Адаптировано под изменения ядра
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;16.03.2021	w5277c@gmail.com			Устранено несколько серьезных ошибок в логике приема данных
+;18.03.2021	w5277c@gmail.com			C5_WAIT используется только в ожидании начала приема данных
+;07.06.2021	w5277c@gmail.com			Ввод функционала MAGIC(незамедлительная реакция при получении определенных 2х байт)
+;14.06.2021	w5277c@gmail.com			Корректная передача MAGIC PID
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_H
 .else
 .set DEF__C5_DRV_UART_H = 1
-.message "Included driver hardware UART v0.4"
+.message "Included driver hardware UART v0.5"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -164,6 +165,7 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 ;TEMP_EH-TX длина, TEMP_EL-RX максимальная длина
 ;TEMP_H,TEMP_L-таймаут ожидания данных(2ms)
 ;LOOP_CNTR,FLAGS-MAGIC слово, Z-адрес процедуры MAGIC
+;TRY_CNTR-PID вызывающего процесса
 ;(ZH=0xff не использовать MAGIC)
 ;OUT: TEMP_H-результат(состояние UART'а),
 ;TEMP_L-длина полученных данных
@@ -198,10 +200,8 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	STD Z+_DRV_UART_H_MAGIC_ADDR+0x00,YH
 	STD Z+_DRV_UART_H_MAGIC_ADDR+0x01,YL
 	STD Z+_DRV_UART_H_MAGIC+0x00,LOOP_CNTR
-	STD Z+_DRV_UART_H_MAGIC+0x00,FLAGS
-	;_PID всегда указывает на текущую задачу
-	MOV FLAGS,_PID
-	STD Z+_DRV_UART_H_MAGIC_PID,FLAGS
+	STD Z+_DRV_UART_H_MAGIC+0x01,FLAGS
+	STD Z+_DRV_UART_H_MAGIC_PID,TRY_CNTR
 
 	;Блок передачи
 	CPI TEMP_EH,0x00
