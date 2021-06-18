@@ -10,10 +10,15 @@
 .set DEF__C5_DRV_IR = 1
 .message "Included driver IR v0.1"
 
-.include	"./core/ram/ram_offset.inc"
-.include	"./core/ram/ram_realloc.inc"
-.include	"./core/eint_enable.inc"
-.include	"./core/eint_disable.inc"
+	.include	"./core/ram/ram_offset.inc"
+	.include	"./core/ram/ram_realloc.inc"
+	.include	"./core/eint_enable.inc"
+	.include	"./core/eint_disable.inc"
+	.include	"./io/port_mode_in.inc"
+	.include	"./io/port_mode_out.inc"
+	.include	"./io/port_set_hi.inc"
+	.include	"./io/port_set_lo.inc"
+
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
 	.EQU	_DRV_IR_RX_PORT								= 0x00	;1B - Порт для приема данных
@@ -34,11 +39,15 @@
 	.EQU	_DRV_IR_RX_LEN									= 0x10	;1B - Максимальное количество бит для приема
 	;---
 
-	.EQU	_DRV_IR_PERIOD_HALF_PREAMBLE				= 0x83	;6мс, половина преамбулы (2мс период)
-	.EQU	_DRV_IR_PERIOD_MAX_PREAMBLE				= 0x88	;16мс, максимальное время преамбулы (2мс период)
-	.EQU	_DRV_IR_PERIOD_LO								= 0x0a	;10 = 0.5мс, низкий уровень (0.000050мс период)
-	.EQU	_DRV_IR_PERIOD_HI0							= 0x0a	;10 = 0.5мс, высокйи уровень = 0 (0.000050мс период)
-	.EQU	_DRV_IR_PERIOD_HI1							= 0x1e	;30 = 1.5мс, высокйи уровень = 1 (0.000050мс период)
+	.EQU	_DRV_IR_TX_PREAMBLE							= 0x83	;6мс, половина преамбулы (2мс период)
+	.EQU	_DRV_IR_TX_LO									= 0x0a	;10 = 0.5мс, низкий уровень (0.000050мс период)
+	.EQU	_DRV_IR_TX_HI0									= 0x0a	;10 = 0.5мс, высокйи уровень = 0 (0.000050мс период)
+	.EQU	_DRV_IR_TX_HI1									= 0x1e	;30 = 1.5мс, высокйи уровень = 1 (0.000050мс период)
+	.EQU	_DRV_IR_RX_MIN_PREAMBLE						= 0x82	;4мс, минимальное время преамбулы (2мс период)
+	.EQU	_DRV_IR_RX_MAX_PREAMBLE						= 0x88	;16мс, максимальное время преамбулы (2мс период)
+	.EQU	_DRV_IR_RX_BIT_TIME_MIN						= 0x0a	;10 = 0.5мс минимальное время передачи бита
+	.EQU	_DRV_IR_RX_BIT_TRESHOLD						= 0x1e	;15 = 1.5мс граница между 0 и 1
+	.EQU	_DRV_IR_RX_BIT_TIME_MAX						= 0x28	;32 = 2.5мс максимальное время передачи бита
 
 	;---STATES_IDS---
 	.EQU	_DRV_IR_TX_PREAMBLE_LO						= 0x00;
@@ -47,11 +56,11 @@
 	.EQU	_DRV_IR_TX_DATA_HI							= 0x03;
 	.EQU	_DRV_IR_RX_PREAMBLE							= 0x06;
 	.EQU	_DRV_IR_RX_DATA								= 0x07;
-	.EQU	DRV_IR_READY									= 0x80;
-	.EQU	DRV_IR_FAIL										= 0x81;
-	.EQU	DRV_IR_OVERFLOW								= 0x82;
-	.EQU	_DRV_IR_TX_DONE								= 0x83;
-	.EQU	_DRV_IR_RX_WAIT								= 0x84;
+	.EQU	_DRV_IR_TX_DONE								= 0x80;
+	.EQU	_DRV_IR_RX_WAIT								= 0x81;
+	.EQU	DRV_IR_READY									= 0x82;
+	.EQU	DRV_IR_FAIL										= 0x83;
+	.EQU	DRV_IR_OVERFLOW								= 0x84;
 
 	.EQU	_DRV_IR_RAM_SIZE								= 0x11			;17B - необходимо выделить
 
@@ -154,21 +163,16 @@ DRV_IR_INIT:
 	MCALL PORT_SET_LO
 	;Запуск передачи
 	LDD TEMP,Z+_DRV_IR_TIMER_ID
-	LDI ACCUM,_DRV_IR_PERIOD_HALF_PREAMBLE
+	LDI ACCUM,_DRV_IR_TX_PREAMBLE
 	MCALL C5_TIMER_START_AT
 	;Жду окончания передачи
 _DRV_IR_PROC__SENDING_WAIT:
 	LDD TEMP,Z+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_TX_DONE
 	BRNE _DRV_IR_PROC__SENDING_WAIT
+	MCALL _DRV_IR_DONE
 
-	;Выключаю индикатор
-	LDD ACCUM,Z+_DRV_IR_LED_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
-	MCALL PORT_SET_LO
 _DRV_IR_PROC__TX_SKIP:
-
 	;Сброс позиции в буфере и номера бита
 	STD Z+_DRV_IR_BIT_POS,C0x00
 
@@ -214,24 +218,20 @@ _DRV_IR_PROC__RECEIVING_WAIT:
 		CP TEMP_L,ACCUM
 		BRCS _DRV_IR_PROC__RECEIVING_WAIT
 		;Достигли таймаута
+		MCALL _DRV_IR_DONE
 		LDI TEMP,DRV_IR_FAIL
 		STD Z+_DRV_IR_STATE,TEMP
-		;Останавливаю таймер
-		LDD TEMP,Z+_DRV_IR_TIMER_ID
-		MCALL C5_TIMER_STOP
-		;Выключаю прерывание для RX порта
-		LDD TEMP_H,Z+_DRV_IR_INT_ID
-		MCALL C5_EINT_DISABLE
-		RJMP _DRV_IR_PROC__RX_SKIP
+		RJMP _DRV_IR_PROC__RX_DONE
 _DRV_IR_PROC__NO_RX_WAIT:
 		SBRS TEMP,0x07
 		RJMP _DRV_IR_PROC__RECEIVING_WAIT
+_DRV_IR_PROC__RX_DONE:
 _DRV_IR_PROC__RX_SKIP:
+	LDI TEMP,DRV_IR_READY
+	STD Z+_DRV_IR_STATE,TEMP
 
-
-
-
-	;TODO
+	POP_Z
+	RET
 
 ;--------------------------------------------------------
 _DRV_IR_TIMER_EVENT:
@@ -247,7 +247,8 @@ _DRV_IR_TIMER_EVENT:
 	MOVW YL,ZL
 	LDD TEMP,Y+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_RX_DATA+0x01
-	BRCS PC+0x04
+	BRCS PC+0x06
+	MCALL _DRV_IR_DONE
 	LDI TEMP,DRV_IR_FAIL
 	STD Y+_DRV_IR_STATE,TEMP
 	RJMP _DRV_IR_TIMER_EVENT__END
@@ -273,7 +274,7 @@ _DRV_IR_TIMER_EVENT__JUMP_TABLE:
 			_DRV_IR_TIMER_EVENT__TX_DATA_HI, _DRV_IR_TIMER_EVENT__RX_PREAMBLE, _DRV_IR_TIMER_EVENT__RX_DATA
 
 _DRV_IR_TIMER_EVENT__TX_PREAMBLE_LO:
-	;Перамбула, низкий уровень, включаем выслкий
+	;Перамбула, низкий уровень, включаем высокий
 	MCALL PORT_SET_HI
 	LDI TEMP,_DRV_IR_TX_PREAMBLE_HI
 	STD Y+_DRV_IR_STATE,TEMP
@@ -297,7 +298,7 @@ _DRV_IR_TIMER_EVENT__TX_DATA_HI:
 _DRV_IR_TIMER_EVENT__SKIP_ACCUM_LOADING:
 	;Устанавливаем длительность для данных, низкий уровень
 	LDD TEMP,Y+_DRV_IR_TIMER_ID
-	LDI ACCUM,_DRV_IR_PERIOD_HI0
+	LDI ACCUM,_DRV_IR_TX_LO
 	MCALL C5_TIMER_START_AT
 	LDI TEMP,_DRV_IR_TX_DATA_LO
 	STD Y+_DRV_IR_STATE,TEMP
@@ -313,31 +314,27 @@ _DRV_IR_TIMER_EVENT__TX_DATA_LO:
 	LDD TEMP,Y+_DRV_IR_ACCUM
 	LSR TEMP
 	STD Y+_DRV_IR_ACCUM,TEMP
-	BRCC PC+0x05
-	LDD TEMP,Y+_DRV_IR_TIMER_ID
-	LDI ACCUM,_DRV_IR_PERIOD_HI1
-	MCALL C5_TIMER_START_AT
+	LDI ACCUM,_DRV_IR_TX_HI0
+	LDI TEMP,_DRV_IR_TX_DATA_LO
+	BRCC PC+0x03
+	LDI ACCUM,_DRV_IR_TX_HI1
 	LDI TEMP,_DRV_IR_TX_DATA_HI
+	LDD TEMP,Y+_DRV_IR_TIMER_ID
+	MCALL C5_TIMER_START_AT
 	STD Y+_DRV_IR_STATE,TEMP
 	RET
 _DRV_IR_TIMER_EVENT__TX_DONE:
-	LDD TEMP,Y+_DRV_IR_TIMER_ID
-	MJMP C5_TIMER_STOP
-
+	MCALL _DRV_IR_DONE
+	LDI TEMP,_DRV_IR_TX_DONE
+	STD Y+_DRV_IR_STATE,TEMP
+	RET
 _DRV_IR_TIMER_EVENT__RX_PREAMBLE:
-	;TODO
-	RET
-
 _DRV_IR_TIMER_EVENT__RX_DATA:
-	;TODO
+	;Таймаут преамбулы или приема данных
+	MCALL _DRV_IR_DONE
+	LDI TEMP,DRV_IR_FAIL
+	STD Y+_DRV_IR_STATE,TEMP
 	RET
-
-
-
-
-
-
-
 
 ;--------------------------------------------------------
 _DRV_IR_EINT_EVENT:
@@ -355,11 +352,12 @@ _DRV_IR_EINT_EVENT:
 	LDD TEMP,Y+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_RX_WAIT
 	BRNE _DRV_IR_EINT_EVENT__NO_RX_WAIT
+	;Запоминаем метку времени для TIMEOUT(x2ms)
 	LDS TEMP,_C5_UPTIME+0x04
 	STD Y+_DRV_IR_TIMESTAMP,TEMP
-	;Устанавливаем длительность преамбулы
+	;Запускаем таймер для PREAMBLE TIMEOUT
 	LDD TEMP,Y+_DRV_IR_TIMER_ID
-	LDI ACCUM,_DRV_IR_PERIOD_MAX_PREAMBLE
+	LDI ACCUM,_DRV_IR_RX_MAX_PREAMBLE
 	MCALL C5_TIMER_START_AT
 	LDI TEMP,_DRV_IR_RX_PREAMBLE
 	STD Y+_DRV_IR_STATE,TEMP
@@ -367,30 +365,105 @@ _DRV_IR_EINT_EVENT:
 _DRV_IR_EINT_EVENT__NO_RX_WAIT:
 	CPI TEMP,_DRV_IR_RX_PREAMBLE
 	BRNE _DRV_IR_EINT_EVENT__NO_RX_PREAMBLE
+	;TODO Нужно ли проверять на минимальную преамбулу?
 	LDS TEMP,_C5_UPTIME+0x04
 	LDD ACCUM,Y+_DRV_IR_TIMESTAMP
 	SUB ACCUM,TEMP
-	CPI ACCUM,0x02
-	BRCS _DRV_IR_EINT_EVENT__FAIL
+	CPI ACCUM,_DRV_IR_RX_MIN_PREAMBLE-0x01
+	BRCS PC+0x06
+	MCALL _DRV_IR_DONE
+	LDI TEMP,DRV_IR_FAIL
+	STD Y+_DRV_IR_STATE,TEMP
+	RJMP _DRV_IR_EINT_EVENT__END
+	;Запоминаем метку времени
+	LDS TEMP,_C5_MAIN_TIMER_CNTR
+	STD Y+_DRV_IR_TIMESTAMP,TEMP
+	MCALL PORT_SET_HI
+	;Запускаем таймер для BIT TIMEOUT
 	LDD TEMP,Y+_DRV_IR_TIMER_ID
-	LDI ACCUM,_DRV_IR_RX_TIMEOUT	;TODO таймер отрабатывает, после данных, на тот случай, если механизм не выполнил полный отсчет
+	LDI ACCUM,_DRV_IR_RX_BIT_TIME_MAX
 	MCALL C5_TIMER_START_AT
+	;Включаю индикатор передачи
+	LDD ACCUM,Y+_DRV_IR_LED_PORT
+	CPI ACCUM,0xff
+	BREQ PC+0x03
+	MCALL PORT_SET_HI
+	;Устанавливаем состояние приема данных
 	LDI TEMP,_DRV_IR_RX_DATA
 	STD Y+_DRV_IR_STATE,TEMP
 	RJMP _DRV_IR_EINT_EVENT__END
-
-
 _DRV_IR_EINT_EVENT__NO_RX_PREAMBLE:
-
-_DRV_IR_EINT_EVENT__FAIL:
-	LDI TEMP,DRV_IR_FAIL
+	CPI TEMP,_DRV_IR_RX_DATA
+	BRNE _DRV_IR_EINT_EVENT__NO_RX_PREAMBLE
+	;Запоминаем метку времени
+	LDD TEMP,Y+_DRV_IR_TIMESTAMP
+	LDS ACCUM,_C5_MAIN_TIMER_CNTR
+	STD Y+_DRV_IR_TIMESTAMP,ACCUM
+	SUB ACCUM,TEMP
+	CPI ACCUM,_DRV_IR_RX_BIT_TIME_MIN-0x01
+	BRCS PC+0x06
+	MCALL _DRV_IR_DONE
+	LDI TEMP,DRV_IR_READY
 	STD Y+_DRV_IR_STATE,TEMP
-_DRV_IR_EINT_EVENT__END:
+	RJMP _DRV_IR_EINT_EVENT__END
+	;Проверка на максимальную длину
+	LDD TEMP,Y+_DRV_IR_BIT_POS
+	LDD ZH,Y+_DRV_IR_RX_LEN
+	CP TEMP,ZH
+	BRNE PC+0x06
+	MCALL _DRV_IR_DONE
+	LDI TEMP,DRV_IR_OVERFLOW
+	STD Y+_DRV_IR_STATE,TEMP
+	RJMP _DRV_IR_EINT_EVENT__END
+	;Записываем бит
+	LDD ZL,Y+_DRV_IR_ACCUM
+	CPI ACCUM,_DRV_IR_RX_BIT_TRESHOLD
+	ROR ZL
+	STD Y+_DRV_IR_ACCUM,ZL
+	;Инкрементируем позицию бита
+	INC TEMP
+	STD Y+_DRV_IR_BIT_POS,TEMP
+	MOV ZL,TEMP
+	ANDI ZL,0xf8
+	BRNE _DRV_IR_EINT_EVENT__SKIP_STORE_ACCUM
+	;Cохраняем ACCUM
+	COM ACCUM
+	LSR TEMP
+	LSR TEMP
+	LSR TEMP
+	LDD ZH,Y+_DRV_IR_DST_ADDR+0x00
+	LDD ZL,Y+_DRV_IR_DST_ADDR+0x01
+	ADD ZL,TEMP
+	ADC ZH,C0x00
+	ST Z,ACCUM
+_DRV_IR_EINT_EVENT__SKIP_STORE_ACCUM:
+	;Запускаем таймер для BIT TIMEOUT
+	LDD TEMP,Y+_DRV_IR_TIMER_ID
+	LDI ACCUM,_DRV_IR_RX_BIT_TIME_MAX
+	MCALL C5_TIMER_START_AT
 
+_DRV_IR_EINT_EVENT__END:
 	POP ACCUM
 	POP TEMP
 	POP_Z
 	POP_Y
 	RET
 
+
+;--------------------------------------------------------
+_DRV_IR_DONE:
+;--------------------------------------------------------
+;Завершение операции
+;--------------------------------------------------------
+	;Таймаут преамбулы или приема данных
+	LDD TEMP,Y+_DRV_IR_TIMER_ID
+	MCALL C5_TIMER_STOP
+	LDD TEMP_H,Z+_DRV_IR_INT_ID
+	MCALL C5_EINT_DISABLE
+	;Выключаю индикатор передачи
+	LDD ACCUM,Z+_DRV_IR_LED_PORT
+	CPI ACCUM,0xff
+	BREQ PC+0x03
+	MCALL PORT_SET_LO
+	RET
 .endif
