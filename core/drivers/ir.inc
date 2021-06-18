@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;10.06.2021	w5277c@gmail.com			Начало
+;19.06.2021	w5277c@gmail.com			Частичный баг фиксинг
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер инфракрасного приемника и передачтика, стандарт NEC(возможно адаптирую для SIRC)
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -47,15 +48,15 @@
 	.EQU	_DRV_IR_RX_MAX_PREAMBLE						= 0x88	;16мс, максимальное время преамбулы (2мс период)
 	.EQU	_DRV_IR_RX_BIT_TIME_MIN						= 0x0a	;10 = 0.5мс минимальное время передачи бита
 	.EQU	_DRV_IR_RX_BIT_TRESHOLD						= 0x1e	;15 = 1.5мс граница между 0 и 1
-	.EQU	_DRV_IR_RX_BIT_TIME_MAX						= 0x28	;32 = 2.5мс максимальное время передачи бита
+	.EQU	_DRV_IR_RX_BIT_TIME_MAX						= 0x32	;50 = 2.5мс максимальное время передачи бита
 
 	;---STATES_IDS---
 	.EQU	_DRV_IR_TX_PREAMBLE_LO						= 0x00;
 	.EQU	_DRV_IR_TX_PREAMBLE_HI						= 0x01;
 	.EQU	_DRV_IR_TX_DATA_LO							= 0x02;
 	.EQU	_DRV_IR_TX_DATA_HI							= 0x03;
-	.EQU	_DRV_IR_RX_PREAMBLE							= 0x06;
-	.EQU	_DRV_IR_RX_DATA								= 0x07;
+	.EQU	_DRV_IR_RX_PREAMBLE							= 0x04;
+	.EQU	_DRV_IR_RX_DATA								= 0x05;
 	.EQU	_DRV_IR_TX_DONE								= 0x80;
 	.EQU	_DRV_IR_RX_WAIT								= 0x81;
 	.EQU	DRV_IR_READY									= 0x82;
@@ -127,8 +128,9 @@ DRV_IR_INIT:
 ;OUT: TEMP_H-DRV_IR_RESULT_x, TEMP_L-длина полученных
 ;данных
 ;--------------------------------------------------------
+	PUSH_Y
 	PUSH_Z
-
+	
 	MCALL C5_RAM_OFFSET
 
 	;Запоминаем таймаут ожидания первого байта
@@ -170,6 +172,7 @@ _DRV_IR_PROC__SENDING_WAIT:
 	LDD TEMP,Z+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_TX_DONE
 	BRNE _DRV_IR_PROC__SENDING_WAIT
+	MOVW YL,ZL
 	MCALL _DRV_IR_DONE
 
 _DRV_IR_PROC__TX_SKIP:
@@ -199,6 +202,7 @@ _DRV_IR_PROC__TX_SKIP:
 	LDS YH,_C5_UPTIME+0x03
 	LDS YL,_C5_UPTIME+0x04
 _DRV_IR_PROC__RECEIVING_WAIT:
+	LDD TEMP,Z+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_RX_WAIT
 	BRNE _DRV_IR_PROC__NO_RX_WAIT
 		;Проверка FIRST TIMEOUT
@@ -218,6 +222,7 @@ _DRV_IR_PROC__RECEIVING_WAIT:
 		CP TEMP_L,ACCUM
 		BRCS _DRV_IR_PROC__RECEIVING_WAIT
 		;Достигли таймаута
+		MOVW YL,ZL
 		MCALL _DRV_IR_DONE
 		LDI TEMP,DRV_IR_FAIL
 		STD Z+_DRV_IR_STATE,TEMP
@@ -227,10 +232,11 @@ _DRV_IR_PROC__NO_RX_WAIT:
 		RJMP _DRV_IR_PROC__RECEIVING_WAIT
 _DRV_IR_PROC__RX_DONE:
 _DRV_IR_PROC__RX_SKIP:
-	LDI TEMP,DRV_IR_READY
-	STD Z+_DRV_IR_STATE,TEMP
+	LDD TEMP_H,Z+_DRV_IR_STATE
+	LDD TEMP_L,Z+_DRV_IR_BIT_POS
 
 	POP_Z
+	POP_Y
 	RET
 
 ;--------------------------------------------------------
@@ -329,10 +335,14 @@ _DRV_IR_TIMER_EVENT__TX_DONE:
 	STD Y+_DRV_IR_STATE,TEMP
 	RET
 _DRV_IR_TIMER_EVENT__RX_PREAMBLE:
-_DRV_IR_TIMER_EVENT__RX_DATA:
 	;Таймаут преамбулы или приема данных
 	MCALL _DRV_IR_DONE
 	LDI TEMP,DRV_IR_FAIL
+	STD Y+_DRV_IR_STATE,TEMP
+	RET
+_DRV_IR_TIMER_EVENT__RX_DATA:
+	MCALL _DRV_IR_DONE
+	LDI TEMP,DRV_IR_READY
 	STD Y+_DRV_IR_STATE,TEMP
 	RET
 
@@ -365,12 +375,16 @@ _DRV_IR_EINT_EVENT:
 _DRV_IR_EINT_EVENT__NO_RX_WAIT:
 	CPI TEMP,_DRV_IR_RX_PREAMBLE
 	BRNE _DRV_IR_EINT_EVENT__NO_RX_PREAMBLE
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
 	;TODO Нужно ли проверять на минимальную преамбулу?
 	LDS TEMP,_C5_UPTIME+0x04
 	LDD ACCUM,Y+_DRV_IR_TIMESTAMP
-	SUB ACCUM,TEMP
-	CPI ACCUM,_DRV_IR_RX_MIN_PREAMBLE-0x01
-	BRCS PC+0x06
+	SUB TEMP,ACCUM
+	CPI TEMP,_DRV_IR_RX_MIN_PREAMBLE&0x7f
+	BRCC PC+0x06
 	MCALL _DRV_IR_DONE
 	LDI TEMP,DRV_IR_FAIL
 	STD Y+_DRV_IR_STATE,TEMP
@@ -378,7 +392,6 @@ _DRV_IR_EINT_EVENT__NO_RX_WAIT:
 	;Запоминаем метку времени
 	LDS TEMP,_C5_MAIN_TIMER_CNTR
 	STD Y+_DRV_IR_TIMESTAMP,TEMP
-	MCALL PORT_SET_HI
 	;Запускаем таймер для BIT TIMEOUT
 	LDD TEMP,Y+_DRV_IR_TIMER_ID
 	LDI ACCUM,_DRV_IR_RX_BIT_TIME_MAX
@@ -394,14 +407,20 @@ _DRV_IR_EINT_EVENT__NO_RX_WAIT:
 	RJMP _DRV_IR_EINT_EVENT__END
 _DRV_IR_EINT_EVENT__NO_RX_PREAMBLE:
 	CPI TEMP,_DRV_IR_RX_DATA
-	BRNE _DRV_IR_EINT_EVENT__NO_RX_PREAMBLE
+	BRNE _DRV_IR_EINT_EVENT__NO_RX_DATA
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
+SBI PINC,PC4&0x0f
 	;Запоминаем метку времени
 	LDD TEMP,Y+_DRV_IR_TIMESTAMP
 	LDS ACCUM,_C5_MAIN_TIMER_CNTR
 	STD Y+_DRV_IR_TIMESTAMP,ACCUM
 	SUB ACCUM,TEMP
-	CPI ACCUM,_DRV_IR_RX_BIT_TIME_MIN-0x01
-	BRCS PC+0x06
+	CPI ACCUM,_DRV_IR_RX_BIT_TIME_MIN
+	BRCC PC+0x06
 	MCALL _DRV_IR_DONE
 	LDI TEMP,DRV_IR_READY
 	STD Y+_DRV_IR_STATE,TEMP
@@ -441,6 +460,9 @@ _DRV_IR_EINT_EVENT__SKIP_STORE_ACCUM:
 	LDD TEMP,Y+_DRV_IR_TIMER_ID
 	LDI ACCUM,_DRV_IR_RX_BIT_TIME_MAX
 	MCALL C5_TIMER_START_AT
+	RJMP _DRV_IR_EINT_EVENT__END
+_DRV_IR_EINT_EVENT__NO_RX_DATA:
+	MCALL _DRV_IR_DONE
 
 _DRV_IR_EINT_EVENT__END:
 	POP ACCUM
@@ -461,7 +483,7 @@ _DRV_IR_DONE:
 	LDD TEMP_H,Z+_DRV_IR_INT_ID
 	MCALL C5_EINT_DISABLE
 	;Выключаю индикатор передачи
-	LDD ACCUM,Z+_DRV_IR_LED_PORT
+	LDD ACCUM,Y+_DRV_IR_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
 	MCALL PORT_SET_LO
