@@ -45,15 +45,15 @@
 	.EQU	_DRV_IR_RX_LEN									= 0x12	;1B - Максимальное количество бит для приема
 	;---
 
-	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*312)/100/2;
-	.EQU	DRV_IR_FREQ_38K								= (CORE_FREQ*328)/100/2;
-	.EQU	DRV_IR_FREQ_36K								= (CORE_FREQ*347)/100/2;
+	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*312)/100/2-1;
+	.EQU	DRV_IR_FREQ_38K								= (CORE_FREQ*328)/100/2-1;
+	.EQU	DRV_IR_FREQ_36K								= (CORE_FREQ*347)/100/2-1;
 	
-	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_HI				= 0x85;180-1;0x0a	;0.5мс, половина преамбулы
-	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_LO				= 90-3;0x87	;14мс, половина преамбулы (2мс период)
-	.EQU	_DRV_IR_TX_HI									= 11;0x0c	;10 = 0.6мс, низкий уровень (0.000050мс период)
-	.EQU	_DRV_IR_TX_LO0									= 11;0x0a	;10 = 0.5мс, высокйи уровень = 0 (0.000050мс период)
-	.EQU	_DRV_IR_TX_LO1									= 33;0x1e	;30 = 1.5мс, высокйи уровень = 1 (0.000050мс период)
+	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_HI				= 0x85	;0.25мс, половина преамбулы
+	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_LO				= 450/5	;14мс, половина преамбулы (2мс период)
+	.EQU	_DRV_IR_TX_HI									= 53/5	;0.3мс, низкий уровень (0.000050мс период)
+	.EQU	_DRV_IR_TX_LO0									= 57/5	;0.8мс, высокйи уровень = 0 (0.000050мс период)
+	.EQU	_DRV_IR_TX_LO1									= 220/5	;1.9мс, высокйи уровень = 1 (0.000050мс период)
 	.EQU	_DRV_IR_RX_MIN_PREAMBLE						= 0x82	;4мс, минимальное время преамбулы (2мс период)
 	.EQU	_DRV_IR_RX_MAX_PREAMBLE						= 0x88	;16мс, максимальное время преамбулы (2мс период)
 	.EQU	_DRV_IR_RX_BIT_TIME_MIN						= 0x0a	;10 = 0.5мс минимальное время передачи бита
