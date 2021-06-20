@@ -496,7 +496,7 @@ C5_TIMER_C_START:
 C5_TIMER_C_SET_COM:
 ;--------------------------------------------------------
 ;Устанавливаю режим работы вывода(OC2A) таймера C
-;IN: TEMP_H-TIMERC_COM_x, TEMP_L-длина периода
+;IN: TEMP_H-TIMERC_COM_x
 ;--------------------------------------------------------
 	PUSH TEMP
 	_C5_TIMERC_SET_COM
@@ -523,6 +523,17 @@ C5_INIT:
 ;--------------------------------------------------------
 	;Запрещение прерываний
 	CLI
+
+	;WATCHDOG STOP
+	WDR
+	LDS ACCUM,MCUSR
+	ANDI ACCUM,~(1<<WDRF)
+	STS MCUSR,ACCUM
+	LDS ACCUM,WDTCR
+	ORI ACCUM,(1<<WDCE)|(1<<WDE)
+	STS WDTCR,ACCUM
+	LDI ACCUM,(0<<WDE)
+	STS WDTCR,ACCUM
 
 	;Инициализация логирования
 .ifdef LOGGING_PORT

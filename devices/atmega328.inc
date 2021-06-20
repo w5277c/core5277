@@ -123,6 +123,10 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
 	.EQU	PRR										= 0x64
 	.EQU		PRTWI									= 0x07
 	.EQU		PRTIM2								= 0x06
@@ -389,6 +393,16 @@
 	.EQU		PGWRT									= 0x02
 	.EQU		PGERS									= 0x01
 	.EQU		SPMEN									= 0x00
+	;---WATCHDOG---
+	.EQU	WDTCR										= 0x60
+	.EQU		WDIF									= 0x07
+	.EQU		WDIE									= 0x06
+	.EQU		WDP3									= 0x05
+	.EQU		WDCE									= 0x04
+	.EQU		WDE									= 0x03
+	.EQU		WDP2									= 0x02
+	.EQU		WDP1									= 0x01
+	.EQU		WDP0									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
@@ -520,8 +534,7 @@ APPLICATION_BLOCK:
 	;TODO просто делитель на 8, а как-же разные CORE_FREQ?
 	LDI TEMP,(0<<CS22)|(1<<CS21)|(0<<CS20)						;/8
 	STS TCCR2B,TEMP
-	CLR TEMP
-	STS TCNT2,TEMP
+	STS TCNT2,C0x00
 	LDS TEMP,SREG
 	PUSH TEMP
 	CLI
@@ -563,7 +576,7 @@ APPLICATION_BLOCK:
 	PUSH TEMP
 	CLI
 	LDS TEMP,TCCR2A
-	ANDI TEMP,~(0b00111111)
+	ANDI TEMP,0b00111111
 	OR TEMP,TEMP_H 
 	STS TCCR2A,TEMP
 	POP TEMP
