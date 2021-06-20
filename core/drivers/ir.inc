@@ -6,6 +6,7 @@
 ;20.06.2021	w5277c@gmail.com			Успешный тест RX, доработка TX
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер инфракрасного приемника и передачтика 38КГц, стандарт NEC(возможно адаптирую для SIRC) использует TIMER C
+;Применяется 'Compare Match Output' если пин TX соответствует OC2A
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_IR
 .else
@@ -42,6 +43,10 @@
 	.EQU	_DRV_IR_RX_LEN									= 0x12	;1B - Максимальное количество бит для приема
 	;---
 
+	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*312)/100;
+	.EQU	DRV_IR_FREQ_38K								= (CORE_FREQ*328)/100;
+	.EQU	DRV_IR_FREQ_36K								= (CORE_FREQ*347)/100;
+	
 	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_HI				= 0x85;180-1;0x0a	;0.5мс, половина преамбулы
 	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_LO				= 90-3;0x87	;14мс, половина преамбулы (2мс период)
 	.EQU	_DRV_IR_TX_HI									= 11;0x0c	;10 = 0.6мс, низкий уровень (0.000050мс период)
@@ -71,17 +76,21 @@
 DRV_IR_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: TEMP_H-порт RX, TEMP_L-порт TX(0xff-использование
-;пина OC2A), TEMP_EH-ид прерывания C5_IR_INTn
+;IN: TEMP_H-порт RX, TEMP_L-порт TX,
+;TEMP_EH-ид прерывания C5_IR_INTn
 ;TEMP_EL-порт индикации передачи (0xff-не используется)
-;ACCUM-ид таймера
+;ACCUM-ид таймера,FLAGS-частота DRV_IR_FREQ_x
 ;--------------------------------------------------------
+	PUSH_Y
 	PUSH_Z
 	PUSH ACCUM
 
 	PUSH ACCUM
 	LDI ACCUM,_DRV_IR_RAM_SIZE
 	MCALL C5_RAM_REALLOC
+
+	MOV TEMP,FLAGS
+	MCALL C5_TIMER_C_SET_PERIOD
 
 	STD Z+_DRV_IR_INT_ID,TEMP_EH
 
@@ -94,11 +103,20 @@ DRV_IR_INIT:
 	MCALL PORT_SET_HI
 	;TX
 	STD Z+_DRV_IR_TX_PORT,TEMP_L
+	LDI ACCUM,0xff
+	STD Z+_DRV_IR_TX_PIN,ACCUM
 	MOV ACCUM,TEMP_L
-	CPI ACCUM,0xff
-	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
+	CPI TEMP_L,OC2A
+	BREQ PC+0x09
+	;Если TX не равен OC2A, то записываем число бита,
+	;и указываем точку входа для прерывания таймера C
+	MCALL PORT_OFFSETS
+	STD Z+_DRV_IR_TX_PORT,TEMP_L
+	STD Z+_DRV_IR_TX_PIN,ACCUM
+	LDI_Y _DRV_IR_TIMER_C_EVENT
+	MCALL C5_TIMER_C_SET_VECTOR
 	;LED
 	STD Z+_DRV_IR_LED_PORT,TEMP_EL
 	MOV ACCUM,TEMP_EL
@@ -121,6 +139,7 @@ DRV_IR_INIT:
 
 	POP ACCUM
 	POP_Z
+	POP_Y
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
@@ -164,13 +183,9 @@ DRV_IR_INIT:
 	CPI ACCUM,0xff
 	BREQ PC+0x03
 	MCALL PORT_SET_HI
-
-	LDD ACCUM,Z+_DRV_IR_TX_PORT
-	MCALL PORT_SET_HI
 	;Запуск передачи
-	LDD TEMP,Z+_DRV_IR_TIMER_ID
 	LDI ACCUM,_DRV_IR_TX_PERIOD_PREAMBLE_HI
-	MCALL C5_TIMER_START_AT
+	MCALL _DRV_IR_TIMER_C_START
 	;Жду окончания передачи
 _DRV_IR_PROC__SENDING_WAIT:
 	LDD TEMP,Z+_DRV_IR_STATE
@@ -245,37 +260,6 @@ _DRV_IR_PROC__RX_SKIP:
 	POP_Y
 	RET
 
-;--------------------------------------------------------
-_DRV_IR_TIMER_C_START:
-;--------------------------------------------------------
-;Запуск таймера C (38 КГц)
-;--------------------------------------------------------
-	PUSH_Z
-	PUSH_THL
-	PUSH ACCUM
-
-	MCALL C5_RAM_OFFSET
-	LDD ZL,Z+_DRV_IR_TX_PORT
-	CPI ZL,0xff
-	BREQ _DRV_IR_TIMER_C_START__SET_COM
-_DRV_IR_TIMER_C_START__END
-	;TODO
-_DRV_IR_TIMER_C_START__SET_COM:
-	;TODO
-_DRV_IR_TIMER_C_START__END:
-	
-	POP ACCUM
-	POP_THL
-	POP_Z
-	RET
-
-;--------------------------------------------------------
-_DRV_IR_TIMER_C_STOP:
-;--------------------------------------------------------
-;Останов таймера C (38 КГц)
-;--------------------------------------------------------
-	;TODO
-	RET
 
 ;--------------------------------------------------------
 _DRV_IR_TIMER_C_EVENT:
@@ -304,6 +288,7 @@ _DRV_IR_TIMER_C_EVENT:
 	POP_THL
 	POP_Z
 	RET
+
 ;--------------------------------------------------------
 _DRV_IR_TIMER_EVENT:
 ;--------------------------------------------------------
@@ -346,7 +331,7 @@ _DRV_IR_TIMER_EVENT__JUMP_TABLE:
 
 _DRV_IR_TIMER_EVENT__TX_PREAMBLE_HI:
 	;Перамбула, низкий уровень, включаем высокий
-	MCALL PORT_SET_LO
+	MCALL _DRV_IR_TIMER_C_STOP
 	;Запуск передачи
 	LDD TEMP,Y+_DRV_IR_TIMER_ID
 	LDI ACCUM,_DRV_IR_TX_PERIOD_PREAMBLE_LO
@@ -358,7 +343,7 @@ _DRV_IR_TIMER_EVENT__TX_PREAMBLE_HI:
 _DRV_IR_TIMER_EVENT__TX_PREAMBLE_LO:
 _DRV_IR_TIMER_EVENT__TX_DATA_LO:
 	;Перамбула или данные, высокий уровень, включаем данные, низкий
-	MCALL PORT_SET_HI
+	MCALL _DRV_IR_TIMER_C_START
 	MOV ACCUM,TEMP
 	ANDI ACCUM,0x07
 	BRNE _DRV_IR_TIMER_EVENT__SKIP_ACCUM_LOADING
@@ -389,7 +374,7 @@ _DRV_IR_TIMER_EVENT__SKIP_ACCUM_LOADING:
 	RET
 _DRV_IR_TIMER_EVENT__TX_DATA_HI:
 	;Данные, низкий уровень включаем выский разной длительностью
-	MCALL PORT_SET_LO
+	MCALL _DRV_IR_TIMER_C_STOP
 	LDD ACCUM,Y+_DRV_IR_TX_LEN
 	CP ACCUM,TEMP
 	BREQ _DRV_IR_TIMER_EVENT__TX_DONE
@@ -561,7 +546,64 @@ _DRV_IR_EINT_EVENT__END:
 	RET
 
 
+;--------------------------------------------------------
+_DRV_IR_TIMER_C_START:
+;--------------------------------------------------------
+;Запуск таймера C
+;IN: ACCUM-период для программного таймера
+;--------------------------------------------------------
+	PUSH_Z
+	PUSH_THL
+	PUSH ACCUM
 
+	LDD TEMP,Z+_DRV_IR_TIMER_ID
+	MCALL C5_TIMER_START_AT
+
+	MCALL C5_RAM_OFFSET
+	LDD ZL,Z+_DRV_IR_TX_PIN
+	CPI ZL,0xff
+	BREQ PC+0x04
+	MCALL C5_TIMER_C_START
+	RJMP PC+0x04
+	LDI TEMP,TIMER_C_COM_TOGGLE
+	MCALL C5_TIMER_C_SET_COM
+
+	POP ACCUM
+	POP_THL
+	POP_Z
+	RET
+
+;--------------------------------------------------------
+_DRV_IR_TIMER_C_STOP:
+;--------------------------------------------------------
+;Останов таймера C
+;--------------------------------------------------------
+	PUSH_Z
+	PUSH ACCUM
+	PUSH TEMP
+
+	LDD ACCUM,Y+_DRV_IR_TX_PIN
+	CPI ACCUM,0xff
+	BRNE PC+0x07
+	MCALL C5_TIMER_C_STOP
+	LDD ACCUM,Y+_DRV_IR_TX_PORT
+	MCALL PORT_SET_LO
+	RJMP _DRV_IR_DONE__END
+	LDI TEMP,TIMER_C_COM_DISCONNECTED
+	MCALL C5_TIMER_C_SET_COM
+	LDI ZH,0x00
+	LDD ZL,Y+_DRV_IR_TX_PORT
+	LDS TEMP,SREG
+	CLI
+	LD TEMP_H,Z
+	AND TEMP_H,ACCUM
+	ST Z,TEMP_H
+	STS SREG,TEMP
+
+	POP TEMP
+	POP ACCUM
+	POP_Z
+	RET
 
 ;--------------------------------------------------------
 _DRV_IR_DONE:
@@ -577,17 +619,15 @@ _DRV_IR_DONE:
 	MCALL C5_TIMER_STOP
 	LDD TEMP_H,Y+_DRV_IR_INT_ID
 	MCALL C5_EINT_DISABLE
-	;Выключаю передачу
-	LDD ACCUM,Y+_DRV_IR_TX_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
-	MCALL PORT_SET_LO
 	;Выключаю индикатор передачи
 	LDD ACCUM,Y+_DRV_IR_LED_PORT
 	CPI ACCUM,0xff
 	BREQ PC+0x03
 	MCALL PORT_SET_LO
+	;Выключаю передачу
+	MCALL _DRV_IR_TIMER_C_STOP
 
+_DRV_IR_DONE__END:
 	POP ACCUM
 	POP TEMP_H
 	POP TEMP
