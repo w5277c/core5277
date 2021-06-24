@@ -20,6 +20,7 @@
 	.SET	C5_DRIVERS_QNT							= 1
 	.SET	C5_TASKS_QNT							= 1
 	.SET	TIMERS									= 1	;0-4
+	.SET	TIMER_C_ENABLE							= 1
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x0000;Размер общего буфера (буфер для SD)
 	.SET	LOGGING_PORT							= PC4	;PA0-PC7
@@ -33,6 +34,7 @@
 	;Блок задач
 	;---
 	;Дополнительно
+	.include "./core/wait_2ms.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
@@ -64,6 +66,7 @@ MAIN:
 	LDI TEMP_EH,C5_IR_INT1
 	LDI TEMP_EL,PB2
 	LDI ACCUM,TID_IR
+	LDI FLAGS,DRV_IR_FREQ_38K
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
@@ -75,6 +78,9 @@ MAIN:
 	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
+TASK_DATA:
+	.db 0x00,0xff,0x0f,0xf0
+
 TASK__INIT:
 
 	LDI ACCUM,0x10
@@ -84,13 +90,19 @@ TASK__INIT:
 ;--------------------------------------------------------
 TASK:
 	LDI TEMP,PID_IR_DRV
-	MOVW YL,ZL
+	LDI_Y TASK_DATA|0x8000
 	MOVW XL,ZL
-	LDI TEMP_EH,0x00*0x08
-	LDI TEMP_EL,0x10*0x08
+	LDI TEMP_EH,0x04*0x08
+	LDI TEMP_EL,0x00*0x08
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
+
+	LDI TEMP_H,0x00
+	LDI TEMP_L,high(5000/2)
+	LDI TEMP,low(5000/2)
+	MCALL C5_WAIT_2MS
+	RJMP TASK
 
 	CPI TEMP_H,DRV_IR_READY
 	BRNE TASK

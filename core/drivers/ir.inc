@@ -48,12 +48,12 @@
 	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*312)/100/2-1;
 	.EQU	DRV_IR_FREQ_38K								= (CORE_FREQ*328)/100/2-1;
 	.EQU	DRV_IR_FREQ_36K								= (CORE_FREQ*347)/100/2-1;
-	
-	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_HI				= 0x85	;0.25мс, половина преамбулы
-	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_LO				= 450/5	;14мс, половина преамбулы (2мс период)
-	.EQU	_DRV_IR_TX_HI									= 53/5	;0.3мс, низкий уровень (0.000050мс период)
-	.EQU	_DRV_IR_TX_LO0									= 57/5	;0.8мс, высокйи уровень = 0 (0.000050мс период)
-	.EQU	_DRV_IR_TX_LO1									= 220/5	;1.9мс, высокйи уровень = 1 (0.000050мс период)
+
+	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_HI				= 0x85	;10(9)мс, половина преамбулы (2мс период)
+	.EQU	_DRV_IR_TX_PERIOD_PREAMBLE_LO				= 450/5	;4.5мс, половина преамбулы (0.000050мс период)
+	.EQU	_DRV_IR_TX_HI									= 56/5	;0.560(0.562)мс, низкий уровень (0.000050мс период)
+	.EQU	_DRV_IR_TX_LO0									= 56/5	;0.560(0.562)мс, высокйи уровень = 0 (0.000050мс период)
+	.EQU	_DRV_IR_TX_LO1									= 169/5	;1.69(1.687)мс, высокйи уровень = 1 (0.000050мс период)
 	.EQU	_DRV_IR_RX_MIN_PREAMBLE						= 0x82	;4мс, минимальное время преамбулы (2мс период)
 	.EQU	_DRV_IR_RX_MAX_PREAMBLE						= 0x88	;16мс, максимальное время преамбулы (2мс период)
 	.EQU	_DRV_IR_RX_BIT_TIME_MIN						= 0x0a	;10 = 0.5мс минимальное время передачи бита
@@ -155,7 +155,7 @@ DRV_IR_INIT:
 	PUSH_Z
 	PUSH ACCUM
 	PUSH TEMP
-	
+
 	MCALL C5_RAM_OFFSET
 
 	;Запоминаем таймаут ожидания первого байта
@@ -222,8 +222,10 @@ _DRV_IR_PROC__TX_SKIP:
 	MCALL C5_EINT_ENABLE
 
 	;Запоминаем текущий UPTIME
+	CLI
 	LDS YH,_C5_UPTIME+0x03
 	LDS YL,_C5_UPTIME+0x04
+	SEI
 _DRV_IR_PROC__RECEIVING_WAIT:
 	LDD TEMP,Z+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_RX_WAIT
@@ -235,8 +237,10 @@ _DRV_IR_PROC__RECEIVING_WAIT:
 		BRNE PC+0x03
 		CPI ACCUM,0x00
 		BREQ _DRV_IR_PROC__RECEIVING_WAIT
+		CLI
 		LDS TEMP_H,_C5_UPTIME+0x03
 		LDS TEMP_L,_C5_UPTIME+0x04
+		SEI
 		SUB TEMP_L,YL
 		SBC TEMP_H,YH
 		CP TEMP_H,TEMP
@@ -399,6 +403,7 @@ _DRV_IR_TIMER_EVENT__TX_DONE:
 	LDI TEMP,DRV_IR_READY
 	STD Y+_DRV_IR_STATE,TEMP
 	RET
+
 _DRV_IR_TIMER_EVENT__RX_PREAMBLE:
 	;Таймаут преамбулы или приема данных
 	MCALL _DRV_IR_DONE
@@ -447,11 +452,11 @@ SBI PINC,PC4&0x0f
 SBI PINC,PC4&0x0f
 SBI PINC,PC4&0x0f
 	;Проверяем на минимальную преамбулу
-	LDS TEMP,_C5_UPTIME+0x04
-	LDD ACCUM,Y+_DRV_IR_TIMESTAMP
-	SUB TEMP,ACCUM
-	CPI TEMP,(_DRV_IR_RX_MIN_PREAMBLE&0x7f)+0x01
-	BRCC PC+0x06
+	;LDS TEMP,_C5_UPTIME+0x04
+	;LDD ACCUM,Y+_DRV_IR_TIMESTAMP
+	;SUB TEMP,ACCUM
+	;CPI TEMP,(_DRV_IR_RX_MIN_PREAMBLE&0x7f)+0x01
+	;BRCC PC+0x06
 	MCALL _DRV_IR_DONE
 	LDI TEMP,DRV_IR_FAIL
 	STD Y+_DRV_IR_STATE,TEMP
