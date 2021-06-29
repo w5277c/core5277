@@ -1,39 +1,27 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;05.03.2020	w5277c@gmail.com			Начало
-;01.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;05.12.2020	w5277c@gmail.com			-с5
+;25.06.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_PORT_GET_BYTE
+.ifdef DEF_REG_BIT_SET
 .else
-.set DEF_PORT_GET_BYTE = 1
+.set DEF_REG_BIT_SET = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included PORT_GET_BYTE"
+.message "included REG_BIT_SET"
 .endif
 
-.include	"./io/port_offsets.inc"
+.include	"./io/reg_bit_hi.inc"
+.include	"./io/reg_bit_lo.inc"
 
 ;--------------------------------------------------------
-PORT_GET_BYTE:
+REG_BIT_SET:
 ;--------------------------------------------------------
-;Считывание состояния порта(8 бит)
-;IN: ACCUM - порт
-;OUT: ACCUM - значение
+;Установка бита для регистра
+;IN: TEMP-адрес регистра, ACCUM-номер бита
+;flag C-состояние бита(true = HI)
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH_THL
-	PUSH TEMP
-
-	MCALL PORT_OFFSETS
-	MOV ZH,C0x00
-	MOV ZL,TEMP
-	LD ACCUM,Z
-
-	POP TEMP
-	POP_THL
-	POP_Z
-	RET
+	BRCC PC+0x03
+	MJMP REG_BIT_LO
+	MJMP REG_BIT_HI
 .endif

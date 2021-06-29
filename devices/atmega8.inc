@@ -7,7 +7,7 @@
 ;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;-----------------------------------------------------------------------------------------------------------------------
-
+;TODO обновить из atmega328
 ;---DESCRIPTION------------------------------------------
 ;core5277 for ATMega8 (8Kb ROM, 512b EEPROM, 1Kb SRAM) at 16MHz (LITTLE ENDIAN)
 ;avrdude -p m8 -c avrispmkII -U flash:w:main.hex
@@ -105,7 +105,11 @@
 	.EQU	SPH										= 0x5e
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
-	.EQU	MCUSR										= MCUCSR;
+	.EQU	MCUSR										= MCUCSR
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
 	;--FAKE-PRR---
 	.EQU	PRR										= 0xff
 	.EQU		PRTWI									= 0x00
@@ -117,20 +121,20 @@
 	.EQU		PRADC									= 0x00
 	;---TWI---
 	.EQU	TWCR										= 0x56
+	.EQU		TWINT									= 0x07
+	.EQU		TWEA									= 0x06
+	.EQU		TWSTA									= 0x05
+	.EQU		TWSTO									= 0x04
+	.EQU		TWWC									= 0x03
+	.EQU		TWEN									= 0x02
+	.EQU		TWIE									= 0x00
 	.EQU	TWDR										= 0x23
 	.EQU	TWAR										= 0x22
+	.EQU		TWGCE									= 0x00
 	.EQU	TWSR										= 0x21
+	.EQU		TWPS1									= 0x01
+	.EQU		TWPS0									= 0x00
 	.EQU	TWBR										= 0x20
-	;---
-	.EQU	TWINT										= 0x07
-	.EQU	TWEA										= 0x06
-	.EQU	TWSTA										= 0x05
-	.EQU	TWSTO										= 0x04
-	.EQU	TWWC										= 0x03
-	.EQU	TWEN										= 0x02
-	.EQU	TWIE										= 0x00
-	.EQU	TWPS0										= 0x00
-	.EQU	TWPS1										= 0x01
 	;---TIMERS---
 	.EQU	TIMSK										= 0x59
 	.EQU	TCCR1A									= 0x4f

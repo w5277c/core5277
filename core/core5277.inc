@@ -23,6 +23,7 @@
 ;14.06.2021	w5277c@gmail.com			v0.3.7	Запрещены прерывания при обработке таймеров, конечный обработчик сам
 ;															принимает решение для разрешения прерываний. Иначе возникают трудно
 ;															разрешимые коллизии.
+;29.06.2021	w5277c@gmail.com			v0.3.8	Множественные, мелкие изменения в основном TIMER_C, введен OPT_MODE
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -49,10 +50,15 @@
 .ifdef TS_MODE
 .else
 	.ifdef REALTIME
-		.SET	TS_MODE									= REALTIME
+		.EQU	TS_MODE								= REALTIME
 	.else
-		.SET	TS_MODE									= TS_MODE_EVENT
+		.EQU	TS_MODE								= TS_MODE_EVENT
 	.endif
+.endif
+
+.ifdef OPT_MODE
+.else
+	.EQU	OPT_MODE									= OPT_MODE_SIZE
 .endif
 
 ;---CORE-PUBLIC-PROCS------------------------------------;Доступные процедуры ядра
@@ -124,9 +130,19 @@
 	.EQU	_C5_TOP_OF_STACK						= RAMSTART+0x07;2B-хранит вершину стека
 	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B-хранит вершину свободной памяти
 	.EQU	_C5_FLAGS								= RAMSTART+0x0b;4B-флагов (32 флага)
-	.EQU	_C5_TIMER_C_VECTOR					= RAMSTART+0x0f;2B-адрес обработчика для таймера C
-	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x11;1B-счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x12;1B-порог срабатывания таймера ядра
+	.EQU	_C5_TIMER_C_PID						= RAMSTART+0x0f;1B-PID задачи использующей таймер C
+.if TIMER_C_ENABLE == 0x01
+	.if OPT_MODE == TS_MODE_TIME
+		.EQU	_C5_TIMER_C_Y						= _C5_TIMER_C_PID+0x01							;2B-адрес выделенной памяти процесса, использующего таймер C
+		.EQU	_C5_TIMER_C_VECTOR				= _C5_TIMER_C_Y+0x02								;2B-адрес обработчика для таймера C
+	.else
+		.EQU	_C5_TIMER_C_VECTOR				= _C5_TIMER_C_PID+0x01							;2B-адрес обработчика для таймера C
+	.endif
+	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_VECTOR+0x02						;1B-счетчик таймера ядра (каждые 0.000050с)
+.else
+	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_PID+0x01							;1B-счетчик таймера ядра (каждые 0.000050с)
+.endif
+	.EQU	_C5_MAIN_TIMER_TRHLD					= _C5_MAIN_TIMER_CNTR+0x01						;1B-порог срабатывания таймера ядра
 .IFDEF INPUT_PORT
 	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01					;xB-буфер ввода
 	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE		;1B-позиция в буфере на свободный элемент
@@ -214,7 +230,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	LOGSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.3.7",0x0d,0x0a,0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.8",0x0d,0x0a,0x00,0x00
 	.INCLUDE "./core/log/log_init.inc"
 	.INCLUDE	"./core/log/log_romstr.inc"
 	.INCLUDE	"./core/log/log_tasksdump.inc"
@@ -247,6 +263,7 @@ C5_DISPATCHER_UNLOCK:
 	.MESSAGE "######## TIMERS DISABLED"
 	C5_TIMER_SET:
 	C5_TIMER_START:
+	C5_TIMER_START_AT:
 	C5_TIMER_STOP:
 		RET
 .ENDIF
@@ -454,25 +471,42 @@ _C5_TIMER_C_IR:
 ;Обработчик прерывания таймера C
 ;--------------------------------------------------------
 	PUSH_Z
+	PUSH_Y
 	LDS ZH,SREG
 	PUSH ZH
+	PUSH PID
 
+	LDS PID,_C5_TIMER_C_PID
+.if OPT_MODE == TS_MODE_TIME
+	LDS YH,_C5_TIMER_C_Y+0x00
+	LDS YL,_C5_TIMER_C_Y+0x01
+.else
+	MCALL C5_RAM_OFFSET
+	MOVW YL,ZL
+.endif
 	LDS ZH,_C5_TIMER_C_VECTOR+0x00
 	LDS ZL,_C5_TIMER_C_VECTOR+0x01
 	ICALL
 
+	POP PID
 	POP ZH
 	STS SREG,ZH
+	POP_Y
 	POP_Z
-	RET
+	RETI
 ;--------------------------------------------------------
 C5_TIMER_C_SET_VECTOR:
 ;--------------------------------------------------------
 ;Установка адреса обработчика таймера C
-;IN: Y-адрес обработчика
+;IN: PID,X-адрес обработчика,Y-адрес выделенной памяти
 ;--------------------------------------------------------
-	STS _C5_TIMER_C_VECTOR+0x00,YH
-	STS _C5_TIMER_C_VECTOR+0x01,YL
+	STS _C5_TIMER_C_PID,PID
+.if OPT_MODE == TS_MODE_TIME
+	STS _C5_TIMER_C_Y+0x00,YH
+	STS _C5_TIMER_C_Y+0x01,YL
+.endif
+	STS _C5_TIMER_C_VECTOR+0x00,XH
+	STS _C5_TIMER_C_VECTOR+0x01,XL
 	RET
 ;--------------------------------------------------------
 C5_TIMER_C_SET_PERIOD:
@@ -489,6 +523,7 @@ C5_TIMER_C_START:
 ;IN: TEMP-длина периода
 ;--------------------------------------------------------
 	PUSH TEMP
+	_C5_TIMERC_SET_PERIOD
 	_C5_TIMERC_START
 	POP TEMP
 	RET
@@ -1032,37 +1067,31 @@ _C5_PROC_HEADER_GET:
 	PUSH TEMP_H
 	PUSH TEMP_L
 
+	MOV TEMP_H,PID
+	ANDI TEMP_H,0x0f
 	SBRS PID,C5_PROCID_OPT_DRV
 	RJMP _C5_PROC_HEADER_GET__TASK
 _C5_PROC_HEADER_GET__DRIVER:
 	LDI_Z _C5_DRIVERS_HEADER
-	MOV TEMP_H,PID													;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
-	ANDI TEMP_H,0x0f
-	LSL TEMP_H
+	LSL TEMP_H														;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
 	MOV TEMP_L,TEMP_H
 	LSL TEMP_H
-	ADD TEMP_L,TEMP_H
 	RJMP _C5_PROC_HEADER_GET__END
 _C5_PROC_HEADER_GET__TASK:
-	LDI ZL,low(_C5_TASKS_HEADER)
-	LDI ZH,high(_C5_TASKS_HEADER)
-	MOV TEMP_H,PID													;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
-	ANDI TEMP_H,0x0f
-	MOV TEMP_L,TEMP_H
+	LDI_Z _C5_TASKS_HEADER
+	MOV TEMP_L,TEMP_H												;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
 	LSL TEMP_L
 	ADD TEMP_H,TEMP_L
 	LSL TEMP_L
 	LSL TEMP_L
-	ADD TEMP_L,TEMP_H
 _C5_PROC_HEADER_GET__END:
+	ADD TEMP_L,TEMP_H
 	ADD ZL,TEMP_L
-	CLR TEMP_H
-	ADC ZH,TEMP_H
+	ADC ZH,C0x00
 
 	POP TEMP_L
 	POP TEMP_H
 	RET
-
 
 .if TS_MODE != TS_MODE_NO
 ;--------------------------------------------------------

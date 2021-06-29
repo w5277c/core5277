@@ -1,47 +1,38 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;05.03.2020	w5277c@gmail.com			Начало
-;01.08.2020	w5277c@gmail.com			Разбиение на файлы
-;03.10.2020	w5277c@gmail.com			Атомарность
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;05.12.2020	w5277c@gmail.com			-с5
+;25.06.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_PORT_MODE_IN
+.ifdef DEF_REG_BIT_INV
 .else
-.set DEF_PORT_MODE_IN = 1
+.set DEF_REG_BIT_INV = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included PORT_MODE_IN"
+.message "included REG_BIT_INV"
 .endif
 
-.include	"./io/port_offsets.inc"
-
 ;--------------------------------------------------------
-PORT_MODE_IN:
+REG_BIT_INV:
 ;--------------------------------------------------------
-;Устанвливаем порт на вход
-;IN: ACCUM-порт
+;Инвертируем бит регистра и возвращаем его новое значение
+;IN: TEMP-адрес,ACCUM-число бита
+;OUT: flag C-состояние бита(true = HI)
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_THL
-	PUSH TEMP
-	PUSH ACCUM
 
-	MCALL PORT_OFFSETS
 	MOV ZH,C0x00
-	MOV ZL,TEMP_L
-
-	COM ACCUM
-	LDS TEMP_L,SREG
+	MOV ZL,TEMP
+	LDS TEMP_H,SREG
 	CLI
-	LD TEMP,Z
-	AND TEMP,ACCUM
-	ST Z,TEMP
-	STS SREG,TEMP_L
+	LD TEMP_L,Z
+	EOR TEMP_L,ACCUM
+	ST Z,TEMP_L
+	AND TEMP_L,ACCUM
+	STS SREG,TEMP_H
 
-	POP ACCUM
-	POP TEMP
+	ADD TEMP_L,C0xff
+
 	POP_THL
 	POP_Z
 	RET
