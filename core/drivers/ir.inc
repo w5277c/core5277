@@ -5,6 +5,7 @@
 ;19.06.2021	w5277c@gmail.com			Частичный баг фиксинг
 ;20.06.2021	w5277c@gmail.com			Успешный тест RX, доработка TX
 ;26.06.2021	w5277c@gmail.com			Все заново
+;01.07.2021	w5277c@gmail.com			Первые успешные тесты
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер инфракрасного приемника и передачтика, использует INT и TIMER C (стандарт NEC возможно адаптирую для SIRC)
 ;Используется аппаратное переключение пина TX, если он соответствует OC2A
@@ -37,21 +38,21 @@
 	.EQU	_DRV_IR_FREQ									= 0x07	;1B - Частота передатчика
 	.EQU	_DRV_IR_STATE									= 0x08	;1B - Состояние драйвера
 	.EQU	_DRV_IR_ACCUM									= 0x09	;1B - Аккумулятор
-	.EQU	_DRV_IR_PULSE_CNTR							= 0x0a	;1B - Счетчик пульсаций
-	.EQU	_DRV_IR_TIMEOUT								= 0x0b	;2B - Таймаут ожидания данных
-	.EQU	_DRV_IR_SRC_ADDR								= 0x0d	;2B - Адрес блока данных для передачи
-	.EQU	_DRV_IR_DST_ADDR								= 0x0f	;2B - Адрес блока данных для приема
-	.EQU	_DRV_IR_BIT_POS								= 0x11	;1B - Позиция текущего бита
-	.EQU	_DRV_IR_BYTE_POS								= 0x12	;1B - Позиция текущего байта
-	.EQU	_DRV_IR_TX_LEN									= 0x13	;1B - Количество бит для передачи
-	.EQU	_DRV_IR_RX_LEN									= 0x14	;1B - Максимальное количество бит для приема
+	.EQU	_DRV_IR_PULSE_CNTR							= 0x0b	;2B - Счетчик пульсаций
+	.EQU	_DRV_IR_TIMEOUT								= 0x0d	;2B - Таймаут ожидания данных
+	.EQU	_DRV_IR_SRC_ADDR								= 0x0f	;2B - Адрес блока данных для передачи
+	.EQU	_DRV_IR_DST_ADDR								= 0x11	;2B - Адрес блока данных для приема
+	.EQU	_DRV_IR_BIT_POS								= 0x13	;1B - Позиция текущего бита
+	.EQU	_DRV_IR_BYTE_POS								= 0x14	;1B - Позиция текущего байта
+	.EQU	_DRV_IR_TX_LEN									= 0x15	;1B - Количество бит для передачи
+	.EQU	_DRV_IR_RX_LEN									= 0x16	;1B - Максимальное количество бит для приема
 	;---
-	.EQU	_DRV_IR_RAM_SIZE								= 0x15	;Необходимо выделить
+	.EQU	_DRV_IR_RAM_SIZE								= 0x17	;Необходимо выделить
 	;---
 
-	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*312)/(100*2)
+	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*313)/(100*2)-1
 	.EQU	DRV_IR_FREQ_38K								= (CORE_FREQ*325)/(100*2)-1
-	.EQU	DRV_IR_FREQ_36K								= (CORE_FREQ*347)/(100*2)
+	.EQU	DRV_IR_FREQ_36K								= (CORE_FREQ*350)/(100*2)-1
 
 
 	;---TIMINGS---
@@ -61,11 +62,11 @@
 	.EQU	_DRV_IR_DTEN									= _DRV_IR_PLEN*0x01		;0.000572, данные, первая часть
 	.EQU	_DRV_IR_DTDI0									= _DRV_IR_PLEN*0x01		;0.000572, данные, вторая часть, 0
 	.EQU	_DRV_IR_DTDI1									= _DRV_IR_PLEN*0x03		;0.001716, данные, вторая часть, 0
-	.EQU	_DRV_IR_PRMIN									= _DRV_IR_PLEN*(0x18-0x04)	;0.011440, минимальная длина преамбулы
+	.EQU	_DRV_IR_PRLEFT									= _DRV_IR_PLEN*(0x04+0x04)	;0.004576, остаток от таймаута преамбулы, не может быть больше
 	.EQU	_DRV_IR_PRMAX									= _DRV_IR_PLEN*(0x18+0x04)	;0.016016, максимальная длина преамбулы
-	.EQU	_DRV_IR_DTMIN									= _DRV_IR_PLEN*(0x02-0x01)	;0.000572, минимальная длина бита
+	.EQU	_DRV_IR_DTLEFT									= _DRV_IR_PLEN*(0x04)		;0.001716, остаток от бита, не может быть больше
 	.EQU	_DRV_IR_DTMAX									= _DRV_IR_PLEN*(0x04+0x01)	;0.002860, максимальная длина бита
-	.EQU	_DRV_IR_DTTRHLD								= _DRV_IR_PLEN*(0x03)		;0.001716, порог между HI и LO битом
+	.EQU	_DRV_IR_DTTRHLD								= _DRV_IR_PLEN*(0x02)		;
 	;---TX-STATES-IDS---
 	.EQU	_DRV_IR_ST_PREN								= 0x10;
 	.EQU	_DRV_IR_ST_PRDI								= 0x01;
@@ -285,7 +286,7 @@ _DRV_IR_PROC__RX_SKIP:
 	CPI TEMP_H,_DRV_IR_ST_TXDONE
 	BRNE PC+0x02
 	LDI TEMP_H,DRV_IR_ST_READY
-	LDD TEMP_L,Y+_DRV_IR_BIT_POS
+	LDD TEMP_L,Y+_DRV_IR_BYTE_POS
 
 	POP TEMP
 	POP ACCUM
@@ -396,6 +397,26 @@ _DRV_IR_TIMER_C_EVENT__SCNPRDI:
 	RJMP _DRV_IR_TIMER_C_EVENT__DONE
 
 _DRV_IR_TIMER_C_EVENT__SCNDTEN:
+	CPI ACCUM,_DRV_IR_ST_PR
+	BRNE _DRV_IR_TIMER_C_EVENT__NO_RXPR
+	;Достигли таймаута
+	MCALL C5_TIMER_C_STOP
+	LDI TEMP,_DRV_IR_ST_DTW
+	STD Y+_DRV_IR_STATE,TEMP
+	STD Y+_DRV_IR_BYTE_POS,C0x00
+	STD Y+_DRV_IR_BIT_POS,C0x00
+	MCALL __DRV_IR_EINT_LED_OFF
+	RJMP _DRV_IR_TIMER_C_EVENT__DONE
+
+_DRV_IR_TIMER_C_EVENT__NO_RXPR:
+	CPI ACCUM,_DRV_IR_ST_DT
+	BRNE _DRV_IR_TIMER_C_EVENT__NO_RX_DT
+	;Достигли таймаута
+	MCALL C5_TIMER_C_STOP
+	LDI TEMP,DRV_IR_ST_READY
+	STD Y+_DRV_IR_STATE,TEMP
+	MCALL __DRV_IR_EINT_LED_OFF
+_DRV_IR_TIMER_C_EVENT__NO_RX_DT:
 	RJMP _DRV_IR_TIMER_C_EVENT__DONE
 
 ;--------------------------------------------------------
@@ -403,6 +424,7 @@ _DRV_IR_EINT_EVENT:
 ;--------------------------------------------------------
 ;Обработчик внешнего прерывания
 ;--------------------------------------------------------
+	PUSH_X
 	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
@@ -415,8 +437,6 @@ _DRV_IR_EINT_EVENT:
 	CPI TEMP,_DRV_IR_ST_DTW
 	BRNE _DRV_IR_EINT_EVENT__NO_DTW
 	;Запоминаем метку времени для TIMEOUT(x2ms)
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
 	LDI_X _DRV_IR_PRMAX
 	STD Y+_DRV_IR_PULSE_CNTR+0x00,XH
 	STD Y+_DRV_IR_PULSE_CNTR+0x01,XL
@@ -429,17 +449,15 @@ SBI PINC,PC4&0x0f
 _DRV_IR_EINT_EVENT__NO_DTW:
 	CPI TEMP,_DRV_IR_ST_PR
 	BRNE _DRV_IR_EINT_EVENT__NO_PR
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
-SBI PINC,PC4&0x0f
 	;Проверяем на минимальную преамбулу
 	LDD XH,Y+_DRV_IR_PULSE_CNTR+0x00
 	LDD XL,Y+_DRV_IR_PULSE_CNTR+0x01
-	CPI XH,high(_DRV_IR_PRMIN)
+	LDI TEMP,high(_DRV_IR_PRLEFT)
+	CP TEMP,XH
 	BRCS _DRV_IR_EINT_EVENT__RST
-	BRNE PC+0x03
-	CPI XL,low(_DRV_IR_PRMIN)
+	BRNE PC+0x04
+	LDI TEMP,low(_DRV_IR_PRLEFT)
+	CP TEMP,XL
 	BRCS _DRV_IR_EINT_EVENT__RST
 	;Включаем индикатор активности
 	LDD TEMP,Y+_DRV_IR_LED_PA
@@ -447,6 +465,7 @@ SBI PINC,PC4&0x0f
 	CP TEMP,C0xff
 	BREQ PC+0x03
 	MCALL REG_BIT_HI
+_DRV_IR_EINT_EVENT__DT_SKIP_ACCUM_SAVE:
 	;Устанавливаем таймаут для данных
 	LDI_X _DRV_IR_DTMAX
 	STD Y+_DRV_IR_PULSE_CNTR+0x00,XH
@@ -460,27 +479,34 @@ _DRV_IR_EINT_EVENT__NO_PR:
 	;Проверяем на минимальную преамбулу
 	LDD XH,Y+_DRV_IR_PULSE_CNTR+0x00
 	LDD XL,Y+_DRV_IR_PULSE_CNTR+0x01
-	CPI XH,high(_DRV_IR_DTMIN)
+	LDI TEMP,high(_DRV_IR_DTLEFT)
+	CP TEMP,XH
 	BRCS _DRV_IR_EINT_EVENT__RST
-	BRNE PC+0x03
-	CPI XL,low(_DRV_IR_DTMIN)
+	BRNE PC+0x04
+	LDI TEMP,low(_DRV_IR_DTLEFT)
+	CP TEMP,XL
 	BRCS _DRV_IR_EINT_EVENT__RST
-	;TODO Запись бит
-	LDD XH,Y+_DRV_IR_BYTE_POS
 	LDD TEMP,Y+_DRV_IR_BIT_POS
 	LDD ACCUM,Y+_DRV_IR_ACCUM
+	CPI XL,_DRV_IR_DTTRHLD
+	ROR ACCUM
+	STD Y+_DRV_IR_ACCUM,ACCUM
+	INC TEMP
 	ANDI TEMP,0x07
+	STD Y+_DRV_IR_BIT_POS,TEMP
 	BRNE _DRV_IR_EINT_EVENT__DT_SKIP_ACCUM_SAVE
+	LDD TEMP,Y+_DRV_IR_BYTE_POS
+	LDD ACCUM,Y+_DRV_IR_ACCUM
 	LDD ZH,Y+_DRV_IR_DST_ADDR+0x00
 	LDD ZL,Y+_DRV_IR_DST_ADDR+0x01
-	ADD ZL,XH
+	ADD ZL,TEMP
 	ADC ZH,C0x00
-	COM ACCUM
 	ST Z,ACCUM
-	INC XH
-	STD Y+_DRV_IR_BYTE_POS,XH
-	LDD ZH,Y+_DRV_IR_RX_LEN
-	CP ACCUM,ZH
+	INC TEMP
+	STD Y+_DRV_IR_BYTE_POS,TEMP
+	LDD ACCUM,Y+_DRV_IR_RX_LEN
+	INC ACCUM
+	CP TEMP,ACCUM
 	BRNE _DRV_IR_EINT_EVENT__DT_SKIP_ACCUM_SAVE
 	;Достигли переполнения
 	MCALL C5_TIMER_C_STOP
@@ -488,14 +514,6 @@ _DRV_IR_EINT_EVENT__NO_PR:
 	MCALL C5_EINT_DISABLE
 	LDI TEMP,DRV_IR_ST_OVERFLOW
 	STD Y+_DRV_IR_STATE,TEMP
-	RJMP _DRV_IR_EINT_EVENT__END
-_DRV_IR_EINT_EVENT__DT_SKIP_ACCUM_SAVE:
-	CPI XL,_DRV_IR_DTTRHLD
-	ROR ACCUM
-	STD Y+_DRV_IR_ACCUM,ACCUM
-	INC TEMP
-	STD Y+_DRV_IR_BIT_POS,TEMP
-	MCALL __DRV_IR_EINT_LED_OFF
 	RJMP _DRV_IR_EINT_EVENT__END
 _DRV_IR_EINT_EVENT__RST:
 	;Достигли переполнения
@@ -513,6 +531,7 @@ _DRV_IR_EINT_EVENT__END:
 	POP TEMP
 	POP_Z
 	POP_Y
+	POP_X
 	RET
 
 __DRV_IR_EINT_LED_OFF:
