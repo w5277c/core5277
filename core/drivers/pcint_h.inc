@@ -3,11 +3,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;07.07.2020	w5277c@gmail.com			Начало
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_PCINT_H
 .else
 .set DEF__C5_DRV_PCINT_H = 1
-.message "Included driver hardware PCINT v0.1"
+.message "Included driver hardware PCINT v0.2"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -33,8 +34,7 @@ DRV_PCINT_H_INIT:
 	LDI ACCUM,_DRV_PCINT_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	;Заполняем
-	MOV XH,ZH
-	MOV XL,ZL
+	MOVW XL,YL
 	MOV LOOP_CNTR,ACCUM
 	LDI TEMP,0xff
 	MCALL RAM_FILL8
@@ -52,25 +52,23 @@ DRV_PCINT_H_INIT:
 ;--------------------------------------------------------
 ;Основной код, разрешаем прерывания и
 ;включаем необходимые флаги
-;IN: ACCUM - порт
-;Y - адрес обработчика
-;FLAGS - PID(0xFF - отключить)
+;IN: ACCUM-порт, X-адрес обработчика,FLAGS-PID
+;(0xFF-отключить)
 ;--------------------------------------------------------
+	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH ACCUM
 
-	LDI ZH,high(PCINT_TABLE*2)
-	LDI ZL,low(PCINT_TABLE*2)
+	LDI_Z PCINT_TABLE*2
 	MOV TEMP,ACCUM
 	SWAP TEMP
 	ANDI TEMP,0x07
 	MOV TEMP_H,TEMP
 	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 	LPM TEMP,Z+
 	MOV ZL,TEMP
 	;Проверка на не заданный порт регистра
@@ -101,19 +99,17 @@ _DRV_PCINT_H_PROC__NOT_RESET:
 	ROL TEMP_H
 
 	;Получаем адрес выделенной памяти
-	MCALL C5_RAM_OFFSET
-	PUSH_Z
+	MCALL C5_RAM_OFFSET_Y
+	MOVW ZL,YL
 	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
 	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 	;Прибавляем смещение относительно номера порта
 	MOV TEMP,ACCUM
 	SWAP TEMP
 	ANDI TEMP,0x07
 	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 	;Записываю новое состояние бита
 	LD TEMP,Z
 	PUSH TEMP_L
@@ -123,14 +119,12 @@ _DRV_PCINT_H_PROC__NOT_RESET:
 	SBRC TEMP_H,0x00
 	OR TEMP,TEMP_L
 	ST Z,TEMP
-	;Получаем адрес блока выделенной памяти
-	POP_Z
 
+	MOVW ZL,YL
 	;Прибавляем смещение на адреса
 	LDI TEMP,low(_DRV_PCINT_H_RAM_ADDRS)
 	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 	;прибавляем смещение относительно номера порта и бита
 	MOV TEMP,ACCUM
 	SWAP TEMP
@@ -148,12 +142,11 @@ _DRV_PCINT_H_PROC__NOT_RESET:
 	ADD TEMP,ACCUM
 	POP ACCUM
 	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 	;Записываем адрес перехода
 	ST Z+,FLAGS
-	ST Z+,YH
-	ST Z+,YL
+	ST Z+,XH
+	ST Z+,XL
 
 	;Разрешаем прерывание PCIE(2-0)
 	MOV TEMP,ACCUM
@@ -171,13 +164,14 @@ _DRV_PCINT_H_PROC__END:
 	POP TEMP_H
 	POP TEMP
 	POP_Z
+	POP_Y
 	RET
 
 ;--------------------------------------------------------
 _DRV_PCINT_H_EVENT:
 ;--------------------------------------------------------
 ;Обработчик изменения состояния пина
-;IN: ACCUM - номер строки в таблице прерываний
+;IN: ACCUM-номер строки в таблице прерываний
 ;При вызове ICALL первый бит FLAGS содержит состояние
 ;пина
 ;--------------------------------------------------------
@@ -193,21 +187,20 @@ _DRV_PCINT_H_EVENT:
 	MCALL PORT_GET_BYTE
 
 	PUSH_X
+	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
 	PUSH FLAGS
 	;Получаем адрес выделенной памяти
-	MCALL C5_RAM_OFFSET
-	MOV XH,ZH
-	MOV XL,ZL
+	MCALL C5_RAM_OFFSET_Y
+	MOVW XL,YL
 	;Получаем адрес предидущих состояний
 	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES+0x01)
 	ADD TEMP,LOOP_CNTR
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
-	LD TEMP,Z															;Старое значение
-	ST Z,ACCUM
+	ADD XL,TEMP
+	ADC XH,C0x00
+	LD TEMP,X															;Старое значение
+	ST X,ACCUM
 	MOV FLAGS,ACCUM
 	EOR ACCUM,TEMP														;XOR
 
@@ -216,15 +209,14 @@ _DRV_PCINT_H_EVENT:
 	ADD TEMP,LOOP_CNTR
 	LSR LOOP_CNTR
 	ADD TEMP,LOOP_CNTR
-	ADD XL,TEMP
-	CLR TEMP
-	ADC XH,TEMP
+	ADD YL,TEMP
+	ADC YH,C0x00
 
 	LDI LOOP_CNTR,0x08
 _DRV_PCINT_H_EVENT__LOOP:
-	LD TEMP,X+
-	LD ZH,X+
-	LD ZL,X+
+	LD TEMP,Y+
+	LD ZH,Y+
+	LD ZL,Y+
 
 	LSR ACCUM
 	BRCC _DRV_PCINT_H_EVENT__NEXT
@@ -243,6 +235,7 @@ _DRV_PCINT_H_EVENT__NEXT:
 	POP FLAGS
 	POP TEMP
 	POP_Z
+	POP_Y
 	POP_X
 	POP LOOP_CNTR
 	POP ACCUM

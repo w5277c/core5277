@@ -16,24 +16,17 @@ CRC8_BLOCK:
 ;--------------------------------------------------------
 ;Подсчет блока CRC(8 бит)
 ;IN: X-адрес начала блока, LOOP_CNTR - длина
-;Y-адрес процедуры для вычисления байта
+;Z-адрес процедуры для вычисления байта
 ;OUT: ACCUM - сумма
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH LOOP_CNTR
 	PUSH TEMP
-	CLR ACCUM
 
+	CLR ACCUM
 _CRC8_BLOCK__LOOP:
-	LDI TEMP,low(_CRC8_BLOCK__CODEPOINT)
-	PUSH TEMP
-	LDI TEMP,high(_CRC8_BLOCK__CODEPOINT)
-	PUSH TEMP
-	PUSH YL
-	PUSH YH
 	LD TEMP,X+
-	RET
-_CRC8_BLOCK__CODEPOINT:
+	ICALL
 	DEC LOOP_CNTR
 	BRNE _CRC8_BLOCK__LOOP
 

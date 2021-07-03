@@ -7,13 +7,16 @@
 ;BUILD: avra  -I ../../ main.asm
 
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	TIMER_C_ENABLE							= 0	;0-1
 	.INCLUDE "./devices/atmega328.inc"
-	.SET	AVRA										= 0	;0-1
-	.SET	REALTIME									= 0	;0-1
-	.SET	TIMERS									= 0	;0-4
+
+	.SET	TS_MODE									= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
+	.SET	OPT_MODE									= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
+	.SET	AVRA										= 1	;0-1
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.SET	TIMERS									= 0	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
-	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+	.SET	LOGGING_PORT							= SCK	;PA0-PC7
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -68,7 +71,7 @@ MAIN:
 	TASK__LOGSTR3:
 	.db   "]",0x0a,0x0d,0x00
 	TASK__LOGSTR4:
-	.db   "!!! 59942/100(DIV100)=",0x00,0x00
+	.db   "59942/100(DIV100)=",0x00,0x00
 ;--------------------------------------------------------;Задача
 TASK__INIT:
 	MCALL C5_READY
@@ -88,9 +91,8 @@ TASK__LOOP:
 	CPI LOOP_CNTR,0x00
 	BRNE TASK__LOOP
 
-	;!!!
-	LDI TEMP_H,high(59942);=600
-	LDI TEMP_L,low(59942);=600
+	LDI TEMP_H,high(59942)
+	LDI TEMP_L,low(59942)
 	C5_LOG_ROMSTR TASK__LOGSTR4
 	MCALL DIV100
 	MCALL C5_LOG_NUMx16

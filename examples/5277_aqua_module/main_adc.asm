@@ -1,7 +1,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;28.10.2020  w5277c@gmail.com			Начало
+;28.10.2020	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
@@ -52,15 +52,13 @@ MAIN:
 
 	;Инициализация ADC
 	LDI PID,PID_ADC_DRV
-	LDI ZH,high(DRV_ADC_INIT)
-	LDI ZL,low(DRV_ADC_INIT)
+	LDI_Z DRV_ADC_INIT
 	LDI ACCUM,TID_ADC
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_TASK
-	LDI ZH,high(TASK__INIT)
-	LDI ZL,low(TASK__INIT)
+	LDI_Z TASK__INIT
 	MCALL C5_CREATE
 
 	MJMP C5_START
@@ -77,8 +75,7 @@ TASK__INFINITE_LOOP:
 	LDI TEMP_EL,ADC_PRESC_X128										;Делитель в x128
 	LDI TEMP_H,0x64													;Кол-во итераций для подсчета среднего
 	LDI TEMP_L,0x08|(0<<0x07)										;Периодичность итераций 1/50/50/0.000050=8 (~50Гц с 50-ю выборками)*2
-	LDI XH,0x00
-	LDI XL,0x00
+	LDI_X 0x0000
 	MCALL C5_EXEC
 
 

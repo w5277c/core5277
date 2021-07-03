@@ -5,8 +5,7 @@
 ;08.10.2020	w5277c@gmail.com			Все плохо, храмает точность, например для 59942
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;10.12.2020	w5277c@gmail.com			-с5
-;-----------------------------------------------------------------------------------------------------------------------
-;TODO перейти на использование MUL8X8
+;03.07.2021	w5277c@gmail.com			Основа div16x8
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF_DIV100
@@ -17,50 +16,18 @@
 .message "included DIV100"
 .endif
 
+.include	"./math/div16x8.inc"
+
 ;--------------------------------------------------------
 DIV100:
 ;--------------------------------------------------------
-;Деление 16b числа на 100 (неточное!)
+;Деление 16b числа на 100
 ;IN: TEMP_H/TEMP_L - 16b число
 ;OUT: TEMP_H/TEMP_L результат
 ;--------------------------------------------------------
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH ACCUM
 	PUSH TEMP
-	PUSH _RESULT_H
-	PUSH _RESULT_L
-
-	MOV TEMP,TEMP_H
-	MOV ACCUM,TEMP_L
-	;Умножаем на 656
-	;x*144
-	LDI TEMP_EH,144
-	CLR TEMP_EL
-	MUL ACCUM,TEMP_EH
-	MOV TEMP_H,_RESULT_H
-	MOV TEMP_L,_RESULT_L
-	MUL TEMP,TEMP_EH
-	ADD TEMP_H,_RESULT_L
-	ADC TEMP_EL,_RESULT_H
-	;x*512
-	CLR TEMP_EH
-	CLR LOOP_CNTR
-	LSL ACCUM
-	ROL TEMP
-	ROL LOOP_CNTR
-
-	ADD TEMP_H,ACCUM
-	ADC TEMP_EL,TEMP
-	ADC TEMP_EH,LOOP_CNTR
-	MOV TEMP_H,TEMP_EH
-	MOV TEMP_L,TEMP_EL
-
-	POP _RESULT_L
-	POP _RESULT_H
+	LDI TEMP,0x64
+	MCALL DIV16X8
 	POP TEMP
-	POP ACCUM
-	POP TEMP_EL
-	POP TEMP_EH
 	RET
 .endif

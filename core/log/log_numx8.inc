@@ -1,9 +1,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.10.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;26.01.2021  w5277c@gmail.com			Не выводим лишние нули
+;08.10.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;26.01.2021	w5277c@gmail.com			Не выводим лишние нули
+;03.07.2021	w5277c@gmail.com			Багфикс
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_NUMX8
 .else
@@ -23,19 +24,17 @@ C5_LOG_NUMX8:
 ;IN: TEMP - байт
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP
+	PUSH_FT
+	PUSH FLAGS
 
+	LDI FLAGS,0x00
 	MOV ACCUM,TEMP
 	LDI TEMP_H,0x00
 	MOV TEMP_L,ACCUM
 	LDI TEMP,0x64
 	MCALL DIV16x8
-	CPI TEMP_L,0x00
-	BREQ PC+0x5
+	OR FLAGS,TEMP_L
+	BREQ PC+0x05
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_LOG_CHAR
@@ -45,8 +44,8 @@ C5_LOG_NUMX8:
 	SUB ACCUM,TEMP_L
 	MOV TEMP,ACCUM
 	MCALL DIV10
-	CPI TEMP_L,0x00
-	BREQ PC+0x5
+	OR FLAGS,TEMP_L
+	BREQ PC+0x05
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_LOG_CHAR
@@ -58,11 +57,8 @@ C5_LOG_NUMX8:
 	MOV TEMP,ACCUM
 	MCALL C5_LOG_CHAR
 
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP_EL
-	POP TEMP_EH
+	POP FLAGS
+	POP_FT
 	POP ACCUM
 	RET
 .endif

@@ -1,19 +1,22 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;31.10.2020  w5277c@gmail.com			Начало
-;30.01.2021  w5277c@gmail.com			Тест, отработано корректно.
+;31.10.2020	w5277c@gmail.com			Начало
+;30.01.2021	w5277c@gmail.com			Тест, отработано корректно.
+;03.07.2021	w5277c@gmail.com			Z->Y, отработано корректно.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
-	
+
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	TIMER_C_ENABLE							= 0	;0-1
 	.INCLUDE "./devices/atmega328.inc"
-	.SET	AVRA										= 0	;0-1
-	.SET	REALTIME									= 1	;0-1
-	.SET	TIMERS									= 1	;0-4
+	.SET	TS_MODE									= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
+	.SET	OPT_MODE									= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
+	.SET	AVRA										= 1	;0-1
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.SET	TIMERS									= 1	;0-4
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
-	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+	.SET	LOGGING_PORT							= SCK	;PA0-PC7
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -61,36 +64,30 @@ MAIN:
 
 	;Инициализация BEEPER
 	LDI PID,PID_BEEPER_DRV
-	LDI ZH,high(DRV_BEEPER_INIT)
-	LDI ZL,low(DRV_BEEPER_INIT)
+	LDI_Z DRV_BEEPER_INIT
 	LDI ACCUM,PD7
 	LDI FLAGS,TID_BEEPER
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_BEEPER_TASK
-	LDI ZH,high(BEEPER_TASK__INIT)
-	LDI ZL,low(BEEPER_TASK__INIT)
+	LDI_Z BEEPER_TASK__INIT
 	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_LED_TASK
-	LDI ZH,high(LED_TASK__INIT)
-	LDI ZL,low(LED_TASK__INIT)
+	LDI_Z LED_TASK__INIT
 	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_UPTIME_TASK
-	LDI ZH,high(UPTIME_TASK__INIT)
-	LDI ZL,low(UPTIME_TASK__INIT)
+	LDI_Z UPTIME_TASK__INIT
 	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_FREEMEM_TASK
-	LDI ZH,high(FREEMEM_TASK__INIT)
-	LDI ZL,low(FREEMEM_TASK__INIT)
+	LDI_Z FREEMEM_TASK__INIT
 	MCALL C5_CREATE
 
 	LDI PID,PID_TIMER_TASK
-	LDI ZH,high(TIMER_TASK__INIT)
-	LDI ZL,low(TIMER_TASK__INIT)
+	LDI_Z TIMER_TASK__INIT
 	LDI TEMP_H,BYTE3(5000/2)
 	LDI TEMP_L,BYTE2(5000/2)
 	LDI TEMP,BYTE1(5000/2)
@@ -100,15 +97,14 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 	BEEPER_TASK__DATA:
-	.db N8,D1,D2,D3,D4,D5,E,0x00
+	.db N64T,C5,D5,E5,F5,G5,A5,H5,E,0x00
 
 BEEPER_TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 BEEPER_TASK__INFINITE_LOOP:
-	LDI YH,high(BEEPER_TASK__DATA)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
-	LDI YL,low(BEEPER_TASK__DATA)
 	LDI TEMP,PID_BEEPER_DRV
+	LDI_Z BEEPER_TASK__DATA|0x8000								;Вызываем процедуру драйвера (данные мелодии берем из ROM)
 	MCALL C5_EXEC
 
 	LDI TEMP,0x05														;Пауза в 5 сеунд

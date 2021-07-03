@@ -1,7 +1,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;27.01.2021  w5277c@gmail.com			Начало (не тестировано)
+;27.01.2021	w5277c@gmail.com			Начало (не тестировано)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_NUMX32
 .else
@@ -18,11 +18,7 @@ C5_LOG_NUMX32:
 ;Логирование десятиричного числа(4 байта)
 ;IN: TEMP_EH/EL/H/L - двойное слово
 ;--------------------------------------------------------
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP
+	PUSH_FT
 	PUSH LOOP_CNTR
 	PUSH_X
 	PUSH_Y
@@ -33,8 +29,7 @@ C5_LOG_NUMX32:
 	MOV ZH,TEMP_H
 	MOV ZL,TEMP_L
 
-	LDI XH,0x00
-	LDI XL,0x0a
+	LDI_X 0x000a
 	LDI LOOP_CNTR,0x0a
 _C5_LOG_NUMX32__LOOP1:
 	MOV TEMP_EH,YH
@@ -71,11 +66,7 @@ _C5_LOG_NUMX32__LOOP2:
 	POP_Y
 	POP_X
 	POP LOOP_CNTR
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP_EL
-	POP TEMP_EH
+	POP_FT
 	RET
 .endif
 .endif

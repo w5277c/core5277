@@ -23,7 +23,7 @@ C5_WAIT_2MS:
 ;с момента вызова C5_TIMER_MARK
 ;IN TEMP_H,TEMP_L,TEMP - время в 0.002s
 ;--------------------------------------------------------
-.IF TS_MODE == TS_MODE_TIME
+.if TS_MODE == TS_MODE_TIME
 	LDS r2,SREG															;Запоминаем регистр флагов
 	MCALL C5_DISPATCHER_LOCK
 	_C5_MACRO__PUSH_RDS												;Пмещаем в стек рабочие регистры задачи
@@ -52,20 +52,20 @@ C5_WAIT_2MS:
 
 	LDI TEMP,_C5_PROC_STATE_TIME_WAIT
 	MCALL _C5_SUSPEND__BODY
-.ELSE
+.else
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH FLAGS
 
-	LDS ACCUM,_C5_UPTIME+0x04	
+	LDS ACCUM,_C5_UPTIME+0x04
 C5_WAIT_2MS__LOOP:
 	LDS FLAGS,_C5_UPTIME+0x04
 	SUB FLAGS,ACCUM
 	BREQ C5_WAIT_2MS__LOOP
 
-	LDS ACCUM,_C5_UPTIME+0x04	
+	LDS ACCUM,_C5_UPTIME+0x04
 	SUB TEMP,FLAGS
 	SBC TEMP_L,C0x00
 	SBC TEMP_H,C0x00
@@ -76,6 +76,6 @@ C5_WAIT_2MS__LOOP:
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
-.ENDIF
+.endif
 	RET
 .endif
