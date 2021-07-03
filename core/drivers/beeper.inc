@@ -5,18 +5,21 @@
 ;26.10.2020	w5277c@gmail.com			Переход на программный таймер
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;24.04.2021	w5277c@gmail.com			Оптимизация
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DRIVER_BEEPER
 .else
 .set DEF_DRIVER_BEEPER = 1
-.message "Included driver Beeper v0.2"
+.message "Included driver Beeper v0.3"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_invert.inc"
-.include	"./io/port_mode_in.inc"
-.include	"./io/port_mode_out.inc"
+.include	"./io/port_offsets.inc"
+.include	"./io/reg_bit_hi.inc"
+.include	"./io/reg_bit_lo.inc"
+.include	"./io/reg_bit_inv.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_BEEPER_PORT						= 0x00;2b - Порт
@@ -149,7 +152,7 @@ DRV_BEEPER_INIT:
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_Z
+	PUSH_Y
 
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BEEPER_RAM_SIZE
@@ -157,23 +160,25 @@ DRV_BEEPER_INIT:
 
 	;Инициализирую таймер (0,000050s)
 	MOV TEMP,FLAGS
-	STD Z+_DRV_BEEPER_TIMER_ID,TEMP
+	STD Y+_DRV_BEEPER_TIMER_ID,TEMP
 	LDI TEMP_H,high(_DRV_BEEPER_TIMER_EVENT)
 	LDI TEMP_L,low(_DRV_BEEPER_TIMER_EVENT)
 	LDI ACCUM,0x01|(0<<0x07)
 	MCALL C5_TIMER_SET
 
 	POP ACCUM
-	STD Z+_DRV_BEEPER_PORT,ACCUM
+	STD Y+_DRV_BEEPER_PORT,ACCUM
 	;Инициализация порта
-	MCALL PORT_SET_LO
-	MCALL PORT_MODE_OUT
-	;Записываем адрес PORTx и число
 	MCALL PORT_OFFSETS
-	STD Z+_DRV_BEEPER_PORT+0x00,TEMP_H
-	STD Z+_DRV_BEEPER_PORT+0x01,ACCUM
+	MOV TEMP,TEMP_L
+	MCALL REG_BIT_HI
+	MOV TEMP,TEMP_H
+	MCALL REG_BIT_LO
+	;Записываем адрес PORTx и число
+	STD Y+_DRV_BEEPER_PORT+0x00,TEMP_H
+	STD Y+_DRV_BEEPER_PORT+0x01,ACCUM
 
-	POP_Z
+	POP_Y
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
@@ -181,27 +186,17 @@ DRV_BEEPER_INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, проигрывание звука
-;IN: Y - адрес на данные
-;(15-ый бит false - RAM, true - ROM)
-;0x00 - конец
+;IN: Z-адрес на данные(15-ый бит false-RAM, true-ROM)
+;0x00-конец
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
-	PUSH TEMP_H
-	PUSH TEMP_L
 	PUSH LOOP_CNTR
-	PUSH FLAGS
 
 	;Считываем информацию о пине
-	MCALL C5_RAM_OFFSET
-
-	LDD FLAGS,Z+_DRV_BEEPER_TIMER_ID
-
-	PUSH_Z
-	MOV ZH,YH
-	MOV ZL,YL
+	MCALL C5_RAM_OFFSET_Y
 
 	;Умножаем на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
@@ -239,25 +234,12 @@ _DRV_BEEPER_PROC__NO_TEMP:
 	RJMP _DRV_BEEPER_PROC__BYTES_LOOP
 
 _DRV_BEEPER_PROC__END:
-	POP_Z
-
 	;SET LO
-	LDD TEMP,Z+_DRV_BEEPER_PORT+0x00
-	LDD ACCUM,Z+_DRV_BEEPER_PORT+0x01
-	COM ACCUM
-	LDS FLAGS,SREG
-	CLI
-	MOV ZL,TEMP
-	CLR ZH
-	LD TEMP,Z
-	AND TEMP,ACCUM
-	ST Z,TEMP
-	STS SREG,FLAGS
+	LDD TEMP,Y+_DRV_BEEPER_PORT+0x00
+	LDD ACCUM,Y+_DRV_BEEPER_PORT+0x01
+	MCALL REG_BIT_LO
 
-	POP FLAGS
 	POP LOOP_CNTR
-	POP TEMP_L
-	POP TEMP_H
 	POP ACCUM
 	POP TEMP
 	POP_Z
@@ -268,10 +250,8 @@ _DRV_BEEPER_PROC__END:
 _DRV_BEEPER_PLAY_BYTE:
 ;--------------------------------------------------------
 ;Печать байта
-;IN: TEMP - байт, LOOP_CNTR - длина ноты,
-;FLAGS - ид таймера
+;IN: Y,TEMP-байт, LOOP_CNTR-длина ноты
 ;--------------------------------------------------------
-	;START
 	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -286,11 +266,9 @@ _DRV_BEEPER_PLAY_BYTE:
 	DEC TEMP
 	MOV ACCUM,TEMP
 	ANDI TEMP,0xfe
-	LDI ZH,high(_DRV_BEEPER_OCTAVS_TABLE*2)
-	LDI ZL,low(_DRV_BEEPER_OCTAVS_TABLE*2)
+	LDI_Z _DRV_BEEPER_OCTAVS_TABLE*2
 	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 	LPM TEMP_L,Z+
 	LPM TEMP_H,Z+
 	SBRS ACCUM,0x00
@@ -304,14 +282,12 @@ _DRV_BEEPER_PLAY_BYTE:
 	ADD TEMP_L,TEMP
 	ADC TEMP_H,ACCUM
 _DRV_BEEPER_PLAY_BYTE__HALF_OCTAVE_SKIP:
-	MCALL C5_RAM_OFFSET
-	STD Z+_DRV_BEEPER_TIMER_TH+0x00,TEMP_H
-	STD Z+_DRV_BEEPER_TIMER_TH+0x01,TEMP_L
-	STD Z+_DRV_BEEPER_TIMER_CNTR+0x00,TEMP_H
-	STD Z+_DRV_BEEPER_TIMER_CNTR+0x01,TEMP_L
-
+	STD Y+_DRV_BEEPER_TIMER_TH+0x00,TEMP_H
+	STD Y+_DRV_BEEPER_TIMER_TH+0x01,TEMP_L
+	STD Y+_DRV_BEEPER_TIMER_CNTR+0x00,TEMP_H
+	STD Y+_DRV_BEEPER_TIMER_CNTR+0x01,TEMP_L
 _DRV_BEEPER_PLAY_BYTE__SKIP:
-	MOV TEMP,FLAGS
+	LDD TEMP,Y+_DRV_BEEPER_TIMER_ID
 	MCALL C5_TIMER_START
 _DRV_BEEPER_PLAY_BYTE__SILENT:
 	;Умножаем на 10
@@ -332,7 +308,7 @@ _DRV_BEEPER_PLAY_BYTE__SILENT:
 	CLR TEMP_H
 	MCALL C5_WAIT_2MS
 
-	MOV TEMP,FLAGS
+	LDD TEMP,Y+_DRV_BEEPER_TIMER_ID
 	MCALL C5_TIMER_STOP
 
 	POP ACCUM
@@ -347,40 +323,35 @@ _DRV_BEEPER_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по таймеру
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_X
 	PUSH_Y
 
 	;Сичтываем информацию о пине
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 
-	LDD YH,Z+_DRV_BEEPER_TIMER_CNTR+0x00
-	LDD YL,Z+_DRV_BEEPER_TIMER_CNTR+0x01
-	SBIW YL,0x01
+	LDD XH,Y+_DRV_BEEPER_TIMER_CNTR+0x00
+	LDD XL,Y+_DRV_BEEPER_TIMER_CNTR+0x01
+	SBIW XL,0x01
 	BREQ PC+0x04
-	STD Z+_DRV_BEEPER_TIMER_CNTR+0x00,YH
-	STD Z+_DRV_BEEPER_TIMER_CNTR+0x01,YL
+	STD Y+_DRV_BEEPER_TIMER_CNTR+0x00,XH
+	STD Y+_DRV_BEEPER_TIMER_CNTR+0x01,XL
 	RJMP _DRV_BEEPER_TIMER_EVENT__END
 
-	LDD YH,Z+_DRV_BEEPER_TIMER_TH+0x00
-	LDD YL,Z+_DRV_BEEPER_TIMER_TH+0x01
-	STD Z+_DRV_BEEPER_TIMER_CNTR+0x00,YH
-	STD Z+_DRV_BEEPER_TIMER_CNTR+0x01,YL
+	LDD XH,Y+_DRV_BEEPER_TIMER_TH+0x00
+	LDD XL,Y+_DRV_BEEPER_TIMER_TH+0x01
+	STD Y+_DRV_BEEPER_TIMER_CNTR+0x00,XH
+	STD Y+_DRV_BEEPER_TIMER_CNTR+0x01,XL
 
 	PUSH ACCUM
-	;INVERT
-	LDD YH,Z+_DRV_BEEPER_PORT+0x01
-	LDD ZL,Z+_DRV_BEEPER_PORT+0x00
-	CLR ZH
-	LDS ACCUM,SREG
-	CLI
-	LD YL,Z
-	EOR YL,YH
-	ST Z,YL
-	STS SREG,ACCUM
+	PUSH TEMP
+	LDD TEMP,Y+_DRV_BEEPER_PORT+0x00
+	LDD ACCUM,Y+_DRV_BEEPER_PORT+0x01
+	MCALL REG_BIT_INV
+	POP TEMP
 	POP ACCUM
 
 _DRV_BEEPER_TIMER_EVENT__END:
 	POP_Y
-	POP_Z
+	POP_X
 	RET
 .endif

@@ -4,11 +4,12 @@
 ;15.10.2020	w5277c@gmail.com			Начало
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;09.06.2021	w5277c@gmail.com			Багфиксинг
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_ADC
 .else
 .set DEF__C5_DRV_ADC = 1
-.message "Included driver ADC v0.2"
+.message "Included driver ADC v0.3"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -42,12 +43,12 @@
 DRV_ADC_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM - ид таймера
+;IN: ACCUM-ид таймера
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_Z
+	PUSH_Y
 
 	PUSH ACCUM
 	;Выделяем память
@@ -56,7 +57,7 @@ DRV_ADC_INIT:
 	POP ACCUM
 
 	;Устанавливаю параметры таймера
-	STD Z+_DRV_ADC_TIMER_ID,ACCUM
+	STD Y+_DRV_ADC_TIMER_ID,ACCUM
 	MOV TEMP,ACCUM
 	LDI TEMP_H,high(_DRV_ADC_TIMER_EVENT)
 	LDI TEMP_L,low(_DRV_ADC_TIMER_EVENT)
@@ -64,10 +65,10 @@ DRV_ADC_INIT:
 	MCALL C5_TIMER_SET
 
 .IFDEF ADCSRB
-	STS ADCSRB,ACCUM
+	STS ADCSRB,C0x00
 .ENDIF
-	STS ADMUX,ACCUM
-	STS ADCSRA,ACCUM
+	STS ADMUX,C0x00
+	STS ADCSRA,C0x00
 
 	;Прописываем прерывание
 	LDI TEMP_H,high(_DRV_ADC_EVENT)
@@ -76,49 +77,47 @@ DRV_ADC_INIT:
 	MCALL C5_IR_VECTOR_SET
 
 	;Завершаем инициализацию
-	POP_Z
+	POP_Y
 	POP TEMP_L
 	POP TEMP_H
 	POP ACCUM
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код.
-;IN: ACCUM - ADC порт(ADC0...)
-;TEMP_EH - опорное напряжение(VREF), TEMP_EL - делитель,
-;TEMP_H - кол-во итераций для вычисления среднего,
-;TEMP_L - период таймера для итераций
-;X - значение нуля(15-й бит - считать по модулю)
-;OUT: TEMP_H,TEMP_L - результат (15-бит знак минуса)
+;IN: ACCUM-ADC порт(ADC0...)
+;TEMP_EH-опорное напряжение(VREF), TEMP_EL-делитель,
+;TEMP_H-кол-во итераций для вычисления среднего,
+;TEMP_L-период таймера для итераций
+;X-значение нуля(15-й бит-считать по модулю)
+;OUT: TEMP_H,TEMP_L-результат (15-бит знак минуса)
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH_Z
+	PUSH_Y
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH TEMP
 	PUSH ACCUM
 
 	;Блокируем ресурс ADC
-	PUSH ACCUM
+;	PUSH ACCUM
 ;	LDI ACCUM,C5_RES_ADC
 ;	MCALL C5_RES_LOCK
-	POP ACCUM
+;	POP ACCUM
 
 	;Увеличиваем размер выделенной памяти на _DRV_ADC_STRUCT_SIZE
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 
-	STD Z+_DRV_ADC_ZERO_VAL+0x00,XH
-	STD Z+_DRV_ADC_ZERO_VAL+0x01,XL
-
-	LDI TEMP,0x00
-	STD Z+_DRV_ADC_SUM+0x00,TEMP
-	STD Z+_DRV_ADC_SUM+0x01,TEMP
-	STD Z+_DRV_ADC_SUM+0x02,TEMP
-	STD Z+_DRV_ADC_ITER_QNT,TEMP_H
-	STD Z+_DRV_ADC_ITER_CNTR,TEMP
+	STD Y+_DRV_ADC_ZERO_VAL+0x00,XH
+	STD Y+_DRV_ADC_ZERO_VAL+0x01,XL
+	STD Y+_DRV_ADC_SUM+0x00,C0x00
+	STD Y+_DRV_ADC_SUM+0x01,C0x00
+	STD Y+_DRV_ADC_SUM+0x02,C0x00
+	STD Y+_DRV_ADC_ITER_QNT,TEMP_H
+	STD Y+_DRV_ADC_ITER_CNTR,C0x00
 
 	;Выставляем состояние - занято
 	LDI TEMP,_DRV_ADC_ST_BUSY
-	STD Z+_DRV_ADC_STATE,TEMP
+	STD Y+_DRV_ADC_STATE,TEMP
 	;Включаю ADC
 	_C5_POWER_ON PRADC
 	;Задаю параметры ADC и запускаю
@@ -135,10 +134,9 @@ DRV_ADC_INIT:
 	;Необходимо использвать таймер?
 	CPI TEMP_H,0x02
 	BRCS DRV_ADC__NO_TIMER
-	LDD TEMP,Z+_DRV_ADC_TIMER_ID
+	LDD TEMP,Y+_DRV_ADC_TIMER_ID
 	MOV ACCUM,TEMP_L
-	MCALL C5_TIMER_SET_PERIOD
-	MCALL C5_TIMER_START
+	MCALL C5_TIMER_START_AT
 	RJMP DRV_ADC__WAIT_RESULT
 DRV_ADC__NO_TIMER:
 	LDS TEMP,ADCSRA
@@ -146,7 +144,7 @@ DRV_ADC__NO_TIMER:
 	STS ADCSRA,TEMP
 	;Ждем результат
 DRV_ADC__WAIT_RESULT:
-	LDD TEMP,Z+_DRV_ADC_STATE
+	LDD TEMP,Y+_DRV_ADC_STATE
 	CPI TEMP,_DRV_ADC_ST_DONE
 	BRNE DRV_ADC__WAIT_RESULT
 
@@ -159,9 +157,9 @@ DRV_ADC__WAIT_RESULT:
 	CLR XH
 	MOV XL,TEMP_H
 	CLR TEMP_EH
-	LDD TEMP_EL,Z+_DRV_ADC_SUM+0x00
-	LDD TEMP_H,Z+_DRV_ADC_SUM+0x01
-	LDD TEMP_L,Z+_DRV_ADC_SUM+0x02
+	LDD TEMP_EL,Y+_DRV_ADC_SUM+0x00
+	LDD TEMP_H,Y+_DRV_ADC_SUM+0x01
+	LDD TEMP_L,Y+_DRV_ADC_SUM+0x02
 	MCALL DIV32X16
 
 	;Разблокируем ресурс ADC
@@ -173,7 +171,7 @@ DRV_ADC__WAIT_END:
 	POP TEMP
 	POP TEMP_EL
 	POP TEMP_EH
-	POP_Z
+	POP_Y
 	POP_X
 	RET
 
@@ -183,10 +181,10 @@ _DRV_ADC_TIMER_EVENT:
 ;Обработчик по таймеру
 ;--------------------------------------------------------
 	PUSH TEMP
-	PUSH_Z
+	PUSH_Y
 
-	MCALL C5_RAM_OFFSET
-	LDD TEMP,Z+_DRV_ADC_STATE
+	MCALL C5_RAM_OFFSET_Y
+	LDD TEMP,Y+_DRV_ADC_STATE
 	CPI TEMP,_DRV_ADC_ST_DONE
 	BREQ _DRV_ADC_TIMER_EVENT__STOP
 	;Еще раз запускаю ADC
@@ -195,11 +193,11 @@ _DRV_ADC_TIMER_EVENT:
 	STS ADCSRA,TEMP
 	RJMP _DRV_ADC_TIMER_EVENT__END
 _DRV_ADC_TIMER_EVENT__STOP:
-	LDD TEMP,Z+_DRV_ADC_TIMER_ID
+	LDD TEMP,Y+_DRV_ADC_TIMER_ID
 	MCALL C5_TIMER_STOP
 _DRV_ADC_TIMER_EVENT__END:
 
-	POP_Z
+	POP_Y
 	POP TEMP
 	RET
 ;--------------------------------------------------------
@@ -207,19 +205,15 @@ _DRV_ADC_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по завершенному вычислению ADC
 ;--------------------------------------------------------
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP
-	PUSH_Z
+	PUSH_FT
+	PUSH_Y
 
 	LDS TEMP_L,ADCL
 	LDS TEMP_H,ADCH
 
-	MCALL C5_RAM_OFFSET
-	LDD TEMP_EH,Z+_DRV_ADC_ZERO_VAL+0x00
-	LDD TEMP_EL,Z+_DRV_ADC_ZERO_VAL+0x01
+	MCALL C5_RAM_OFFSET_Y
+	LDD TEMP_EH,Y+_DRV_ADC_ZERO_VAL+0x00
+	LDD TEMP_EL,Y+_DRV_ADC_ZERO_VAL+0x01
 	;Проверка на вычисление по модулю
 	SBRS TEMP_EH,0x07
 	RJMP _DRV_ADC_EVENT__NO_MOD
@@ -241,36 +235,32 @@ _DRV_ADC_EVENT__NO_MOD:
 	SUB TEMP_L,TEMP_EL
 	SBC TEMP_H,TEMP_EH
 	;Прибавляю к сумме
-	LDD TEMP,Z+_DRV_ADC_SUM+0x02
+	LDD TEMP,Y+_DRV_ADC_SUM+0x02
 	ADD TEMP,TEMP_L
-	STD Z+_DRV_ADC_SUM+0x02,TEMP
-	LDD TEMP,Z+_DRV_ADC_SUM+0x01
+	STD Y+_DRV_ADC_SUM+0x02,TEMP
+	LDD TEMP,Y+_DRV_ADC_SUM+0x01
 	ADC TEMP,TEMP_H
-	STD Z+_DRV_ADC_SUM+0x01,TEMP
+	STD Y+_DRV_ADC_SUM+0x01,TEMP
 	LDI TEMP_L,0x00
-	LDD TEMP,Z+_DRV_ADC_SUM+0x00
+	LDD TEMP,Y+_DRV_ADC_SUM+0x00
 	ADC TEMP,TEMP_L
-	STD Z+_DRV_ADC_SUM+0x00,TEMP
+	STD Y+_DRV_ADC_SUM+0x00,TEMP
 
 	;Инкрементирую итерацию и проверяю на конец
-	LDD TEMP,Z+_DRV_ADC_ITER_CNTR
+	LDD TEMP,Y+_DRV_ADC_ITER_CNTR
 	INC TEMP
-	STD Z+_DRV_ADC_ITER_CNTR,TEMP
-	LDD TEMP_L,Z+_DRV_ADC_ITER_QNT
+	STD Y+_DRV_ADC_ITER_CNTR,TEMP
+	LDD TEMP_L,Y+_DRV_ADC_ITER_QNT
 	CP TEMP_L,TEMP
 	BRNE _DRV_ADC_EVENT__NEXT
 	;Отключаю таймер и выставляю состояние DONE
-	LDD TEMP,Z+_DRV_ADC_TIMER_ID
+	LDD TEMP,Y+_DRV_ADC_TIMER_ID
 	MCALL C5_TIMER_STOP
 	LDI TEMP,_DRV_ADC_ST_DONE
-	STD Z+_DRV_ADC_STATE,TEMP
+	STD Y+_DRV_ADC_STATE,TEMP
 _DRV_ADC_EVENT__NEXT:
 
-	POP_Z
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP_EL
-	POP TEMP_EH
+	POP_Y
+	POP_FT
 	RET
 .endif
