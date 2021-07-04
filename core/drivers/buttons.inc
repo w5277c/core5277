@@ -1,15 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.03.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;28.10.2020  w5277c@gmail.com			Корректировка таймингов
-;23.04.2021  w5277c@gmail.com			Багфиксинг и успешный первый тест
+;02.03.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;28.10.2020	w5277c@gmail.com			Корректировка таймингов
+;23.04.2021	w5277c@gmail.com			Багфиксинг и успешный первый тест
+;04.07.2021	w5277c@gmail.com			Z->Y, оптимизация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_BUTTONS
 .else
 .set DEF__C5_DRV_BUTTONS = 1
-.message "Included driver Buttons v0.2"
+.message "Included driver Buttons v0.3"
 
 ;TODO Фиксируется 5-ое длинное нажатие (вероятно с потерей первого значения) из 4 допустимых
 
@@ -26,46 +27,46 @@
 .include	"./io/port_get.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_BUTTONS_STRUCT_SIZE						= 0x04;Размер структуры данных для каждой кнопки
-	.EQU	_DRV_BUTTONS_QUEUE_MAX_SIZE					= 0x05;Количество кнопок очереди для событий
+	.EQU	_DRV_BUTTONS_STRUCT_SIZE					= 0x04	;Размер структуры данных для каждой кнопки
+	.EQU	_DRV_BUTTONS_QUEUE_MAX_SIZE				= 0x05	;Количество кнопок очереди для событий
 	;---
-	.EQU	_DRV_BUTTONS_TIMER_ID							= 0x00;1B - ИД таймера
-	.EQU	_DRV_BUTTONS_BUTTONS_QNT						= 0x01;1B - Количество кнопок
-	.EQU	_DRV_BUTTONS_CNTR									= 0x02;1B - Счетчик опроса
-	.EQU	_DRV_BUTTONS_QUEUE_SIZE							= 0x03;1B - Кол-во элементов в очереди
-	.EQU	_DRV_BUTTONS_QUEUE								= 0x04;_DRV_BUTTONS_QUEUE_MAX_SIZE*2 - очередь событий [PORT,RESULT]
-	.EQU	_DRV_BUTTONS_DATA									= _DRV_BUTTONS_QUEUE+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2);x4B - Данные кнопок
+	.EQU	_DRV_BUTTONS_TIMER_ID						= 0x00	;1B - ИД таймера
+	.EQU	_DRV_BUTTONS_BUTTONS_QNT					= 0x01	;1B - Количество кнопок
+	.EQU	_DRV_BUTTONS_CNTR								= 0x02	;1B - Счетчик опроса
+	.EQU	_DRV_BUTTONS_QUEUE_SIZE						= 0x03	;1B - Кол-во элементов в очереди
+	.EQU	_DRV_BUTTONS_QUEUE							= 0x04	;_DRV_BUTTONS_QUEUE_MAX_SIZE*2 - очередь событий [PORT,RESULT]
+	.EQU	_DRV_BUTTONS_DATA								= _DRV_BUTTONS_QUEUE+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2);x4B - Данные кнопок
 
 	;---Структура данных по кнопкам---
-	.EQU	_DRV_BUTTONS_PORT									= 0x00;Порт кнопки
-	.EQU	_DRV_BUTTONS_CNTR_N_FLAGS						= 0x01;Счетчик высоких состояний и флаги(старший ниббл)
-	.EQU	_DRV_BUTTONS_TIME									= 0x02;Время отсчета
-	.EQU	_DRV_BUTTONS_RESULT								= 0x03;Результат |rqqqssss|, r - повтор, q-кол-во нажатий(1-4), s-состояния(история 0-короткое/1-длинное)
+	.EQU	_DRV_BUTTONS_PORT								= 0x00	;Порт кнопки
+	.EQU	_DRV_BUTTONS_CNTR_N_FLAGS					= 0x01	;Счетчик высоких состояний и флаги(старший ниббл)
+	.EQU	_DRV_BUTTONS_TIME								= 0x02	;Время отсчета
+	.EQU	_DRV_BUTTONS_RESULT							= 0x03	;Результат |rqqqssss|, r - повтор, q-кол-во нажатий(1-4), s-состояния(история 0-короткое/1-длинное)
 	;---Тайминги---
-	.EQU	_DRV_BUTTONS_TIMER_PERIOD						= 0x02;Период таймера (x*0.002) (анализ 32мс)
-	.EQU	_DRV_BUTTONS_MAX_CNTR							= 0x08;Количество необходимых итераций перед анализом
+	.EQU	_DRV_BUTTONS_TIMER_PERIOD					= 0x02	;Период таймера (x*0.002) (анализ 32мс)
+	.EQU	_DRV_BUTTONS_MAX_CNTR						= 0x08	;Количество необходимых итераций перед анализом
 	;---
-	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME			= 300/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
-	.EQU	_DRV_BUTTONS_HOLD_TIME							= 1000/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
-	.EQU	_DRV_BUTTONS_TIMEOUT								= 800/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME		= 300/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_HOLD_TIME						= 1000/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_TIMEOUT							= 800/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
 	;---Флаги---
-	.EQU	_DRV_BUTTONS_FL_INIT								= 0x04;Ожидание начала цикла опроса
-	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN						= 0x05;Первый опрос(нет предыдущего занчения)
-	.EQU	_DRV_BUTTONS_FL_HOLD								= 0x06;Удерживание
-	.EQU	_DRV_BUTTONS_FL_STATE							= 0x07;Текущее состояние порта
+	.EQU	_DRV_BUTTONS_FL_INIT							= 0x04	;Ожидание начала цикла опроса
+	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN					= 0x05	;Первый опрос(нет предыдущего занчения)
+	.EQU	_DRV_BUTTONS_FL_HOLD							= 0x06	;Удерживание
+	.EQU	_DRV_BUTTONS_FL_STATE						= 0x07	;Текущее состояние порта
 	;---OPERATIONS---
-	.EQU	DRV_BUTTONS_OP_ADD								= 0x00
-	.EQU	DRV_BUTTONS_OP_GET								= 0x01
-	.EQU	DRV_BUTTONS_OP_WAIT								= 0x02
+	.EQU	DRV_BUTTONS_OP_ADD							= 0x00
+	.EQU	DRV_BUTTONS_OP_GET							= 0x01
+	.EQU	DRV_BUTTONS_OP_WAIT							= 0x02
 
-	.EQU	_DRV_BUTTONS_RAM_SIZE							= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
+	.EQU	_DRV_BUTTONS_RAM_SIZE						= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
 ;--------------------------------------------------------
 DRV_BUTTONS_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM - ид таймера
+;IN: ACCUM-ид таймера
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_Y
 	PUSH_X
 	PUSH LOOP_CNTR
 	PUSH TEMP
@@ -78,19 +79,18 @@ DRV_BUTTONS_INIT:
 	POP ACCUM
 
 	LDI TEMP,0x00
-	STD Z+_DRV_BUTTONS_QUEUE_SIZE,TEMP
-	STD Z+_DRV_BUTTONS_BUTTONS_QNT,TEMP
-	STD Z+_DRV_BUTTONS_CNTR,TEMP
+	STD Y+_DRV_BUTTONS_QUEUE_SIZE,TEMP
+	STD Y+_DRV_BUTTONS_BUTTONS_QNT,TEMP
+	STD Y+_DRV_BUTTONS_CNTR,TEMP
 
 	LDI LOOP_CNTR,_DRV_BUTTONS_QUEUE_MAX_SIZE*2
-	MOV XH,ZH
-	MOV XL,ZL
+	MOVW XL,YL
 	ADIW XL,_DRV_BUTTONS_QUEUE
 	MCALL RAM_FILL8
 
 	;Инициализирую таймер с периодом в 0.002*_DRV_BUTTONS_TIMER_PERIOD
 	MOV TEMP,ACCUM
-	STD Z+_DRV_BUTTONS_TIMER_ID,TEMP
+	STD Y+_DRV_BUTTONS_TIMER_ID,TEMP
 	LDI TEMP_H,high(DRV_BUTTONS_TIMER_EVENT)
 	LDI TEMP_L,low(DRV_BUTTONS_TIMER_EVENT)
 	LDI ACCUM,_DRV_BUTTONS_TIMER_PERIOD|0x80
@@ -103,17 +103,17 @@ DRV_BUTTONS_INIT:
 	POP TEMP
 	POP LOOP_CNTR
 	POP_X
-	POP_Z
+	POP_Y
 	MCALL C5_READY
 
 ;--------------------------------------------------------
 ;Основной код
-;IN: FLAGS - тип операции
+;IN: FLAGS-тип операции
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_Y
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 
 	CPI FLAGS,DRV_BUTTONS_OP_ADD
 	BRNE PC+0x04
@@ -129,17 +129,17 @@ DRV_BUTTONS_INIT:
 
 _DRV_BUTTONS_PROC_END:
 	POP TEMP
-	POP_Z
+	POP_Y
 	RET
 
 ;--------------------------------------------------------
 _DRV_BUTTONS_OP_ADD:
 ;--------------------------------------------------------
 ;Добавляем кнопку
-;IN: ACCUM - порт кнопки(7-бит - включать подтяжку)
+;IN: ACCUM-порт кнопки(7-бит-включать подтяжку)
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH_Y
+	PUSH_X
 
 	;Увеличиваем размер выделенной памяти на _DRV_BUTTONS_STRUCT_SIZE
 	PUSH ACCUM
@@ -147,14 +147,14 @@ _DRV_BUTTONS_OP_ADD:
 	MCALL C5_RAM_EXTEND
 	POP ACCUM
 
-	LDD TEMP,Z+_DRV_BUTTONS_BUTTONS_QNT
+	LDD TEMP,Y+_DRV_BUTTONS_BUTTONS_QNT
 	INC TEMP
-	STD Z+_DRV_BUTTONS_BUTTONS_QNT,TEMP
+	STD Y+_DRV_BUTTONS_BUTTONS_QNT,TEMP
 
 	;Сбрасываем флаг подтяжки
 	MOV TEMP,ACCUM
 	ANDI ACCUM,0x7f
-	STD Y+_DRV_BUTTONS_PORT,ACCUM
+	STD X+_DRV_BUTTONS_PORT,ACCUM
 	;Порт на вход
 	MCALL PORT_MODE_IN
 	SBRS TEMP,0x07
@@ -164,12 +164,12 @@ _DRV_BUTTONS_OP_ADD:
 
 	;Записываем данные кнопки
 	LDI TEMP,(1<<_DRV_BUTTONS_FL_INIT)
-	STD Y+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
+	STD X+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
 	LDI TEMP,0x00
-	STD Y+_DRV_BUTTONS_TIME,TEMP
-	STD Y+_DRV_BUTTONS_RESULT,TEMP
+	STD X+_DRV_BUTTONS_TIME,TEMP
+	STD X+_DRV_BUTTONS_RESULT,TEMP
 
-	POP_Y
+	POP_X
 	POP ACCUM
 	RET
 
@@ -177,10 +177,10 @@ _DRV_BUTTONS_OP_ADD:
 _DRV_BUTTONS_OP_WAIT:
 ;--------------------------------------------------------
 ;Ожидаем нажатие
-;OUT: TEMP_H - порт, TEMP_L - результат
+;OUT: TEMP_H-порт, TEMP_L-результат
 ;--------------------------------------------------------
 _DRV_BUTTONS_OP_WAIT__LOOP:
-	LDD TEMP,Z+_DRV_BUTTONS_QUEUE_SIZE
+	LDD TEMP,Y+_DRV_BUTTONS_QUEUE_SIZE
 	CPI TEMP,0x00
 	BRNE _DRV_BUTTONS_OP_GET
 	MCALL C5_WAIT
@@ -190,29 +190,30 @@ _DRV_BUTTONS_OP_WAIT__LOOP:
 _DRV_BUTTONS_OP_GET:
 ;--------------------------------------------------------
 ;Считываем нажатие
-;OUT: TEMP_H - порт(0xff - нет нажатий),
-;TEMP_L - результат
+;OUT: TEMP_H-порт(0xff-нет нажатий),
+;TEMP_L-результат
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 	PUSH_X
+	PUSH_Z
 
 	LDI TEMP_H,0xff
 	;Декрементируем размер очереди
 	LDS ACCUM,SREG
 	CLI
-	LDD LOOP_CNTR,Z+_DRV_BUTTONS_QUEUE_SIZE
+	LDD LOOP_CNTR,Y+_DRV_BUTTONS_QUEUE_SIZE
 	CPI LOOP_CNTR,0x00
 	BREQ _DRV_BUTTONS_PULL_QUEUE__END
 	DEC LOOP_CNTR
-	STD Z+_DRV_BUTTONS_QUEUE_SIZE,LOOP_CNTR
+	STD Y+_DRV_BUTTONS_QUEUE_SIZE,LOOP_CNTR
 
 	LDI XH,0x00
 	LDI XL,_DRV_BUTTONS_QUEUE
 	LSL LOOP_CNTR
 	ADD XL,LOOP_CNTR
-	ADD XL,ZL
-	ADC XH,ZH
+	ADD XL,YL
+	ADC XH,YH
 	LD TEMP_H,X+
 	LD TEMP_L,X
 	;Если очередь не пуста, то сдвигаем данные очереди
@@ -220,15 +221,15 @@ _DRV_BUTTONS_OP_GET:
 	BREQ _DRV_BUTTONS_PULL_QUEUE__END
 	LDI XH,0x00
 	LDI XL,_DRV_BUTTONS_QUEUE+0x02
-	ADD XL,ZL
-	ADC XH,ZH
-	PUSH_Z
+	ADD XL,YL
+	ADC XH,YH
+	MOVW ZL,YL
 	ADIW ZL,_DRV_BUTTONS_QUEUE
 	MCALL RAM_COPY8
-	POP_Z
 _DRV_BUTTONS_PULL_QUEUE__END:
 	STS SREG,ACCUM
 
+	POP_Z
 	POP_X
 	POP LOOP_CNTR
 	POP ACCUM
@@ -242,47 +243,47 @@ DRV_BUTTONS_TIMER_EVENT:
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
-	PUSH_Z
+	PUSH_Y
 
-	MCALL C5_RAM_OFFSET
-	LDD LOOP_CNTR,Z+_DRV_BUTTONS_BUTTONS_QNT
+	MCALL C5_RAM_OFFSET_Y
+	LDD LOOP_CNTR,Y+_DRV_BUTTONS_BUTTONS_QNT
 	CPI LOOP_CNTR,0x00
 	BRNE PC+0x02
 	RJMP DRV_BUTTONS_TIMER_EVENT__END
 
 	;Инкрементирую счетчик опроса
-	LDD TEMP,Z+_DRV_BUTTONS_CNTR
+	LDD TEMP,Y+_DRV_BUTTONS_CNTR
 	CPI TEMP,_DRV_BUTTONS_MAX_CNTR
 	BREQ DRV_BUTTONS_TIMER_EVENT__ANALYZE
 	INC TEMP
 	STD Z+_DRV_BUTTONS_CNTR,TEMP
 
 	;Смещаемся на данные первой кнопки
-	ADIW ZL,_DRV_BUTTONS_DATA
+	ADIW YL,_DRV_BUTTONS_DATA
 
 	;Читаем состояние портов для каждой кнопки
 DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
-	LDD ACCUM,Z+_DRV_BUTTONS_PORT
+	LDD ACCUM,Y+_DRV_BUTTONS_PORT
 	MCALL PORT_GET
 	BRCS DRV_BUTTONS_TIMER_EVENT__LO_STATE
 	;Инкрементирую счетчик
-	LDD TEMP,Z+_DRV_BUTTONS_CNTR_N_FLAGS
+	LDD TEMP,Y+_DRV_BUTTONS_CNTR_N_FLAGS
 	MOV ACCUM,TEMP
 	ANDI TEMP,0xf0
 	ANDI ACCUM,0x0f
 	INC ACCUM
 	OR TEMP,ACCUM
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
+	STD Y+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
 DRV_BUTTONS_TIMER_EVENT__LO_STATE:
 
-	ADIW ZL,_DRV_BUTTONS_STRUCT_SIZE
+	ADIW YL,_DRV_BUTTONS_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BRNE DRV_BUTTONS_TIMER_EVENT__READ_LOOP
 	RJMP DRV_BUTTONS_TIMER_EVENT__END
 
 DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	;Останавливаю таймер, пока не выполню анализ
-	LDD TEMP,Z+_DRV_BUTTONS_TIMER_ID
+	LDD TEMP,Y+_DRV_BUTTONS_TIMER_ID
 	MCALL C5_TIMER_STOP
 	;Разрешаю прерывания, так как процедура медленная
 	LDS TEMP,SREG
@@ -290,19 +291,16 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	SEI
 
 	PUSH_X
-	PUSH_Y
+	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH FLAGS
 
 	;Сбрасываю счетчик, т.к. отсчет завершен
 	LDI TEMP,0x00
-	STD Z+_DRV_BUTTONS_CNTR,TEMP
+	STD Y+_DRV_BUTTONS_CNTR,TEMP
 
-	;Запоминаем Z в Y, для доступа к основным параметрам типа _DRV_BUTTONS_QUEUE_SIZE
-	MOV YH,ZH
-	MOV YL,ZL
-
+	MOVW ZL,YL
 	;Смещаемся на данные первой кнопки
 	ADIW ZL,_DRV_BUTTONS_DATA
 
@@ -455,12 +453,12 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE_END:
 	POP FLAGS
 	POP TEMP_L
 	POP TEMP_H
-	POP_Y
+	POP_Z
 	POP_X
 	POP TEMP
 	STS SREG,TEMP
 DRV_BUTTONS_TIMER_EVENT__END:
-	POP_Z
+	POP_Y
 	POP LOOP_CNTR
 	POP ACCUM
 	POP TEMP
@@ -470,8 +468,8 @@ DRV_BUTTONS_TIMER_EVENT__END:
 _DRV_BUTTONS__QUEUE_ADD:
 ;--------------------------------------------------------
 ;Добавляем элемент в очередь
-;IN: Y - Адрес основных переменных, Z - адрес данных
-;кнопки, ACCUM - результат обработки кнопки
+;IN: Y-Адрес основных переменных, Z-адрес данных
+;кнопки, ACCUM-результат обработки кнопки
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
@@ -484,8 +482,7 @@ _DRV_BUTTONS__QUEUE_ADD:
 	BREQ _DRV_BUTTONS__QUEUE_ADD_END
 
 	;Вычисляем адрес очереди
-	MOV XH,YH
-	MOV XL,YL
+	MOVW XL,YL
 	ADIW XL,_DRV_BUTTONS_QUEUE
 
 	LDS TEMP_L,SREG

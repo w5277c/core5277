@@ -6,16 +6,16 @@
 ;20.06.2021	w5277c@gmail.com			Успешный тест RX, доработка TX
 ;26.06.2021	w5277c@gmail.com			Все заново
 ;01.07.2021	w5277c@gmail.com			Первые успешные тесты
+;04.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер инфракрасного приемника и передачтика, использует INT и TIMER C (стандарт NEC возможно адаптирую для SIRC)
-;Используется аппаратное переключение пина TX, если он соответствует OC2A
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO: Добавить поддержку PCINT драйвера
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_IR
 .else
 .set DEF__C5_DRV_IR = 1
-.message "Included driver IR v0.1"
+.message "Included driver IR v0.2"
 
 	.include	"./core/ram/ram_offset.inc"
 	.include	"./core/ram/ram_realloc.inc"
@@ -93,13 +93,11 @@ DRV_IR_INIT:
 ;FLAGS-частота DRV_IR_FREQ_x
 ;--------------------------------------------------------
 	PUSH_Y
-	PUSH_Z
 	PUSH ACCUM
 	PUSH_THL
 
 	LDI ACCUM,_DRV_IR_RAM_SIZE
 	MCALL C5_RAM_REALLOC
-	MOVW YL,ZL
 
 	;Настройка таймера C
 	LDI_X _DRV_IR_TIMER_C_EVENT
@@ -155,13 +153,12 @@ DRV_IR_INIT:
 	POP_THL
 	POP ACCUM
 	POP_Z
-	POP_Y
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
-;IN: Y-src адрес, X-dst адрес,
-;TEMP_EH-TX длина в битах, TEMP_EL-RX максимальная длина
-;в битах, TEMP_H,TEMP_L-таймаут ожидания данных(2ms)
+;IN: Z-src адрес, X-dst адрес,
+;TEMP_EH-TX длина, TEMP_EL-RX максимальная длина
+;TEMP_H,TEMP_L-таймаут ожидания данных(2ms)
 ;OUT: TEMP_H-DRV_IR_RESULT_x, TEMP_L-длина полученных
 ;данных
 ;--------------------------------------------------------
@@ -170,20 +167,17 @@ DRV_IR_INIT:
 	PUSH ACCUM
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 
 	;Запоминаем SRC
-	SBRS YH,0x07
+	SBRS ZH,0x07
 	RJMP PC+0x04
 	;Умножаем на 2 адрес работы с ROM
-	LSL YL
-	ROL YH
-	ORI YH,0x80
-	STD Z+_DRV_IR_SRC_ADDR+0x00,YH
-	STD Z+_DRV_IR_SRC_ADDR+0x01,YL
-
-	MOVW YL,ZL
-
+	LSL ZL
+	ROL ZH
+	ORI ZH,0x80
+	STD Y+_DRV_IR_SRC_ADDR+0x00,ZH
+	STD Y+_DRV_IR_SRC_ADDR+0x01,ZL
 	;Запоминаем DST
 	STD Y+_DRV_IR_DST_ADDR+0x00,XH
 	STD Y+_DRV_IR_DST_ADDR+0x01,XL
@@ -345,6 +339,7 @@ _DRV_IR_TIMER_C_EVENT__SCNPREN:
 	CP TEMP,C0x00
 	BRNE _DRV_IR_TIMER_C_EVENT__SKIP_ACCUM_LOADING
 	LDD TEMP,Y+_DRV_IR_BYTE_POS
+	PUSH_Z
 	LDD ZH,Y+_DRV_IR_SRC_ADDR+0x00
 	LDD ZL,Y+_DRV_IR_SRC_ADDR+0x01
 	MOV ACCUM,ZH
@@ -358,6 +353,7 @@ _DRV_IR_TIMER_C_EVENT__SCNPREN:
 	LD TEMP,Z
 	RJMP PC+02
 	LPM TEMP,Z
+	POP_Z
 	STD Y+_DRV_IR_ACCUM,TEMP
 _DRV_IR_TIMER_C_EVENT__SKIP_ACCUM_LOADING:
 	LDI TEMP,_DRV_IR_ST_DTEN
@@ -426,12 +422,10 @@ _DRV_IR_EINT_EVENT:
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
-	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
 
-	MCALL C5_RAM_OFFSET
-	MOVW YL,ZL
+	MCALL C5_RAM_OFFSET_Y
 
 	LDD TEMP,Y+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_ST_DTW
@@ -497,11 +491,13 @@ _DRV_IR_EINT_EVENT__NO_PR:
 	BRNE _DRV_IR_EINT_EVENT__DT_SKIP_ACCUM_SAVE
 	LDD TEMP,Y+_DRV_IR_BYTE_POS
 	LDD ACCUM,Y+_DRV_IR_ACCUM
+	PUSH_Z
 	LDD ZH,Y+_DRV_IR_DST_ADDR+0x00
 	LDD ZL,Y+_DRV_IR_DST_ADDR+0x01
 	ADD ZL,TEMP
 	ADC ZH,C0x00
 	ST Z,ACCUM
+	POP_Z
 	INC TEMP
 	STD Y+_DRV_IR_BYTE_POS,TEMP
 	LDD ACCUM,Y+_DRV_IR_RX_LEN
@@ -529,7 +525,6 @@ _DRV_IR_EINT_EVENT__END:
 
 	POP ACCUM
 	POP TEMP
-	POP_Z
 	POP_Y
 	POP_X
 	RET
@@ -542,5 +537,4 @@ __DRV_IR_EINT_LED_OFF:
 	BREQ PC+0x03
 	MCALL REG_BIT_LO
 	RET
-
 .endif

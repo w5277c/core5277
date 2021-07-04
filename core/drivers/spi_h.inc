@@ -1,14 +1,15 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;05.06.2021  w5277c@gmail.com			Начало (не тестировано)
+;05.06.2021	w5277c@gmail.com			Начало (не тестировано)
+;04.07.2021	w5277c@gmail.com			Z->Y, необходимо тестирование
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер аппаратного SPI
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_SPI_H
 .else
 .set DEF__C5_DRV_SPI_H = 1
-.message "Included driver hardware SPI master v0.1"
+.message "Included driver hardware SPI master v0.2"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -48,15 +49,15 @@
 DRV_SPI_H_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: DRV_SPI_H_MODE_MASTER/SLAVE|TEMP-DRV_SPI_H_MODE_x|
-;DRV_SPI_H_PRESC_x|DRV_SPI_H_DO_x
+;IN: TEMP-DRV_SPI_H_MODE_MASTER/SLAVE|
+;TEMP-DRV_SPI_H_MODE_x|DRV_SPI_H_PRESC_x|DRV_SPI_H_DO_x
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_Y
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
 	PUSH ACCUM
-	
+
 	LDI ACCUM,_DRV_SPI_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
@@ -100,37 +101,36 @@ DRV_SPI_H_INIT__END:
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
-	POP_Z
+	POP_Y
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
-;IN: Y-src адрес, X-dst адрес,
-;TEMP_H-TX длина, TEMP_L-RX длина
+;IN: Z-src адрес, X-dst адрес,TEMP_H-TX длина,
+;TEMP_L-RX длина
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 
 	;Запоминаем SRC
-	SBRS YH,0x07
+	SBRS ZH,0x07
 	RJMP PC+0x04
 	;Умножаем на 2 адрес работы с ROM
-	LSL YL
-	ROL YH
-	ORI YH,0x80
-	STD Z+_DRV_SPI_H_SRC_ADDR+0x00,YH
-	STD Z+_DRV_SPI_H_SRC_ADDR+0x01,YL
+	LSL ZL
+	ROL ZH
+	ORI ZH,0x80
+	STD Y+_DRV_SPI_H_SRC_ADDR+0x00,ZH
+	STD Y+_DRV_SPI_H_SRC_ADDR+0x01,ZL
 	;Запоминаем DST
-	STD Z+_DRV_SPI_H_DST_ADDR+0x00,XH
-	STD Z+_DRV_SPI_H_DST_ADDR+0x01,XL
+	STD Y+_DRV_SPI_H_DST_ADDR+0x00,XH
+	STD Y+_DRV_SPI_H_DST_ADDR+0x01,XL
 	;Запминаем длину TX и RX
-	STD Z+_DRV_SPI_H_TX_LEN,TEMP_H
-	STD Z+_DRV_SPI_H_RX_LEN,TEMP_L
+	STD Y+_DRV_SPI_H_TX_LEN,TEMP_H
+	STD Y+_DRV_SPI_H_RX_LEN,TEMP_L
 	;Сброс позиции
-	CLR TEMP
-	STD Z+_DRV_SPI_H_POS,TEMP
+	STD Z+_DRV_SPI_H_POS,C0x00
 	;Включаем SPI
 	_C5_POWER_ON PRSPI
 	CLI
@@ -138,12 +138,12 @@ DRV_SPI_H_INIT__END:
 	ORI TEMP,(1<<SPE)
 	STS SPCR,TEMP
 	SEI
-	
+
 	MCALL _DRV_SPI_H_EVENT
-	
+
 	;Жду окончания передачи
 _DRV_SPI_H_PROC__WAIT:
-	LDD TEMP,Z+_DRV_SPI_H_POS
+	LDD TEMP,Y+_DRV_SPI_H_POS
 	CP TEMP,TEMP_H
 	BRCS PC+0x04
 	BRNE PC+0x06
@@ -170,7 +170,7 @@ _DRV_SPI_H_EVENT:
 ;--------------------------------------------------------
 ;Обработчик прерывания
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_Y
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
@@ -180,19 +180,19 @@ _DRV_SPI_H_EVENT:
 	PUSH TEMP
 	CLI
 
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 
 	;Считываю позицию в буфере
-	LDD TEMP,Z+_DRV_SPI_H_POS
-	LDD TEMP_H,Z+_DRV_SPI_H_TX_LEN
-	LDD TEMP_L,Z+_DRV_SPI_H_RX_LEN
+	LDD TEMP,Y+_DRV_SPI_H_POS
+	LDD TEMP_H,Y+_DRV_SPI_H_TX_LEN
+	LDD TEMP_L,Y+_DRV_SPI_H_RX_LEN
 
 	CP TEMP,TEMP_H
 	BRCC _DRV_SPI_H_NEXT_BYTE__TX_SKIP
 	PUSH_Z
-	LDD ACCUM,Z+_DRV_SPI_H_SRC_ADDR+0x00
-  	LDD ZL,Z+_DRV_SPI_H_SRC_ADDR+0x01
-	MOV ZH,ACCUM
+	LDD ZH,Y+_DRV_SPI_H_SRC_ADDR+0x00
+  	LDD ZL,Y+_DRV_SPI_H_SRC_ADDR+0x01
+	MOV ACCUM,ZH
 	ANDI ZH,0x7f
 	ADD ZL,TEMP
 	ADC ZH,C0x00
@@ -207,9 +207,9 @@ _DRV_SPI_H_NEXT_BYTE__TX_SKIP:
 	BRCC _DRV_SPI_H_NEXT_BYTE__RX_SKIP
 	LDS TEMP_L,SPDR
 	PUSH_Z
-	LDD ACCUM,Z+_DRV_SPI_H_DST_ADDR+0x00
-  	LDD ZL,Z+_DRV_SPI_H_DST_ADDR+0x01
-	MOV ZH,ACCUM
+	LDD ZH,Y+_DRV_SPI_H_DST_ADDR+0x00
+  	LDD ZL,Y+_DRV_SPI_H_DST_ADDR+0x01
+	MOV ACCUM,ZH
 	ADD ZL,TEMP
 	ADC ZH,C0x00
 	ST Z,TEMP_L
@@ -218,7 +218,7 @@ _DRV_SPI_H_NEXT_BYTE__RX_SKIP:
 
 	;Инкрементируем позицию
 	INC TEMP
-	STD Z+_DRV_SPI_H_POS,TEMP
+	STD Y+_DRV_SPI_H_POS,TEMP
 
 	POP TEMP
 	STS SREG,TEMP

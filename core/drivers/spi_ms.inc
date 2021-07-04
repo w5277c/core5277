@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;18.11.2020	w5277c@gmail.com			Начало
 ;04.06.2021	w5277c@gmail.com			Исправлены смещения переходов
+;04.07.2021	w5277c@gmail.com			Z->Y, необходимо тестирование
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO реализовать прием данных
 ;TODO объединить с кодом ведомого?
@@ -10,7 +11,7 @@
 .ifdef DEF__C5_DRV_SPI_MS
 .else
 .set DEF__C5_DRV_SPI_MS = 1
-.message "Included driver software SPI master v0.2"
+.message "Included driver software SPI master v0.3"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -45,18 +46,22 @@ DRV_SPI_MS_INIT:
 ;TEMP_L - размер пакета в байтах,
 ;ACCUM - время выдерживания паузы
 ;--------------------------------------------------------
+	PUSH_Y
+	PUSH_Z
+
+	MOVW ZL,YL
 	PUSH ACCUM
 	LDI ACCUM,_DRV_SPI_MS_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	POP ACCUM
 
-	STD Z+_DRV_SPI_MS_SCK_PORT,XH
-	STD Z+_DRV_SPI_MS_MISO_PORT,XL
-	STD Z+_DRV_SPI_MS_MOSI_PORT,YH
-	STD Z+_DRV_SPI_MS_CS_PORT,YL
-	STD Z+_DRV_SPI_MS_CHIP_QNT,TEMP_H
-	STD Z+_DRV_SPI_MS_PACKET_SZIE,TEMP_H
-	STD Z+_DRV_SPI_MS_WAIT_TIME,ACCUM
+	STD Y+_DRV_SPI_MS_SCK_PORT,XH
+	STD Y+_DRV_SPI_MS_MISO_PORT,XL
+	STD Y+_DRV_SPI_MS_MOSI_PORT,ZH
+	STD Y+_DRV_SPI_MS_CS_PORT,ZL
+	STD Y+_DRV_SPI_MS_CHIP_QNT,TEMP_H
+	STD Y+_DRV_SPI_MS_PACKET_SZIE,TEMP_H
+	STD Y+_DRV_SPI_MS_WAIT_TIME,ACCUM
 
 	;Инициализируем порт SCK
 	MOV ACCUM,XH
@@ -69,25 +74,26 @@ DRV_SPI_MS_INIT:
 	MCALL PORT_MODE_IN
 	MCALL PORT_SET_HI
 	;Инициализируем порт MOSI
-	MOV ACCUM,YH
+	MOV ACCUM,ZH
 	CPI ACCUM,0xff
 	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
 	;Инициализируем порт CS
-	MOV ACCUM,YL
+	MOV ACCUM,ZL
 	CPI ACCUM,0xff
 	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 
+	POP_Z
+	POP_Y
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, передача данных
-;IN: Y - адрес на блок данных на запись
-;(15-ый бит false - RAM, true - ROM)
-;TEMP_H - номер чипа(0-...)
-;TEMP_L - количество пакетов
+;IN: Z-адрес на блок данных на запись
+;(15-ый бит false-RAM, true-ROM)
+;TEMP_H-номер чипа(0-...), TEMP_L-количество пакетов
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
@@ -96,11 +102,7 @@ DRV_SPI_MS_INIT:
 	PUSH LOOP_CNTR
 
 	;Загружаем в Y адрес на выделенный блок памяти
-	MCALL C5_RAM_OFFSET
-	PUSH_Z
-	MOV ZH,YH
-	MOV ZL,YL
-	POP_Y
+	MCALL C5_RAM_OFFSET_Y
 	;Умножаем Z на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
 	RJMP PC+0x04
@@ -175,8 +177,8 @@ _DRV_SPI_MS_PACKET_BYTES_END:
 _DRV_SPI_MS_BYTE:
 ;--------------------------------------------------------
 ;Коммуникация (передача и прием байта)
-;IN: Y - адрес на выделенную память
-;TEMP - Данные
+;IN: Y-адрес на выделенную память
+;TEMP-Данные
 ;OUT: ??? TODO
 ;--------------------------------------------------------
 	PUSH ACCUM
@@ -210,8 +212,8 @@ _DRV_SPI_MS_BYTE_LOOP:
 _DRV_SPI_MS_WAIT:
 ;--------------------------------------------------------
 ;Выдерживаем паузу
-;IN: Y - адрес на выделенную память
-;TEMP - время паузы(*500нс), не может быть менее 40
+;IN: Y-адрес на выделенную память
+;TEMP-время паузы(*500нс), не может быть менее 40
 ;--------------------------------------------------------
 	PUSH TEMP
 	LDD TEMP,Y+_DRV_SPI_MS_WAIT_TIME
