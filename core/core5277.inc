@@ -289,8 +289,7 @@ _C5_IR:
 	PUSH PID
 	PUSH ACCUM
 	;Находим смещение в таблице прерываний _C5_IR_VECTORS_TABLE
-	LDI ZH,high(_C5_IR_VECTORS_TABLE)
-	LDI ZL,low(_C5_IR_VECTORS_TABLE)
+	LDI_Z _C5_IR_VECTORS_TABLE
 
 .if _IV_STEP == 2
 	LSR _C5_TEMP_L
@@ -594,16 +593,14 @@ C5_INIT:
 	LDI TEMP,0xF7
 	LDI TEMP_H,high(RAMEND-0x010f)									;RAM_SIZE-16(stack)
 	LDI TEMP_L,low(RAMEND-0x010f)
-	LDI XH,0x01
-	LDI XL,0x00
+	LDI_X 0x0100
 	MCALL RAM_FILL16
 
 	;Сброс счетчика времени
 	LDI TEMP,0x00
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x05
-	LDI XH,high(_C5_UPTIME)
-	LDI XL,low(_C5_UPTIME)
+	LDI_X _C5_UPTIME
 	MCALL RAM_FILL16
 ;--------------------------------------------------------
 C5_REINIT:
@@ -614,37 +611,31 @@ C5_REINIT:
 	LDI TEMP,0xff
 	LDI TEMP_H,0x00
 	LDI TEMP_L,_C5_IRV_TABLE_SIZE									;IV_VECTORS_TABLE
-	LDI XL,low(_C5_IR_VECTORS_TABLE)
-	LDI XH,high(_C5_IR_VECTORS_TABLE)
+	LDI_X _C5_IR_VECTORS_TABLE
 	MCALL RAM_FILL16
 	;Чистка очереди
 	LDI TEMP,0xff
 	LDI TEMP_H,0x00
 	LDI TEMP_L,_C5_RES_QUEUE_SIZE
-	LDI XH,high(_C5_RESOURCE_QUEUE)
-	LDI XL,low(_C5_RESOURCE_QUEUE)
+	LDI_X _C5_RESOURCE_QUEUE
 	MCALL RAM_FILL16
 	;Чистка переменных в памяти
 	CLR _C5_COREFLAGS
 	;Задаем вершину стека
-	LDI XH,high(_C5_STACK_END)
-	LDI XL,low(_C5_STACK_END)
+	LDI_X _C5_STACK_END
 	STS _C5_TOP_OF_STACK+0x00,XH
 	STS _C5_TOP_OF_STACK+0x01,XL
 	;Задаем вершину свободной памяти
-	LDI XH,high(_C5_FREE_RAM)
-	LDI XL,low(_C5_FREE_RAM)
+	LDI_X _C5_FREE_RAM
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
 	;Чистка флагов
-	CLR TEMP
-	STS _C5_FLAGS+0x00,TEMP
-	STS _C5_FLAGS+0x01,TEMP
-	STS _C5_FLAGS+0x02,TEMP
-	STS _C5_FLAGS+0x03,TEMP
+	STS _C5_FLAGS+0x00,C0x00
+	STS _C5_FLAGS+0x01,C0x00
+	STS _C5_FLAGS+0x02,C0x00
+	STS _C5_FLAGS+0x03,C0x00
 	;Задаем счетчик основному таймеру
-	LDI TEMP,0x00
-	STS _C5_MAIN_TIMER_CNTR,TEMP
+	STS _C5_MAIN_TIMER_CNTR,C0x00
 	LDI TEMP,_C5_TIMER_PERIOD
 	STS _C5_MAIN_TIMER_TRHLD,TEMP
 .IFDEF INPUT_PORT
@@ -699,11 +690,9 @@ C5_IR_VECTOR_SET:
 	MOV ZL,ACCUM
 	LSL ACCUM
 	ADD ACCUM,ZL
-	LDI ZH,high(_C5_IR_VECTORS_TABLE)
-	LDI ZL,low(_C5_IR_VECTORS_TABLE)
+	LDI_Z _C5_IR_VECTORS_TABLE
 	ADD ZL,ACCUM
-	CLR ACCUM
-	ADC ZH,ACCUM
+	ADC ZH,C0x00
 	STD Z+0x00,PID
 	STD Z+0x01,TEMP_H
 	STD Z+0x02,TEMP_L
@@ -839,10 +828,9 @@ C5_CREATE:
 	ORI TEMP,_C5_PROC_STATE_GHOST
 	STD Z+_C5_PROC_STATE,TEMP
 	;Обнуляем адрес выделенной памяти и размер
-	CLR TEMP
-	STD Z+_C5_PROC_RAM_OFFSET+0x00,TEMP
-	STD Z+_C5_PROC_RAM_OFFSET+0x01,TEMP
-	STD Z+_C5_PROC_RAM_SIZE,TEMP
+	STD Z+_C5_PROC_RAM_OFFSET+0x00,C0x00
+	STD Z+_C5_PROC_RAM_OFFSET+0x01,C0x00
+	STD Z+_C5_PROC_RAM_SIZE,C0x00
 
 	;Проверяем на признак драйвера, пропускаем блок кода для задачи, если признак есть
 	SBRC PID,C5_PROCID_OPT_DRV
@@ -854,8 +842,7 @@ C5_CREATE:
 	LDS r1,_C5_TOP_OF_STACK+0x01
 	STD Z+_C5_TASK_STACK_OFFSET+0x01,r1
 	;Записываем размер стека
-	CLR TEMP
-	STD Z+_C5_TASK_STACK_SIZE,TEMP
+	STD Z+_C5_TASK_STACK_SIZE,C0x00
 	;Восстанавливаем все регистры из стека
 	POP TEMP
 
@@ -1031,8 +1018,7 @@ C5_EXEC:
 	MOV _C5_DRIVER_EXEC_ZH,ZH
 	MOV _C5_DRIVER_EXEC_ZL,ZL
 	;Помещаем в стек адрес возврата из вызываемой процедуры
-	LDI ZH,high(_C5_EXEC__DONE)
-	LDI ZL,low(_C5_EXEC__DONE)
+	LDI_Z _C5_EXEC__DONE
 	PUSH ZL
 	PUSH ZH
 	;Получаем заголовок вызываемого драйвера
@@ -1054,7 +1040,6 @@ C5_EXEC:
 	RET
 _C5_EXEC__DONE:
 	POP PID
-
 	RET
 
 ;--------------------------------------------------------

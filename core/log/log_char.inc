@@ -14,17 +14,15 @@
 C5_LOG_CHAR:
 ;--------------------------------------------------------
 ;Логирование символа
-;IN: TEMP - байт
+;IN: TEMP-байт
 ;--------------------------------------------------------
-	PUSH ZH
-	PUSH ZL
+	PUSH_Z
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 	PUSH TEMP
 	PUSH FLAGS
 
-	LDI ZH,high(PORTS_TABLE*2+((LOGGING_PORT>>4)*0x03))
-	LDI ZL,low(PORTS_TABLE*2+((LOGGING_PORT>>4)*0x03))
+	LDI_Z (PORTS_TABLE*2+((LOGGING_PORT>>4)*0x03))
 	LPM ZL,Z
 	CLR ZH
 
@@ -72,8 +70,7 @@ _C5_LOG_PROC__BITES_LOOP:
 	POP TEMP
 	POP LOOP_CNTR
 	POP ACCUM
-	POP ZL
-	POP ZH
+	POP_Z
 	RET
 .endif
 .endif

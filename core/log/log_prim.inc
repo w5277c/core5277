@@ -1,7 +1,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;06.02.2021  w5277c@gmail.com			Начало
+;06.02.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_PRIM
 .else
@@ -19,23 +19,18 @@ C5_LOG_PRIM:
 ;IN: Z-адрес на память с переменными, TEMP-смещение для
 ;переменной, ACCUM-тип примитива
 ;--------------------------------------------------------
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP
+	PUSH_FT
 	PUSH LOOP_CNTR
 	PUSH_X
 	PUSH_Y
 	PUSH_Z
 
 	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 	MOV LOOP_CNTR,ACCUM
 	ANDI LOOP_CNTR,0x0f
 	ADD ZL,LOOP_CNTR
-	ADC ZH,TEMP
+	ADC ZH,C0x00
 
 	CLR TEMP_EH
 	CLR TEMP_EL
@@ -99,11 +94,7 @@ _C5_LOG_PRIM__LOOP2:
 	POP_Y
 	POP_X
 	POP LOOP_CNTR
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP_EL
-	POP TEMP_EH
+	POP_FT
 	RET
 .endif
 .endif

@@ -1,7 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;18.01.2021  w5277c@gmail.com			Начало
+;18.01.2021	w5277c@gmail.com			Начало
+;05.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DRIVER_SD_SET_BLOCK
 .else
@@ -41,19 +42,17 @@ _DRV_SD_SET_BLOCK:
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
-		PUSH_Y
-		LDI_Y _DRV_SD_LOG_STR_BLOCK|0x8000
+		PUSH_Z
+		LDI_Z _DRV_SD_LOG_STR_BLOCK|0x8000
 		MCALL C5_LOG_STR
 		LDI TEMP,'['
 		MCALL C5_LOG_CHAR
 		MCALL C5_LOG_WORD
 		LDI TEMP,']'
 		MCALL C5_LOG_CHAR
-		PUSH_Z
-		MOV ZH,XH
-		MOV ZL,XL
+		MOVW ZL,XL
 		MCALL C5_LOG_RAMDUMP
-		LDI_Y _DRV_SD_LOG_STR_CRC|0x8000
+		LDI_Z _DRV_SD_LOG_STR_CRC|0x8000
 		MCALL C5_LOG_STR
 		PUSH TEMP_H
 		PUSH TEMP_L
@@ -64,7 +63,6 @@ _DRV_SD_SET_BLOCK:
 		POP TEMP_H
 		MCALL C5_LOG_CR
 		POP_Z
-		POP_Y
 	.endif
 .endif
 

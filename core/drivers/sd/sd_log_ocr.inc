@@ -1,7 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;27.01.2021  w5277c@gmail.com			Начало
+;27.01.2021	w5277c@gmail.com			Начало
+;05.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_SD_LOG_OCR
 .else
@@ -37,21 +38,20 @@ DRV_SD_LOG_OCR:
 	PUSH TEMP
 	PUSH ACCUM
 
-	MOV ZH,XH
-	MOV ZL,XL
+	MOVW YL,XL
 
-	LDI_Y _DRV_SD_LOG_STR_OCR|0x8000
+	LDI_Z _DRV_SD_LOG_STR_OCR|0x8000
 	MCALL C5_LOG_STR
 
-	LDD TEMP,Z+0x02
+	LDD TEMP,Y+0x02
 	SBRS TEMP,0x07
 	RJMP PC+0x05
-	LDI_Y _DRV_SD_LOG_STR_OCR_VOLTAGES|0x8000
+	LDI_Z _DRV_SD_LOG_STR_OCR_VOLTAGES|0x8000
 	LDI TEMP,0x00
 	MCALL C5_LOG_STR_EL
 	MCALL C5_LOG_CR
 
-	LDD ACCUM,Z+0x01
+	LDD ACCUM,Y+0x01
 	LDI TEMP,0x01
 _DRV_SD_LOG_OCR__VOLTAGES_LOOP:
 	LSR ACCUM
@@ -62,30 +62,30 @@ _DRV_SD_LOG_OCR__VOLTAGES_LOOP:
 	CPI TEMP,0x09
 	BRNE _DRV_SD_LOG_OCR__VOLTAGES_LOOP
 
-	LDD TEMP,Z+0x00
+	LDD TEMP,Y+0x00
 	SBRS TEMP,0x07
 	BRCC PC+0x07
-	LDI_Y _DRV_SD_LOG_STR_OCR_24|0x8000
+	LDI_Z _DRV_SD_LOG_STR_OCR_24|0x8000
 	MCALL C5_LOG_STR
 	MCALL C5_LOG_CR
 	SBRS TEMP,0x04
 	BRCC PC+0x07
-	LDI_Y _DRV_SD_LOG_STR_OCR_27|0x8000
+	LDI_Z _DRV_SD_LOG_STR_OCR_27|0x8000
 	MCALL C5_LOG_STR
 	MCALL C5_LOG_CR
 	SBRS TEMP,0x02
 	BRCC PC+0x07
-	LDI_Y _DRV_SD_LOG_STR_OCR_29|0x8000
+	LDI_Z _DRV_SD_LOG_STR_OCR_29|0x8000
 	MCALL C5_LOG_STR
 	MCALL C5_LOG_CR
 	SBRS TEMP,0x01
 	BRCC PC+0x07
-	LDI_Y _DRV_SD_LOG_STR_OCR_30|0x8000
+	LDI_Z _DRV_SD_LOG_STR_OCR_30|0x8000
 	MCALL C5_LOG_STR
 	MCALL C5_LOG_CR
 	SBRS TEMP,0x00
 	BRCC PC+0x07
-	LDI_Y _DRV_SD_LOG_STR_OCR_31|0x8000
+	LDI_Z _DRV_SD_LOG_STR_OCR_31|0x8000
 	MCALL C5_LOG_STR
 	MCALL C5_LOG_CR
 

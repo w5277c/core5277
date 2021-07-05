@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;12.06.2020  w5277c@gmail.com        Начало
-;02.08.2020  w5277c@gmail.com        Разбиение на файлы
-;30.08.2020  w5277c@gmail.com        Устранены основные ошибки
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;12.06.2020	w5277c@gmail.com        Начало
+;02.08.2020	w5277c@gmail.com        Разбиение на файлы
+;30.08.2020	w5277c@gmail.com        Устранены основные ошибки
+;27.10.2020	w5277c@gmail.com        Обновлена информация об авторских правах
+;05.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_TASKSDUMP
 .else
@@ -27,8 +28,7 @@ C5_LOG_TASKSDUMP:
 ;Логирование информации о задачах
 ;--------------------------------------------------------
 	PUSH TEMP
-	PUSH YH
-	PUSH YL
+	PUSH_Z
 	PUSH PID
 
 	C5_LOG_ROMSTR _LOGSTR_TASKSDUMP
@@ -41,8 +41,7 @@ C5_LOG_TASKSDUMP:
 
 
 	C5_LOG_ROMSTR _LOGSTR_RES_QUEUE
-	LDI YH,high(_C5_RESOURCE_QUEUE)
-	LDI YL,low(_C5_RESOURCE_QUEUE)
+	LDI_Z _C5_RESOURCE_QUEUE
 	LDI TEMP,_C5_RES_QUEUE_SIZE
 	MCALL C5_LOG_BYTES
 
@@ -55,8 +54,7 @@ _C5_LOG_TASKSDUMP__TASK_LOOP:
 	C5_LOG_ROMSTR LOGSTR_DONE
 
 	POP PID
-	POP YL
-	POP YH
+	POP_Z
 	POP TEMP
 	RET
 .endif

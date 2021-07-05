@@ -1,7 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;15.01.2021  w5277c@gmail.com        Начало
+;15.01.2021	w5277c@gmail.com			Начало
+;05.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_LOG_STRN
 .else
@@ -14,43 +15,38 @@
 C5_LOG_STRN:
 ;--------------------------------------------------------
 ;Логирование строки с указанной длинной
-;IN: Y - адрес на строку теста, TEMP-длина
-;(15-ый бит false - RAM, true - ROM)
+;IN: Z-адрес на строку,TEMP-длина(15-ый бит false-RAM,
+;true-ROM)
 ;--------------------------------------------------------
 	PUSH LOOP_CNTR
 	PUSH TEMP
-	PUSH ZH
-	PUSH ZL
+	PUSH_Z
+	PUSH ACCUM
 
-	MOV ZH,YH
-	MOV ZL,YL
 	;Умножаем на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
 	RJMP PC+0x04
 	LSL ZL
 	ROL ZH
 	ORI ZH,0x80
-
+	MOV ACCUM,AH
+	ANDI ZH,0x7f
 	MOV LOOP_CNTR,TEMP
 _C5_LOG_STRN__BYTES_LOOP:
 	;Считываем байт
-	SBRC ZH,0x07
-	RJMP PC+0x03
+	SBRS ACCUM,0x07
 	LD TEMP,Z+
-	RJMP PC+04
-	ANDI ZH,0b01111111
+	SBRC ACCUM,0x07
 	LPM TEMP,Z+
-	ORI ZH,0b10000000
 	CPI TEMP,0x00
 	BREQ _C5_LOG_STRN__END
-
 	MCALL C5_LOG_CHAR
 	DEC LOOP_CNTR
 	BRNE _C5_LOG_STRN__BYTES_LOOP
 
 _C5_LOG_STRN__END:
-	POP ZL
-	POP ZH
+	POP ACCUM
+	POP_Z
 	POP TEMP
 	POP LOOP_CNTR
 	RET

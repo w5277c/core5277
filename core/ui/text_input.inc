@@ -1,7 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;16.04.2021  w5277c@gmail.com			Начало
+;16.04.2021	w5277c@gmail.com			Начало
+;05.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_TEXT_INPUT
 .else
@@ -15,7 +16,7 @@
 C5_TEXT_INPUT:
 ;--------------------------------------------------------
 ;Считывет с UART ASCII HEX символы(без добавления 0)
-;IN:Y-адрес буфера,ACCUM-размер буфера
+;IN:Z-адрес буфера,ACCUM-размер буфера
 ;OUT: TEMP-длина
 ;--------------------------------------------------------
 	PUSH LOOP_CNTR
@@ -47,14 +48,14 @@ C5_TEXT_INPUT__KEY_CHECKING_NOT_BACKSPACE:
 	BRCC C5_TEXT_INPUT__MAIN_LOOP
 	CP LOOP_CNTR,ACCUM
 	BREQ C5_TEXT_INPUT__MAIN_LOOP
-	PUSH_Y
-	ADD YL,LOOP_CNTR
+	PUSH_Z
+	ADD ZL,LOOP_CNTR
 	PUSH TEMP
 	LDI TEMP,0x00
-	ADC YL,TEMP
+	ADC ZL,TEMP
 	POP TEMP
-	ST Y,TEMP
-	POP_Y
+	ST Z,TEMP
+	POP_Z
 	INC LOOP_CNTR
 	MCALL _C5_TEXT_INPUT_DRAW
 	RJMP C5_TEXT_INPUT__MAIN_LOOP
