@@ -29,7 +29,7 @@ SDNF_SUB:																;Signed Digital aNd Fractional
 	BRNE PC+0x04
 	CPI ZL,0xff
 	BRNE PC+0x02
-	RJMP _SDNF_ADD__ERROR
+	RJMP _SDNF_SUB__ERROR
 
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -42,4 +42,8 @@ SDNF_SUB:																;Signed Digital aNd Fractional
 	POP TEMP_L
 	POP TEMP_H
 	RJMP SDNF_ADD
+_SDNF_SUB__ERROR:
+	LDI XH,0xff
+	LDI XL,0xff
+	RET
 .endif

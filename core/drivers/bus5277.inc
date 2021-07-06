@@ -126,6 +126,7 @@
 	.EQU	BUS5277_CMD_EXECUTE							= 0x08	;Выполнить
 	.EQU	BUS5277_CMD_SET_VALUE						= 0x09	;Задать значение
 	.EQU	BUS5277_CMD_SET_TIMER						= 0x0a	;Запустить таймер
+	.EQU	BUS5277_CMD_SET_POWER_SLOW					= 0x0b	;Установить мощность в процентах с плавным переходом
 	;---COMMAND-SOURCE-CODES---
 	.EQU	BUS5277_CMD_SRC_MANUAL						= 0x01	;Вручную
 	.EQU	BUS5277_CMD_SRC_BUS							= 0x02	;Шина
