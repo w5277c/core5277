@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019  w5277c@gmail.com			Начало
-;01.08.2020  w5277c@gmail.com			Разбиение на файлы
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;10.12.2020  w5277c@gmail.com			-с5
+;07.10.2019	w5277c@gmail.com			Начало
+;01.08.2020	w5277c@gmail.com			Разбиение на файлы
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;10.12.2020	w5277c@gmail.com			-с5
+;06.07.2021	w5277c@gmail.com			Y->Z
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_SDNF_CP
 .else
@@ -17,12 +18,12 @@
 ;--------------------------------------------------------
 SDNF_CP:																	;Signed Digital aNd Fractional
 ;--------------------------------------------------------
-;Сравнение двух знаковых целых с дробной частью (X < Y)
-;IN: X, Y
-;OUT: флаг С(X<Y), флаг Z(X=Y), ошибка - флаги включены
+;Сравнение двух знаковых целых с дробной частью (X < Z)
+;IN: X, Z
+;OUT: флаг С(X<Z), флаг Z(X=Z), ошибка - флаги включены
 ;-START--------------------------------------------------
 	PUSH XL
-	PUSH YL
+	PUSH ZL
 	PUSH TEMP_H
 	PUSH TEMP_L
 	;Проверка на корректность значений
@@ -30,47 +31,47 @@ SDNF_CP:																	;Signed Digital aNd Fractional
 	BRNE PC+0x03
 	CPI XL,0xff
 	BREQ _SDNF_CP__ERROR
-	CPI YH,0xff
+	CPI ZH,0xff
 	BRNE PC+0x03
-	CPI YL,0xff
+	CPI ZL,0xff
 	BREQ _SDNF_CP__ERROR
 	;Выношу знаки в отдельные регистры
 	MOV TEMP_H,XL
 	ANDI TEMP_H,0x80
-	MOV TEMP_L,YL
+	MOV TEMP_L,ZL
 	ANDI TEMP_L,0x80
 	ANDI XL,0x7f
-	ANDI YL,0x7f
-	CPI XL,100
+	ANDI ZL,0x7f
+	CPI XL,0x64
 	BRCC _SDNF_CP__ERROR
-	CPI YL,100
+	CPI ZL,0x64
 	BRCC _SDNF_CP__ERROR
 
 	;Проверяю целую часть
-	CP XH,YH
+	CP XH,ZH
 	BREQ _SDNF_CP__H_EQUAL
 	BRCS PC+0x04
-	SBRC TEMP_H,0x07													;Включаю флаг C, если |X|>|Y| и X<0
+	SBRC TEMP_H,0x07													;Включаю флаг C, если |X|>|Z| и X<0
 	SEC
 	RJMP _SDNF_CP__END
-	SBRC TEMP_L,0x07													;Выключаю флаг C, если |X|<|Y| и Y<0
+	SBRC TEMP_L,0x07													;Выключаю флаг C, если |X|<|Z| и Z<0
 	CLC
 	RJMP _SDNF_CP__END
 _SDNF_CP__H_EQUAL:
 	;проверяю дробную часть
-	CP XL,YL
+	CP XL,ZL
 	BREQ _SDNF_CP__L_EQUAL
 	BRCS PC+0x04
-	SBRC TEMP_H,0x07													;Включаю флаг C, если |X|>|Y| и X<0
+	SBRC TEMP_H,0x07													;Включаю флаг C, если |X|>|Z| и X<0
 	SEC
 	RJMP _SDNF_CP__END
-	SBRC TEMP_L,0x07													;Выключаю флаг C, если |X|<|Y| и Y<0
+	SBRC TEMP_L,0x07													;Выключаю флаг C, если |X|<|Z| и Z<0
 	CLC
 	RJMP _SDNF_CP__END
 _SDNF_CP__L_EQUAL:
 	EOR TEMP_L,TEMP_H
 	BREQ _SDNF_CP__EQUAL
-	ROL TEMP_H															;Определяю флаг C, если |X|=|Y| и X<0
+	ROL TEMP_H															;Определяю флаг C, если |X|=|Z| и X<0
 	CLZ
 	RJMP _SDNF_CP__END
 _SDNF_CP__ERROR:
@@ -84,7 +85,7 @@ _SDNF_CP__EQUAL:
 _SDNF_CP__END:
 	POP TEMP_L
 	POP TEMP_H
-	POP YL
+	POP ZL
 	POP XL
 	RET
 .endif
