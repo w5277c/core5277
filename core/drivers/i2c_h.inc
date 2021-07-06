@@ -9,6 +9,11 @@
 ;Как будто данные в TWDR появляются с опозданием в 1 байт
 ;Возможно причина в TWI_MR_SLA_R_ACK я его пропускаю, если не пропускать то в TWDR получаю 0xd1
 
+.ifdef DEF__C5_DRV_I2C_H
+.else
+.set DEF__C5_DRV_I2C_H = 1
+.message "Included driver hardware I2C v0.1"
+
 .include	"./core/drivers/_i2c.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -349,3 +354,4 @@ _DRV_I2C_H_EVENT__END:
 	POP_Y
 	POP TEMP
 	RET
+.endif

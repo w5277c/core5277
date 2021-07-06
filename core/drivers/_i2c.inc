@@ -34,3 +34,4 @@
 	.EQU	DRV_I2C_STATE_RC						= 0x02
 	.EQU	DRV_I2C_STATE_OK						= 0x80
 	.EQU	DRV_I2C_STATE_ERROR					= 0x81
+.endif
