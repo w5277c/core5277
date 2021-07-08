@@ -35,7 +35,7 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 512
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
-	#include "/devices/_common.inc"
+	.include "/devices/_common.inc"
 
 	.SET	MUL_SUPPORT								= 0x00
 

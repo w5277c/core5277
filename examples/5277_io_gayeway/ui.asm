@@ -19,7 +19,7 @@
 	.SET	C5_DRIVERS_QNT							= 0
 	.SET	C5_TASKS_QNT							= 1
 	.SET	TIMERS									= 0	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
 	.SET	BUFFER_SIZE								= 0x0000;Размер общего буфера (буфер для SD)
 	.SET	LOGGING_PORT							= PC5	;PA0-PC7
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_DBG

@@ -19,7 +19,7 @@
 ;---CORE-SETTINGS----------------------------------------
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS	;25/50ns
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US	;25/50us
 	.SET	TIMERS									= 2	;0-...
 	.SET	BUFFER_SIZE								= 0x10;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7

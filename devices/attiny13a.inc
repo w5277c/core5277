@@ -18,7 +18,7 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 64
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
-	#include "/devices/_common.inc"
+	.include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY13A

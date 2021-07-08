@@ -28,7 +28,7 @@
 	.SET 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
 	.SET	EEPROM_SIZE								= 0x200
 
-	#include "/devices/_common.inc"
+	.include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA16

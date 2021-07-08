@@ -10,7 +10,7 @@
 	.SET	AVRA												= 1		;0-1
 	.SET	TS_MODE											= TS_MODE_TIME
 	.SET	TIMERS											= 1		;0-4
-	.SET	TIMERS_SPEED									= TIMERS_SPEED_50NS
+	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US
 	.SET	BUFFER_SIZE										= 0x00	;Размер общего буфера
 ;	.SET	LOGGING_PORT									= PC0		;PA0-PC7
 

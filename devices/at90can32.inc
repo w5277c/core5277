@@ -22,7 +22,7 @@
 	.EQU	EEPROM_SIZE								= 0x0400			;1K
 	.EQU	FLASH_SIZE								= 0x8000			;32K
 
-	#include "/devices/_common.inc"
+	.include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= CAN32

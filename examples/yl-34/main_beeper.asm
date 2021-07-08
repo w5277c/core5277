@@ -10,7 +10,7 @@
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_25US
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 

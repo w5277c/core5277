@@ -22,7 +22,7 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 1024
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
-	#include "/devices/_common.inc"
+	.include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA8
@@ -273,6 +273,13 @@
 	.EQU		PGWRT									= 0x02
 	.EQU		PGERS									= 0x01
 	.EQU		SPMEN									= 0x00
+	;---WATCHDOG---
+	.EQU	WDTCR										= 0x41
+	.EQU		WDCE									= 0x04
+	.EQU		WDE									= 0x03
+	.EQU		WDP2									= 0x02
+	.EQU		WDP1									= 0x01
+	.EQU		WDP0									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
@@ -287,7 +294,7 @@
 	RCALL	_C5_IR														; External Interrupt0
 	RCALL	_C5_IR														; External Interrupt1
 .IF TIMER_C_ENABLE == 0x01
-	RCALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare
+	RJMP	_C5_TIMER_C_IR												; Timer/Counter2 Compare
 .ELSE
 	RCALL	_C5_IR														; Timer/Counter2 Compare
 .ENDIF

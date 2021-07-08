@@ -31,7 +31,7 @@
 ;---CORE-SETTINGS----------------------------------------
 	.SET	AVRA												= 1	;0-1
 	.SET	REALTIME											= 0	;0-1
-	.SET	TIMERS_SPEED									= TIMERS_SPEED_25NS	;25/50ns
+	.SET	TIMERS_SPEED									= TIMERS_SPEED_25US	;25/50us
 	.SET	TIMERS											= 1	;0-...
 	.SET	TIMER_C_ENABLE									= 1	;0-1
 	.SET	LOGGING_PORT									= PC5

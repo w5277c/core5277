@@ -4,19 +4,21 @@
 ;20.05.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 	.SET	CORE_FREQ										= 0x08	;Max: 8-ATMega16, 10-ATMega382
-
-	;---подключаем библиотеку устройства---
+	.EQU	TIMER_C_ENABLE									= 0	;0-1
 	.INCLUDE "./devices/atmega8.inc"
-	.SET	REPORT_INCLUDES								= 0x01
 
 	;Важные, но не обязательные параметры ядра
-	.SET	AVRA												= 0	;0-1
-	.SET	TS_MODE											= TS_MODE_TIME
-	.SET	TIMERS_SPEED									= TIMERS_SPEED_50NS
+;---CONSTANTS--------------------------------------------
+	;---MAIN-CONSTANTS---
+	.SET	REPORT_INCLUDES								= 0x01
+	.EQU	TS_MODE											= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
+	.EQU	OPT_MODE											= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
+	.SET	AVRA												= 0		;0-1
+	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US
 	.SET	C5_DRIVERS_QNT									= 3
 	.SET	C5_TASKS_QNT									= 1
-	.SET	TIMERS											= 3	;0-4
-	.SET	LOGGING_PORT									= MISO
+	.SET	TIMERS											= 3		;0-4
+	.SET	LOGGING_PORT									= MOSI
 	;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов (дополнительные включения должны быть перед основным)
@@ -84,23 +86,20 @@ MAIN:
 
 	;Инициализация BUTTONS
 	LDI PID,PID_BUTTONS_DRV
-	LDI ZH,high(DRV_BUTTONS_INIT)
-	LDI ZL,low(DRV_BUTTONS_INIT)
+	LDI_Z DRV_BUTTONS_INIT
 	LDI ACCUM,TID_BUTTONS
 	MCALL C5_CREATE
 
 	;Инициализация BEEPER
 	LDI PID,PID_BEEPER_DRV
-	LDI ZH,high(DRV_BEEPER_INIT)
-	LDI ZL,low(DRV_BEEPER_INIT)
+	LDI_Z DRV_BEEPER_INIT
 	LDI ACCUM,BEEPER_PORT
 	LDI FLAGS,TID_BEEPER
 	MCALL C5_CREATE
 
 	;Инициализация 7SEGLD
 	LDI PID,PID_7SEGLD_DRV
-	LDI ZH,high(DRV_7SEGLD_INIT)
-	LDI ZL,low(DRV_7SEGLD_INIT)
+	LDI_Z DRV_7SEGLD_INIT
 	LDI TEMP_EH,SEGA_PORT
 	LDI TEMP_EL,SEGB_PORT
 	LDI TEMP_H,SEGC_PORT
@@ -131,8 +130,7 @@ MAIN:
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_TASK
-	LDI ZH,high(TASK__INIT)
-	LDI ZL,low(TASK__INIT)
+	LDI_Z TASK__INIT
 	MCALL C5_CREATE
 
 	MJMP C5_START

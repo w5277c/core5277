@@ -46,9 +46,9 @@
 
 .ifdef CORE_FREQ
 	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
-	.EQU	TIMERS_SPEED_50NS						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
-	.EQU	TIMERS_SPEED_25NS						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.EQU	TIMERS_SPEED_50US						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
+	.EQU	TIMERS_SPEED_25US						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
 	.SET	INPUT_BUFFER_SIZE						= 0x80			;Размер буфера ввода (не менее 2)
 ;---PROC-ID-OPTIONS--------------------------------------;Не изменяемые опции процесса размещаемые в идентификаторе процесса
 	.EQU	C5_PROCID_OPT_NOSUSP					= 0x04			;Запрещено диспетчеру прерывать выполнение
