@@ -102,10 +102,10 @@ DRV_7SEGLD_INIT:
 	MCALL RAM_FILL8
 	POP LOOP_CNTR
 
-	;Инициализируем таймер с периодом в 50Hz для всех цифр
+	;Инициализируем таймер с периодом в 100Hz для всех цифр
 	;10/_7SEGLD_SIZE
 	LDI TEMP_H,0x00
-	LDI TEMP_L,0x0a
+	LDI TEMP_L,0x05
 	MOV TEMP,LOOP_CNTR
 	MCALL DIV16X8
 	MOV ACCUM,TEMP_L

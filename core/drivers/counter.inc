@@ -17,14 +17,13 @@
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_COUNTER_TICKS								= 0x09;Необходимое количество чтений порта
-	.EQU	_DRV_COUNTER_RAM_SIZE							= 0x09
+	.EQU	_DRV_COUNTER_RAM_SIZE							= 0x08
 	;---DATA---
 	.EQU	_DRV_COUNTER_PORT									= 0x00;1B - порт
-	.EQU	_DRV_COUNTER_TIMER_ID							= 0x01;1B - ид таймера
-	.EQU	_DRV_COUNTER_CNTR									= 0x02;1B - счетчик чтений порта
-	.EQU	_DRV_COUNTER_SUMM									= 0x03;1B - количество низких состояний порта
-	.EQU	_DRV_COUNTER_LAST_STATE							= 0x04;1B - предидущее состояние порта
-	.EQU	_DRV_COUNTER_VALUE								= 0x05;4B - значение
+	.EQU	_DRV_COUNTER_CNTR									= 0x01;1B - счетчик чтений порта
+	.EQU	_DRV_COUNTER_SUMM									= 0x02;1B - количество низких состояний порта
+	.EQU	_DRV_COUNTER_LAST_STATE							= 0x03;1B - предидущее состояние порта
+	.EQU	_DRV_COUNTER_VALUE								= 0x04;4B - значение
 	;---OPERATIONS---
 	.EQU	DRV_COUNTER_OP_GET								= 0x00
 	.EQU	DRV_COUNTER_OP_RESET								= 0x01
@@ -36,10 +35,9 @@ DRV_COUNTER_INIT:
 ;IN: TEMP_H-порт(7-бит-подтяжка к +), TEMP_L-ид таймера
 ;--------------------------------------------------------
 	LDI ACCUM,_DRV_COUNTER_RAM_SIZE
-	MCALL C5_RAM_EXTEND
+	MCALL C5_RAM_REALLOC
 
 	STD Y+_DRV_COUNTER_PORT,TEMP_H
-	STD Y+_DRV_COUNTER_TIMER_ID,TEMP_L
 	STD Y+_DRV_COUNTER_CNTR,C0x00
 	STD Y+_DRV_COUNTER_SUMM,C0x00
 	STD Y+_DRV_COUNTER_VALUE+0x00,C0x00
@@ -50,13 +48,16 @@ DRV_COUNTER_INIT:
 	;Сбрасываем флаг подтяжки
 	MOV ACCUM,TEMP_H
 	ANDI ACCUM,0x7f
-	STD Z+_DRV_COUNTER_PORT,ACCUM
+	STD Y+_DRV_COUNTER_PORT,ACCUM
 	;Порт на вход
 	MCALL PORT_MODE_IN
+	;Включаем подтяжку, если необходимо
 	SBRS TEMP_H,0x07
 	RJMP PC+0x03
-	;Включаем подтяжку, если необходимо
 	MCALL PORT_SET_HI
+
+	LDI TEMP,0xff
+	STD Y+_DRV_COUNTER_LAST_STATE,TEMP
 
 	MOV TEMP,TEMP_L
 	LDI TEMP_H,high(_DRV_COUNTER_TIMER_EVENT)
@@ -124,14 +125,19 @@ _DRV_COUNTER_TIMER_EVENT:
 	CPI TEMP_H,_DRV_COUNTER_TICKS/2
 	LDI TEMP_H,0x00
 	ROL TEMP_H
+	CPI TEMP_L,0xff
+	BRNE PC+0x03
+	STD Y+_DRV_COUNTER_LAST_STATE,TEMP_H
+	RJMP _DRV_COUNTER_TIMER_EVENT__INC_SKIP
 	EOR TEMP_L,TEMP_H
 	BREQ _DRV_COUNTER_TIMER_EVENT__INC_SKIP
 	STD Y+_DRV_COUNTER_LAST_STATE,TEMP_H
 	SBRS TEMP_H,0x00
 	RJMP _DRV_COUNTER_TIMER_EVENT__INC_SKIP
 
+	LDI TEMP_H,0x01
 	LDD ACCUM,Y+_DRV_COUNTER_VALUE+0x03
-	INC ACCUM
+	ADD ACCUM,TEMP_H
 	STD Y+_DRV_COUNTER_VALUE+0x03,ACCUM
 	LDD ACCUM,Y+_DRV_COUNTER_VALUE+0x02
 	ADC ACCUM,C0x00
