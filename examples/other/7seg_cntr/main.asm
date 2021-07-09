@@ -3,7 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;20.05.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-	.SET	CORE_FREQ										= 0x08	;Max: 8-ATMega16, 10-ATMega382
+	.SET	CORE_FREQ										= 0x08
 	.EQU	TIMER_C_ENABLE									= 0	;0-1
 	.INCLUDE "./devices/atmega8.inc"
 
@@ -15,15 +15,13 @@
 	.EQU	OPT_MODE											= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
 	.SET	AVRA												= 0		;0-1
 	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US
-	.SET	C5_DRIVERS_QNT									= 5
-	.SET	C5_TASKS_QNT									= 1
-	.SET	TIMERS											= 5		;0-...
-	;.SET	LOGGING_PORT									= MOSI
+	.SET	TIMERS											= 4		;0-...
+	.SET	LOGGING_PORT									= MOSI
+
 	;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;Блок драйверов (дополнительные включения должны быть перед основным)
 	.include	"./core/drivers/buttons.inc"
-	.include	"./core/drivers/beeper.inc"
 	.include	"./core/drivers/7segld.inc"
 	.include	"./core/drivers/counter.inc"
 	.include	"./core/drivers/adc.inc"
@@ -32,7 +30,6 @@
 	;---
 	;Дополнительно
 	;---
-	.include "./core/log/log_ramdump.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---MAIN-CONSTANTS---
@@ -50,37 +47,30 @@
 	.EQU	BATTERY_PORT									= PC5		;Порт для анализа уровня заряда батареи
 	.EQU	BUTTON_PORT										= PD3		;Порт для кнопки		!!!
 	.EQU	INT_PORT											= PB0		;Порт ввода
-	.EQU	BEEPER_PORT										= PD6		;Порт бипера
 
 	;Идентификаторы драйверов(0-7|0-15)
 	.EQU	PID_BUTTONS_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
-	.EQU	PID_BEEPER_DRV									= 1|(1<<C5_PROCID_OPT_DRV)
-	.EQU	PID_7SEGLD_DRV									= 2|(1<<C5_PROCID_OPT_DRV)
-	.EQU	PID_COUNTER_DRV								= 3|(1<<C5_PROCID_OPT_DRV)
-	.EQU	PID_ADC_DRV										= 4|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_7SEGLD_DRV									= 1|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_COUNTER_DRV								= 2|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_ADC_DRV										= 3|(1<<C5_PROCID_OPT_DRV)
 
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK											= 0
 	;Идентификаторы таймеров
 	.EQU	TID_BUTTONS										= 0
-	.EQU	TID_BEEPER										= 1
-	.EQU	TID_7SEGLD										= 2
-	.EQU	TID_COUNTER										= 3
-	.EQU	TID_ADC											= 4
+	.EQU	TID_7SEGLD										= 1
+	.EQU	TID_COUNTER										= 2
+	.EQU	TID_ADC											= 3
 	;---
 
 	;Дополнительно (по мере использования)
-	.include "./io/port_set_hi.inc"
-	.include "./io/port_set_lo.inc"
-	.include "./io/port_invert.inc"
-	.include "./core/wait_2ms.inc"
+	.include "./mem/eeprom_read_byte.inc"
+	.include "./mem/eeprom_write_byte.inc"
 	.include	"./conv/num16_to_strf.inc"
 	.include	"./conv/num_to_7seg.inc"
 	.include	"./core/wait_1s.inc"
 	;---
 
-BEEPER_SND1:
-	.db N64,H3,H4,H5,E,0x00
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
 	CLI
@@ -97,13 +87,6 @@ MAIN:
 	LDI PID,PID_BUTTONS_DRV
 	LDI_Z DRV_BUTTONS_INIT
 	LDI ACCUM,TID_BUTTONS
-	MCALL C5_CREATE
-
-	;Инициализация BEEPER
-	LDI PID,PID_BEEPER_DRV
-	LDI_Z DRV_BEEPER_INIT
-	LDI ACCUM,BEEPER_PORT
-	LDI FLAGS,TID_BEEPER
 	MCALL C5_CREATE
 
 	;Инициализация COUNTER
@@ -157,36 +140,47 @@ MAIN:
 
 	MJMP C5_START
 
-;--------------------------------------------------------
-TASK_START_SND:
-	.db N64T,F5,E,0x00
 ;--------------------------------------------------------;Задача
 TASK__INIT:
-
 	LDI ACCUM,0x05
 	MCALL C5_RAM_REALLOC
+
+	LDI TEMP,PID_BUTTONS_DRV
+	LDI FLAGS,DRV_BUTTONS_OP_ADD
+	LDI ACCUM,BUTTON_PORT|0x80
+	MCALL C5_EXEC
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
+	LDI TEMP,PID_7SEGLD_DRV
+	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
+	LDI ACCUM,0xff
+	LDI TEMP_L,0x00
+	MCALL C5_EXEC
+
 	MCALL _TASK_GET_BAT_V
 	MCALL _TASK_LED_UPDATE
-
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
 	LDI ACCUM,0b00111000
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
-
 	LDI TEMP,0x03
 	MCALL C5_WAIT_1S
 
-;Большое потребление тока, устройство перезагружается
-;	MCALL _TASK_DISPLAY_OFF
-;	LDI TEMP,PID_BEEPER_DRV
-;	LDI_Z TASK_START_SND|0x8000
-;	MCALL C5_EXEC
+	MCALL _TASK_READ_LAST_VALUE
+	CPI TEMP_H,0xff
+	BREQ _TASK__NO_LAST_VALUE
+	MCALL _TASK_LED_UPDATE
+	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
+	LDI ACCUM,0b00011100
+	LDI TEMP_L,0x00
+	MCALL C5_EXEC
+	LDI TEMP,0x03
+	MCALL C5_WAIT_1S
 
+_TASK__NO_LAST_VALUE:
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
 	LDI ACCUM,0x00
@@ -202,23 +196,44 @@ TASK_LOOP:
 	MCALL _TASK_GET_BAT_V
 	CPI TEMP_H,0x00
 	BRNE PC+0x07
-	CPI TEMP_L,130
+	CPI TEMP_L,100
 	BRCC PC+0x05
 	LDI ACCUM,0b00000010
-	CPI TEMP_L,110
+	CPI TEMP_L,80
 	BRCC PC+0x02
 	LDI ACCUM,0b00010000
 
 	LDI LOOP_CNTR,0x03
 _TASK__LOOP2:
 	LDI TEMP_L,0x00
+	LDI TEMP,PID_7SEGLD_DRV
+	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
 	MCALL C5_EXEC
 	MCALL TASK_COUNTER_UPDATE
 	PUSH ACCUM
 	LDI ACCUM,0b00000000
 	MCALL C5_EXEC
 	MCALL TASK_COUNTER_UPDATE
+
+	LDI TEMP,PID_BUTTONS_DRV
+	LDI FLAGS,DRV_BUTTONS_OP_GET
+	MCALL C5_EXEC
 	POP ACCUM
+	CPI TEMP_H,0xff
+	BREQ _TASK__LOOP2_NEXT
+	;Проверка на короткое нажатие
+	CPI TEMP_L,0b00010000
+	BRNE _TASK_ITERATION__NO_SHORT_PRESS
+	MCALL _TASK_WRITE_LAST_VALUE
+	RJMP TASK
+_TASK_ITERATION__NO_SHORT_PRESS:
+	;Проверка на единичное длинное нажатие
+	CPI TEMP_L,0b00010001											
+	BRNE _TASK__LOOP2_NEXT
+	MCALL _TASK_WRITE_LAST_VALUE
+	;TODO POWER OFF
+
+_TASK__LOOP2_NEXT:
 	DEC LOOP_CNTR
 	BRNE _TASK__LOOP2
 	RJMP TASK_LOOP
@@ -242,7 +257,7 @@ TASK_COUNTER_UPDATE:
 ;--------------------------------------------------------
 _TASK_GET_BAT_V:
 ;--------------------------------------------------------
-;OUT: TEMP_H/L-Напряжение батареи в сотых вольта
+;OUT: TEMP_H/L-напряжение батареи в сотых вольта
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH TEMP_EH
@@ -250,36 +265,20 @@ _TASK_GET_BAT_V:
 	PUSH TEMP
 	PUSH ACCUM
 
-	LDI TEMP,PID_7SEGLD_DRV
-	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
-	LDI ACCUM,0xff
-	LDI TEMP_L,0x00
-	MCALL C5_EXEC
-
 	LDI TEMP,PID_ADC_DRV
 	LDI ACCUM,ADC5
-	LDI TEMP_EH,ADC_VREF_AVCC
+	LDI TEMP_EH,ADC_VREF_2_56_CAP
 	LDI TEMP_EL,DRV_ADC_PRESC_AUTO
 	LDI TEMP_H,0x04
 	LDI TEMP_L,0x85
 	LDI_X 0x0000
 	MCALL C5_EXEC
-	
-	LDI TEMP,0x0a
-	MCALL MUL16X8
-	LDI TEMP,31
-	MCALL DIV16X8
 
-	PUSH TEMP_H
-	PUSH TEMP_L
-	LDI TEMP,PID_7SEGLD_DRV
-	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
-	LDI ACCUM,0xff
-	LDI TEMP_L,0x00
-	MCALL C5_EXEC
-	POP TEMP_L
-	POP TEMP_H
-	
+	LSR TEMP_H
+	ROR TEMP_L
+	LSR TEMP_H
+	ROR TEMP_L
+		
 	POP ACCUM
 	POP TEMP
 	POP TEMP_EL
@@ -289,6 +288,8 @@ _TASK_GET_BAT_V:
 
 ;--------------------------------------------------------
 _TASK_LED_UPDATE:
+;--------------------------------------------------------
+;IN: TEMP_H/L-значение
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_FT
@@ -325,27 +326,46 @@ _TASK_LED_UPDATE:
 	RET
 
 ;--------------------------------------------------------
-_TASK_DISPLAY_OFF:
+_TASK_WRITE_LAST_VALUE:
+;--------------------------------------------------------
+;Сохраняем в EEPROM значение счетчика
+;IN: TEMP_H/L-значение
 ;--------------------------------------------------------
 	PUSH TEMP
-	PUSH FLAGS
-	PUSH ACCUM
+	PUSH TEMP_H
 	PUSH TEMP_L
-	
-	LDI TEMP,PID_7SEGLD_DRV
-	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
-	LDI ACCUM,0x00
+
+	LDI TEMP,PID_COUNTER_DRV
+	LDI FLAGS,DRV_COUNTER_OP_GET
+	MCALL C5_EXEC
+	PUSH TEMP_L
+	PUSH TEMP_H
+	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
-	MCALL C5_EXEC
-	LDI TEMP_L,0x01
-	MCALL C5_EXEC
-	LDI TEMP_L,0x02
-	MCALL C5_EXEC
-	LDI TEMP_L,0x03
-	MCALL C5_EXEC
+	POP TEMP
+	MCALL EEPROM_WRITE_BYTE
+	INC TEMP_L
+	POP TEMP
+	MCALL EEPROM_WRITE_BYTE
 
 	POP TEMP_L
-	POP ACCUM
-	POP FLAGS
+	POP TEMP_H
+	POP TEMP
+	RET
+;--------------------------------------------------------
+_TASK_READ_LAST_VALUE:
+;--------------------------------------------------------
+;Чтение из EEPROM последнее значение
+;OUT: TEMP_H/L-значение
+;--------------------------------------------------------
+	PUSH TEMP
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x00
+	MCALL EEPROM_READ_BYTE
+	PUSH TEMP
+	INC TEMP_L
+	MCALL EEPROM_READ_BYTE
+	MOV TEMP_L,TEMP
+	POP TEMP_H
 	POP TEMP
 	RET
