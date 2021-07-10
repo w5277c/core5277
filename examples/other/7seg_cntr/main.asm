@@ -15,9 +15,9 @@
 	.EQU	OPT_MODE											= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
 	.SET	AVRA												= 0		;0-1
 	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US
-	.SET	C5_DRIVERS_QNT									= 3
+	.SET	C5_DRIVERS_QNT									= 4
 	.SET	C5_TASKS_QNT									= 1
-	.SET	TIMERS											= 3		;0-4
+	.SET	TIMERS											= 4		;0-...
 	.SET	LOGGING_PORT									= MOSI
 	;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -25,6 +25,7 @@
 	.include	"./core/drivers/buttons.inc"
 	.include	"./core/drivers/beeper.inc"
 	.include	"./core/drivers/7segld.inc"
+	.include	"./core/drivers/counter.inc"
 	;---
 	;Блок задач
 	;---
@@ -54,6 +55,7 @@
 	.EQU	PID_BUTTONS_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
 	.EQU	PID_BEEPER_DRV									= 1|(1<<C5_PROCID_OPT_DRV)
 	.EQU	PID_7SEGLD_DRV									= 2|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_COUNTER_DRV								= 3|(1<<C5_PROCID_OPT_DRV)
 
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK											= 0
@@ -61,6 +63,7 @@
 	.EQU	TID_BUTTONS										= 0
 	.EQU	TID_BEEPER										= 1
 	.EQU	TID_7SEGLD										= 2
+	.EQU	TID_COUNTER										= 3
 	;---
 
 	;Дополнительно (по мере использования)
@@ -68,6 +71,8 @@
 	.include "./io/port_set_lo.inc"
 	.include "./io/port_invert.inc"
 	.include "./core/wait_2ms.inc"
+	.include	"./conv/num16_to_strf.inc"
+	.include	"./conv/num_to_7seg.inc"
 	;---
 
 BEEPER_SND1:
@@ -95,6 +100,13 @@ MAIN:
 	LDI_Z DRV_BEEPER_INIT
 	LDI ACCUM,BEEPER_PORT
 	LDI FLAGS,TID_BEEPER
+	MCALL C5_CREATE
+
+	;Инициализация COUNTER
+	LDI PID,PID_COUNTER_DRV
+	LDI_Z DRV_COUNTER_INIT
+	LDI TEMP_H,PB0
+	LDI TEMP_L,TID_COUNTER
 	MCALL C5_CREATE
 
 	;Инициализация 7SEGLD
@@ -137,19 +149,20 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
+
+	LDI ACCUM,0x05
+	MCALL C5_RAM_REALLOC
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
-	LDI ACCUM,0b01100000
+	LDI ACCUM,0x00
 	LDI TEMP_L,0x01
 	MCALL C5_EXEC
-
-	LDI ACCUM,0b11011010
 	LDI TEMP_L,0x02
 	MCALL C5_EXEC
-	LDI ACCUM,0b11110010
 	LDI TEMP_L,0x03
 	MCALL C5_EXEC
 
@@ -157,33 +170,51 @@ TASK:
 TASK_LOOP:
 	LDI ACCUM,0b10000000
 	MCALL C5_EXEC
-	MCALL TASK_WAIT
-
+	MCALL TASK_COUNTER_UPDATE
 	LDI ACCUM,0b01000000
 	MCALL C5_EXEC
-	MCALL TASK_WAIT
-
+	MCALL TASK_COUNTER_UPDATE
 	LDI ACCUM,0b00000010
 	MCALL C5_EXEC
-	MCALL TASK_WAIT
-
+	MCALL TASK_COUNTER_UPDATE
 	LDI ACCUM,0b00000100
 	MCALL C5_EXEC
-	MCALL TASK_WAIT
-
+	MCALL TASK_COUNTER_UPDATE
 	RJMP TASK_LOOP
 
-TASK_WAIT:
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP
+TASK_COUNTER_UPDATE:
+	PUSH_FT
+
+	LDI TEMP,PID_COUNTER_DRV
+	LDI FLAGS,DRV_COUNTER_OP_GET
+	MCALL C5_EXEC
+
+	MOVW ZL,YL
+	MCALL NUM16_TO_STRF
+	LDD TEMP,Z+0x02
+	MCALL NUM_TO_7SEG
+	MOV ACCUM,TEMP
+	LDI TEMP,PID_7SEGLD_DRV
+	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
+	LDI TEMP_L,0x01
+	MCALL C5_EXEC
+	LDD TEMP,Z+0x03
+	MCALL NUM_TO_7SEG
+	MOV ACCUM,TEMP
+	LDI TEMP,PID_7SEGLD_DRV
+	LDI TEMP_L,0x02
+	MCALL C5_EXEC
+	LDD TEMP,Z+0x04
+	MCALL NUM_TO_7SEG
+	MOV ACCUM,TEMP
+	LDI TEMP,PID_7SEGLD_DRV
+	LDI TEMP_L,0x03
+	MCALL C5_EXEC
 
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	LDI TEMP,0x32/2
 	MCALL C5_WAIT_2MS
 
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
+	POP_FT
 	RET

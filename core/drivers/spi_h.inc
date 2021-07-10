@@ -52,12 +52,6 @@ DRV_SPI_H_INIT:
 ;IN: TEMP-DRV_SPI_H_MODE_MASTER/SLAVE|
 ;TEMP-DRV_SPI_H_MODE_x|DRV_SPI_H_PRESC_x|DRV_SPI_H_DO_x
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP
-	PUSH ACCUM
-
 	LDI ACCUM,_DRV_SPI_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
@@ -97,11 +91,6 @@ DRV_SPI_H_INIT__SLAVE:
 	MCALL PORT_SET_HI
 
 DRV_SPI_H_INIT__END:
-	POP ACCUM
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
-	POP_Y
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация

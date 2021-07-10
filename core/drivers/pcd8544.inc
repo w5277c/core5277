@@ -41,11 +41,6 @@ DRV_PCD8544_INIT:
 ;IN: TEMP_EH-RST порт, TEMP_EL-DC порт, TEMP_H-Din порт,
 ;TEMP_L-Clk порт, ACCUM-ид таймера
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH ACCUM
-	PUSH_THL
-	PUSH TEMP
-
 	PUSH ACCUM
 	LDI ACCUM,_DRV_PCD8544_RAM_SIZE
 	MCALL C5_RAM_REALLOC
@@ -87,10 +82,6 @@ DRV_PCD8544_INIT:
 	MCALL C5_TIMER_SET
 	MCALL C5_TIMER_START
 
-	POP TEMP
-	POP_THL
-	POP ACCUM
-	POP_Z
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код

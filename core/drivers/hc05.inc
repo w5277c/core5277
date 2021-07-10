@@ -90,17 +90,13 @@ DRV_HC05_INIT:
 ;Инициализация
 ;IN: TEMP-ид драйвера UART, FLAGS-флаги
 ;--------------------------------------------------------
-	PUSH ACCUM
-
 	LDI ACCUM,_DRV_HC05_VARS_SIZE+_DRV_HC05_BUFFER_SIZE
 	MCALL C5_RAM_REALLOC
 
 	STD Z+_DRV_HC05_UART_DRV_ID,TEMP
 	STD Z+_DRV_HC05_FLAGS,FLAGS
 
-	POP ACCUM
 	MCALL C5_READY
-
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;--------------------------------------------------------

@@ -149,12 +149,6 @@ DRV_BEEPER_INIT:
 ;IN: ACCUM-порт, FLAGS-ид таймера
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH TEMP
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH_Y
-
-	PUSH ACCUM
 	LDI ACCUM,_DRV_BEEPER_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
@@ -178,11 +172,6 @@ DRV_BEEPER_INIT:
 	STD Y+_DRV_BEEPER_PORT+0x00,TEMP_H
 	STD Y+_DRV_BEEPER_PORT+0x01,ACCUM
 
-	POP_Y
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP
-	POP ACCUM
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, проигрывание звука

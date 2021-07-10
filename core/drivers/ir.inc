@@ -92,10 +92,6 @@ DRV_IR_INIT:
 ;TEMP_EL-порт индикации передачи (0xff-не используется)
 ;FLAGS-частота DRV_IR_FREQ_x
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH ACCUM
-	PUSH_THL
-
 	LDI ACCUM,_DRV_IR_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
@@ -150,9 +146,6 @@ DRV_IR_INIT:
 	LDI ACCUM,DRV_IR_ST_READY
 	STD Y+_DRV_IR_STATE,ACCUM
 
-	POP_THL
-	POP ACCUM
-	POP_Z
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация

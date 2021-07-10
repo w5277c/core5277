@@ -46,11 +46,6 @@ DRV_ADC_INIT:
 ;IN: ACCUM-ид таймера
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH_Y
-
-	PUSH ACCUM
 	;Выделяем память
 	LDI ACCUM,_DRV_ADC_RAM_SIZE
 	MCALL C5_RAM_REALLOC
@@ -77,10 +72,6 @@ DRV_ADC_INIT:
 	MCALL C5_IR_VECTOR_SET
 
 	;Завершаем инициализацию
-	POP_Y
-	POP TEMP_L
-	POP TEMP_H
-	POP ACCUM
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код.

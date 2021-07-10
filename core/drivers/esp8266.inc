@@ -97,17 +97,13 @@ DRV_ESP8266_INIT:
 ;Инициализация
 ;IN: TEMP-ид драйвера UART, FLAGS-флаги
 ;--------------------------------------------------------
-	PUSH ACCUM
-
 	LDI ACCUM,_DRV_ESP8266_VARS_SIZE+_DRV_ESP8266_BUFFER_SIZE
 	MCALL C5_RAM_REALLOC
 
 	STD Z+_DRV_ESP8266_UART_DRV_ID,TEMP
 	STD Z+_DRV_ESP8266_FLAGS,FLAGS
 
-	POP ACCUM
 	MCALL C5_READY
-
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;--------------------------------------------------------

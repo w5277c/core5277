@@ -66,13 +66,6 @@ DRV_BUTTONS_INIT:
 ;Инициализация
 ;IN: ACCUM-ид таймера
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH_X
-	PUSH LOOP_CNTR
-	PUSH TEMP
-	PUSH TEMP_H
-	PUSH TEMP_L
-
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BUTTONS_RAM_SIZE
 	MCALL C5_RAM_REALLOC
@@ -98,14 +91,7 @@ DRV_BUTTONS_INIT:
 	;Запускаю таймер
 	MCALL C5_TIMER_START
 
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP
-	POP LOOP_CNTR
-	POP_X
-	POP_Y
 	MCALL C5_READY
-
 ;--------------------------------------------------------
 ;Основной код
 ;IN: FLAGS-тип операции

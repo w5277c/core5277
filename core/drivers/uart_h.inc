@@ -75,13 +75,6 @@ DRV_UART_H_INIT:
 ;TEMP_EH-ид таймера, FLAGS - опции
 ;TEMP_EL-скорость передачи данных
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH TEMP_EL
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP
-	PUSH ACCUM
-
 	LDI ACCUM,_DRV_UART_H_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
@@ -150,12 +143,6 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	;Подпитываю UART
 	_C5_POWER_ON PRUSART0
 
-	POP ACCUM
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP_EL
-	POP_Y
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация

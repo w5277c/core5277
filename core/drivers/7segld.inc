@@ -54,14 +54,6 @@ DRV_7SEGLD_INIT:
 ;FLAGS-режим работы DRV_7SEGLD_MODE_...
 ;TEMP_EH/EL/H/L,XH/L,YH/L-порты сегментов(ABCDEFGp)
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH_X
-	PUSH LOOP_CNTR
-	PUSH TEMP
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH ACCUM
-
 	MOVW ZL,YL
 
 	PUSH ACCUM
@@ -126,15 +118,7 @@ DRV_7SEGLD_INIT:
 	;Запускаем таймер
 	MCALL C5_TIMER_START
 
-	POP ACCUM
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP
-	POP LOOP_CNTR
-	POP_X
-	POP_Z
 	MCALL C5_READY
-
 ;--------------------------------------------------------
 ;Основной код
 ;IN: FLAGS - тип операции

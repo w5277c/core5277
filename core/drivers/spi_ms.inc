@@ -46,9 +46,6 @@ DRV_SPI_MS_INIT:
 ;TEMP_L - размер пакета в байтах,
 ;ACCUM - время выдерживания паузы
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH_Z
-
 	MOVW ZL,YL
 	PUSH ACCUM
 	LDI ACCUM,_DRV_SPI_MS_RAM_SIZE
@@ -86,8 +83,6 @@ DRV_SPI_MS_INIT:
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 
-	POP_Z
-	POP_Y
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, передача данных

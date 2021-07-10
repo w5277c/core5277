@@ -76,12 +76,6 @@ DRV_UART_F_INIT:
 ;TEMP_EL-скорость передачи данных
 ;FLAGS-ид драйвера PCINT
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH ACCUM
-	PUSH TEMP
-	PUSH TEMP_H
-	PUSH TEMP_L
-
 	PUSH ACCUM
 	LDI ACCUM,_DRV_UART_F_RAM_SIZE
 	MCALL C5_RAM_REALLOC
@@ -142,11 +136,6 @@ _DRV_UART_F_INIT__NO_DR_PORT:
 	LDI TEMP_L,low(_DRV_UART_F_PCINT_EVENT)
 	MCALL C5_IR_VECTOR_SET
 
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP
-	POP ACCUM
-	POP_Z
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация

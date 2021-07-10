@@ -153,12 +153,6 @@ DRV_BUS5277_INIT:
 ;ACCUM-ид UART драйвера
 ;FLAGS-флаги
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH TEMP
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH ACCUM
-
 	;Выделяем память
 	PUSH ACCUM
 	LDI ACCUM,_DRV_BUS5277_RAM_SIZE
@@ -183,12 +177,6 @@ DRV_BUS5277_INIT:
 	STD Y+_DRV_BUS5277_EXTRASCAN_T_REQ_DATA+0x00,TEMP
 	LDI TEMP,0x8c
 	STD Y+_DRV_BUS5277_EXTRASCAN_T_REQ_DATA+0x01,TEMP
-
-	POP ACCUM
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP
-	POP_Y
 
 	MCALL C5_READY
 ;--------------------------------------------------------

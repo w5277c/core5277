@@ -3,14 +3,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;05.01.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-;TODO отказаться от T
-;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_NUM16_TO_STR
+.ifdef DEF_NUM16_TO_STRF
 .else
-.set DEF_NUM16_TO_STR = 1
+.set DEF_NUM16_TO_STRF = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included NUM16_TO_STR"
+.message "included NUM16_TO_STRF"
 .endif
 
 .include	"./math/div32x16.inc"
@@ -18,13 +16,13 @@
 .include	"./math/mul16x8.inc"
 
 ;--------------------------------------------------------
-NUM16_TO_STR:
+NUM16_TO_STRF:
 ;--------------------------------------------------------
 ;Конвертирование знакового целого с дробной в текст
 ;Конец строки не указывается
-;IN: TEMP_H,TEMP_L - число (0-65535),
-;Z - dst адрес
-;OUT: Z - новое смещение
+;IN: TEMP_H,TEMP_L-число (00000-65535),
+;Z-dst адрес
+;OUT: Z-новое смещение
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH LOOP_CNTR
@@ -38,20 +36,15 @@ NUM16_TO_STR:
 	LDI LOOP_CNTR,0x05
 	LDI XH,high(10000)
 	LDI XL,low(10000)
-__NUM16_TO_STR__LOOP:
+__NUM16_TO_STRF__LOOP:
 	LDI TEMP_EH,0x00
 	LDI TEMP_EL,0x00
 	PUSH TEMP_H
 	PUSH TEMP_L
 	MCALL DIV32X16
-	BRTS PC+0x04
-	CPI TEMP_L,0x00
-	BREQ __NUM16_TO_STR__SKIP_CHAR
-	SET
 	LDI TEMP,0x30
 	ADD TEMP,TEMP_L
 	ST Z+,TEMP
-__NUM16_TO_STR__SKIP_CHAR:
 	MOV TEMP,TEMP_L
 	MOV TEMP_H,XH
 	MOV TEMP_L,XL
@@ -69,7 +62,7 @@ __NUM16_TO_STR__SKIP_CHAR:
 	MOV TEMP_H,TEMP_EH
 	MOV TEMP_L,TEMP_EL
 	DEC LOOP_CNTR
-	BRNE __NUM16_TO_STR__LOOP
+	BRNE __NUM16_TO_STRF__LOOP
 
 	POP TEMP_EL
 	POP TEMP_EH

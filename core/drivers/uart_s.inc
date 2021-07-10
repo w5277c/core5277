@@ -87,11 +87,6 @@ DRV_UART_S_INIT:
 ;YL-ид драйвера PCINT или
 ;прерывание C5_IR_INTn(с выключенным 0x07 битом)
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH ACCUM
-	PUSH YH
-	PUSH TEMP
-
 	PUSH ACCUM
 	LDI ACCUM,_DRV_UART_S_RAM_SIZE
 	MCALL C5_RAM_REALLOC
@@ -141,10 +136,6 @@ _DRV_UART_S_INIT__NO_LED_PORT:
 	LSL YH
 	STD Z+_DRV_UART_S_NEXT_TIMEOUT,YH
 
-	POP TEMP
-	POP YH
-	POP ACCUM
-	POP_Z
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
@@ -222,9 +213,9 @@ _DRV_UART_S_PROC__SENDING_WAIT:
 	LDD TEMP,Z+_DRV_UART_S_STATE
 	CPI TEMP,DRV_UART_ST_READY
 	BRNE _DRV_UART_S_PROC__SENDING_WAIT
-	
+
 	MCALL C5_SOFT_UART_MODE_RESET
-	
+
 	;Порт направления в LO
 	LDD ACCUM,Z+_DRV_UART_S_DR_PORT
 	CPI ACCUM,0xff
