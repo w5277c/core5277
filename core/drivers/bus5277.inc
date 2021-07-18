@@ -30,7 +30,7 @@
 ; s - размер всего пакета(40B максимум, длина данных = s-4)
 ; q - бит 0-запрос, 1-ответ
 ; с - код функции или ответа
-; u - признак адресации по UID (значение a игнорируется)
+; u - признак адресации по UID (значение a игнорируется) при запросе и признак наличия записей в истории при ответе
 ; d - данные функции (при включенном u, первые 8 байт = UID)
 ; w - crc8(1wire)
 
@@ -326,6 +326,15 @@ _DRV_BUS5277_PROC_SLAVE_SEND:
 .ifdef LOGGING_PORT
 	MCALL _DRV_BUS5277__LOG_REQV
 .endif
+	;Устанавливаем бит U если это ответ и история не пуста
+	LDD TEMP,Z+_DRV_BUS5277_PACKET_HEADER_CODE
+	SBRS TEMP,0x07
+	RJMP PC+0x06
+	LDS TEMP_EL,C5_BUFFER+HISTORY_OFFSET+0x00
+	CPI TEMP_EL,0x00
+	BREQ PC+0x03
+	ORI TEMP,0x40
+	STD Z+_DRV_BUS5277_PACKET_HEADER_CODE,TEMP
 	;Запускаем драйвер UART
 	PUSH YH
 	LDD TEMP,Y+_DRV_BUS5277_UART_DRV_ID
