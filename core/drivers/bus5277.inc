@@ -226,12 +226,15 @@ _DRV_BUS5277_PROC_MASTER:
 	MCALL _DRV_BUS5277__LOG_REQV
 .endif
 	;Запускаем драйвер UART
+	PUSH YH
 	LDD TEMP_EH,Z+_DRV_BUS5277_PACKET_HEADER_SIZE			;Длина данных для передачи
 	LDD TEMP,Y+_DRV_BUS5277_UART_DRV_ID
 	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
 	LDI TEMP_H,high(20/2)											;Максимальное время ожидания данных
 	LDI TEMP_L,low(20/2)
+	LDI YH,0xff
 	MCALL C5_EXEC
+	POP YH
 	;Проверка ответа на ошибку
 	LDI ACCUM,BUS5277_RESP_NO_ANSWER
 	CPI TEMP_H,DRV_UART_ST_READY
@@ -270,6 +273,7 @@ _DRV_BUS5277_PROC_SLAVE_RECV:
 
 _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	;Запускаем драйвер UART
+	PUSH_Y
 	LDD TEMP,Y+_DRV_BUS5277_UART_DRV_ID
 	LDI TEMP_EH,0x00													;Длина данных для передачи
 	LDI TEMP_EL,DRV_BUS5277_MAX_PACKET_SIZE					;Максимальная длина данных для приема
@@ -278,8 +282,9 @@ _DRV_BUS5277_PROC_SLAVE_RECV__LOOP:
 	LDI LOOP_CNTR,0x80												;Пара байт для определения EXTRASCAN T
 	LDI FLAGS,0x8c
 	MOV TRY_CNTR,PID
-	LDI_Z _DRV_BUS5277_SLAVE_MAGIC_EVENT						;Адрес процедуры отклика на EXTRASCAN T
+	LDI_Y _DRV_BUS5277_SLAVE_MAGIC_EVENT						;Адрес процедуры отклика на EXTRASCAN T
 	MCALL C5_EXEC
+	POP_Y
 
 	;Проверка ответа на ошибку
 	CPI TEMP_H,DRV_UART_ST_READY
@@ -322,10 +327,13 @@ _DRV_BUS5277_PROC_SLAVE_SEND:
 	MCALL _DRV_BUS5277__LOG_REQV
 .endif
 	;Запускаем драйвер UART
+	PUSH YH
 	LDD TEMP,Y+_DRV_BUS5277_UART_DRV_ID
 	LDD TEMP_EH,Z+_DRV_BUS5277_PACKET_HEADER_SIZE			;Длина данных для передачи
 	LDI TEMP_EL,0x00													;Максимальная длина данных для приема(только передача)
+	LDI YH,0xff
 	MCALL C5_EXEC
+	POP YH
 	LDI ACCUM,BUS5277_RESP_OK
 
 	POP_FT
@@ -363,10 +371,13 @@ _DRV_BUS5277_PROC_EXTRASCAN_T:
 
 	LDI_Z _DRV_BUS5277_EXTRASCAN_T_REQ_DATA
 	MCALL C5_DISPATCHER_LOCK
+	PUSH YH
 	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
 	LDI TEMP_EH,0x02
 	LDI TEMP_EL,0x00
+	LDI YH,0xff
 	MCALL C5_EXEC														;Необходимо, чтобы UART отработал фиксированное время
+	POP YH
 
 	;Запускаем таймер отсчитывающий интервалы чтения сигналов от устройств
 	LDS FLAGS,SREG
