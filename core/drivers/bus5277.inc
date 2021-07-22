@@ -92,6 +92,7 @@
 	.EQU	BUS5277_FUNC_BTLDR_MODE						= 0x0d	;Перейти в режим бутлоадера
 	.EQU	BUS5277_FUNC_BTLDR_WRITE					= 0x0e	;Записать блок данных во FLASH
 	.EQU	BUS5277_FUNC_BTLDR_DONE						= 0x0f	;Выйти из режима бутлоадера
+	.EQU	BUS5277_FUNC_SCAN								= 0x10	;Обнаружение устройств на шине
 	;---																	;Блок комманд с адресацией по UID
 	.EQU	BUS5277_FUNC_SEARCH							= 0x40	;Поиск устройства (определение UID устройств)
 	.EQU	BUS5277_FUNC_INFO_BY_UID					= 0x41	;Чтение исномации об устройстве (аналогично BUS5277_FUNC_INFO, но адресация по UID)
