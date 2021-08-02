@@ -9,6 +9,7 @@
 ;17.04.2021	w5277c@gmail.com			Поддержка таймера C
 ;14.06.2021	w5277c@gmail.com			Локализация C5_SOFT_UART_MODE_SET/RESET
 ;23.07.2021	w5277c@gmail.com			Z->Y, необходимо тестирование
+;02.08.2021	w5277c@gmail.com			Поддержка BREAK
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO поддержка MAGIC?
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -79,14 +80,13 @@ DRV_UART_S_INIT:
 ;Инициализация
 ;IN: TEMP_H-порт RX, TEMP_L-порт TX
 ;YH-порт направления передача/прием
-;(0xff-не используется),
 ;YL-порт индикации передачи
-;(0xff-не используется)
 ;TEMP_EH-ид таймера(0x83 - используем таймер C)
 ;FLAGS-опции
 ;TEMP_EL-скорость передачи данных
 ;ACCUM-ид драйвера PCINT или
 ;прерывание C5_IR_INTn(с выключенным 0x07 битом)
+;Для всех портов 0xff-порт не используется.
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH_Y
@@ -109,26 +109,28 @@ DRV_UART_S_INIT:
 	;Инициализирую порт направления данных
 	MOV ACCUM,YH
 	CPI ACCUM,0xff
-	BREQ _DRV_UART_S_INIT__NO_DR_PORT
+	BREQ Pc+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
-_DRV_UART_S_INIT__NO_DR_PORT:
 	STD Z+_DRV_UART_S_DR_PORT,ACCUM
 	;Инициализирую порт индикации
 	MOV ACCUM,YL
 	CPI ACCUM,0xff
-	BREQ _DRV_UART_S_INIT__NO_LED_PORT
+	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
-_DRV_UART_S_INIT__NO_LED_PORT:
 	STD Z+_DRV_UART_S_LED_PORT,ACCUM
 	;Инициализирую порт RX
 	MOV ACCUM,TEMP_H
+	CPI ACCUM,0xff
+	BREQ PC+0x05
 	MCALL PORT_MODE_IN
 	MCALL PORT_SET_HI
 	STD Z+_DRV_UART_S_RX_PORT,ACCUM
 	;Инициализирую порт TX
 	MOV ACCUM,TEMP_L
+	CPI ACCUM,0xff
+	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 	STD Z+_DRV_UART_S_TX_PORT,ACCUM
@@ -324,7 +326,6 @@ _DRV_UART_S_PROC__DONE:
 	POP_Y
 	RET
 
-
 ;--------------------------------------------------------
 _DRV_UART_S_EVENT:
 ;--------------------------------------------------------
@@ -340,8 +341,25 @@ _DRV_UART_S_EVENT:
 	MCALL _DRV_UART_S_SEND_EVENT
 	RJMP __DRV_UART_S_EVENT__END
 	CPI TEMP,DRV_UART_ST_RECEIVING
-	BRNE PC+0x03
+	BRNE PC+0x04
 	MCALL _DRV_UART_S_RECV_EVENT
+	RJMP __DRV_UART_S_EVENT__END
+	CPI TEMP,DRV_UART_ST_BREAK
+	BRNE __DRV_UART_S_EVENT__END
+		;Останавливаю таймер
+		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+		MCALL C5_TIMER_STOP
+		;Порт TX в HI
+		LDD ACCUM,Y+_DRV_UART_S_TX_PORT
+		MCALL PORT_SET_HI
+		;Порт направления в LO
+		LDD ACCUM,Y+_DRV_UART_S_DR_PORT
+		CPI ACCUM,0xff
+		BREQ PC+0x03
+		MCALL PORT_SET_LO
+		;Устанавливаю состояние READY
+		LDI TEMP,DRV_UART_ST_READY
+		STD Y+_DRV_UART_S_STATE,TEMP
 
 __DRV_UART_S_EVENT__END:
 	POP TEMP
@@ -383,6 +401,23 @@ _DRV_UART_S_SEND_EVENT:
 __DRV_UART_S_SEND_EVENT__NO_START:
 	CPI TEMP_H,0x0ff
 	BRNE __DRV_UART_S_SEND_EVENT__NOT_FINISH
+		;Проверяем на опцию BREAK
+		LDD TEMP,Y+_DRV_UART_S_OPTIONS
+		SBRS TEMP,DRV_UART_OPT_BREAK
+		RJMP __DRV_UART_S_SEND_EVENT__NO_BREAK
+		;Выставляем TX в низкий уровень
+		LDD ACCUM,Y+_DRV_UART_S_TX_PORT
+		MCALL PORT_SET_LO
+
+		LDI TEMP,DRV_UART_ST_BREAK
+		STD Y+_DRV_UART_S_STATE,TEMP
+		;Обновляю таймер на отсчет таймаута для посылки BREAK
+		LDD ACCUM,Y+_DRV_UART_S_NEXT_TIMEOUT
+		LSL ACCUM
+		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+		MCALL C5_TIMER_START_AT	;TODO оптимизировать
+		RJMP __DRV_UART_S_SEND_EVENT__END
+__DRV_UART_S_SEND_EVENT__NO_BREAK:
 		;Останавливаю таймер
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
 		MCALL C5_TIMER_STOP
