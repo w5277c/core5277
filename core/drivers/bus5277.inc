@@ -92,6 +92,7 @@
 	.EQU	BUS5277_FUNC_BTLDR_MODE						= 0x0d	;Перейти в режим бутлоадера
 	.EQU	BUS5277_FUNC_BTLDR_WRITE					= 0x0e	;Записать блок данных во FLASH
 	.EQU	BUS5277_FUNC_BTLDR_DONE						= 0x0f	;Выйти из режима бутлоадера
+	.EQU	BUS5277_FUNC_COMMUNICATE					= 0x10	;Быстрый аналог IFACE_OPEN/COMMUNICATE/CLOSE для BUS5277
 	;---																	;Блок комманд перезапуска устройства
 	.EQU	BUS5277_FUNC_SOFT_RESET						= 0x3c	;Перезагрузка устройства
 	.EQU	BUS5277_FUNC_RESET							= 0x3d	;Сброс устройства к первоначальным настройкам (кроме параметров соединения)

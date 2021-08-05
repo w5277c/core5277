@@ -19,10 +19,11 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
 	#pragma AVRPART MEMORY EEPROM 512
 
-	.SET	BOOT_512B_ADDR							= 0x1e00
-	.SET	BOOT_1024B_ADDR						= 0x1c00
-	.SET 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
-	.SET	EEPROM_SIZE								= 0x200
+	.EQU	BOOT_512B_ADDR							= 0x1e00
+	.EQU	BOOT_1024B_ADDR						= 0x1c00
+	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
+	.EQU	EEPROM_SIZE								= 0x200
+	.EQU	FLASH_SIZE								= 0x4000			;16K
 
 	.include "/devices/_common.inc"
 
