@@ -128,6 +128,8 @@
 	.SET	INT6_PORT								= 0xff
 	.SET	INT7_PORT								= 0xff
 
+	.DEF	C0x00										= r7				;Константа 0x00
+	.DEF	C0xff										= r8				;Константа 0xff
 	.DEF	TEMP_L									= r16				;Младший регистр общего назначения
 	.DEF	TEMP_H									= r17				;Старший регистр общего назначения
 	.DEF	TEMP										= r18				;Регистр общего назначения

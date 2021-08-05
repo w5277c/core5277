@@ -17,18 +17,11 @@
 .endif
 
 .ORG BOOT_512W_ADDR
+	.EQU	BLDR_VERSION									= 0x01	;Версия бутлоадера
 	;---
-	.SET	EEPROM_MSETS_OFFSET							= 0x08	;Смещение на основные настройки
-	;---
-	.EQU	EEPROM_RESERVED1								= 0x00	;8Б зарезервировано, первая страница, не безопасна
-	.SET	EEPROM_DEV_TYPE								= 0x08	;2B тип устройства
-	.SET	EEPROM_DEV_SERIAL								= 0x0a	;8Б серийного номера
-	.SET	EEPROM_PCB_VERSION							= 0x12	;1Б Версия PCB
-	.SET	EEPROM_FW_VERSION								= 0x13	;1Б Версия прошивки
-	.SET	EEPROM_BUS_ADDR								= 0x14	;1Б Адрес устройства на шине
 	.SET	EEPROM_BLDR_ERR_CNTR							= 0x15	;1Б Счетчик ошибок, изначально равен 64, при нуле блокируем работу загрузчика
 	.SET	EEPROM_BLDR_ENABLED							= 0x16	;1Б Признак работы бутлоадера(0x52)
-	;--адреса портоа---
+	;--адреса портов---
 	.SET	EEPROM_BLDR_TX_PORT							= 0x17	;Адрес DDR, адрес PORT и значение байта для порта TX
 	.SET	EEPROM_BLDR_RX_PORT							= 0x1a	;Адрес DDR, адрес PORT и значение байта для порта RX
 	.SET	EEPROM_BLDR_DR_PORT							= 0x1d	;Адрес DDR, адрес PORT и значение байта(0xff-не используется) для порта DR
@@ -36,19 +29,21 @@
 .ifdef EEPROM_BLDR_SECURE_DATA_SIZE
 	.EQU	EEPROM_BLDR_SECURE_DATA						= 0x20	;Смещение для опциональных данных процедуры расшифровки данных прошивки
 	.SET	EEPROM_ESETS_OFFSET							= EEPROM_BLDR_SECURE_DATA+EEPROM_BLDR_SECURE_DATA_SIZE	;Смещение доступное для нужд основной программы
-.else
-	.SET	EEPROM_ESETS_OFFSET							= 0x20	;Смещение доступное для нужд основной программы
 .endif
 
 	.EQU	_BLDR_UART_BUFFER_LEN						= 0x28	;40B - максимальная длина буфера UART
 	.EQU	_BLDR_FLASH_BUFFER							= RAMSTART+0x28;FLASH_PAGESIZE - размер буфера
+	.EQU	_BLDR_RAM_SECURE_DATA						= _BLDR_FLASH_BUFFER+FLASH_PAGESIZE
 
 	.EQU	_APPLICATION_FLASH_SIZE						= (FLASH_SIZE-1024)
 	.EQU	_BLDR_BOCKS_QNT								= _APPLICATION_FLASH_SIZE/FLASH_PAGESIZE
-	;---регистры---
-;	.DEF	B00												= r2
-;	.EQU	BUS_ADDR											= r25		;PID
-;	.EQU	ERR_CNTR											= r23		;TRY_CNTR
+
+	;---REGISTERS---
+	.DEF	DR_PORT_BN										= r6
+	.DEF	DR_PORT_PORT									= r5
+	.DEF	DR_PORT_DDR										= r4
+	.DEF	ERR_CNTR											= r23
+	.DEF	BUS_ADDR											= r25
 
 	;---BUS5277-OFFSETS---
 	.EQU	_BLDR_BUS5277_PACKET_HEADER				= 0x00	;3B - заголовок пакета
@@ -59,7 +54,7 @@
 	;---BUS5277-REQUEST-CODES---
 	.EQU	_BLDR_BUS5277_FUNC_INFO						= 0x00	;Чтение информации об устройстве
 	.EQU	_BLDR_BUS5277_FUNC_BTLDR_MODE				= 0x0d	;Перейти в режим бутлоадера
-	.EQU	_BLDR_BUS5277_FUNC_BTLDR_WRITE			= 0x0e	;Записать блока данных во флеш, передаем номер 32б блока в странице или смещение во FLASH
+	.EQU	_BLDR_BUS5277_FUNC_BTLDR_WRITE			= 0x0e	;Записать блок данных во флеш, передаем номер 32б блока в странице или смещение во FLASH
 	.EQU	_BLDR_BUS5277_FUNC_BTLDR_DONE				= 0x0f	;Выйти из режима бутлоадера
 	;---BUS5277-RESPONSE-CODES---
 	.EQU	_BLDR_BUS5277_RESP_OK						= 0x80	;Все в порядке
@@ -72,7 +67,8 @@ BLDR_START:
 ;Точка входа в загрузчик
 ;--------------------------------------------------------
 	RJMP PC+0x03
-.dw 0x5277,0xb100
+	;Признак наличия бутлоадера и его версия
+.dw 0x5277,BLDR_VERSION
 	;Инициализация стека
 	LDI TEMP,high(RAMEND)
 	STS SPH,TEMP
@@ -90,9 +86,9 @@ BLDR_UNCONDITIONAL_START:
 	CLI
 
 	LDI TEMP,0x00
-	MOV r2,TEMP
+	MOV C0x00,TEMP
 	LDI TEMP,0xff
-	MOV r3,TEMP
+	MOV C0xff,TEMP
 
 	CLR ZH
 	;TX-OUT,HI
@@ -131,48 +127,59 @@ BLDR_UNCONDITIONAL_START:
 	;DR-OUT,LO
 	LDI_X EEPROM_BLDR_DR_PORT+0x02
 	RCALL _BLDR__EEPROM_READ_BYTE
-	MOV r6,TEMP
-	CP r6,r3
+	MOV DR_PORT_BN,TEMP
+	CP DR_PORT_BN,C0xff
 	BREQ PC+0x0f
 	LDI_X EEPROM_BLDR_DR_PORT+0x01
 	RCALL _BLDR__EEPROM_READ_BYTE
 	MOV ZL,TEMP
-	MOV r5,TEMP
+	MOV DR_PORT_PORT,TEMP
 	LD TEMP,Z
-	AND TEMP,r6
+	AND TEMP,DR_PORT_BN
 	ST Z,TEMP
 	LDI_X EEPROM_BLDR_DR_PORT+0x00
 	RCALL _BLDR__EEPROM_READ_BYTE
 	MOV ZL,TEMP
-	MOV r4,TEMP
+	MOV DR_PORT_DDR,TEMP
 	LD TEMP,Z
-	OR TEMP,r6
+	OR TEMP,DR_PORT_BN
 	ST Z,TEMP
 
 	LDI_X EEPROM_BUS_ADDR
 	RCALL _BLDR__EEPROM_READ_BYTE
-	MOV r25,TEMP
+	MOV BUS_ADDR,TEMP
 
 	LDI_X EEPROM_BLDR_ERR_CNTR
 	RCALL _BLDR__EEPROM_READ_BYTE
-	MOV r23,TEMP
-	CP r23,r2
+	MOV ERR_CNTR,TEMP
+	CP ERR_CNTR,C0x00
 	BREQ PC+0x00
+
+.if EEPROM_BLDR_SECURE_DATA > 0x00
+	LDI_X EEPROM_BLDR_SECURE_DATA
+	LDI_Y _BLDR_RAM_SECURE_DATA
+	LDI_Z EEPROM_BLDR_SECURE_DATA_SIZE
+_BLDR__LOAD_SECURE_DATA:
+	RCALL _BLDR__EEPROM_READ_BYTE
+	ST Y+,TEMP
+	ADIW XL,0x01
+	SBIW ZL,0x01
+	BRNE _BLDR__LOAD_SECURE_DATA
+.endif
 
 	;Инициализация UART
 	LDI TEMP,(1<<RXC0)|(1<<TXC0)
 	STS UCSR0A,TEMP
-	STS UCSR0B,r2
+	STS UCSR0B,C0x00
 	LDI TEMP,low((1<<URSEL0)|(1<<UCSZ01)|(1<<UCSZ00))		;URSEL необходим для ATmega16, в остальных должен быть равен 0
 	STS UCSR0C,TEMP
 	LDI TEMP,51/(16/CORE_FREQ)
 	STS UBRR0L,TEMP
-	STS UBRR0H,r2
+	STS UBRR0H,C0x00
 
 _BLDR_START__RX_START:
 	;Прием UART
-	LDI TEMP,0x00
-	STS UCSR0A,TEMP
+	STS UCSR0A,C0x00
 	LDI TEMP,(1<<RXEN0)
 	STS UCSR0B,TEMP
 
@@ -206,7 +213,7 @@ _BLDR_START__RX_TIMEOUT:
 	LDI_Z RAMSTART
 	;Проверка на соответствие адреса
 	LDD TEMP,Z+_BLDR_BUS5277_PACKET_HEADER_ADDR
-	CP TEMP,r25
+	CP TEMP,BUS_ADDR
 	BRNE _BLDR_START__RX_START
 	;Проверка на соответствие длины пакета и принятых данных
 	LDD TEMP,Z+_BLDR_BUS5277_PACKET_HEADER_SIZE
@@ -227,8 +234,8 @@ _BLDR_START__RX_TIMEOUT:
 	CPI TEMP_H,_BLDR_BUS5277_FUNC_INFO
 	BRNE _BLDR_START__NOT_INFO
 
-		ST Y+,r2
-		LDI TEMP,0x04+0x10											;MAGIC(2)+TYPE(2)+SERIAL(8)+PCB_VER(1)+FW_VER(1)+BUS_ADDR(1)+ERR_CNTR(1)+_BLDR_BOCKS_QNT(1)+FLASH_PAGESIZE/8(1)
+		ST Y+,BUS_ADDR
+		LDI TEMP,0x04+0x13											;MAGIC(2)+TYPE(2)+SERIAL(8)+PCB_VER(1)+FW_VER(1)+BUS_ADDR(1)+BLDR_VERSION(1)+ERR_CNTR(1)+_BLDR_BOCKS_QNT(1)+FLASH_PAGESIZE/8(1)
 		ST Y+,TEMP
 		LDI TEMP,_BLDR_BUS5277_RESP_OK
 		ST Y+,TEMP
@@ -238,7 +245,7 @@ _BLDR_START__RX_TIMEOUT:
 		ST Y+,TEMP
 
 		LDI_X EEPROM_DEV_TYPE
-		LDI LOOP_CNTR,0x0e
+		LDI LOOP_CNTR,0x0f
 _BLDR_START__MODE_LOOP:
 		RCALL _BLDR__EEPROM_READ_BYTE
 		ST Y+,TEMP
@@ -252,7 +259,7 @@ _BLDR_START__MODE_LOOP:
 		ST Y+,TEMP
 
 		LDI_Z RAMSTART
-		LDI TEMP_L,0x03+0x12
+		LDI TEMP_L,0x03+0x13
 		RCALL _BLDR_CRC8_BLOCK
 		ST Y,ACCUM
 		INC TEMP_L
@@ -277,7 +284,7 @@ _BLDR_START__NOT_INFO:
 		BRNE PC+0x04
 		CPI TEMP_L,0x00
 		BRNE PC+0x02
-		NOP
+		NOP;TODO ????
 
 		ADIW YL,_BLDR_BUS5277_PACKET_DATA+0x02
 
@@ -299,7 +306,7 @@ _BLDR_START__WRITE_FILL_FLASH_BUFFER:
 		DEC LOOP_CNTR
 		BRNE _BLDR_START__WRITE_FILL_FLASH_BUFFER
 
-		CP TEMP_L,r2
+		CP TEMP_L,C0x00
 		BREQ _BLDR__WRITE_PAGE_TO_FLASH
 
 		LDI TEMP_H,_BLDR_BUS5277_RESP_OK
@@ -319,9 +326,9 @@ _BLDR_START__NOT_WRITE:
 _BLDR_START__DONE_LOOP:
 		LD TEMP,-Y
 		RCALL _BLDR_CRC8
-		CP YH,r2
+		CP YH,C0x00
 		BRNE _BLDR_START__DONE_LOOP
-		CP YL,r2
+		CP YL,C0x00
 		BRNE _BLDR_START__DONE_LOOP
 
 		LDI_Z RAMSTART
@@ -329,10 +336,10 @@ _BLDR_START__DONE_LOOP:
 		CP TEMP,ACCUM
 		BREQ PC+0x09
 		;CRC не совпался
-		CP r23,r2
+		CP ERR_CNTR,C0x00
 		BREQ PC+0x00
-		DEC r23
-		MOV TEMP,r23
+		DEC ERR_CNTR
+		MOV TEMP,ERR_CNTR
 		LDI_X EEPROM_BLDR_ERR_CNTR
 		RCALL _BLDR__EEPROM_WRITE_BYTE
 		RJMP _BLDR_RESP__ILLEGAL_DATA_ADDR
@@ -352,13 +359,12 @@ _BLDR_START__NOT_DONE:
 _BLDR__WRITE_PAGE_TO_FLASH:
 ;--------------------------------------------------------
 ;Блок процедуры записи страницы FLASH
-;IN: ACCUM-комер страницы
+;IN: ACCUM-номер страницы
 ;--------------------------------------------------------
 		LDI_Z _BLDR_FLASH_BUFFER
 		PUSH ACCUM
 		;Влючаем признак бутлоадера, теперь выход возможен только после полной прошивки
-		LDI XH,high(EEPROM_BLDR_ENABLED)
-		LDI XL,low(EEPROM_BLDR_ENABLED)
+		LDI_X EEPROM_BLDR_ENABLED
 		RCALL _BLDR__EEPROM_READ_BYTE
 		CPI TEMP,0x52
 		BREQ PC+0x03
@@ -366,7 +372,7 @@ _BLDR__WRITE_PAGE_TO_FLASH:
 		RCALL _BLDR__EEPROM_WRITE_BYTE
 
 .ifdef DEF_BOOTLADER_SECURE
-		LDI_X EEPROM_BLDR_SECURE_DATA
+		LDI_Y _BLDR_RAM_SECURE_DATA
 		_BLDR_SECURE
 .endif
 
@@ -430,7 +436,6 @@ _BLDR__WRITE_PAGE_TO_FLASH__RWWLOOP:
 		RJMP _BLDR__WRITE_PAGE_TO_FLASH__RWWLOOP
 
 _BLDR__WRITE_PAGE_TO_FLASH__DONE:
-
 		LDI TEMP_H,_BLDR_BUS5277_RESP_OK
 		RCALL _BLDR__MAKE_RESP
 		RJMP _BLDR_START__RX_START
@@ -442,7 +447,7 @@ _BLDR__MAKE_RESP:
 ;1 байт из ACCUM)
 ;--------------------------------------------------------
 	LDI_Y RAMSTART
-	ST Y+,r2
+	ST Y+,BUS_ADDR
 	LDI TEMP_L,0x04
 	SBRC TEMP_H,0x06
 	INC TEMP_L
@@ -461,12 +466,12 @@ _BLDR__UART_TX_START:
 ;IN:TEMP_L-длина данных
 ;--------------------------------------------------------
 	;DR TURN ON
-	CP r6,r3
+	CP DR_PORT_BN,C0xff
 	BREQ PC+0x06
 	CLR YH
-	MOV YL,r5
+	MOV YL,DR_PORT_PORT
 	LD TEMP,Y
-	OR TEMP,r6
+	OR TEMP,DR_PORT_BN
 	ST Y,TEMP
 
 	LDI TEMP,(1<<TXEN0)
@@ -488,14 +493,14 @@ _BLDR__UART_TX_STOP_WAIT:
 	SBIW YL,0x01
 	BRNE _BLDR__UART_TX_STOP_WAIT
 
-	STS UCSR0B,r2
+	STS UCSR0B,C0x00
 	;DR TURN OFF
-	CP r6,r3
+	CP DR_PORT_BN,C0xff
 	BREQ PC+0x06
 	CLR YH
-	MOV YL,r5
+	MOV YL,DR_PORT_PORT
 	LD TEMP,Y
-	AND TEMP,r6
+	AND TEMP,DR_PORT_BN
 	ST Y,TEMP
 	RET
 
@@ -524,22 +529,20 @@ _BLDR__EEPROM_WRITE_BYTE:
 ;IN: X-адрес в EEPROM
 ;OUT: TEMP-значение
 ;--------------------------------------------------------
+	PUSH ACCUM
 _BLDR__EEPROM_WRITE_BYTE__LOOP:
-	PUSH TEMP
-	LDS TEMP,EECR
-	ANDI TEMP,(1<<EEPE)
+	LDS ACCUM,EECR
+	ANDI ACCUM,(1<<EEPE)
 	BRNE _BLDR__EEPROM_WRITE_BYTE__LOOP
 	STS EEARH,TEMP_H
 	STS EEARL,TEMP_L
-	POP TEMP
-	PUSH TEMP
 	STS EEDR,TEMP
-	LDS TEMP,EECR
-	ORI TEMP,(1<<EEMPE)
-	STS EECR,TEMP
-	ORI TEMP,(1<<EEPE)
-	STS EECR,TEMP
-	POP TEMP
+	LDS ACCUM,EECR
+	ORI ACCUM,(1<<EEMPE)
+	STS EECR,ACCUM
+	ORI ACCUM,(1<<EEPE)
+	STS EECR,ACCUM
+	POP ACCUM
 	RET
 
 ;--------------------------------------------------------

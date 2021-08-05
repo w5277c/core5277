@@ -199,8 +199,6 @@
 	.DEF	_RESULT_L								= r0
 	.DEF	_RESULT_H								= r1
 	;...r2-r6 используются в диспетчере
-	.DEF	C0x00										= r7				;Константа 0x00
-	.DEF	C0xff										= r8				;Константа 0xff
 	.DEF	_C5_DISPATCHER_LOCK_CNTR			= r9				;Счетчик вложенных блокировок диспетчера
 	.DEF	_C5_DRIVER_EXEC_ZH					= r10
 	.DEF	_C5_DRIVER_EXEC_ZL					= r11
