@@ -49,6 +49,9 @@
 .endif
 
 ;---CONSTANTS--------------------------------------------
+_DRV_BUS5277_EXTRASCAN_T_REQ_DATA:								;2B - данные запроса EXTRASCAN_T
+	.db	0x80,0x8c
+
 	;---VAR-OFFSETS---
 	;---DATA-OFFSETS---
 ;	.EQU	_DRV_BUS5277_PACKET_HEADER						= 0x00;3B - заголовок пакета
@@ -57,12 +60,11 @@
 	.EQU		_DRV_BUS5277_PACKET_HEADER_CODE		= 0x02;
 
 	.EQU	_DRV_BUS5277_EXTRASCAN_T_BUFFER_ADDR	= 0x00	;2B - адрес буфера EXTRASCAN_T
-	.EQU	_DRV_BUS5277_EXTRASCAN_T_REQ_DATA		= 0x02	;2B - данные запроса EXTRASCAN_T
-	.EQU	_DRV_BUS5277_BUS_ADDR						= 0x04	;1B - адрес устройства на шине
-	.EQU	_DRV_BUS5277_UART_DRV_ID					= 0x05	;1B - ид драйвера UART
-	.EQU	_DRV_BUS5277_EXTRASCAN_TIMER				= 0x06	;1B - ид таймера для EXTRASCAN_T
-	.EQU	_DRV_BUS5277_EXTRASCAN_CNTR				= 0x07	;1B - счетчик для EXTRASCAN_T
-	.EQU	_DRV_BUS5277_FLAGS							= 0x08	;1B - флаги драйвера
+	.EQU	_DRV_BUS5277_BUS_ADDR						= 0x02	;1B - адрес устройства на шине
+	.EQU	_DRV_BUS5277_UART_DRV_ID					= 0x03	;1B - ид драйвера UART
+	.EQU	_DRV_BUS5277_EXTRASCAN_TIMER				= 0x04	;1B - ид таймера для EXTRASCAN_T
+	.EQU	_DRV_BUS5277_EXTRASCAN_CNTR				= 0x05	;1B - счетчик для EXTRASCAN_T
+	.EQU	_DRV_BUS5277_FLAGS							= 0x06	;1B - флаги драйвера
 
 	;---FLAGS---
 	.EQU	DRV_BUS5277_FLAG_HAVE_DATA					= 0x00	;Бит наличия данных
@@ -74,7 +76,7 @@
 	.EQU	DRV_BUS5277_OP_SLAVE_SEND					= 0x04	;Режим ведомого ответ на запрос
 	.EQU	DRV_BUS5277_OP_EXTRASCAN					= 0x06	;Режим EXTRASCAN - опрос адресов на наличие новых данных
 	.EQU	DRV_BUS5277_OP_EXTRASCAN_T					= 0x08	;Режим TIMING EXTRASCAN
-	.EQU	DRV_BUS5277_OP_HAVE_DATA					= 0x0a	;Устанавливаем флаг HAVE_DATA
+	.EQU	DRV_BUS5277_OP_HAVE_DATA					= 0x0a	;Управляем флагом HAVE_DATA
 	;---REQUEST-CODES---
 	.EQU	BUS5277_FUNC_INFO								= 0x00	;Чтение исномации об устройстве (0x5277 + тип, серийниый номер, версия PCB, версия FW, адрес на шине, uptime)
 	.EQU	BUS5277_FUNC_ADDR_SET						= 0x01	;Установка адреса на шине(1-126)
@@ -144,7 +146,7 @@
 	.EQU	_DRV_BUS5277_MASTER_ADDR					= 0x00	;Адрес мастера
 	.EQU	_DRV_BUS5277_EXTRASCAN_T_PERIOD			= 0x01	;Период чтения сигнала 0,000 050с
 	;---
-	.EQU	_DRV_BUS5277_RAM_SIZE						= 0x09	;
+	.EQU	_DRV_BUS5277_RAM_SIZE						= 0x07	;
 
 ;--------------------------------------------------------
 DRV_BUS5277_INIT:
@@ -173,12 +175,6 @@ DRV_BUS5277_INIT:
 	LDI TEMP_L,low(_DRV_BUS5277_EXTRASCAN_TIMER_EVENT)
 	LDI ACCUM,_DRV_BUS5277_EXTRASCAN_T_PERIOD/2+0x01
 	MCALL C5_TIMER_SET
-
-	;Формируем данные для запроса EXTRASCAN_T
-	LDI TEMP,0x80
-	STD Y+_DRV_BUS5277_EXTRASCAN_T_REQ_DATA+0x00,TEMP
-	LDI TEMP,0x8c
-	STD Y+_DRV_BUS5277_EXTRASCAN_T_REQ_DATA+0x01,TEMP
 
 	MCALL C5_READY
 ;--------------------------------------------------------
@@ -373,6 +369,7 @@ _DRV_BUS5277_PROC_EXTRASCAN_T:
 	PUSH_FT
 
 	;Режим ведущего
+
 	LDD TEMP,Y+_DRV_BUS5277_FLAGS
 	ORI TEMP,(1<<DRV_BUS5277_FLAG_MASTER)
 	STD Y+_DRV_BUS5277_FLAGS,TEMP
@@ -388,10 +385,10 @@ _DRV_BUS5277_PROC_EXTRASCAN_T:
 	LDI TEMP,0x01
 	STD Y+_DRV_BUS5277_EXTRASCAN_CNTR,TEMP
 
-	LDI_Z _DRV_BUS5277_EXTRASCAN_T_REQ_DATA
+	LDI_Z _DRV_BUS5277_EXTRASCAN_T_REQ_DATA|0x8000
 	MCALL C5_DISPATCHER_LOCK
 	PUSH YH
-	LDD TEMP,Z+_DRV_BUS5277_UART_DRV_ID
+	LDD TEMP,Y+_DRV_BUS5277_UART_DRV_ID
 	LDI TEMP_EH,0x02
 	LDI TEMP_EL,0x00
 	LDI YH,0xff
@@ -426,11 +423,13 @@ _DRV_BUS5277_PROC_EXTRASCAN_T__LOOP:
 _DRV_BUS5277_PROC_SET_HAVE_DATA:
 ;--------------------------------------------------------
 ;Устанавливаем наличие данных
-;IN: Y-выделенная память
+;IN: Y-выделенная память, ACCUM-(0x01-SET,0x00-RESET)
 ;--------------------------------------------------------
 	PUSH TEMP
 	MCALL C5_DISPATCHER_LOCK
 	LDD TEMP,Y+_DRV_BUS5277_FLAGS
+	ANDI TEMP,~(1<<DRV_BUS5277_FLAG_HAVE_DATA)
+	SBRC ACCUM,0x00
 	ORI TEMP,(1<<DRV_BUS5277_FLAG_HAVE_DATA)
 	STD Y+_DRV_BUS5277_FLAGS,TEMP
 	MCALL C5_DISPATCHER_UNLOCK
