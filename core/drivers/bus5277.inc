@@ -94,7 +94,7 @@ _DRV_BUS5277_EXTRASCAN_T_REQ_DATA:								;2B - данные запроса EXTR
 	.EQU	BUS5277_FUNC_BTLDR_MODE						= 0x0d	;Перейти в режим бутлоадера
 	.EQU	BUS5277_FUNC_BTLDR_WRITE					= 0x0e	;Записать блок данных во FLASH
 	.EQU	BUS5277_FUNC_BTLDR_DONE						= 0x0f	;Выйти из режима бутлоадера
-	.EQU	BUS5277_FUNC_COMMUNICATE					= 0x10	;Быстрый аналог IFACE_OPEN/COMMUNICATE/CLOSE для BUS5277
+	.EQU	BUS5277_FUNC_COMM								= 0x10	;Быстрый аналог IFACE_OPEN/COMMUNICATE/CLOSE для BUS5277
 	;---																	;Блок комманд перезапуска устройства
 	.EQU	BUS5277_FUNC_SOFT_RESET						= 0x3c	;Перезагрузка устройства
 	.EQU	BUS5277_FUNC_RESET							= 0x3d	;Сброс устройства к первоначальным настройкам (кроме параметров соединения)
@@ -543,6 +543,10 @@ _DRV_BUS5277_SLAVE_MAGIC_EVENT:
 	LDD TEMP,Y+_DRV_BUS5277_FLAGS
 	SBRS TEMP,DRV_BUS5277_FLAG_HAVE_DATA
 	RJMP _DRV_BUS5277_SLAVE_MAGIC_EVENT__END
+	;При 0 адресе не отвечаем
+	LDD ACCUM,Y+_DRV_BUS5277_BUS_ADDR
+	CPI ACCUM,0x00
+	BREQ _DRV_BUS5277_SLAVE_MAGIC_EVENT__END
 
 	;Признак первой отработки таймера
 	LDI TEMP,0x00
@@ -553,7 +557,6 @@ _DRV_BUS5277_SLAVE_MAGIC_EVENT:
 	LDI TEMP,TIMERS_SPEED
 	_CORRE5277_TIMERA_CORRECTOR TEMP
 	LDD TEMP,Y+_DRV_BUS5277_EXTRASCAN_TIMER
-	LDD ACCUM,Y+_DRV_BUS5277_BUS_ADDR
 	MCALL C5_TIMER_START_AT
 	STS SREG,FLAGS
 
