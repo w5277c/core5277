@@ -11,7 +11,7 @@
 .include	"./math/mul32x16.inc"
 
 ;--------------------------------------------------------
-NUMX32_TO_STR:
+NUM32_TO_STR:
 ;--------------------------------------------------------
 ;Запись 4Б числа в виде строки
 ;IN: TEMP_EH/EL/H/L-двойное слово, Z-dst адрес
@@ -31,7 +31,7 @@ NUMX32_TO_STR:
 
 	LDI_X 0x000a
 	LDI LOOP_CNTR,0x0a
-_NUMX32_TO_STR__LOOP1:
+_NUM32_TO_STR__LOOP1:
 	MOV TEMP_EH,YH
 	MOV TEMP_EL,YL
 	MOV TEMP_H,FLAGS
@@ -47,16 +47,16 @@ _NUMX32_TO_STR__LOOP1:
 	SUB TEMP_H,TEMP_L
 	PUSH TEMP_H
 	DEC LOOP_CNTR
-	BRNE _NUMX32_TO_STR__LOOP1
+	BRNE _NUM32_TO_STR__LOOP1
 
 	LDI TEMP_L,0x00
 	LDI LOOP_CNTR,0x0a
-_NUMX32_TO_STR__LOOP2:
+_NUM32_TO_STR__LOOP2:
 	POP TEMP
 	SUBI TEMP,(0x100-0x30)
 	ST Z+,TEMP
 	DEC LOOP_CNTR
-	BRNE _NUMX32_TO_STR__LOOP2
+	BRNE _NUM32_TO_STR__LOOP2
 
 	POP TRY_CNTR
 	POP FLAGS
@@ -65,5 +65,4 @@ _NUMX32_TO_STR__LOOP2:
 	POP LOOP_CNTR
 	POP_FT
 	RET
-.endif
 .endif
