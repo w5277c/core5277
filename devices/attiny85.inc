@@ -115,6 +115,10 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
 	.EQU	PRR										= 0x40
 	.EQU		PRTIM1								= 0x03
 	.EQU		PRTIM0								= 0x02
@@ -218,6 +222,17 @@
 	.EQU		EEPE									= 0x01
 	.EQU		EEWE									= EEPE
 	.EQU		EERE									= 0x00
+	;---WATCHDOG---
+	.EQU	WDTCR										= 0x41
+	.EQU		WDIF									= 0x07
+	.EQU		WDIE									= 0x06
+	.EQU		WDP3									= 0x05
+	.EQU		WDCE									= 0x04
+	.EQU		WDE									= 0x03
+	.EQU		WDP2									= 0x02
+	.EQU		WDP1									= 0x01
+	.EQU		WDP0									= 0x00
+
 	;---ADC---
 	.EQU	ADMUX										= 0x27
 	.EQU		REFS1									= 0x07
