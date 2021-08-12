@@ -51,7 +51,7 @@
 	.include "./core/ui/menu.inc"
 	.include	"./core/ui/hex32_input.inc"
 	.include "./core/ui/text_input.inc"
-	.include "./core/log/log_ramdump.inc"
+	.include "./core/io/out_ramdump.inc"
 	;---
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
@@ -144,12 +144,12 @@ TASK:
 	CPI TEMP_L,0x00
 	BREQ TASK
 	LDI TEMP,'['
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MOV TEMP,TEMP_L
 	MOV YH,ZH
 	MOV YL,ZL
-	MCALL C5_LOG_STRN
+	MCALL C5_OUT_STRN
 	LDI TEMP,']'
-	MCALL C5_LOG_CHAR
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CHAR
+	MCALL C5_OUT_CR
 	RJMP TASK

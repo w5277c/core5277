@@ -8,9 +8,9 @@
 .else
 .set DEF_C5_TEXT_INPUT = 1
 
-.include "./core/log/log_char.inc"
-.include "./core/log/log_strn.inc"
-.include "./core/log/log_cr.inc"
+.include "./core/io/out_char.inc"
+.include "./core/io/out_strn.inc"
+.include "./core/io/out_cr.inc"
 
 ;--------------------------------------------------------
 C5_TEXT_INPUT:
@@ -38,7 +38,7 @@ C5_TEXT_INPUT__MAIN_LOOP:
 	DEC LOOP_CNTR
 	MCALL _C5_TEXT_INPUT_DRAW
 	LDI TEMP,' '
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MCALL _C5_TEXT_INPUT_DRAW
 	RJMP C5_TEXT_INPUT__MAIN_LOOP
 C5_TEXT_INPUT__KEY_CHECKING_NOT_BACKSPACE:
@@ -60,7 +60,7 @@ C5_TEXT_INPUT__KEY_CHECKING_NOT_BACKSPACE:
 	MCALL _C5_TEXT_INPUT_DRAW
 	RJMP C5_TEXT_INPUT__MAIN_LOOP
 C5_TEXT_INPUT__DONE:
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CR
 	MOV TEMP,LOOP_CNTR
 
 	POP LOOP_CNTR
@@ -68,13 +68,13 @@ C5_TEXT_INPUT__DONE:
 
 _C5_TEXT_INPUT_DRAW:
 	LDI TEMP,0x0d
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,'$'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 
 	MOV TEMP,LOOP_CNTR
 	CPI TEMP,0x00
 	BREQ PC+0x03
-	MCALL C5_LOG_STRN
+	MCALL C5_OUT_STRN
 	RET
 .endif

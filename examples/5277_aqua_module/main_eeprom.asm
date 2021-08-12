@@ -25,8 +25,8 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_cr.inc"
 	.include	"./mem/eeprom_write_byte.inc"
 	.include	"./mem/eeprom_read_byte.inc"
 	;---
@@ -84,8 +84,8 @@ TASK__INFINITE_LOOP:
 	MOV TEMP_L,TEMP
 	POP TEMP_H
 
-	MCALL C5_LOG_WORD
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_WORD
+	MCALL C5_OUT_CR
 
 	RET
 

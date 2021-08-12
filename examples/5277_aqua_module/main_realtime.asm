@@ -28,13 +28,13 @@
 	.include	"./core/wait_1s.inc"
 	.include	"./core/uptime_copy.inc"
 	.include	"./core/meminfo_copy.inc"
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	.include "./io/port_mode_out.inc"
 	.include "./io/port_set_hi.inc"
 	.include "./io/port_set_lo.inc"
-	.include "./core/log/log_numx16.inc"
+	.include "./core/io/out_num16.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -145,10 +145,10 @@ UPTIME_TASK__INFINITE_LOOP:
 	MCALL C5_DISPATCHER_LOCK
 	PUSH_Y
 	LDI_Y UPTIME_TASK__STR1|0x8000
-	MCALL C5_LOG_STR
+	MCALL C5_OUT_STR
 	POP_Y
-	MCALL C5_LOG_BYTES
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_BYTES
+	MCALL C5_OUT_CR
 	MCALL C5_DISPATCHER_UNLOCK
 
 	LDI TEMP,0x01
@@ -173,19 +173,19 @@ FREEMEM_TASK__INFINITE_LOOP:
 	MCALL C5_DISPATCHER_LOCK
 	PUSH_Y
 	LDI_Y FREEMEM_TASK__STR1|0x8000
-	MCALL C5_LOG_STR
+	MCALL C5_OUT_STR
 	POP_Y
 	LDD TEMP_H,Y+0x02
 	LDD TEMP_L,Y+0x03
-	MCALL C5_LOG_NUMx16
+	MCALL C5_OUT_NUMx16
 	PUSH_Y
 	LDI_Y FREEMEM_TASK__STR2|0x8000
-	MCALL C5_LOG_STR
+	MCALL C5_OUT_STR
 	POP_Y
 	LDD TEMP_H,Y+0x00
 	LDD TEMP_L,Y+0x01
-	MCALL C5_LOG_NUMx16
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_NUMx16
+	MCALL C5_OUT_CR
 	MCALL C5_DISPATCHER_UNLOCK
 
 	LDI TEMP,0x01

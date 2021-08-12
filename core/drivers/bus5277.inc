@@ -43,9 +43,9 @@
 	.include	"./mem/rom_read_bytes.inc"
 
 .ifdef LOGGING_PORT
-	.include	"./core/log/log_cr.inc"
-	.include	"./core/log/log_char.inc"
-	.include	"./core/log/log_bytes.inc"
+	.include	"./core/io/out_cr.inc"
+	.include	"./core/io/out_char.inc"
+	.include	"./core/io/out_bytes.inc"
 .endif
 
 ;---CONSTANTS--------------------------------------------
@@ -679,13 +679,13 @@ _DRV_BUS5277__LOG_REQV:
 	SBRS TEMP,DRV_BUS5277_FLAG_LOGGING
 	RET
 	LDI TEMP,'>'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDD TEMP,Z+_DRV_BUS5277_PACKET_HEADER_SIZE
 	PUSH_Y
 	MOVW YL,ZL
-	MCALL C5_LOG_BYTES
+	MCALL C5_OUT_BYTES
 	POP_Y
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CR
 	RET
 ;--------------------------------------------------------
 _DRV_BUS5277__LOG_RESP:
@@ -696,13 +696,13 @@ _DRV_BUS5277__LOG_RESP:
 	SBRS TEMP,DRV_BUS5277_FLAG_LOGGING
 	RET
 	LDI TEMP,'<'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	PUSH_Y
 	MOVW YL,XL
 	LDD TEMP,Y+_DRV_BUS5277_PACKET_HEADER_SIZE
-	MCALL C5_LOG_BYTES
+	MCALL C5_OUT_BYTES
 	POP_Y
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CR
 	RET
 .endif
 .endif

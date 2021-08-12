@@ -23,7 +23,7 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_word.inc"
+	.include	"./core/io/out_word.inc"
 ;	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -73,7 +73,7 @@ TASK__INFINITE_LOOP:
 	LDI TEMP,PID_BUTTONS_DRV
 	LDI FLAGS,DRV_BUTTONS_OP_WAIT
 	MCALL C5_EXEC
-	MCALL C5_LOG_WORD
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_WORD
+	MCALL C5_OUT_CR
 	RJMP TASK__INFINITE_LOOP
 

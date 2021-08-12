@@ -25,10 +25,10 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_word.inc"
+	.include	"./core/io/out_word.inc"
 
 .include	"./core/wait_1s.inc"
-.include	"./core/log/log_byte.inc"
+.include	"./core/io/out_byte.inc"
 ;	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -92,8 +92,8 @@ TASK__INFINITE_LOOP:
 ;	LDI TEMP_L,0x08|(0<<0x07)										;Периодичность итераций 1/50/50/0.000050=8 (~50Гц с 50-ю выборками)
 ;	MCALL C5_EXEC
 
-	MCALL C5_LOG_WORD
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_WORD
+	MCALL C5_OUT_CR
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S

@@ -23,8 +23,8 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_cr.inc"
 	.include	"./mem/eeprom_write_byte.inc"
 	.include	"./mem/eeprom_read_byte.inc"
 	.include	"./core/wait_1s.inc"
@@ -99,6 +99,6 @@ TASK__INFINITE_LOOP:
 
 	MOV YH,ZH
 	MOV YL,ZL
-	MCALL C5_LOG_STR
+	MCALL C5_OUT_STR
 	RJMP TASK__INFINITE_LOOP
 

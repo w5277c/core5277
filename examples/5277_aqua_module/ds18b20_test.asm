@@ -6,9 +6,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/wait_1s.inc"
-.include	"./core/log/log_byte.inc"
-.include	"./core/log/log_char.inc"
-.include	"./core/log/log_sdnf.inc"
+.include	"./core/io/out_byte.inc"
+.include	"./core/io/out_char.inc"
+.include	"./core/io/out_sdnf.inc"
 
 DS18B20_TEST_INIT:
 	MCALL C5_READY
@@ -23,15 +23,15 @@ DS18B20_TEST_LOOP:
 	CPI TEMP_L,0xFF
 	BRNE DS18B20_TEST_NO_ERROR
 	LDI TEMP,'E'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,':'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MOV TEMP,TEMP_H
-	MCALL C5_LOG_BYTE
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_BYTE
+	MCALL C5_OUT_CR
 	RJMP DS18B20_TEST_LOOP
 DS18B20_TEST_NO_ERROR:
-	MCALL C5_LOG_SDNF
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_SDNF
+	MCALL C5_OUT_CR
 	RJMP DS18B20_TEST_LOOP
 

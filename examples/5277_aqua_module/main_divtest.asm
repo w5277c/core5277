@@ -25,10 +25,10 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_numx8.inc"
-	.include	"./core/log/log_numx16.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_num8.inc"
+	.include	"./core/io/out_num16.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	.include	"./math/div10.inc"
 	.include	"./math/div100.inc"
 	;---
@@ -40,7 +40,7 @@
 	;Идентификаторы таймеров
 	;---
 
-	.dw	C5_LOG_NUMx8,DIV10
+	.dw	C5_OUT_NUMx8,DIV10
 
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
@@ -79,23 +79,23 @@ TASK__INIT:
 	LDI LOOP_CNTR,0x00
 TASK__LOOP:
 	MOV TEMP,LOOP_CNTR
-	MCALL C5_LOG_NUMx8
-	C5_LOG_ROMSTR TASK__LOGSTR1
+	MCALL C5_OUT_NUMx8
+	C5_OUT_ROMSTR TASK__LOGSTR1
 	MCALL DIV10
 	MOV TEMP,TEMP_L
-	MCALL C5_LOG_NUMx8
-	C5_LOG_ROMSTR TASK__LOGSTR2
-	MCALL C5_LOG_BYTE
-	C5_LOG_ROMSTR TASK__LOGSTR3
+	MCALL C5_OUT_NUMx8
+	C5_OUT_ROMSTR TASK__LOGSTR2
+	MCALL C5_OUT_BYTE
+	C5_OUT_ROMSTR TASK__LOGSTR3
 	INC LOOP_CNTR
 	CPI LOOP_CNTR,0x00
 	BRNE TASK__LOOP
 
 	LDI TEMP_H,high(59942)
 	LDI TEMP_L,low(59942)
-	C5_LOG_ROMSTR TASK__LOGSTR4
+	C5_OUT_ROMSTR TASK__LOGSTR4
 	MCALL DIV100
-	MCALL C5_LOG_NUMx16
+	MCALL C5_OUT_NUMx16
 
 	RET
 

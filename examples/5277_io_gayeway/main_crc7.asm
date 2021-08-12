@@ -21,7 +21,7 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_byte.inc"
+	.include	"./core/io/out_byte.inc"
 	.include	"./core/ram/ram_realloc.inc"
 	.include	"./conv/crc8_block.inc"
 	.include	"./conv/crc7_730.inc"
@@ -92,6 +92,6 @@ _TASK__LOOP:
 	ORI ACCUM,0x01
 
 	MOV TEMP,ACCUM
-	MCALL C5_LOG_BYTE
+	MCALL C5_OUT_BYTE
 
 	RET

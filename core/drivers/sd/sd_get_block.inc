@@ -13,10 +13,10 @@
 .include	"./conv/crc16_block.inc"
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
-		.include	"./core/log/log_word.inc"
-		.include	"./core/log/log_char.inc"
-		.include	"./core/log/log_ramdump.inc"
-		.include	"./core/log/log_str.inc"
+		.include	"./core/io/out_word.inc"
+		.include	"./core/io/out_char.inc"
+		.include	"./core/io/out_ramdump.inc"
+		.include	"./core/io/out_str.inc"
 	.endif
 .endif
 
@@ -87,14 +87,14 @@ _DRV_SD_GET_BLOCK__DATA:
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
 		PUSH_Z
 		LDI_Z _DRV_SD_LOG_STR_BLOCK|0x8000
-		MCALL C5_LOG_STR
+		MCALL C5_OUT_STR
 		LDI TEMP,'['
-		MCALL C5_LOG_CHAR
-		MCALL C5_LOG_WORD
+		MCALL C5_OUT_CHAR
+		MCALL C5_OUT_WORD
 		LDI TEMP,']'
-		MCALL C5_LOG_CHAR
+		MCALL C5_OUT_CHAR
 		MOVW ZL,XL
-		MCALL C5_LOG_RAMDUMP
+		MCALL C5_OUT_RAMDUMP
 		POP_Z
 	.endif
 .endif

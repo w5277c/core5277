@@ -28,12 +28,12 @@
 	;---
 	;Дополнительно
 	.include	"./core/wait_1s.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_cr.inc"
 	.include "./io/input_get_char.inc"
 	.include	"./core/drivers/sd/sd_log_ocr.inc"
 	.include	"./core/drivers/sd/sd_log_cid.inc"
 	.include	"./core/drivers/sd/sd_log_csd.inc"
-	.include	"./core/log/log_ramdump.inc"
+	.include	"./core/io/out_ramdump.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -77,7 +77,7 @@ TASK__INIT:
 _TASK__LOOP:
 	MCALL INPUT_GET_CHAR
 
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CR
 
 	LDI TEMP,PID_SD_DRV
 	LDI FLAGS,DRV_SD_OP_INIT
@@ -119,7 +119,7 @@ _TASK__LOOP:
 .endif
 
 	MCALL INPUT_GET_CHAR
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 
 
 

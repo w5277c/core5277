@@ -227,15 +227,15 @@
 ; 	.MESSAGE 28800*CORE_FREQ
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
-	LOGSTR_CORE:
+	OUTSTR_CORE:
 	.db   0x0d,0x0a,"Powered by core5277 v0.3.8",0x0d,0x0a,0x00,0x00
-	.INCLUDE "./core/log/log_init.inc"
-	.INCLUDE	"./core/log/log_romstr.inc"
-	.INCLUDE	"./core/log/log_tasksdump.inc"
-	.INCLUDE "./core/log/log_corefault.inc"
+	.INCLUDE "./core/io/out_init.inc"
+	.INCLUDE	"./core/io/out_romstr.inc"
+	.INCLUDE	"./core/io/out_tasksdump.inc"
+	.INCLUDE "./core/io/out_corefault.inc"
 .ELSE
 	.MESSAGE "######## LOGGING DISABLED"
-	.INCLUDE "./core/log/log_fake.inc"
+	.INCLUDE "./core/io/out_fake.inc"
 .ENDIF
 .IFDEF INPUT_PORT
 	.MESSAGE "######## INPUT ENABLED"
@@ -478,8 +478,7 @@ _C5_TIMER_C_IR:
 	LDS YH,_C5_TIMER_C_Y+0x00
 	LDS YL,_C5_TIMER_C_Y+0x01
 .else
-	MCALL C5_RAM_OFFSET
-	MOVW YL,ZL
+	MCALL C5_RAM_OFFSET_Y
 .endif
 	LDS ZH,_C5_TIMER_C_VECTOR+0x00
 	LDS ZL,_C5_TIMER_C_VECTOR+0x01
@@ -569,10 +568,10 @@ C5_INIT:
 
 	;Инициализация логирования
 .ifdef LOGGING_PORT
-	MCALL C5_LOG_INIT
+	MCALL C5_OUT_INIT
 .endif
 .ifdef LOGGING_PORT
-	MCALL C5_LOG_TASKSDUMP
+	MCALL C5_OUT_TASKSDUMP
 .endif
 
 	;Сбрасываем флаги причины сброса
@@ -768,7 +767,7 @@ C5_START:
 ;--------------------------------------------------------
 ;Запуск ядра
 ;--------------------------------------------------------
-	C5_LOG_ROMSTR LOGSTR_CORE
+	C5_OUT_ROMSTR OUTSTR_CORE
 
 	;Запуск таймера
 	_CORRE5277_TIMERA_START
@@ -960,7 +959,7 @@ C5_READY:
 	TST TEMP_H
 	BREQ PC+0x04
 	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK
-	MCALL C5_LOG_COREFAULT
+	MCALL C5_OUT_COREFAULT
 	STD Z+_C5_TASK_STACK_SIZE,TEMP_L
 
 	;Запись временной метки
@@ -1222,7 +1221,7 @@ _C5_SUSPEND__BODY:
 	BRCS _C5_SUSPEND__CORRECT_STACK_SIZE
 _C5_SUSPEND__HUGE_STACK:
 	LDI TEMP,_C5_FAULT_HUGE_STACK
-	MJMP C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
+	MJMP C5_OUT_COREFAULT											;Стеки значения не имеют, ядро упало
 	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x01
 _C5_SUSPEND__CORRECT_STACK_SIZE:
 
@@ -1235,7 +1234,7 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	TST TEMP_EH
 	BREQ PC+0x04
 	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK2
-	MCALL C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
+	MCALL C5_OUT_COREFAULT											;Стеки значения не имеют, ядро упало
 
 	;Обновляем длину стека задачи
 	STD Z+_C5_TASK_STACK_SIZE,TEMP_EL

@@ -25,10 +25,10 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_char.inc"
-	.include	"./core/log/log_sdnf.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_char.inc"
+	.include	"./core/io/out_sdnf.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -86,26 +86,26 @@ TASK__INFINITE_LOOP:
 	BRNE TASK__ERROR
 
 	LDI TEMP,'T'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,':'
-	MCALL C5_LOG_CHAR
-	MCALL C5_LOG_SDNF
+	MCALL C5_OUT_CHAR
+	MCALL C5_OUT_SDNF
 	LDI TEMP,' '
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,'H'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,':'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MOV TEMP_H,TEMP_EH
 	MOV TEMP_L,TEMP_EL
-	MCALL C5_LOG_SDNF
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_SDNF
+	MCALL C5_OUT_CR
 	RJMP TASK__DONE
 
 TASK__ERROR:
-	C5_LOG_ROMSTR TASK__LOGSTR_ERROR
-	MCALL C5_LOG_BYTE
-	MCALL C5_LOG_CR
+	C5_OUT_ROMSTR TASK__LOGSTR_ERROR
+	MCALL C5_OUT_BYTE
+	MCALL C5_OUT_CR
 
 TASK__DONE:
 	LDI TEMP_H,BYTE3(1000/2)

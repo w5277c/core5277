@@ -11,9 +11,9 @@
 .include	"./core/time32_delta.inc"
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
-		.include	"./core/log/log_str.inc"
-		.include	"./core/log/log_str_el.inc"
-		.include	"./core/log/log_cr.inc"
+		.include	"./core/io/out_str.inc"
+		.include	"./core/io/out_str_el.inc"
+		.include	"./core/io/out_cr.inc"
 _DRV_SD_LOG_STR_DATA_RESPONSE_TOKEN:
 		.db	"Response:",0x00
 _DRV_SD_LOG_STR_DATA_RESPONSE_TOKENS:
@@ -65,14 +65,14 @@ _DRV_SD_GET_DATARESP_TOKEN2__DONE:
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
 		PUSH_Z
 		LDI_Z _DRV_SD_LOG_STR_DATA_RESPONSE_TOKEN|0x8000
-		MCALL C5_LOG_STR
+		MCALL C5_OUT_STR
 		MOV TEMP,ACCUM
 		LSR TEMP
 		LSR TEMP
 		DEC TEMP
 		LDI_Z _DRV_SD_LOG_STR_DATA_RESPONSE_TOKENS|0x8000
-		MCALL C5_LOG_STR_EL
-		MCALL C5_LOG_CR
+		MCALL C5_OUT_STR_EL
+		MCALL C5_OUT_CR
 		POP_Z
 	.endif
 .endif

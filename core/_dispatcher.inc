@@ -9,7 +9,7 @@
 .else
 .set DEF_C5_DISPATCHER = 1
 
-.include "./core/log/log_corefault.inc"
+.include "./core/io/out_corefault.inc"
 
 ;--------------------------------------------------------
 _C5_DISPATCHER_EVENT:

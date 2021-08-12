@@ -25,10 +25,10 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_char.inc"
-	.include	"./core/log/log_sdnf.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_char.inc"
+	.include	"./core/io/out_sdnf.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -89,10 +89,10 @@ TASK__INFINITE_LOOP:
 	CPI TEMP_L,0xff
 	BREQ TASK__ERROR
 
-	MCALL C5_LOG_SDNF
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_SDNF
+	MCALL C5_OUT_CR
 	RJMP TASK__INFINITE_LOOP
 
 TASK__ERROR:
-	C5_LOG_ROMSTR TASK__LOGSTR_ERROR
+	C5_OUT_ROMSTR TASK__LOGSTR_ERROR
 	RJMP TASK__INFINITE_LOOP

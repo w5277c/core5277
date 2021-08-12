@@ -23,9 +23,9 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	.include	"./core/wait_2ms.inc"
 	;---
 
@@ -95,10 +95,10 @@ TASK__INFINITE_LOOP:
 	LDI TEMP,0x08
 	MOV YH,XH
 	MOV YL,XL
-	MCALL C5_LOG_BYTES
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_BYTES
+	MCALL C5_OUT_CR
 	RJMP TASK__INFINITE_LOOP
 TASK__ERROR:
-	C5_LOG_ROMSTR TASK__LOGSTR_ERROR
+	C5_OUT_ROMSTR TASK__LOGSTR_ERROR
 	RJMP TASK__INFINITE_LOOP
 
