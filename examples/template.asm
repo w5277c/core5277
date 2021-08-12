@@ -4,6 +4,7 @@
 ;18.09.2020  w5277c@gmail.com        Первая версия шаблона
 ;11.11.2020  w5277c@gmail.com        Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
+	.SET	CORE_FREQ								= 16	;2-20Mhz
 	.INCLUDE "./devices/atmega328.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -18,7 +19,7 @@
 ;---CORE-SETTINGS----------------------------------------
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS	;25/50ns
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US	;25/50us
 	.SET	TIMERS									= 2	;0-...
 	.SET	BUFFER_SIZE								= 0x10;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
@@ -35,8 +36,8 @@
 	.include "./io/port_set_hi.inc"
 	.include "./io/port_set_lo.inc"
 	.include	"./core/wait_1s.inc"
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_romstr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_romstr.inc"
 	;---
 
 

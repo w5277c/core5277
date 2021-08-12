@@ -23,10 +23,10 @@
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
-		.include	"./core/log/log_char.inc"
-		.include	"./core/log/log_strn.inc"
+		.include	"./core/io/out_char.inc"
+		.include	"./core/io/out_strn.inc"
 		.include	"./str/strn_trim.inc"
-		.include	"/core/log/log_cr.inc"
+		.include	"./core/io/out_cr.inc"
 	.endif
 .endif
 
@@ -97,17 +97,13 @@ DRV_ESP8266_INIT:
 ;Инициализация
 ;IN: TEMP-ид драйвера UART, FLAGS-флаги
 ;--------------------------------------------------------
-	PUSH ACCUM
-
 	LDI ACCUM,_DRV_ESP8266_VARS_SIZE+_DRV_ESP8266_BUFFER_SIZE
 	MCALL C5_RAM_REALLOC
 
 	STD Z+_DRV_ESP8266_UART_DRV_ID,TEMP
 	STD Z+_DRV_ESP8266_FLAGS,FLAGS
 
-	POP ACCUM
 	MCALL C5_READY
-
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;--------------------------------------------------------
@@ -788,13 +784,13 @@ _DRV_ESP8266__LOG_REQV:
 	SBRS TEMP,DRV_ESP8266_FLAG_LOGGING
 	RET
 	LDI TEMP,'>'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MOV TEMP,TEMP_EH
 	PUSH_Y
 	MCALL STRN_TRIM
-	MCALL C5_LOG_STRN
+	MCALL C5_OUT_STRN
 	POP_Y
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CR
 	RET
 ;--------------------------------------------------------
 _DRV_ESP8266__LOG_REQV_BYTES:
@@ -805,10 +801,10 @@ _DRV_ESP8266__LOG_REQV_BYTES:
 	SBRS TEMP,DRV_ESP8266_FLAG_LOGGING
 	RET
 	LDI TEMP,'>'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MOV TEMP,TEMP_EH
-	MCALL C5_LOG_BYTES
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_BYTES
+	MCALL C5_OUT_CR
 	RET
 ;--------------------------------------------------------
 _DRV_ESP8266__LOG_RESP:
@@ -819,13 +815,13 @@ _DRV_ESP8266__LOG_RESP:
 	SBRS TEMP,DRV_ESP8266_FLAG_LOGGING
 	RET
 	LDI TEMP,'<'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MOV TEMP,TEMP_L
 	PUSH_Y
 	MCALL STRN_TRIM
-	MCALL C5_LOG_STRN
+	MCALL C5_OUT_STRN
 	POP_Y
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CR
 	RET
 .endif
 .endif

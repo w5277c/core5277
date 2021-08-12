@@ -6,7 +6,6 @@
 ;BUILD: avra  -I ../../ main.asm
 
 	.SET	CORE_FREQ								= 8	;2-20Mhz
-
 	.INCLUDE "./devices/atmega16.inc"
 	;Важные, но не обязательные параметры ядра
 	.SET	AVRA										= 1	;0-1
@@ -14,7 +13,7 @@
 	.SET	C5_DRIVERS_QNT							= 0
 	.SET	C5_TASKS_QNT							= 1
 	.SET	TIMERS									= 0	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
 	.SET	BUFFER_SIZE								= 0x0000;Размер общего буфера (буфер для SD)
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_PNC
@@ -28,8 +27,8 @@
 	;---
 	;Дополнительно
 	.include	"./core/wait_1s.inc"
-	.include	"./core/log/log_cr.inc"
-	.include	"./core/log/log_ramdump.inc"
+	.include	"./core/io/out_cr.inc"
+	.include	"./core/io/out_ramdump.inc"
 	.include "./io/input_get.inc"
 	.include	"./core/ram/ram_realloc.inc"
 	.include	"./prim/common.inc"
@@ -38,7 +37,7 @@
 	.include	"./prim/prim_cp.inc"
 	.include	"./prim/prim_cpi.inc"
 	.include	"./prim/prim_mov.inc"
-	.include	"./core/log/log_prim.inc"
+	.include	"./core/io/out_prim.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -84,53 +83,53 @@ TASK__INIT:
 _TASK__LOOP:
 
 	LDI TEMP,'A'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,':'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MCALL INPUT_WAIT_CHAR
-	MCALL C5_LOG_BYTE
+	MCALL C5_OUT_BYTE
 	PUSH TEMP
 	LDI TEMP,'['
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	POP TEMP
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,']'
-	MCALL C5_LOG_CHAR
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CHAR
+	MCALL C5_OUT_CR
 
 
 	LDI TEMP,'B'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,':'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MCALL INPUT_WAIT_CHAR
-	MCALL C5_LOG_BYTE
+	MCALL C5_OUT_BYTE
 	PUSH TEMP
 	LDI TEMP,'['
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	POP TEMP
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,']'
-	MCALL C5_LOG_CHAR
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_CHAR
+	MCALL C5_OUT_CR
 
 
 	LDI TEMP,'L'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,':'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	MCALL INPUT_LISTEN
 L1:
 	MCALL INPUT_GET_CHAR
 	CPI TEMP,0x00
 	BREQ L1
-	MCALL C5_LOG_BYTE
+	MCALL C5_OUT_BYTE
 	PUSH TEMP
 	LDI TEMP,'['
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	POP TEMP
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	LDI TEMP,']'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	RJMP L1
 

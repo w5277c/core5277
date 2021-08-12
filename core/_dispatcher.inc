@@ -9,13 +9,14 @@
 .else
 .set DEF_C5_DISPATCHER = 1
 
-.include "./core/log/log_corefault.inc"
+.include "./core/io/out_corefault.inc"
 
 ;--------------------------------------------------------
 _C5_DISPATCHER_EVENT:
 ;--------------------------------------------------------
 ;Очередная итерация диспетчера
 ;--------------------------------------------------------
+	SEI
 	PUSH ZH
 	PUSH ZL
 	PUSH LOOP_CNTR
@@ -140,13 +141,7 @@ _C5_DISPATCHER_EVENT__UNLOCKED:
 	POP r5																;вызов _C5_DISPATCHER_EVENT
 	POP r5																;SREG
 	POP r6																;TEMP
-	POP r7																;ICALL
-	POP r8																;ICALL
-
-	;Восстанавливаю стек задачи
-	;В r7,r8 храниться адрес возврата на задачу, возвращаем ее обратно в стек
-	PUSH r8
-	PUSH r7
+	;Следующие два байта - ICALL, оставляем их в стеке
 
 	;Помещаю в стек регистры задачи
 	PUSH r16

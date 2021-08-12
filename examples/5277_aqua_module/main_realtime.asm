@@ -1,19 +1,22 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;31.10.2020  w5277c@gmail.com			Начало
-;30.01.2021  w5277c@gmail.com			Тест, отработано корректно.
+;31.10.2020	w5277c@gmail.com			Начало
+;30.01.2021	w5277c@gmail.com			Тест, отработано корректно.
+;03.07.2021	w5277c@gmail.com			Z->Y, отработано корректно.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	TIMER_C_ENABLE							= 0	;0-1
+	.INCLUDE "./devices/atmega328.inc"
+	.SET	TS_MODE									= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
+	.SET	OPT_MODE									= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
 	.SET	AVRA										= 1	;0-1
-	.SET	REALTIME									= 1	;0-1
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
 	.SET	TIMERS									= 1	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
-	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+	.SET	LOGGING_PORT							= SCK	;PA0-PC7
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -25,12 +28,13 @@
 	.include	"./core/wait_1s.inc"
 	.include	"./core/uptime_copy.inc"
 	.include	"./core/meminfo_copy.inc"
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	.include "./io/port_mode_out.inc"
 	.include "./io/port_set_hi.inc"
 	.include "./io/port_set_lo.inc"
+	.include "./core/io/out_num16.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -60,36 +64,30 @@ MAIN:
 
 	;Инициализация BEEPER
 	LDI PID,PID_BEEPER_DRV
-	LDI ZH,high(DRV_BEEPER_INIT)
-	LDI ZL,low(DRV_BEEPER_INIT)
+	LDI_Z DRV_BEEPER_INIT
 	LDI ACCUM,PD7
 	LDI FLAGS,TID_BEEPER
 	MCALL C5_CREATE
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_BEEPER_TASK
-	LDI ZH,high(BEEPER_TASK__INIT)
-	LDI ZL,low(BEEPER_TASK__INIT)
+	LDI_Z BEEPER_TASK__INIT
 	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_LED_TASK
-	LDI ZH,high(LED_TASK__INIT)
-	LDI ZL,low(LED_TASK__INIT)
+	LDI_Z LED_TASK__INIT
 	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_UPTIME_TASK
-	LDI ZH,high(UPTIME_TASK__INIT)
-	LDI ZL,low(UPTIME_TASK__INIT)
+	LDI_Z UPTIME_TASK__INIT
 	MCALL C5_CREATE
 	;Инициализация задачи тестирования
 	LDI PID,PID_FREEMEM_TASK
-	LDI ZH,high(FREEMEM_TASK__INIT)
-	LDI ZL,low(FREEMEM_TASK__INIT)
+	LDI_Z FREEMEM_TASK__INIT
 	MCALL C5_CREATE
 
 	LDI PID,PID_TIMER_TASK
-	LDI ZH,high(TIMER_TASK__INIT)
-	LDI ZL,low(TIMER_TASK__INIT)
+	LDI_Z TIMER_TASK__INIT
 	LDI TEMP_H,BYTE3(5000/2)
 	LDI TEMP_L,BYTE2(5000/2)
 	LDI TEMP,BYTE1(5000/2)
@@ -99,20 +97,17 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 	BEEPER_TASK__DATA:
-	.db N16T,C3,D3,D3d,C3,D3,D3d,D3d,F3,G3,D3d,F3,G3,F3,G3,A3,F3,G3,A3,G3d,A3d,C4,G3d,A3d,C4,C4,P,C4,C4,C4,C4,E
-	;.db N4,D0,D1,D2,D3,D4,E
-	;.db N8,C4,C4d,D4,D4d,E4,E4d,F4,F4d,G4,G4d,A4,A4d,H4,H4d,C5,C5d,D5,D5d,E5,E5d,F5,F5d,G5,G5d,A5,A5d,H5,H5d,E
+	.db N64T,C5,D5,E5,F5,G5,A5,H5,E,0x00
 
 BEEPER_TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 BEEPER_TASK__INFINITE_LOOP:
-	LDI YH,high(BEEPER_TASK__DATA)|0x80							;Вызываем процедуру драйвера (данные мелодии берем из ROM)
-	LDI YL,low(BEEPER_TASK__DATA)
 	LDI TEMP,PID_BEEPER_DRV
+	LDI_Z BEEPER_TASK__DATA|0x8000								;Вызываем процедуру драйвера (данные мелодии берем из ROM)
 	MCALL C5_EXEC
 
-	LDI TEMP,0x01														;Пауза в 5 сеунд
+	LDI TEMP,0x05														;Пауза в 5 сеунд
 	MCALL C5_WAIT_1S
 	RJMP BEEPER_TASK__INFINITE_LOOP
 
@@ -123,25 +118,20 @@ LED_TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 LED_TASK__INFINITE_LOOP:
-	LDI ACCUM,PD4
-	MCALL PORT_SET_LO
-
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	LDI TEMP,0x32
 	MCALL C5_WAIT_2MS
 
 	LDI ACCUM,PD4
-	MCALL PORT_SET_HI
-
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
-	LDI TEMP,0x32
-	MCALL C5_WAIT_2MS
+	MCALL PORT_INVERT
 
 	RJMP LED_TASK__INFINITE_LOOP
 
 ;--------------------------------------------------------;Задача
+	UPTIME_TASK__STR1:
+	.db "UPTIME[2ms]:0x",0x00,0x00
+
 UPTIME_TASK__INIT:
 	LDI ACCUM,0x05
 	MCALL C5_RAM_REALLOC
@@ -152,36 +142,54 @@ UPTIME_TASK__INIT:
 UPTIME_TASK__INFINITE_LOOP:
 	MCALL C5_UPTIME_COPY
 	LDI TEMP,0x05
-	MCALL C5_LOG_BYTES
-	MCALL C5_LOG_CR
+	MCALL C5_DISPATCHER_LOCK
+	PUSH_Y
+	LDI_Y UPTIME_TASK__STR1|0x8000
+	MCALL C5_OUT_STR
+	POP_Y
+	MCALL C5_OUT_BYTES
+	MCALL C5_OUT_CR
+	MCALL C5_DISPATCHER_UNLOCK
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
-
 	RJMP UPTIME_TASK__INFINITE_LOOP
 
 ;--------------------------------------------------------;Задача
+	FREEMEM_TASK__STR1:
+	.db "MEM. TOTAL:",0x00
+	FREEMEM_TASK__STR2:
+	.db " FREE:",0x00,0x00
+
 FREEMEM_TASK__INIT:
-	LDI ACCUM,0x05
+	LDI ACCUM,0x04
 	MCALL C5_RAM_REALLOC
+	MOV YH,ZH
+	MOV YL,ZL
 	MCALL C5_READY
 ;--------------------------------------------------------
 FREEMEM_TASK__INFINITE_LOOP:
-	MOV YH,ZH
-	MOV YL,ZL
 	MCALL C5_MEMINFO_COPY
-	LDI TEMP,0x02
-	MCALL C5_LOG_BYTES
-	LDI TEMP,'/'
-	MCALL C5_LOG_CHAR
-	ADIW YL,0x02
-	LDI TEMP,0x02
-	MCALL C5_LOG_BYTES
-	MCALL C5_LOG_CR
+	MCALL C5_DISPATCHER_LOCK
+	PUSH_Y
+	LDI_Y FREEMEM_TASK__STR1|0x8000
+	MCALL C5_OUT_STR
+	POP_Y
+	LDD TEMP_H,Y+0x02
+	LDD TEMP_L,Y+0x03
+	MCALL C5_OUT_NUMx16
+	PUSH_Y
+	LDI_Y FREEMEM_TASK__STR2|0x8000
+	MCALL C5_OUT_STR
+	POP_Y
+	LDD TEMP_H,Y+0x00
+	LDD TEMP_L,Y+0x01
+	MCALL C5_OUT_NUMx16
+	MCALL C5_OUT_CR
+	MCALL C5_DISPATCHER_UNLOCK
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
-
 	RJMP FREEMEM_TASK__INFINITE_LOOP
 
 ;--------------------------------------------------------;Задача
@@ -196,8 +204,6 @@ TIMER_TASK__INFINITE_LOOP:
 	LDI TEMP,0x02
 	MCALL C5_WAIT_1S
 
-
 	;Выполняем SUSPEND с переходом на начало для следующей итерации или просто делаем RET
 	MCALL C5_SUSPEND
 	RJMP TIMER_TASK__INFINITE_LOOP
-

@@ -5,12 +5,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega16.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega16.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_25US
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 
@@ -25,9 +25,9 @@
 	.include "./io/port_set_hi.inc"
 	.include "./io/port_set_lo.inc"
 	.include	"./core/wait_1s.inc"
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	.include	"./core/uptime_copy.inc"
 	.include	"./core/meminfo_copy.inc"
 	;---
@@ -142,8 +142,8 @@ UPTIME_TASK__INIT:
 UPTIME_TASK__INFINITE_LOOP:
 	MCALL C5_UPTIME_COPY
 	LDI TEMP,0x05
-	MCALL C5_LOG_BYTES
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_BYTES
+	MCALL C5_OUT_CR
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
@@ -161,13 +161,13 @@ FREEMEM_TASK__INFINITE_LOOP:
 	MOV YL,ZL
 	MCALL C5_MEMINFO_COPY
 	LDI TEMP,0x02
-	MCALL C5_LOG_BYTES
+	MCALL C5_OUT_BYTES
 	LDI TEMP,'/'
-	MCALL C5_LOG_CHAR
+	MCALL C5_OUT_CHAR
 	ADIW YL,0x02
 	LDI TEMP,0x02
-	MCALL C5_LOG_BYTES
-	CALL C5_LOG_CR
+	MCALL C5_OUT_BYTES
+	CALL C5_OUT_CR
 
 	LDI TEMP,0x01
 	MCALL C5_WAIT_1S

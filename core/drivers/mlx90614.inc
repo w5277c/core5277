@@ -1,8 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;17.06.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;17.06.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/ram/ram_offset.inc"
@@ -27,35 +28,33 @@ _DRV_MLX90614_DATAPCKET:
 DRV_MLX90614_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM - ид драйвера i2c
+;IN: ACCUM-ид драйвера i2c
 ;--------------------------------------------------------
 	PUSH ACCUM
 	LDI ACCUM,_DRV_MLX96014_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	POP ACCUM
-	STD Z+_DRV_MLX90614_I2C_DRV,ACCUM
+	STD Y+_DRV_MLX90614_I2C_DRV,ACCUM
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, работа с датчиком
-;OUT: Z - температура объекта,
-;Флаг Z - результат(true = успешно)
+;OUT: X-температура объекта,
+;Флаг Z-результат(true = успешно)
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP_EL
-	PUSH_X
 	PUSH_Y
+	PUSH_Z
 
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 
-	LDD TEMP,Z+_DRV_MLX90614_I2C_DRV
-	LDI YH,high(_DRV_MLX90614_DATAPCKET)|0x80
-	LDI YL,low(_DRV_MLX90614_DATAPCKET)
-	MOV XH,ZH
-	MOV XL,ZL
+	LDD TEMP,Y+_DRV_MLX90614_I2C_DRV
+	LDI_Z _DRV_MLX90614_DATAPCKET|0x8000
+	MOVW XL,YL
 	LDI TEMP_H,_DRV_MLX90614_SEND_LEN
 	LDI TEMP_L,_DRV_MLX90614_RECV_LEN
 	LDI ACCUM,_DRV_MLX90614_I2C_ADDR
@@ -63,9 +62,8 @@ DRV_MLX90614_INIT:
 	CPI TEMP,DRV_I2C_STATE_OK
 	BRNE _DRV_MLX90614__ERROR
 
-
-	LDD TEMP_H,Z+_DRV_MLX90614_RESULT+0x01
-	LDD TEMP_L,Z+_DRV_MLX90614_RESULT+0x00
+	LDD TEMP_H,Y+_DRV_MLX90614_RESULT+0x01
+	LDD TEMP_L,Y+_DRV_MLX90614_RESULT+0x00
 	LDI TEMP,0x02
 	MCALL MUL16X8
 	SUBI TEMP_L,low(_DRV_MLX90614_K)
@@ -73,20 +71,20 @@ DRV_MLX90614_INIT:
 	MOV ACCUM,TEMP_L
 	LDI TEMP,100
 	MCALL DIV16X8
-	MOV ZH,TEMP_L
+	MOV XH,TEMP_L
 	CLR TEMP_H
 	LDI TEMP,100
 	MCALL MUL16X8
-	MOV ZL,ACCUM
-	SUB ZL,TEMP_L
+	MOV XL,ACCUM
+	SUB XL,TEMP_L
 	SEZ
 	RJMP _DRV_MLX90614__END
 _DRV_MLX90614__ERROR:
 
 	CLZ
 _DRV_MLX90614__END:
+	POP_Z
 	POP_Y
-	POP_X
 	POP TEMP_EL
 	POP TEMP_L
 	POP TEMP_H

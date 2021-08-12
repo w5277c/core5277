@@ -6,12 +6,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 1	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC0	;PA0-PC7
 
@@ -23,8 +23,8 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_cr.inc"
 	.include	"./mem/eeprom_write_byte.inc"
 	.include	"./mem/eeprom_read_byte.inc"
 	.include	"./core/wait_1s.inc"
@@ -99,6 +99,6 @@ TASK__INFINITE_LOOP:
 
 	MOV YH,ZH
 	MOV YL,ZL
-	MCALL C5_LOG_STR
+	MCALL C5_OUT_STR
 	RJMP TASK__INFINITE_LOOP
 

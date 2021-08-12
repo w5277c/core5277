@@ -6,14 +6,17 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.SET	TIMER_C_ENABLE							= 0	;0-1
+	.INCLUDE "./devices/atmega328.inc"
+
+	.SET	TS_MODE									= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
+	.SET	OPT_MODE									= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
 	.SET	AVRA										= 1	;0-1
-	.SET	REALTIME									= 0	;0-1
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
 	.SET	TIMERS									= 0	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
-	.SET	LOGGING_PORT							= PC0	;PA0-PC7
+	.SET	LOGGING_PORT							= SCK	;PA0-PC7
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -22,8 +25,8 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_bytes.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_bytes.inc"
+	.include	"./core/io/out_cr.inc"
 	.include	"./mem/eeprom_write_byte.inc"
 	.include	"./mem/eeprom_read_byte.inc"
 	;---
@@ -81,8 +84,8 @@ TASK__INFINITE_LOOP:
 	MOV TEMP_L,TEMP
 	POP TEMP_H
 
-	MCALL C5_LOG_WORD
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_WORD
+	MCALL C5_OUT_CR
 
 	RET
 

@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;28.05.2020  w5277c@gmail.com			Начало
-;01.08.2020  w5277c@gmail.com			Разбиение на файлы
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;06.02.2021  w5277c@gmail.com			Проверка на отсутствие драйверов
+;28.05.2020	w5277c@gmail.com			Начало
+;01.08.2020	w5277c@gmail.com			Разбиение на файлы
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;06.02.2021	w5277c@gmail.com			Проверка на отсутствие драйверов
+;03.07.2021	w5277c@gmail.com			Оптимизация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_RAM_FIND_USED_BLOCK_MT
 .else
@@ -15,9 +16,9 @@ _C5_RAM_FIND_USED_BLOCK_MT:
 ;--------------------------------------------------------
 ;Ищем ближайший занятый блок выделяемой памяти в задачах,
 ;адрес которого будет больше, чем указанный адрес
-;IN: Y - адрес текущего блока
-;OUT: Y - адрес найденного блока, ACCUM - длина блока,
-;flag Z - результат(true-найдено)
+;IN: Y-адрес текущего блока
+;OUT: Y-адрес найденного блока, ACCUM-длина блока,
+;flag Z-результат(true-найдено)
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Z
@@ -26,33 +27,24 @@ _C5_RAM_FIND_USED_BLOCK_MT:
 	PUSH TEMP
 	PUSH LOOP_CNTR
 
-	LDI XH,0xff
-	LDI XL,0xff
+	LDI_X 0xffff
 
 .IF	0x00 != C5_DRIVERS_QNT
 	LDI LOOP_CNTR,0x00
-	LDI ZH,high(_C5_DRIVERS_HEADER)
-	LDI ZL,low(_C5_DRIVERS_HEADER)
+	LDI_Z _C5_DRIVERS_HEADER
 _C5_RAM_FIND_USED_BLOCK_MT__LOOP1:
 	MCALL _C5_RAM_FIND_USED_BLOCK_MT__BODY
-	LDI TEMP,_C5_DRIVER_HEADER_SIZE
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_C5_DRIVER_HEADER_SIZE
 	INC LOOP_CNTR
 	CPI LOOP_CNTR,C5_DRIVERS_QNT
 	BRNE _C5_RAM_FIND_USED_BLOCK_MT__LOOP1
 .ENDIF
 
 	LDI LOOP_CNTR,0x00
-	LDI ZH,high(_C5_TASKS_HEADER)
-	LDI ZL,low(_C5_TASKS_HEADER)
+	LDI_Z _C5_TASKS_HEADER
 _C5_RAM_FIND_USED_BLOCK_MT__LOOP2:
 	MCALL _C5_RAM_FIND_USED_BLOCK_MT__BODY
-	LDI TEMP,_C5_TASK_HEADER_SIZE
-	ADD ZL,TEMP
-	LDI TEMP,0x00
-	ADC ZH,TEMP
+	ADIW ZL,_C5_TASK_HEADER_SIZE
 	INC LOOP_CNTR
 	CPI LOOP_CNTR,C5_TASKS_QNT
 	BRNE _C5_RAM_FIND_USED_BLOCK_MT__LOOP2
@@ -64,8 +56,7 @@ _C5_RAM_FIND_USED_BLOCK_MT__LOOP2:
 	CLZ
 	RJMP _C5_RAM_FIND_USED_BLOCK_MT__END
 _C5_RAM_FIND_USED_BLOCK_MT__OK:
-	MOV YH,XH
-	MOV YL,XL
+	MOVW YL,XL
 	SEZ
 _C5_RAM_FIND_USED_BLOCK_MT__END:
 	POP LOOP_CNTR

@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <PropertyGroup>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>7.0</ProjectVersion>
+    <ToolchainName>com.Atmel.AVRAssembler</ToolchainName>
+    <ProjectGuid>59B1D629-9DCC-43ed-A0FD-8AB0E4D622AB</ProjectGuid>
+    <avrdeviceseries>none</avrdeviceseries>
+    <avrdevice>ATmega328P</avrdevice>
+    <OutputFileName>$(MSBuildProjectName)</OutputFileName>
+    <OutputFileExtension>.obj</OutputFileExtension>
+    <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
+    <Language>ASSEMBLY</Language>
+    <AssemblyName>5277_aqua_module</AssemblyName>
+    <Name>5277_aqua_module</Name>
+    <RootNamespace>5277_aqua_module</RootNamespace>
+    <ToolchainFlavour>Native</ToolchainFlavour>
+    <EntryFile>$(MSBuildProjectDirectory)\main_beeper.asm</EntryFile>
+    <KeepTimersRunning>false</KeepTimersRunning>
+    <OverrideVtor>false</OverrideVtor>
+    <CacheFlash>true</CacheFlash>
+    <ProgFlashFromRam>true</ProgFlashFromRam>
+    <RamSnippetAddress>0x20000000</RamSnippetAddress>
+    <UncachedRange />
+    <preserveEEPROM>true</preserveEEPROM>
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
+    <BootSegment>2</BootSegment>
+    <ResetRule>0</ResetRule>
+    <eraseonlaunchrule>1</eraseonlaunchrule>
+    <EraseKey />
+    <avrtool>com.atmel.avrdbg.tool.jtagicemkii</avrtool>
+    <avrtoolserialnumber>070000004696</avrtoolserialnumber>
+    <avrdeviceexpectedsignature>0x1E950F</avrdeviceexpectedsignature>
+    <com_atmel_avrdbg_tool_jtagicemkii>
+      <ToolOptions>
+        <InterfaceProperties>
+        </InterfaceProperties>
+        <InterfaceName>debugWIRE</InterfaceName>
+      </ToolOptions>
+      <ToolType>com.atmel.avrdbg.tool.jtagicemkii</ToolType>
+      <ToolNumber>070000004696</ToolNumber>
+      <ToolName>JTAGICE mkII</ToolName>
+    </com_atmel_avrdbg_tool_jtagicemkii>
+    <avrtoolinterface>debugWIRE</avrtoolinterface>
+    <UseGdb>False</UseGdb>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <ToolchainSettings>
+      <AvrAssembler>
+        <avrasm.assembler.general.WrapRelativeJumps>True</avrasm.assembler.general.WrapRelativeJumps>
+        <avrasm.assembler.general.AdditionalIncludeDirectories>
+          <ListValues>
+            <Value>C:\repos\w5277c\core5277</Value>
+          </ListValues>
+        </avrasm.assembler.general.AdditionalIncludeDirectories>
+        <avrasm.assembler.general.IncludeFile />
+      </AvrAssembler>
+    </ToolchainSettings>
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <ToolchainSettings>
+      <AvrAssembler>
+        <avrasm.assembler.general.GenerateMAPFile>False</avrasm.assembler.general.GenerateMAPFile>
+        <avrasm.assembler.general.GenerateLSSFile>False</avrasm.assembler.general.GenerateLSSFile>
+        <avrasm.assembler.general.WrapRelativeJumps>True</avrasm.assembler.general.WrapRelativeJumps>
+        <avrasm.assembler.general.AdditionalIncludeDirectories>
+          <ListValues>
+            <Value>../../..</Value>
+          </ListValues>
+        </avrasm.assembler.general.AdditionalIncludeDirectories>
+        <avrasm.assembler.general.IncludeFile />
+      </AvrAssembler>
+    </ToolchainSettings>
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="main_adc.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_am2301.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_beeper.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_blink.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_buttons.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_divtest.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_ds18b20.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_ds1990a.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_eeprom.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_mlx90614.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_realtime.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_uart.asm">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Assembler.targets" />
+</Project>

@@ -1,9 +1,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;24.01.2021  w5277c@gmail.com			Начало
-;12.02.2021  w5277c@gmail.com			Исправлены явные косяки
-;26.02.2021  w5277c@gmail.com			EIMSK,EIFR!
+;24.01.2021	w5277c@gmail.com			Начало
+;12.02.2021	w5277c@gmail.com			Исправлены явные косяки
+;26.02.2021	w5277c@gmail.com			EIMSK,EIFR!
+;20.06.2021	w5277c@gmail.com			Устранено ложное срабатывание при вклчючении
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_EINT_ENABLE
 .else
@@ -83,12 +84,12 @@ _C5_EINT_ENABLE__ISC_SET_SKIP:
 	CLR ACCUM
 	ADC ZH,ACCUM
 	LPM ACCUM,Z
-	LDS TEMP,EIMSK
-	OR TEMP,ACCUM
-	STS EIMSK,TEMP
 	LDS TEMP,EIFR
 	OR TEMP,ACCUM
 	STS EIFR,TEMP
+	LDS TEMP,EIMSK
+	OR TEMP,ACCUM
+	STS EIMSK,TEMP
 
 	POP_Z
 	POP LOOP_CNTR

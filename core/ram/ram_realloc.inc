@@ -1,9 +1,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;28.05.2020  w5277c@gmail.com			Начало
-;01.08.2020  w5277c@gmail.com			Разбиение на файлы
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
+;28.05.2020	w5277c@gmail.com			Начало
+;01.08.2020	w5277c@gmail.com			Разбиение на файлы
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_RAM_REALLOC
 .else
@@ -20,12 +21,12 @@
 C5_RAM_REALLOC:
 ;--------------------------------------------------------
 ;Перевыделяем память(в том числе освобождаем)
-;IN: PID, ACCUM - общий размер памяти
-;OUT: Z - адрес на выделенную часть
-;flag Z(false - error,owerflow)
+;IN: PID, ACCUM-общий размер памяти
+;OUT: Y-адрес на выделенную часть
+;flag Z(false-error,owerflow)
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH_Y
+	PUSH_Z
 	PUSH ACCUM
 	PUSH TEMP
 	MCALL C5_DISPATCHER_LOCK
@@ -48,8 +49,7 @@ _C5_RAM_REALLOC__EP2:
 	BRNE _C5_RAM_REALLOC__ERROR
 
 	;Проверяем, нужно ли обновлять вершину выделяемой памяти
-	MOV XH,YH
-	MOV XL,YL
+	MOVW XL,YL
 	ADD XL,ACCUM
 	LDI ACCUM,0x00
 	ADC XH,ACCUM
@@ -83,12 +83,10 @@ _C5_RAM_REALLOC__SUCCESS:
 _C5_RAM_REALLOC__ERROR:
 	CLZ
 _C5_RAM_REALLOC__END:
-	MOV ZH,YH
-	MOV ZL,YL
 	MCALL C5_DISPATCHER_UNLOCK
 	POP TEMP
 	POP ACCUM
-	POP_Y
+	POP_Z
 	POP_X
 	RET
 .endif

@@ -1,11 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;05.03.2020  w5277c@gmail.com			Начало
-;01.08.2020  w5277c@gmail.com			Разбиение на файлы
-;03.10.2020  w5277c@gmail.com			Атомарность
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;05.12.2020  w5277c@gmail.com			-с5
+;05.03.2020	w5277c@gmail.com			Начало
+;01.08.2020	w5277c@gmail.com			Разбиение на файлы
+;03.10.2020	w5277c@gmail.com			Атомарность
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;05.12.2020	w5277c@gmail.com			-с5
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_SET_LO
 .else
@@ -24,27 +24,25 @@ PORT_SET_LO:
 ;IN: ACCUM - порт
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH TEMP_H
-	PUSH TEMP_L
+	PUSH_THL
 	PUSH TEMP
 	PUSH ACCUM
 
 	MCALL PORT_OFFSETS
-	CLR ZH
+	MOV ZH,C0x00
 	MOV ZL,TEMP_H
 
+	COM ACCUM
 	LDS TEMP_L,SREG
 	CLI
 	LD TEMP,Z
-	COM ACCUM
 	AND TEMP,ACCUM
 	ST Z,TEMP
 	STS SREG,TEMP_L
 
 	POP ACCUM
 	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
+	POP_THL
 	POP_Z
 	RET
 .endif

@@ -6,12 +6,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega16.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega16.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 1	;0-1
 	.SET	TIMERS									= 1	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_25NS
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_25US
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PB0	;PA0-PC7
 
@@ -23,9 +23,9 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_sdnf.inc"
-	.include	"./core/log/log_romstr.inc"
-	.include	"./core/log/log_cr.inc"
+	.include	"./core/io/out_sdnf.inc"
+	.include	"./core/io/out_romstr.inc"
+	.include	"./core/io/out_cr.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -89,7 +89,7 @@ TASK__INFINITE_LOOP:
 
 	MOV TEMP_H,ZH
 	MOV TEMP_L,ZL
-	MCALL C5_LOG_SDNF
-	MCALL C5_LOG_CR
+	MCALL C5_OUT_SDNF
+	MCALL C5_OUT_CR
 	RJMP TASK__INFINITE_LOOP
 

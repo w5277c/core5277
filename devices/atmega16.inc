@@ -1,11 +1,13 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;02.05.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;19.01.2021  w5277c@gmail.com			Обновлен блок EEPROM
-;21.01.2021  w5277c@gmail.com			Дбавлены порты для инструкций SBI,CBI...
+;02.05.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;19.01.2021	w5277c@gmail.com			Обновлен блок EEPROM
+;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
+;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO обновить из atmega328
 
 ;---DESCRIPTION------------------------------------------
 ;core5277 for ATMega16 (16Kb ROM, 512b EEPROM, 1Kb SRAM) at 16MHz (LITTLE ENDIAN)
@@ -26,7 +28,7 @@
 	.SET 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
 	.SET	EEPROM_SIZE								= 0x200
 
-	#include "/devices/_common.inc"
+	.include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA16
@@ -43,6 +45,7 @@
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x045f
+	.SET	INPUT_BUFFER_SIZE						= 0x40			;Размер буфера ввода (не менее 2)
 
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
@@ -110,6 +113,15 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR;
+	;--FAKE-PRR---
+	.EQU	PRR										= 0xff
+	.EQU		PRTWI									= 0x00
+	.EQU		PRTIM2								= 0x00
+	.EQU		PRTIM0								= 0x00
+	.EQU		PRTIM1								= 0x00
+	.EQU		PRSPI									= 0x00
+	.EQU		PRUSART0								= 0x00
+	.EQU		PRADC									= 0x00
 	;---TWI---
 	.EQU	TWCR										= 0x56
 	.EQU	TWDR										= 0x23
@@ -127,7 +139,7 @@
 	.EQU	TWPS0										= 0x00
 	.EQU	TWPS1										= 0x01
 	;---TIMERS---
-	.EQU	TIMSK1									= 0x59
+	.EQU	TIMSK										= 0x59
 	.EQU	TCCR1A									= 0x4f
 	.EQU	TCCR1B									= 0x4e
 	.EQU	TCNT1H									= 0x4d
@@ -136,7 +148,7 @@
 	.EQU	OCR1AL									= 0x4a
 	.EQU	OCR1BH									= 0x49
 	.EQU	OCR1BL									= 0x48
-	.EQU	TIFR1										= 0x58
+	.EQU	TIFR										= 0x58
 	;---
 	.EQU	OCIE1A									= 0x04
 	.EQU	WGM13										= 0x04
@@ -149,6 +161,7 @@
 	.EQU	OCF1A										= 0x04
 	.EQU	OCF1B										= 0x03
 	.EQU	OCIE1B									= 0x03
+	;TODO дополнить
 	;---UART---
 	.EQU	UDR0										= 0x2c
 	.EQU	UCSR0A									= 0x2b
@@ -238,6 +251,21 @@
 	.EQU	ADC6										= 0x06
 	.EQU	ADC7										= 0x07
 	.EQU	ADCT										= 0x08
+	;--SPI---
+	.EQU	SPCR										= 0x2d
+	.EQU		SPIE									= 0x07
+	.EQU		SPE									= 0x06
+	.EQU		DORD									= 0x05
+	.EQU		MSTR									= 0x04
+	.EQU		CPOL									= 0x03
+	.EQU		CPHA									= 0x02
+	.EQU		SPR1									= 0x01
+	.EQU		SPR0									= 0x00
+	.EQU	SPSR										= 0x2e
+	.EQU		SPIF									= 0x07
+	.EQU		WCOL									= 0x06
+	.EQU		SPI2X									= 0x00
+	.EQU	SPDR										= 0x2f
 	;--SPM---
 	.EQU	SPMCSR									= 0x57
 	.EQU	SPMCR										= SPMCSR
@@ -251,9 +279,9 @@
 	.EQU		SPMEN									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
-	.EQU	ADC_VREF_AREF						= (0<<REFS1)|(0<<REFS0)
-	.EQU	ADC_VREF_AVCC						= (0<<REFS1)|(1<<REFS0)
-	.EQU	ADC_VREF_2_56_CAP					= (1<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)
+	.EQU	ADC_VREF_AVCC							= (0<<REFS1)|(1<<REFS0)
+	.EQU	ADC_VREF_2_56_CAP						= (1<<REFS1)|(1<<REFS0)
 
 	.SET	INT0_PORT								= PD2
 	.SET	INT1_PORT								= PD3
@@ -262,7 +290,11 @@
 	JMP	MAIN															; Reset
 	CALL	_C5_IR														; External Interrupt0
 	CALL	_C5_IR														; External Interrupt1
+.IF TIMER_C_ENABLE == 0x01
+	CALL	_C5_TIMER_C_IR												; Timer/Counter2 Compare
+.ELSE
 	CALL	_C5_IR														; Timer/Counter2 Compare
+.ENDIF
 	CALL	_C5_IR														; Timer/Counter2 Overflow
 	CALL	_C5_IR														; Timer/Counter1 Capture Event
 	JMP	_C5_TIMER_A_IR												; Timer/Counter1 Compare Match A
@@ -310,13 +342,13 @@ APPLICATION_BLOCK:
 	LDI TEMP,0x00
 	STS OCR1AH,TEMP
 	LDI TEMP,(1<<OCF1A)
-	STS TIFR1,TEMP
+	STS TIFR,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_START
-	LDS TEMP,TIMSK1
+	LDS TEMP,TIMSK
 	ORI TEMP,(1<<OCIE1A)
-	STS TIMSK1,TEMP
+	STS TIMSK,TEMP
 .ENDMACRO
 
 .MACRO _CORRE5277_TIMERA_CORRECTOR
@@ -331,7 +363,7 @@ APPLICATION_BLOCK:
 	STS OCR1AH,TEMP_H
 	STS OCR1AL,TEMP_L
 	LDI TEMP,(1<<OCF1A)
-	STS TIFR1,TEMP
+	STS TIFR,TEMP
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
@@ -339,6 +371,7 @@ APPLICATION_BLOCK:
 
 .MACRO _C5_TIMERB
 	;SUBI TEMP,0x08														;Подобрано вручную, не должно быть вообще
+	PUSH TEMP
 	LDS TEMP_L,TCNT1L
 	LDS TEMP_H,TCNT1H
 	ADD TEMP_L,TEMP
@@ -346,22 +379,60 @@ APPLICATION_BLOCK:
 	ADC TEMP_H,TEMP
 	STS OCR1BH,TEMP_H
 	STS OCR1BL,TEMP_L
-	LDS TEMP,TIFR1
+
+	LDS TEMP_H,SREG
+	CLI
+	LDS TEMP,TIFR
 	ORI TEMP,(1<<OCF1B)
-	STS TIFR1,TEMP
+	STS TIFR,TEMP
 	;Установка флага
 	LDI TEMP,(1<<_CFL_TIMER_B_USE)
 	OR _C5_COREFLAGS,TEMP
 	;Запуск таймера
-	LDS TEMP,TIMSK1
+	LDS TEMP,TIMSK
 	ORI TEMP,(1<<OCIE1B)
-	STS TIMSK1,TEMP
+	STS TIMSK,TEMP
+	STS SREG,TEMP_H
+
 	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
-	LDS TEMP,TIMSK1
+	LDS TEMP_H,SREG
+	CLI
+	LDS TEMP,TIMSK
 	ANDI TEMP,~(1<<OCIE1B)
-	STS TIMSK1,TEMP
+	STS TIMSK,TEMP
+	STS SREG,TEMP_H
+	POP TEMP
+.ENDMACRO
+
+.MACRO _C5_TIMERC_SET_PERIOD
+	STS TCNT2,TEMP_H
+	STS OCR2,TEMP_L
+.ENDMACRO
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS22)|(1<<CS21)|(0<<CS20);/8
+	STS TCCR2,TEMP
+	_C5_TIMERC_SET_PERIOD
+	LDS TEMP_H,SREG
+	CLI
+	LDS TEMP,TIMSK
+	ORI TEMP,(1<<OCIE2A)
+	STS TIMSK,TEMP
+	LDS TEMP,TIFR
+	ORI TEMP,(1<<OCF2)
+	STS TIFR,TEMP
+	STS SREG,TEMP_H
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDS TEMP,SREG
+	CLI
+	PUSH TEMP
+	LDS TEMP,TIFR
+	ANDI TEMP,~(1<<OCF2)
+	STS TIFR,TEMP
+	POP TEMP
+	STS SREG,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON

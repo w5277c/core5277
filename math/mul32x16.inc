@@ -3,6 +3,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;27.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO перейти на использование MUL8X8
+;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_MUL32X16
 .else
 .set DEF_MUL32X16 = 1
@@ -30,35 +32,79 @@ MUL32X16:
 	CLR YH
 	CLR TEMP
 
+	PUSH TEMP_H
+	PUSH TEMP_L
+	;MUL TEMP_L,XL
+	MOV TEMP,XL
+	MCALL MUL8X8
+	MOV YL,TEMP_L
+	MOV YH,TEMP_H
+	POP TEMP_L
+	POP TEMP_H
 
-	MUL TEMP_L,XL
-	MOV YL,_RESULT_L
-	MOV YH,_RESULT_H
+	PUSH TEMP_H
+	PUSH TEMP_L
+	;MUL TEMP_H,XL
+	MOV TEMP_L,TEMP_H
+	MOV TEMP,XL
+	MCALL MUL8X8
+	ADD YH,TEMP_L
+	ADC ZL,TEMP_H
+	POP TEMP_L
+	POP TEMP_H
+	ADC ZH,C0x00
 
-	MUL TEMP_H,XL
-	ADD YH,_RESULT_L
-	ADC ZL,_RESULT_H
-	ADC ZH,TEMP
+	PUSH TEMP_H
+	PUSH TEMP_L
+	;MUL TEMP_EL,XL
+	MOV TEMP_L,TEMP_EL
+	MOV TEMP,XL
+	MCALL MUL8X8
+	ADD ZL,TEMP_L
+	ADC ZH,TEMP_H
+	POP TEMP_L
+	POP TEMP_H
 
-	MUL TEMP_EL,XL
-	ADD ZL,_RESULT_L
-	ADC ZH,_RESULT_H
+	PUSH TEMP_H
+	PUSH TEMP_L
+	;MUL TEMP_EH,XL
+	MOV TEMP_L,TEMP_EH
+	MOV TEMP,XL
+	MCALL MUL8X8
+	ADD YH,TEMP_L
+	POP TEMP_L
+	POP TEMP_H
 
-	MUL TEMP_EH,XL
-	ADD YH,_RESULT_L
+	PUSH TEMP_H
+	PUSH TEMP_L
+	;MUL TEMP_L,XH
+	MOV TEMP,XH
+	ADD YH,TEMP_L
+	ADC ZL,TEMP_H
+	POP TEMP_L
+	POP TEMP_H
+	ADC ZH,C0x00
 
+	PUSH TEMP_H
+	PUSH TEMP_L
+	;MUL TEMP_H,XH
+	MOV TEMP_L,TEMP_H
+	MOV TEMP,XH
+	MCALL MUL8X8
+	ADD ZL,TEMP_L
+	ADC ZH,TEMP_H
+	POP TEMP_L
+	POP TEMP_H
 
-	MUL TEMP_L,XH
-	ADD YH,_RESULT_L
-	ADC ZL,_RESULT_H
-	ADC ZH,TEMP
-
-	MUL TEMP_H,XH
-	ADD ZL,_RESULT_L
-	ADC ZH,_RESULT_H
-
-	MUL TEMP_EL,XH
-	ADD ZH,_RESULT_L
+	PUSH TEMP_H
+	PUSH TEMP_L
+	;MUL TEMP_EL,XH
+	MOV TEMP_L,TEMP_EL
+	MOV TEMP,XH
+	MCALL MUL8X8
+	ADD ZH,TEMP_L
+	POP TEMP_L
+	POP TEMP_H
 
 	MOV TEMP_L,YL
 	MOV TEMP_H,YH

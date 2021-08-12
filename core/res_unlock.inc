@@ -33,8 +33,7 @@ C5_RES_UNLOCK:
 	LDI LOOP_CNTR,_C5_RES_QUEUE_SIZE
 	LDI FLAGS,0x00
 _C5_RES_UNLOCK__QUEUE_LOOP:
-	MOV ZH,XH
-	MOV ZL,XL
+	MOVW ZL,XL
 	LD TEMP_L,X+														;RES_ID
 	LD TEMP_H,X+														;PID
 	;Проверяем на пустой элемент очереди

@@ -1,11 +1,13 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.08.2020  w5277c@gmail.com			Начало
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;19.01.2021  w5277c@gmail.com			Обновлен блок EEPROM
-;21.01.2021  w5277c@gmail.com			Дбавлены порты для инструкций SBI,CBI...
+;08.08.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;19.01.2021	w5277c@gmail.com			Обновлен блок EEPROM
+;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
+;29.05.2021	w5277c@gmail.com			Исправлен .DEVICE, ввод параметра MUL_SUPPORT
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO обновить из atmega328
 
 ;---DESCRIPTION------------------------------------------
 ;core5277 for ATtiny85 (8KB ROM, 512B EEPROM, 512B SRAM) at 16MHz (LITTLE ENDIAN)
@@ -16,14 +18,26 @@
 ;;;;;avrdude -p m8 -c avrispmkII -U lfuse:w:0xef:m -U hfuse:w:0xdc:m -U efuse:w:0xf9:m
 
 	;---SPECIFY-DEVICE---
-	.DEVICE ATtiny45
+	.DEVICE ATtiny85
+
+	.equ	FLASHEND		= 0x0fff	; Note: Word address
+	.equ	IOEND			= 0x003f
+	.equ	SRAM_START	= 0x0060
+	.equ	SRAM_SIZE	= 512
+	.equ	XRAMEND		= 0x0000
+	.equ	E2END			= 0x01ff
+	.equ	EEPROMEND	= 0x01ff
+	.equ	EEADRBITS	= 9
+
 
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY EEPROM 512
 	#pragma AVRPART MEMORY INT_SRAM SIZE 512
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
-	#include "/devices/_common.inc"
+	.include "/devices/_common.inc"
+
+	.SET	MUL_SUPPORT								= 0x00
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
@@ -40,6 +54,7 @@
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x025f
+	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
 
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
@@ -100,6 +115,10 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
 	.EQU	PRR										= 0x40
 	.EQU		PRTIM1								= 0x03
 	.EQU		PRTIM0								= 0x02
@@ -107,6 +126,7 @@
 	.EQU		PRADC									= 0x00
 	;---TIMERS---
 	.EQU	TIMSK										= 0x59
+	.EQU	TIMSK0									= TIMSK
 	.EQU		OCIE1A								= 0x06
 	.EQU		OCIE1B								= 0x05
 	.EQU		OCIE0A								= 0x04
@@ -114,6 +134,7 @@
 	.EQU		TOIE1									= 0x02
 	.EQU		TOIE0									= 0x01
 	.EQU	TIFR										= 0x58
+	.EQU	TIFR0										= TIFR
 	.EQU		OCF1A									= 0x06
 	.EQU		OCF1B									= 0x05
 	.EQU		OCF0A									= 0x04
@@ -201,6 +222,17 @@
 	.EQU		EEPE									= 0x01
 	.EQU		EEWE									= EEPE
 	.EQU		EERE									= 0x00
+	;---WATCHDOG---
+	.EQU	WDTCR										= 0x41
+	.EQU		WDIF									= 0x07
+	.EQU		WDIE									= 0x06
+	.EQU		WDP3									= 0x05
+	.EQU		WDCE									= 0x04
+	.EQU		WDE									= 0x03
+	.EQU		WDP2									= 0x02
+	.EQU		WDP1									= 0x01
+	.EQU		WDP0									= 0x00
+
 	;---ADC---
 	.EQU	ADMUX										= 0x27
 	.EQU		REFS1									= 0x07
@@ -253,7 +285,11 @@
 	RJMP	MAIN															; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
 	RCALL	_C5_IR														; Pin Change Interrupt Request 0
+.IF TIMER_C_ENABLE == 0x01
+	RCALL	_C5_TIMER_C_IR												; Timer/Counter1 Compare Match A
+.ELSE
 	RCALL	_C5_IR														; Timer/Counter1 Compare Match A
+.ENDIF
 	RCALL	_C5_IR														; Timer/Counter1 Overflow
 	RCALL	_C5_IR														; Timer/Counter0 Overflow
 	RCALL	_C5_IR														; EEPROM Ready
@@ -321,22 +357,59 @@ APPLICATION_BLOCK:
 	LDS TEMP_L,TCNT0
 	ADD TEMP_L,TEMP
 	STS OCR0B,TEMP_L
-	LDS TEMP,TIFR
-	ORI TEMP,(1<<OCF0B)
-	STS TIFR,TEMP
+
+	LDS TEMP_L,SREG
+	CLI
+	LDS TEMP_H,TIFR
+	ORI TEMP_H,(1<<OCF0B)
+	STS TIFR,TEMP_H
 	;Установка флага
-	LDI TEMP,(1<<_CFL_TIMER_B_USE)
-	OR _C5_COREFLAGS,TEMP
+	LDI TEMP_H,(1<<_CFL_TIMER_B_USE)
+	OR _C5_COREFLAGS,TEMP_H
 	;Запуск таймера
-	LDS TEMP,TIMSK
-	ORI TEMP,(1<<OCIE0B)
-	STS TIMSK,TEMP
+	LDS TEMP_H,TIMSK
+	ORI TEMP_H,(1<<OCIE0B)
+	STS TIMSK,TEMP_H
+	STS SREG,TEMP_L
+
 	SBRC _C5_COREFLAGS,_CFL_TIMER_B_USE
 	RJMP PC-0x01
 	;Останов таймера
+	LDS TEMP_L,SREG
+	CLI
+	LDS TEMP_H,TIMSK
+	ANDI TEMP_H,~(1<<OCIE0B)
+	STS TIMSK,TEMP_H
+	STS SREG,TEMP_L
+.ENDMACRO
+
+.MACRO _C5_TIMERC_SET_PERIOD
+	STS TCNT1,TEMP_H
+	STS OCR1A,TEMP_L
+.ENDMACRO
+.MACRO _C5_TIMERC_START
+	LDI TEMP,(1<<WGM21)|(0<<WGM20)|(0<<CS13)|(1<<CS12)|(0<<CS21)|(0<<CS20);/8
+	STS TCCR1,TEMP
+	_C5_TIMERC_SET_PERIOD
+	LDS TEMP_H,SREG
+	CLI
 	LDS TEMP,TIMSK
-	ANDI TEMP,~(1<<OCIE0B)
+	ORI TEMP,(1<<OCIE1A)
 	STS TIMSK,TEMP
+	LDS TEMP,TIFR
+	ORI TEMP,(1<<OCF1A)
+	STS TIFR,TEMP
+	STS SREG,TEMP_H
+.ENDMACRO
+.MACRO _C5_TIMERC_STOP
+	LDS TEMP,SREG
+	CLI
+	PUSH TEMP
+	LDS TEMP,TIFR
+	ANDI TEMP,~(1<<OCF2A)
+	STS TIFR2,TEMP
+	POP TEMP
+	STS SREG,TEMP
 .ENDMACRO
 
 .MACRO _C5_POWER_ON

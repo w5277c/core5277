@@ -5,12 +5,12 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;BUILD: avra  -I ../../ main.asm
 
-	.INCLUDE "./devices/atmega328.inc"
 	.SET	CORE_FREQ								= 16	;2-20Mhz
+	.INCLUDE "./devices/atmega328.inc"
 	.SET	AVRA										= 1	;0-1
 	.SET	REALTIME									= 0	;0-1
 	.SET	TIMERS									= 0	;0-4
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50NS
+	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
 	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
 	.SET	LOGGING_PORT							= PC4	;PA0-PC7
 
@@ -21,7 +21,7 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./core/log/log_byte.inc"
+	.include	"./core/io/out_byte.inc"
 	.include	"./core/ram/ram_realloc.inc"
 	.include	"./conv/crc8_block.inc"
 	.include	"./conv/crc7_730.inc"
@@ -92,6 +92,6 @@ _TASK__LOOP:
 	ORI ACCUM,0x01
 
 	MOV TEMP,ACCUM
-	MCALL C5_LOG_BYTE
+	MCALL C5_OUT_BYTE
 
 	RET

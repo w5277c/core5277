@@ -1,11 +1,17 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;24.03.2020  w5277c@gmail.com        Начало
-;30.08.2020  w5277c@gmail.com        Адаптировано под изменения ядра
-;13.09.2020  w5277c@gmail.com        Добавлена дополнительная проверка на присутствие датчика
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;24.03.2020	w5277c@gmail.com			Начало
+;30.08.2020	w5277c@gmail.com			Адаптировано под изменения ядра
+;13.09.2020	w5277c@gmail.com			Добавлена дополнительная проверка на присутствие датчика
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;25.04.2021	w5277c@gmail.com			Подправлены тайминги, учтен CORE_FREQ
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_1WIRE
+.else
+.set DEF__C5_DRV_1WIRE = 1
+.message "Included driver 1Wire v0.3"
 
 .include	"./io/port_mode_in.inc"
 .include	"./io/port_mode_out.inc"
@@ -28,7 +34,7 @@ DRV_1WIRE_INIT:
 	LDI ACCUM,_DRV_1WIRE_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	POP ACCUM
-	STD Z+_DRV_1WIRE_PORT,ACCUM
+	STD Y+_DRV_1WIRE_PORT,ACCUM
 
 	;Инициализация порта (IN, WO_PULL)
 	MCALL PORT_MODE_IN
@@ -37,25 +43,24 @@ DRV_1WIRE_INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
-;IN: Y - адрес на блок данных на запись
-;(15-ый бит false - RAM, true - ROM)
-;TEMP_H - длина данных на запись,
-;TEMP_L - длина данных для чтения.
-;X - адрес на блок для чтения
-;OUT: TEMP - 0x00-успех
+;IN: Z-адрес на блок данных на передачу
+;(15-ый бит false-RAM, true-ROM)
+;TEMP_H-длина данных на запись,
+;TEMP_L-длина данных для чтения.
+;X-адрес на блок для приема
+;OUT: TEMP-0x00-успех
 ;--------------------------------------------------------
 	PUSH_X
+	PUSH_Y
 	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH ACCUM
 
 	;Сичтываем информацию о пине
-	MCALL C5_RAM_OFFSET
-	LDD ACCUM,Z+_DRV_1WIRE_PORT
+	MCALL C5_RAM_OFFSET_Y
+	LDD ACCUM,Y+_DRV_1WIRE_PORT
 
-	MOV ZH,YH
-	MOV ZL,YL
 	;Умножаем на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
 	RJMP PC+0x04
@@ -75,20 +80,20 @@ DRV_1WIRE_INIT:
 	;Проверка на присутствие
 	MCALL PORT_SET_LO
 	MCALL PORT_MODE_OUT
-	C5_WAIT_500NS (540*2)/6											;500us(480-960) по факту получл 489мс
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
-	C5_WAIT_500NS (540*2)/6
+	LDI TEMP,low((250-10)/(16/CORE_FREQ))						;500us(480-960) по факту получл 489мс
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
 	MCALL PORT_MODE_IN
 	C5_WAIT_500NS 60*2												;60us
 	MCALL PORT_GET														;Читаем состояние порта
 	BRCS _DRV_1WIRE_PROC__ERROR
-	C5_WAIT_500NS (440*2)/4											;440us(420 min)
-	C5_WAIT_500NS (440*2)/4
-	C5_WAIT_500NS (440*2)/4
-	C5_WAIT_500NS (440*2)/4
+	LDI TEMP,low((220-10)/(16/CORE_FREQ))						;440us(420 min)
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
 	MCALL PORT_GET														;Читаем состояние порта
 	BRCC _DRV_1WIRE_PROC__ERROR
 	CPI TEMP_H,0x00
@@ -129,6 +134,7 @@ _DRV_1WIRE_PROC__END:
 	POP TEMP_L
 	POP TEMP_H
 	POP_Z
+	POP_Y
 	POP_X
 	RET
 
@@ -136,8 +142,8 @@ _DRV_1WIRE_PROC__END:
 _DRV_1WIRE_READ_BYTE:
 ;--------------------------------------------------------
 ;Чтене байта
-;IN: ACCUM - порт
-;OUT: TEMP - байт
+;IN: ACCUM-порт
+;OUT: TEMP-байт
 ;--------------------------------------------------------
 	PUSH TEMP_L
 	PUSH LOOP_CNTR
@@ -163,7 +169,7 @@ _DRV_1WIRE_READ_BYTE__LOOP:
 _DRV_1WIRE_WRITE_BYTE:
 ;--------------------------------------------------------
 ;Запись байта
-;IN: TEMP - байт, ACCUM - порт
+;IN: TEMP-байт, ACCUM-порт
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
@@ -193,12 +199,19 @@ _DRV_1WIRE_DELAY_1US:
 ;--------------------------------------------------------
 ;Пауза в 16 тактов
 ;--------------------------------------------------------
+;TODO необходимо проверить тайминги на частотах !=16
+.IF CORE_FREQ > 16
+	NOP
+.ENDIF
+.if CORE_FREQ > 8
 	NOP
 	NOP
 	NOP
+.ENDIF
+.if CORE_FREQ > 4
 	NOP
 	NOP
-	NOP
+.ENDIF
 	RET
 
 ;--------------------------------------------------------
@@ -207,8 +220,9 @@ _DRV_1WIRE_DELAY_4US:
 ;Пауза в 64 такта
 ;--------------------------------------------------------
 	PUSH TEMP
-	LDI TEMP,14
+	LDI TEMP,CORE_FREQ-1
 	DEC TEMP
 	BRNE PC-0x01
 	POP TEMP
-   RET
+	RET
+.endif

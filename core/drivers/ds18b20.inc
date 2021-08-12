@@ -1,14 +1,17 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;29.03.2020  w5277c@gmail.com			Начало
-;30.08.2020  w5277c@gmail.com			Адаптировано под изменения ядра
-;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
-;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
+;29.03.2020	w5277c@gmail.com			Начало
+;30.08.2020	w5277c@gmail.com			Адаптировано под изменения ядра
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;12.02.2020	w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
-
+;TODO: Не пройден тест, ERROR
+;-----------------------------------------------------------------------------------------------------------------------
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
+.include	"./core/wait_2ms.inc"
 .include	"./conv/crc8_block.inc"
 .include	"./conv/crc8_maxim.inc"
 .include	"./math/mul16x8.inc"
@@ -41,21 +44,20 @@ _DRV_1WIRE_SKIP_ROM_N_READ_S:
 DRV_DS18B20_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM - ид драйвера 1w
+;IN: ACCUM-ид драйвера 1w
 ;--------------------------------------------------------
 	PUSH ACCUM
 	LDI ACCUM,_DRV_DS18B20_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	POP ACCUM
-	STD Z+_DRV_DS18B20_1W_DRV,ACCUM
+	STD Y+_DRV_DS18B20_1W_DRV,ACCUM
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, опрос датчика
-;OUT: TEMP_H,TEMP_L - значение температуры в SDNF формате
-;TEMP_L = 0xff - ошибка, код в TEMP_H:
-;0x01,0x02 - датчик не обнаружен
-;0x03 - ошибка CRC
+;OUT: TEMP_H,TEMP_L-значение температуры в SDNF формате
+;TEMP_L-0xff-ошибка, код в TEMP_H:
+;0x01,0x02-датчик не обнаружен, 0x03-ошибка CRC
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -66,12 +68,11 @@ DRV_DS18B20_INIT:
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 
-	MCALL C5_RAM_OFFSET
-	LDD ACCUM,Z+_DRV_DS18B20_1W_DRV
+	MCALL C5_RAM_OFFSET_Y
+	LDD ACCUM,Y+_DRV_DS18B20_1W_DRV
 
 	MOV TEMP,ACCUM
-	LDI YH,high(_DRV_1WIRE_SKIP_ROM_N_CONVERT_T)|0x80
-	LDI YL,low(_DRV_1WIRE_SKIP_ROM_N_CONVERT_T)
+	LDI_Z _DRV_1WIRE_SKIP_ROM_N_CONVERT_T|0x8000
 	LDI TEMP_H,0x02
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
@@ -81,16 +82,14 @@ DRV_DS18B20_INIT:
 	LDI TEMP,DRV_DS18B20_RESULT_ABSENT1
 	RJMP _DRV_DS18B20_PROC__ERROR
 
-	LDI TEMP_H,low(_DRV_DS18B20_DELAY/0x10000)
-	LDI TEMP_L,low(_DRV_DS18B20_DELAY/0x100)
-	LDI TEMP,low(_DRV_DS18B20_DELAY)
+	LDI TEMP_H,BYTE3(_DRV_DS18B20_DELAY)
+	LDI TEMP_L,BYTE2(_DRV_DS18B20_DELAY)
+	LDI TEMP,BYTE1(_DRV_DS18B20_DELAY)
 	MCALL C5_WAIT_2MS
 
 	MOV TEMP,ACCUM
-	LDI YH,high(_DRV_1WIRE_SKIP_ROM_N_READ_S)|0x80
-	LDI YL,low(_DRV_1WIRE_SKIP_ROM_N_READ_S)
-	MOV XH,ZH
-	MOV XL,ZL
+	LDI_Z _DRV_1WIRE_SKIP_ROM_N_READ_S|0x8000
+	MOVW XL,YL
 	LDI TEMP_H,0x02
 	LDI TEMP_L,_DRV_DS18B20_BUFFER_SIZE
 	MCALL C5_EXEC
@@ -100,16 +99,17 @@ DRV_DS18B20_INIT:
 	RJMP _DRV_DS18B20_PROC__ERROR
 
 	LDI LOOP_CNTR,0x08
-	LDI_Y CRC8_MAXIM
+	MOVW XL,YL
+	LDI_Z CRC8_MAXIM
 	MCALL CRC8_BLOCK
-	LDD TEMP,Z+_DRV_DS18B20_BUFFER_CRC
+	LDD TEMP,Y+_DRV_DS18B20_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03
 	LDI TEMP,0x03
 	RJMP _DRV_DS18B20_PROC__ERROR
 
-	LDD TEMP_H,Z+_DRV_DS18B20_BUFFER_TH
-	LDD TEMP_L,Z+_DRV_DS18B20_BUFFER_TL
+	LDD TEMP_H,Y+_DRV_DS18B20_BUFFER_TH
+	LDD TEMP_L,Y+_DRV_DS18B20_BUFFER_TL
 	;Пребразовываем в SDNF
 	MOV TEMP,TEMP_L													;Преобразуем в человеческий вид целую часть
 	ANDI TEMP,0xF0

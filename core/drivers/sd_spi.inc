@@ -3,6 +3,10 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;18.01.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
+;Драйвер карты памяти (режим SPI)
+;-----------------------------------------------------------------------------------------------------------------------
+;TODO переписать регистры ACCUM-тип операции, FLAGS-результат
+
 .ifdef DEF__C5_DRV_SD_SPI
 .else
 .set DEF__C5_DRV_SD_SPI = 1
@@ -22,9 +26,9 @@
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
-		.include	"./core/log/log_char.inc"
-		.include	"./core/log/log_bytes.inc"
-		.include	"./core/log/log_cr.inc"
+		.include	"./core/io/out_char.inc"
+		.include	"./core/io/out_bytes.inc"
+		.include	"./core/io/out_cr.inc"
 _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 		.db	"Got Ver1.X SD card",0x00,"Got Ver2.00 or later SC SD card",0x00,"Got Ver2.00 or later HC/EC SD card",0x00
 		_DRV_SD_LOG_STR_BLOCK:
@@ -84,7 +88,6 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.EQU	DRV_SD_FLAG_VER2HC								= 0x03;
 	;---
 
-;Драйвер карты памяти (режим SPI)
 ;--------------------------------------------------------
 DRV_SD_INIT:
 ;--------------------------------------------------------
@@ -446,12 +449,12 @@ _DRV_SD__SEND_CMD:
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
 		PUSH_Y
 		LDI TEMP,'>'
-		MCALL C5_LOG_CHAR
+		MCALL C5_OUT_CHAR
 		MOV TEMP,TEMP_L
 		MOV YH,XH
 		MOV YL,XL
-		MCALL C5_LOG_BYTES
-		MCALL C5_LOG_CR
+		MCALL C5_OUT_BYTES
+		MCALL C5_OUT_CR
 		POP_Y
 	.endif
 .endif

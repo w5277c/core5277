@@ -17,6 +17,13 @@
 ;01.02.2021	w5277c@gmail.com			v0.3.1	Учтено разное начало RAM, мелкие доработки
 ;06.02.2021	w5277c@gmail.com			v0.3.2	Примитивы и проверка на отсутствие драйверов
 ;16.04.2021	w5277c@gmail.com			v0.3.3	Вынесен C5_WAIT_2MS из диспетчера, дефолтное значение для BUFFER_SIZE
+;24.05.2021	w5277c@gmail.com			v0.3.4	Исправлена ошибка в работе программных таймеров
+;29.05.2021	w5277c@gmail.com			v0.3.5	Ввод TS_MODE, выделены константы C0x00,X0xff и прочее.
+;31.05.2021	w5277c@gmail.com			v0.3.6	Корректная проверка на выход стека в зону выделяемой памяти
+;14.06.2021	w5277c@gmail.com			v0.3.7	Запрещены прерывания при обработке таймеров, конечный обработчик сам
+;															принимает решение для разрешения прерываний. Иначе возникают трудно
+;															разрешимые коллизии.
+;29.06.2021	w5277c@gmail.com			v0.3.8	Множественные, мелкие изменения в основном TIMER_C, введен OPT_MODE
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -33,25 +40,33 @@
 ;Некоторые драйверы имеют жесткую привязку к портам, например SD, так как процедуры PORT... для них слишком медленны
 ;Функционал драйверов (также как и различные дополнительные процедуры) дорабатывается по мере необходимости
 
-;TODO необходимо сделать более компактный и шустрый драйвер аналогичный PCINT, но работающий с INT0/1
-;тогда можно будет разрешить программному UART битрейт как минимум в 19200
 ;TODO TIMER-TASK отрабатывает немного чаще, почему?
-;TODO давно не проверялся старый функционал, например BEEPER.
 ;TODO нужна еще одна модель динамической памяти но с 16 битным размером. Плюс возможность задавать модель в main-е.
-;TODO проверить код на предмет установки DRIVERS_QNT в 0x00
-;TODO есть мысль переделать использование сдвоенных регистров. Z-для операций работы с ROM, прыжков на базе регистра.
-;Y-адресация на выделенную память, так как позволяет работать с константой, X-как основной аргумент для процедур
-;При таком подходе можно будет использовать таблицу переходов для процедур, вместо блоков CPI+BRNE+MCALL+RJMP в основном
-;блоке драйвера
+;TODO проверить использование _PID, специално введен, чтобы драйвер знал кто его вызвал (не нужно передавать отдельно
+;как параметр)
+;TODO добавить проверку на превышение максимального кол-ва задач и драйверов при создании процесса
 ;-----------------------------------------------------------------------------------------------------------------------
 
-;---CORE-PUBLIC-PROCS------------------------------------;Доступные процедуры ядра
-	.EQU	C5_PROC_EXEC							= 0x01			;запуск процедуры драйвера
-	.EQU	C5_PROC_WAIT_2MS						= 0x02			;ожидание *2мс
-	.EQU	C5_PROC_DISPATCHER_LOCK				= 0x03			;блокировка диспетчера
-	.EQU	C5_PROC_DISPATCHER_UNLOCK			= 0x04			;разблокировка диспетчера
-	.EQU	C5_PROC_SUSPEND						= 0x05			;передать управление следующей задаче
+.ifdef TS_MODE
+.else
+	.ifdef REALTIME
+		.EQU	TS_MODE								= REALTIME
+	.else
+		.EQU	TS_MODE								= TS_MODE_EVENT
+	.endif
+.endif
 
+.ifdef OPT_MODE
+.else
+	.EQU	OPT_MODE									= OPT_MODE_SIZE
+.endif
+
+;---CORE-PUBLIC-PROCS------------------------------------;Доступные процедуры ядра
+	.EQU	C5_PROC_EXEC							= 0x01			;Запуск процедуры драйвера
+	.EQU	C5_PROC_WAIT_2MS						= 0x02			;Ожидание *2мс
+	.EQU	C5_PROC_DISPATCHER_LOCK				= 0x03			;Блокировка диспетчера
+	.EQU	C5_PROC_DISPATCHER_UNLOCK			= 0x04			;Разблокировка диспетчера
+	.EQU	C5_PROC_SUSPEND						= 0x05			;Передать управление следующей задаче
 
 ;---PROC-STATES------------------------------------------;Состояния задачи (PROC-STATES-младший ниббл, PROC-MODE-старший ниббл)
 	.EQU	_C5_PROC_STATE_ABSENT				= 0x00			;Нет задачи
@@ -69,36 +84,37 @@
 
 ;---TIMER-STRUCTURE---------------------------------------(5b);
 	.EQU	_C5_TIMER_STRUCT_SIZE				= 0x05			;Длина блока таймера
-	.EQU	_C5_TIMER_PROC_ID						= 0x00			;1b - ид процедуры(0-..., 0xff - не исп.)
-	.EQU	_C5_TIMER_HANDLER						= 0x01			;2b - адрес обработчика
-	.EQU	_C5_TIMER_CNTR							= 0x03			;1b - счетчик таймера
-	.EQU	_C5_TIMER_DEFAULT						= 0x04			;1b - порог 0x01-0x7f, 7-бит:период отсчета,H:0.002s,L:0.00005s)
+	.EQU	_C5_TIMER_PROC_ID						= 0x00			;1b-ид процедуры(0-..., 0xff - не исп.)
+	.EQU	_C5_TIMER_HANDLER						= 0x01			;2b-адрес обработчика
+	.EQU	_C5_TIMER_CNTR							= 0x03			;1b-счетчик таймера
+	.EQU	_C5_TIMER_DEFAULT						= 0x04			;1b-порог 0x01-0x7f, 7-бит:период отсчета,H:0.002s,L:0.00005s)
 
 ;---PROC-STRUCTURE---------------------------------------;Заголовок процедуры(6B-драйвер, 11B-задача)
-	.EQU	_C5_PROC_STATE							= 0x00			;1B - статус процедуры(младший ниббл) и опции(старший ниббл)
-	.EQU	_C5_PROC_RAM_OFFSET					= 0x01			;2B - адрес начала выделенной памяти
-	.EQU	_C5_PROC_RAM_SIZE						= 0x03			;1B - размер выделенной памяти
-	.EQU	_C5_DRIVER_OFFSET						= 0x04			;2B - адрес процедуры драйвера или
-	.EQU	_C5_TASK_STACK_OFFSET				= 0x04			;2B - адрес начала стека задачи
-	.EQU	_C5_TASK_STACK_SIZE					= 0x06			;1B - размер стека задачи
-	.EQU	_C5_TASK_TIMESTAMP					= 0x07			;1B - мекта времени переключения на задачу
-	.EQU	_C5_TASK_EXECTIME						= 0x08			;3B - время запуска задачи(~9 часов максимум, тик в 2мс)
+	.EQU	_C5_PROC_STATE							= 0x00			;1B-статус процедуры(младший ниббл) и опции(старший ниббл)
+	.EQU	_C5_PROC_RAM_OFFSET					= 0x01			;2B-адрес начала выделенной памяти
+	.EQU	_C5_PROC_RAM_SIZE						= 0x03			;1B-размер выделенной памяти
+	.EQU	_C5_DRIVER_OFFSET						= 0x04			;2B-адрес процедуры драйвера или
+	.EQU	_C5_TASK_STACK_OFFSET				= 0x04			;2B-адрес начала стека задачи
+	.EQU	_C5_TASK_STACK_SIZE					= 0x06			;1B-размер стека задачи
+	.EQU	_C5_TASK_TIMESTAMP					= 0x07			;1B-мекта времени переключения на задачу
+	.EQU	_C5_TASK_EXECTIME						= 0x08			;3B-время запуска задачи(~9 часов максимум, тик в 2мс)
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_C5_DRIVER_HEADER_SIZE				= 0x06			;Размер заголовка драйвера
 	.EQU	_C5_TASK_HEADER_SIZE					= 0x0b			;Размер заголовка задачи
-.IF TIMERS_SPEED == TIMERS_SPEED_25NS
+.IF TIMERS_SPEED == TIMERS_SPEED_25US
 	.EQU	_C5_TIMER_PERIOD						= 0x50			;80, т.е. 0.000025*80=0.002=2мс
 .ELSE
 	.EQU	_C5_TIMER_PERIOD						= 0x28			;40, т.е. 0.000050*40=0.002=2мс
 .ENDIF
-	.EQU	_C5_TASK_STACK_DEF_SIZE				= 0x13			;Размер стека задачи при создании (16 регистров + SREG + точка возврата)
-	.EQU	_C5_TASKS_ACTIVE_TIME				= 0x01			;Время работы задачи 1*2 = 2мс
+	.EQU	_C5_TASK_STACK_DEF_SIZE				= 0x13			;Размер стека задачи при создании (16 регистров+SREG+точка возврата)
+	.EQU	_C5_TASKS_ACTIVE_TIME				= 0x01			;Время работы задачи 1*2=2мс
 	.EQU	_C5_IRV_TABLE_SIZE					= 0x4b			;Размер таблицы прерываний
 	;---CORE-FAULTS---
-	.EQU	_C5_FAULT_HUGE_STACK					= 0x01			;Стек залез на границу между стеком и выделяемой памяти
+	.EQU	_C5_FAULT_HUGE_STACK					= 0x01			;Стек перешел границу выделяемой памяти
 	.EQU	_C5_FAULT_HUGE_TASK_STACK			= 0x02			;Размер стека задачи более 255 байт
-	;---CORE-RESOURCES---											;Идентфикаторы ресурсов, 0-127 отданы пользователю, старшие - ядру
+	.EQU	_C5_FAULT_HUGE_TASK_STACK2			= 0x03			;Размер стека задачи более 255 байт
+	;---CORE-RESOURCES---											;Идентфикаторы ресурсов, 0-127 отданы пользователю, старшие-ядру
 	.EQU	C5_RES_TIMER_B							= 0xFE			;Таймер B
 	.EQU	C5_RES_ADC								= 0xFD			;ADC
 	;---
@@ -106,32 +122,45 @@
 	.EQU	_CFL_TIMER_B_USE						= 0x00			;Флаг запущенного таймера B
 	.EQU	_CFL_TIMER_UART_CORRECTION			= 0x01			;Корректировка таймера для соответствия частотам UART
 	.EQU	_CFL_DISPATCHER_ORDER				= 0x02			;Заявка на отработку диспетчера(формируется когда диспетчер заблокирован)
+	.EQU	CFL_VIDEO_SYNC							= 0x03			;
 
 ;---RAM-OFFSETS------------------------------------------
-	.EQU	_C5_UPTIME								= RAMSTART+0x00;5B - отсчет времени (~75 лет при тике каждые 0.002мс)
-	.EQU	_C5_CORE_STACK							= RAMSTART+0x05;2B - хранит смещение стека ядра
-	.EQU	_C5_TOP_OF_STACK						= RAMSTART+0x07;2B - хранит вершину стека
-	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B - хранит вершину свободной памяти
-	.EQU	_C5_FLAGS								= RAMSTART+0x0b;4B - флагов (32 флага)
-	.EQU	_C5_MAIN_TIMER_CNTR					= RAMSTART+0x0f;1B - счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_MAIN_TIMER_TRHLD					= RAMSTART+0x10;1B - порог срабатывания таймера ядра
+	.EQU	_C5_UPTIME								= RAMSTART+0x00;5B-отсчет времени (~75 лет при тике каждые 0.002мс)
+	.EQU	_C5_CORE_STACK							= RAMSTART+0x05;2B-хранит смещение стека ядра
+	.EQU	_C5_TOP_OF_STACK						= RAMSTART+0x07;2B-хранит вершину стека
+	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B-хранит вершину свободной памяти
+	.EQU	_C5_FLAGS								= RAMSTART+0x0b;4B-флагов (32 флага)
+	.EQU	_C5_TIMER_C_PID						= RAMSTART+0x0f;1B-PID задачи использующей таймер C
+.if TIMER_C_ENABLE == 0x01
+	.if OPT_MODE == TS_MODE_TIME
+		.EQU	_C5_TIMER_C_Y						= _C5_TIMER_C_PID+0x01							;2B-адрес выделенной памяти процесса, использующего таймер C
+		.EQU	_C5_TIMER_C_VECTOR				= _C5_TIMER_C_Y+0x02								;2B-адрес обработчика для таймера C
+	.else
+		.EQU	_C5_TIMER_C_VECTOR				= _C5_TIMER_C_PID+0x01							;2B-адрес обработчика для таймера C
+	.endif
+	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_VECTOR+0x02						;1B-счетчик таймера ядра (каждые 0.000050с)
+.else
+	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_PID+0x01							;1B-счетчик таймера ядра (каждые 0.000050с)
+.endif
+	.EQU	_C5_MAIN_TIMER_TRHLD					= _C5_MAIN_TIMER_CNTR+0x01						;1B-порог срабатывания таймера ядра
 .IFDEF INPUT_PORT
-	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01				;XB - буфер ввода
-	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE	;XB - таблица таймеров(TIMERS*5)
+	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01					;xB-буфер ввода
+	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE		;1B-позиция в буфере на свободный элемент
+	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE+0x01	;xB-таблица таймеров(TIMERS*5)
 .ELSE
-	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01				;XB - таблица таймеров(TIMERS*5)
+	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01					;xB-таблица таймеров(TIMERS*5)
 .ENDIF																	;TIMERS*5
 	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS+TIMERS*5
-																			;XB - таблица прерываний (_C5_IR_QNT*3 для каждгого прерывания, исключая RESET)
+																			;xB-таблица прерываний (_C5_IR_QNT*3 для каждого прерывания, исключая RESET)
 	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3
-																			;XB - заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
+																			;xB-заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
 	.EQU	_C5_TASKS_HEADER						= _C5_DRIVERS_HEADER+C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE
-																			;XB - заголовки задач (X=C5_TASKS_QNT*_C5_TASK_HEADER_SIZE)
+																			;xB-заголовки задач (X=C5_TASKS_QNT*_C5_TASK_HEADER_SIZE)
 	.EQU	_C5_RESOURCE_QUEUE					= _C5_TASKS_HEADER+C5_TASKS_QNT*_C5_TASK_HEADER_SIZE
-																			;XB - очередь задач к ресурсам(1b - RES_ID, 1b - TASK_ID...)
-	.EQU	C5_BUFFER								= _C5_RESOURCE_QUEUE + _C5_RES_QUEUE_SIZE
+																			;xB-очередь задач к ресурсам(1B-RES_ID, 1B-TASK_ID...)
+	.EQU	C5_BUFFER								= _C5_RESOURCE_QUEUE+_C5_RES_QUEUE_SIZE
 	.EQU	_C5_FREE_RAM							= C5_BUFFER+BUFFER_SIZE
-	.EQU	_C5_STACK_END							= RAMEND-_C5_STACK_SIZE	;XB - стек ядра, далее буфер, стек задач и выделяемая память
+	.EQU	_C5_STACK_END							= RAMEND-_C5_STACK_SIZE	;xB-стек ядра, далее буфер, стек задач и выделяемая память
 														;TODO проверить что стек не перетирает первый байт буфера
 .IF AVRA == 0x01
 	.MESSAGE "######## BUFFER OFFSET:",C5_BUFFER
@@ -143,48 +172,51 @@
 	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
 	.MESSAGE "######## STACK END OFFSET:",_C5_STACK_END
-	.MESSAGE "######## TASK ENDPOINT OFFSET:",_C5_TASK_ENDPOINT
 	.MESSAGE "######## CORE FREQ:",CORE_FREQ
-	.IF TIMERS_SPEED == TIMERS_SPEED_50NS
+	.IF TIMERS_SPEED == TIMERS_SPEED_50US
 		.MESSAGE "######## TIMERS NORMAL SPEED (",TIMERS_SPEED,")"
-	.ELSEIF TIMERS_SPEED == TIMERS_SPEED_25NS
+	.ELSEIF TIMERS_SPEED == TIMERS_SPEED_25US
 		.MESSAGE "######## TIMERS x2 SPEED (",TIMERS_SPEED,")"
 	.ELSE
 		.MESSAGE "######## TIMERS WRONG SPEED"
 	.ENDIF
 .ELSE
-	.IF TIMERS_SPEED == TIMERS_SPEED_50NS
+	.IF TIMERS_SPEED == TIMERS_SPEED_50US
 		.MESSAGE "######## TIMERS NORMAL SPEED"
 	.ELSE
-		.IF TIMERS_SPEED == TIMERS_SPEED_25NS
+		.IF TIMERS_SPEED == TIMERS_SPEED_25US
 			.MESSAGE "######## TIMERS x2 SPEED"
 		.ELSE
 			.MESSAGE "######## TIMERS WRONG SPEED"
 		.ENDIF
 	.ENDIF
 .ENDIF
+.IF TIMER_C_ENABLE == 0x01
+	.MESSAGE "######## TIMER C ENABLED"
+.ENDIF
 
-
-;---REGISTERS--------------------------------------------;r0-r14 выделено под нужды ядра
+;---REGISTERS--------------------------------------------;r0-r14 выделено для нужд ядра
 	.DEF	_RESULT_L								= r0
 	.DEF	_RESULT_H								= r1
-	;...r2-r8 используются в процедуре SUSPEND
+	;...r2-r6 используются в диспетчере
 	.DEF	_C5_DISPATCHER_LOCK_CNTR			= r9				;Счетчик вложенных блокировок диспетчера
 	.DEF	_C5_DRIVER_EXEC_ZH					= r10
 	.DEF	_C5_DRIVER_EXEC_ZL					= r11
 	.DEF	_C5_TEMP_H								= r12
 	.DEF	_C5_TEMP_L								= r13
-	.DEF	_C5_COREFLAGS							= r14				;флаги ядра
-	.DEF	_PID										= r15				;ид корневого процесса(обычно задачи)
+	.DEF	_C5_COREFLAGS							= r14				;Флаги ядра
+	.DEF	_PID										= r15				;ИД корневого процесса(обычно задачи)
 
 
 	.INCLUDE	"./mem/ram_copy8.inc"
 	.INCLUDE	"./mem/ram_fill16.inc"
+.if TS_MODE != TS_MODE_NO
 	.INCLUDE "./mem/ram_copy8_desc.inc"
 	.INCLUDE "./mem/ram_copy16_desc.inc"
+.endif
 	.INCLUDE "./conv/bitnum_to_num.inc"
 .IFDEF INPUT_PORT
-	.INCLUDE "./core/ui/in.inc"
+	.INCLUDE "./core/ui/input.inc"
 .ENDIF
 
 ;---OPTIONS-ANALYZE--------------------------------------
@@ -195,20 +227,20 @@
 ; 	.MESSAGE 28800*CORE_FREQ
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
-	LOGSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.3.3",0x0d,0x0a,0x00,0x00
-	.INCLUDE "./core/log/log_init.inc"
-	.INCLUDE	"./core/log/log_romstr.inc"
-	.INCLUDE	"./core/log/log_tasksdump.inc"
-	.INCLUDE "./core/log/log_corefault.inc"
+	OUTSTR_CORE:
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.8",0x0d,0x0a,0x00,0x00
+	.INCLUDE "./core/io/out_init.inc"
+	.INCLUDE	"./core/io/out_romstr.inc"
+	.INCLUDE	"./core/io/out_tasksdump.inc"
+	.INCLUDE "./core/io/out_corefault.inc"
 .ELSE
 	.MESSAGE "######## LOGGING DISABLED"
-	.INCLUDE "./core/log/log_fake.inc"
+	.INCLUDE "./core/io/out_fake.inc"
 .ENDIF
 .IFDEF INPUT_PORT
 	.MESSAGE "######## INPUT ENABLED"
 .ENDIF
-.IF REALTIME == 1
+.IF TS_MODE == TS_MODE_TIME
 	.MESSAGE "######## DISPATCHER ENABLED"
 	.INCLUDE "./core/_dispatcher.inc"
 .ELSE
@@ -222,13 +254,14 @@ C5_DISPATCHER_UNLOCK:
 .IF TIMERS > 0x00
 	.MESSAGE "######## TIMERS ENABLED"
 	.INCLUDE "./core/timer_set.inc"
-	.INCLUDE "./core/timer_set_period.inc"
 	.INCLUDE "./core/timer_start.inc"
+	.INCLUDE "./core/timer_start_at.inc"
 	.INCLUDE "./core/timer_stop.inc"
 .ELSE
 	.MESSAGE "######## TIMERS DISABLED"
 	C5_TIMER_SET:
 	C5_TIMER_START:
+	C5_TIMER_START_AT:
 	C5_TIMER_STOP:
 		RET
 .ENDIF
@@ -241,7 +274,7 @@ _C5_IR:
 ;--------------------------------------------------------
 ;Обработчик всех прерываний
 ;--------------------------------------------------------
-	;Получаем адрес по которому определим тип прерывания
+	;Получаем адрес по которому определяем тип прерывания
 	POP _C5_TEMP_H
 	POP _C5_TEMP_L
 
@@ -254,18 +287,17 @@ _C5_IR:
 	PUSH PID
 	PUSH ACCUM
 	;Находим смещение в таблице прерываний _C5_IR_VECTORS_TABLE
-	LDI ZH,high(_C5_IR_VECTORS_TABLE)
-	LDI ZL,low(_C5_IR_VECTORS_TABLE)
+	LDI_Z _C5_IR_VECTORS_TABLE
 
 .if _IV_STEP == 2
 	LSR _C5_TEMP_L
 .endif
-	DEC _C5_TEMP_L												;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
+	DEC _C5_TEMP_L														;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
 
-	MOV ACCUM,_C5_TEMP_L												;Номер строки в таблице перывания
+	MOV ACCUM,_C5_TEMP_L												;Номер строки в таблице перываний
 	DEC _C5_TEMP_L														;Первая запись в таблице прерываний не используется
 	BREQ PC+0x04
-	MOV TEMP,_C5_TEMP_L												;Умножаю на 3(1 байт - PID, 2 байта - адрес перехода)
+	MOV TEMP,_C5_TEMP_L												;Умножаем на 3(1B-PID, 2B-адрес перехода)
 	LSL _C5_TEMP_L
 	ADD _C5_TEMP_L,TEMP
 
@@ -280,11 +312,11 @@ _C5_IR:
 	;Корневой процесс - текущий и единственный
 	PUSH _PID
 	MOV _PID,PID
-	;Переходим если адрес указан(в ACCUM номер строки таблицы прерываний)
+	;Переходим, если адрес указан(в ACCUM номер строки таблицы прерываний)
 	ICALL																	;Возвращаться надо по RET(не RETI), TEMP и SREG сохранять не нужно
 	POP _PID
 _C5_IR__END:
-	;Восстанавливаю регистры и выхожу
+	;Восстанавливаем регистры и выходим
 	POP ACCUM
 	POP PID
 	POP_Z
@@ -296,13 +328,11 @@ _C5_IR__END:
 ;--------------------------------------------------------
 _C5_TIMER_A_IR:
 ;--------------------------------------------------------
-;Обработчик прерывания таймера
+;Обработчик прерывания основного таймера
 ;--------------------------------------------------------
 	PUSH TEMP
 	LDS TEMP,SREG
 	PUSH TEMP
-
-	SEI
 
 	LDI TEMP,TIMERS_SPEED-0x02
 	SBRC _C5_COREFLAGS,_CFL_TIMER_UART_CORRECTION
@@ -317,8 +347,7 @@ _C5_TIMER_A_IR:
 	PUSH PID
 	PUSH_Y
 
-	LDI YH,high(_C5_TIMERS)
-	LDI YL,low(_C5_TIMERS)
+	LDI_Y _C5_TIMERS
 	LDI LOOP_CNTR,TIMERS
 _C5_TIMER_A_IR__HF_LOOP:
 	LDD PID,Y+_C5_TIMER_PROC_ID
@@ -329,14 +358,14 @@ _C5_TIMER_A_IR__HF_LOOP:
 	RJMP _C5_TIMER_A_IR__HF_NEXT
 	LDD TEMP,Y+_C5_TIMER_CNTR
 	DEC TEMP
-	BRNE _C5_TIMER_IR__DISPATCHER__TIMER_HF_SKIP
+	STD Y+_C5_TIMER_CNTR,TEMP
+	CPI TEMP,0x00
+	BRNE _C5_TIMER_A_IR__HF_NEXT
 	LDD ZH,Y+_C5_TIMER_HANDLER+0x00
 	LDD ZL,Y+_C5_TIMER_HANDLER+0x01
 	ICALL
-	LDD ACCUM,Y+_C5_TIMER_DEFAULT
-	MOV TEMP,ACCUM
+	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
-_C5_TIMER_IR__DISPATCHER__TIMER_HF_SKIP:
 	STD Y+_C5_TIMER_CNTR,TEMP
 _C5_TIMER_A_IR__HF_NEXT:
 	ADIW YL,0x05
@@ -350,7 +379,6 @@ _C5_TIMER_A_IR__HF_NEXT:
 .ENDIF
 _C5_TIMER_IR__DISPATCHER:
 
-	;14t max
 	PUSH ACCUM
 	LDS ACCUM,_C5_MAIN_TIMER_CNTR
 	INC ACCUM
@@ -389,8 +417,7 @@ _C5_TIMER_IR__DISPATCHER:
 	PUSH PID
 	PUSH_Y
 
-	LDI YH,high(_C5_TIMERS)
-	LDI YL,low(_C5_TIMERS)
+	LDI_Y _C5_TIMERS
 	LDI LOOP_CNTR,TIMERS
 _C5_TIMER_A_IR__LF_LOOP:
 	LDD PID,Y+_C5_TIMER_PROC_ID
@@ -401,13 +428,14 @@ _C5_TIMER_A_IR__LF_LOOP:
 	RJMP _C5_TIMER_A_IR__LF_NEXT
 	LDD TEMP,Y+_C5_TIMER_CNTR
 	DEC TEMP
-	BRNE _C5_TIMER_IR__DISPATCHER__TIMER_LF_SKIP
+	STD Y+_C5_TIMER_CNTR,TEMP
+	CPI TEMP,0x00
+	BRNE _C5_TIMER_A_IR__LF_NEXT
 	LDD ZH,Y+_C5_TIMER_HANDLER+0x00
 	LDD ZL,Y+_C5_TIMER_HANDLER+0x01
 	ICALL
-	MOV TEMP,ACCUM
+	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
-_C5_TIMER_IR__DISPATCHER__TIMER_LF_SKIP:
 	STD Y+_C5_TIMER_CNTR,TEMP
 _C5_TIMER_A_IR__LF_NEXT:
 	ADIW YL,0x05
@@ -421,14 +449,100 @@ _C5_TIMER_A_IR__LF_NEXT:
 .ENDIF
 
 	POP_Z
-.IF REALTIME == 1
-	MCALL _C5_DISPATCHER_EVENT										;3+4
+
+.IF TS_MODE == TS_MODE_TIME
+	MCALL _C5_DISPATCHER_EVENT
 .ENDIF
 _C5_TIMER_A_IR__END:
+
 	POP TEMP
 	STS SREG,TEMP
 	POP TEMP
 	RETI
+
+
+.IF TIMER_C_ENABLE == 0x01
+;--------------------------------------------------------
+_C5_TIMER_C_IR:
+;--------------------------------------------------------
+;Обработчик прерывания таймера C
+;--------------------------------------------------------
+	PUSH_Z
+	PUSH_Y
+	LDS ZH,SREG
+	PUSH ZH
+	PUSH PID
+
+	LDS PID,_C5_TIMER_C_PID
+.if OPT_MODE == TS_MODE_TIME
+	LDS YH,_C5_TIMER_C_Y+0x00
+	LDS YL,_C5_TIMER_C_Y+0x01
+.else
+	MCALL C5_RAM_OFFSET_Y
+.endif
+	LDS ZH,_C5_TIMER_C_VECTOR+0x00
+	LDS ZL,_C5_TIMER_C_VECTOR+0x01
+	ICALL
+
+	POP PID
+	POP ZH
+	STS SREG,ZH
+	POP_Y
+	POP_Z
+	RETI
+;--------------------------------------------------------
+C5_TIMER_C_SET_VECTOR:
+;--------------------------------------------------------
+;Установка адреса обработчика таймера C
+;IN: PID,X-адрес обработчика,Y-адрес выделенной памяти
+;--------------------------------------------------------
+	STS _C5_TIMER_C_PID,PID
+.if OPT_MODE == TS_MODE_TIME
+	STS _C5_TIMER_C_Y+0x00,YH
+	STS _C5_TIMER_C_Y+0x01,YL
+.endif
+	STS _C5_TIMER_C_VECTOR+0x00,XH
+	STS _C5_TIMER_C_VECTOR+0x01,XL
+	RET
+;--------------------------------------------------------
+C5_TIMER_C_SET_PERIOD:
+;--------------------------------------------------------
+;Установка периода таймера C
+;IN: TEMP-длина периода
+;--------------------------------------------------------
+	_C5_TIMERC_SET_PERIOD
+	RET
+;--------------------------------------------------------
+C5_TIMER_C_START:
+;--------------------------------------------------------
+;Запуск таймера C
+;IN: TEMP-длина периода
+;--------------------------------------------------------
+	PUSH TEMP
+	_C5_TIMERC_SET_PERIOD
+	_C5_TIMERC_START
+	POP TEMP
+	RET
+;--------------------------------------------------------
+C5_TIMER_C_SET_COM:
+;--------------------------------------------------------
+;Устанавливаю режим работы вывода(OC2A) таймера C
+;IN: TEMP_H-TIMERC_COM_x
+;--------------------------------------------------------
+	PUSH TEMP
+	_C5_TIMERC_SET_COM
+	POP TEMP
+	RET
+;--------------------------------------------------------
+C5_TIMER_C_STOP:
+;--------------------------------------------------------
+;Останов таймера C
+;--------------------------------------------------------
+	PUSH TEMP
+	_C5_TIMERC_STOP
+	POP TEMP
+	RET
+.ENDIF
 
 ;========================================================================
 ;===Базовые процедуры ядра===============================================
@@ -441,31 +555,49 @@ C5_INIT:
 	;Запрещение прерываний
 	CLI
 
+	;WATCHDOG STOP
+	WDR
+	LDS ACCUM,MCUSR
+	ANDI ACCUM,~(1<<WDRF)
+	STS MCUSR,ACCUM
+	LDS ACCUM,WDTCR
+	ORI ACCUM,(1<<WDCE)|(1<<WDE)
+	STS WDTCR,ACCUM
+	LDI ACCUM,(0<<WDE)
+	STS WDTCR,ACCUM
+
 	;Инициализация логирования
 .ifdef LOGGING_PORT
-	MCALL C5_LOG_INIT
+	MCALL C5_OUT_INIT
 .endif
 .ifdef LOGGING_PORT
-	MCALL C5_LOG_TASKSDUMP
+	MCALL C5_OUT_TASKSDUMP
 .endif
+
 	;Сбрасываем флаги причины сброса
 	CLR TEMP
 	STS MCUSR,TEMP
 
-	;Заполнение всей памяти 0xF7 значением для(диагностики)
+	EOR C0x00,C0x00
+	LDI TEMP,0xff
+	MOV C0xff,TEMP
+
+.IF TIMER_C_ENABLE == 0x01
+	_C5_TIMERC_INIT
+.ENDIF
+
+	;Заполнение всей памяти 0xF7 значением (для диагностики)
 	LDI TEMP,0xF7
 	LDI TEMP_H,high(RAMEND-0x010f)									;RAM_SIZE-16(stack)
 	LDI TEMP_L,low(RAMEND-0x010f)
-	LDI XH,0x01
-	LDI XL,0x00
+	LDI_X 0x0100
 	MCALL RAM_FILL16
 
 	;Сброс счетчика времени
 	LDI TEMP,0x00
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x05
-	LDI XH,high(_C5_UPTIME)
-	LDI XL,low(_C5_UPTIME)
+	LDI_X _C5_UPTIME
 	MCALL RAM_FILL16
 ;--------------------------------------------------------
 C5_REINIT:
@@ -476,79 +608,61 @@ C5_REINIT:
 	LDI TEMP,0xff
 	LDI TEMP_H,0x00
 	LDI TEMP_L,_C5_IRV_TABLE_SIZE									;IV_VECTORS_TABLE
-	LDI XL,low(_C5_IR_VECTORS_TABLE)
-	LDI XH,high(_C5_IR_VECTORS_TABLE)
+	LDI_X _C5_IR_VECTORS_TABLE
 	MCALL RAM_FILL16
 	;Чистка очереди
 	LDI TEMP,0xff
 	LDI TEMP_H,0x00
 	LDI TEMP_L,_C5_RES_QUEUE_SIZE
-	LDI XH,high(_C5_RESOURCE_QUEUE)
-	LDI XL,low(_C5_RESOURCE_QUEUE)
+	LDI_X _C5_RESOURCE_QUEUE
 	MCALL RAM_FILL16
-
 	;Чистка переменных в памяти
 	CLR _C5_COREFLAGS
-
-	;Задаю вершину стека
-	LDI XH,high(_C5_STACK_END)
-	LDI XL,low(_C5_STACK_END)
+	;Задаем вершину стека
+	LDI_X _C5_STACK_END
 	STS _C5_TOP_OF_STACK+0x00,XH
 	STS _C5_TOP_OF_STACK+0x01,XL
-	;Задаю вершину свободной памяти
-	LDI XH,high(_C5_FREE_RAM)
-	LDI XL,low(_C5_FREE_RAM)
+	;Задаем вершину свободной памяти
+	LDI_X _C5_FREE_RAM
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
-
 	;Чистка флагов
-	CLR TEMP
-	STS _C5_FLAGS+0x00,TEMP
-	STS _C5_FLAGS+0x01,TEMP
-	STS _C5_FLAGS+0x02,TEMP
-	STS _C5_FLAGS+0x03,TEMP
-
+	STS _C5_FLAGS+0x00,C0x00
+	STS _C5_FLAGS+0x01,C0x00
+	STS _C5_FLAGS+0x02,C0x00
+	STS _C5_FLAGS+0x03,C0x00
 	;Задаем счетчик основному таймеру
-	LDI TEMP,0x00
-	STS _C5_MAIN_TIMER_CNTR,TEMP
+	STS _C5_MAIN_TIMER_CNTR,C0x00
 	LDI TEMP,_C5_TIMER_PERIOD
 	STS _C5_MAIN_TIMER_TRHLD,TEMP
-
 .IFDEF INPUT_PORT
-	MCALL C5_IN_INIT
+	MCALL C5_INPUT_INIT
 .ENDIF
-
 .IF TIMERS > 0x00
 	;Установка таймеров как не используемых
 	LDI TEMP_H,high(TIMERS*0x05)
 	LDI TEMP_L,low(TIMERS*0x05)
 	LDI TEMP,0xff
-	LDI XH,high(_C5_TIMERS)
-	LDI XL,low(_C5_TIMERS)
+	LDI_X _C5_TIMERS
 	MCALL RAM_FILL16
 .ENDIF
-
 	;Чистка заголовков драйверов
 .IF	0x00 != C5_DRIVERS_QNT
-	LDI XH,high(_C5_DRIVERS_HEADER)
-	LDI XL,low(_C5_DRIVERS_HEADER)
+	LDI_X _C5_DRIVERS_HEADER
 	LDI TEMP_H,high(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
 	LDI TEMP_L,low(_C5_DRIVER_HEADER_SIZE*C5_DRIVERS_QNT)
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	MCALL RAM_FILL16
 .ENDIF
 	;Чистка заголовков задач
-	LDI XH,high(_C5_TASKS_HEADER)
-	LDI XL,low(_C5_TASKS_HEADER)
+	LDI_X _C5_TASKS_HEADER
 	LDI TEMP_H,high(_C5_TASK_HEADER_SIZE*C5_TASKS_QNT)
 	LDI TEMP_L,low(_C5_TASK_HEADER_SIZE*C5_TASKS_QNT)
 	LDI TEMP,_C5_PROC_STATE_ABSENT
 	MCALL RAM_FILL16
-
 	;Чистка регистров
 	CLR _C5_DISPATCHER_LOCK_CNTR
-
-	;Инициализирую таймер (0.000050s - 800 тактов)
+	;Инициализируем таймер (0.000050s - 800 тактов)
 	_C5_TIMERA_INIT
 	RET
 
@@ -556,9 +670,9 @@ C5_REINIT:
 C5_IR_VECTOR_SET:
 ;--------------------------------------------------------
 ;Устанавливаем адрес перехода для прерывания
-;IN: PID-ид задачи/драйвера,
+;IN: PID-ид процесса,
 ;ACCUM-номер прерывания (1-...), TEMP_H,TEMP_L-
-;адрес перехода (0 - не использовать перерывание)
+;адрес перехода (0-не использовать перерывание)
 ;--------------------------------------------------------
 	PUSH_Z
 	LDS ZL,SREG
@@ -573,11 +687,9 @@ C5_IR_VECTOR_SET:
 	MOV ZL,ACCUM
 	LSL ACCUM
 	ADD ACCUM,ZL
-	LDI ZH,high(_C5_IR_VECTORS_TABLE)
-	LDI ZL,low(_C5_IR_VECTORS_TABLE)
+	LDI_Z _C5_IR_VECTORS_TABLE
 	ADD ZL,ACCUM
-	CLR ACCUM
-	ADC ZH,ACCUM
+	ADC ZH,C0x00
 	STD Z+0x00,PID
 	STD Z+0x01,TEMP_H
 	STD Z+0x02,TEMP_L
@@ -610,15 +722,12 @@ C5_SOFT_UART_MODE_RESET:
 	POP TEMP
 	RET
 
-;========================================================================
-;===Процедуры работы с таймерами=========================================
-;========================================================================
 ;--------------------------------------------------------
 C5_TCNT_GET:
 ;--------------------------------------------------------
 ;Получаем значение счетчика таймера
-;Осчет кратный 0.000 000 5s
-;OUT: TEMP - значение счетчика таймера
+;Отсчет кратный 0.000 000 5s
+;OUT: TEMP-значение счетчика таймера
 ;--------------------------------------------------------
 	_C5_TIMER_TCNT TEMP
 	RET
@@ -627,7 +736,7 @@ C5_TCNT_GET:
 _C5_WAIT_500NS:
 ;--------------------------------------------------------
 ;Ждем истечения времени
-;IN TEMP - время в 0.000 000 5s(не менее 40 ~20us)
+;IN TEMP-время в 0.000 000 5s(не менее 40 ~20us)
 ;--------------------------------------------------------
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -653,23 +762,24 @@ _C5_TIMER_B_IR:
 	POP TEMP
 	RETI
 
-;========================================================================
-;===Процедуры работы с задачами и драйверами=============================
-;========================================================================
 ;--------------------------------------------------------
 C5_START:
 ;--------------------------------------------------------
 ;Запуск ядра
 ;--------------------------------------------------------
-	C5_LOG_ROMSTR LOGSTR_CORE
+	C5_OUT_ROMSTR OUTSTR_CORE
 
 	;Запуск таймера
 	_CORRE5277_TIMERA_START
 	;Разрешаем прерывания
 	SEI
+.if TS_MODE == TS_MODE_NO
+	;TODO простая реализаия переключения стека и переход на первую задачу
+.endif
+.if TS_MODE != TS_MODE_NO
 _C5_START__LOOP:
-	CLT
 	LDI PID,0x00													;Счетчик задач
+	LDI FLAGS,0x00
 _C5_START__TASKS_LOOP:
 	MCALL _C5_PROC_HEADER_GET
 	LDD TEMP,Z+_C5_PROC_STATE
@@ -678,17 +788,22 @@ _C5_START__TASKS_LOOP:
 	BRNE _C5_START__NEXT_TASK
 	PUSH PID
 	MOV _PID,PID
+	PUSH FLAGS
 	MCALL _C5_RESUME												;Возвращаемся по C5_SUSPEND
+	POP FLAGS
 	POP PID
-	SET
+	ORI FLAGS,0x01
 _C5_START__NEXT_TASK:
 	INC PID
 	CPI PID,C5_TASKS_QNT
 	BRNE _C5_START__TASKS_LOOP
-	BRTS _C5_START__LOOP
+	SBRS FLAGS,0x00
 	SLEEP
 	RJMP _C5_START__LOOP
-
+.endif
+;========================================================================
+;===Процедуры работы с задачами и драйверами=============================
+;========================================================================
 ;--------------------------------------------------------
 C5_CREATE:
 ;--------------------------------------------------------
@@ -710,10 +825,9 @@ C5_CREATE:
 	ORI TEMP,_C5_PROC_STATE_GHOST
 	STD Z+_C5_PROC_STATE,TEMP
 	;Обнуляем адрес выделенной памяти и размер
-	CLR TEMP
-	STD Z+_C5_PROC_RAM_OFFSET+0x00,TEMP
-	STD Z+_C5_PROC_RAM_OFFSET+0x01,TEMP
-	STD Z+_C5_PROC_RAM_SIZE,TEMP
+	STD Z+_C5_PROC_RAM_OFFSET+0x00,C0x00
+	STD Z+_C5_PROC_RAM_OFFSET+0x01,C0x00
+	STD Z+_C5_PROC_RAM_SIZE,C0x00
 
 	;Проверяем на признак драйвера, пропускаем блок кода для задачи, если признак есть
 	SBRC PID,C5_PROCID_OPT_DRV
@@ -725,8 +839,7 @@ C5_CREATE:
 	LDS r1,_C5_TOP_OF_STACK+0x01
 	STD Z+_C5_TASK_STACK_OFFSET+0x01,r1
 	;Записываем размер стека
-	CLR TEMP
-	STD Z+_C5_TASK_STACK_SIZE,TEMP
+	STD Z+_C5_TASK_STACK_SIZE,C0x00
 	;Восстанавливаем все регистры из стека
 	POP TEMP
 
@@ -780,9 +893,19 @@ C5_CREATE__TIMER_CODE_SKIP2:
 
 	;Помещаем точку возврата
 	MOV r0,TEMP
+.if TS_MODE == TS_MODE_NO
+	LDI TEMP,low(SRAM_START)
+.endif
+.if TS_MODE != TS_MODE_NO
 	LDI TEMP,low(_C5_TASK_ENDPOINT)
+.endif
 	PUSH TEMP
+.if TS_MODE == TS_MODE_NO
+	LDI TEMP,high(SRAM_START)
+.endif
+.if TS_MODE != TS_MODE_NO
 	LDI TEMP,high(_C5_TASK_ENDPOINT)
+.endif
 	PUSH TEMP
 	MOV TEMP,r0
 	RJMP C5_CREATE__DRIVER_CODE_SKIP
@@ -836,7 +959,7 @@ C5_READY:
 	TST TEMP_H
 	BREQ PC+0x04
 	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK
-	MCALL C5_LOG_COREFAULT
+	MCALL C5_OUT_COREFAULT
 	STD Z+_C5_TASK_STACK_SIZE,TEMP_L
 
 	;Запись временной метки
@@ -854,7 +977,7 @@ C5_READY__IS_DRIVER:
 	POP r0
 	POP r1
 	;Извлекаем точку входа на сновной код драйвера
-	MOV PID,_PID														;TODO!!! разве в _PID не хранится ид задачи?
+	MOV PID,_PID
 	MCALL _C5_PROC_HEADER_GET
 
 	;Записываем адрес основной процедуры драйвера
@@ -879,7 +1002,7 @@ C5_READY__END:
 C5_EXEC:
 ;--------------------------------------------------------
 ;Выполнение процедуры драйвера
-;IN: TEMP - ид вызываемого драйвера
+;IN: TEMP-ид вызываемого драйвера
 ;--------------------------------------------------------
 	PUSH PID
 
@@ -891,9 +1014,8 @@ C5_EXEC:
 	;Сохраняем значение Z
 	MOV _C5_DRIVER_EXEC_ZH,ZH
 	MOV _C5_DRIVER_EXEC_ZL,ZL
-	;Размещаем в стек адрес возврата из вызываемой процедуры
-	LDI ZH,high(_C5_EXEC__DONE)
-	LDI ZL,low(_C5_EXEC__DONE)
+	;Помещаем в стек адрес возврата из вызываемой процедуры
+	LDI_Z _C5_EXEC__DONE
 	PUSH ZL
 	PUSH ZH
 	;Получаем заголовок вызываемого драйвера
@@ -911,18 +1033,54 @@ C5_EXEC:
 	MOV ZH,_C5_DRIVER_EXEC_ZH
 	MOV ZL,_C5_DRIVER_EXEC_ZL
 	MCALL C5_DISPATCHER_UNLOCK
-	;Перехожим на процедуру драйвера
+	;Переходим на процедуру драйвера
 	RET
 _C5_EXEC__DONE:
 	POP PID
-
 	RET
 
+;--------------------------------------------------------
+_C5_PROC_HEADER_GET:
+;--------------------------------------------------------
+;Возвращает смещение на заголовок процесса
+;IN:PID-ид процеса
+;OUT:Z-смещение
+;--------------------------------------------------------
+	PUSH TEMP_H
+	PUSH TEMP_L
+
+	MOV TEMP_H,PID
+	ANDI TEMP_H,0x0f
+	SBRS PID,C5_PROCID_OPT_DRV
+	RJMP _C5_PROC_HEADER_GET__TASK
+_C5_PROC_HEADER_GET__DRIVER:
+	LDI_Z _C5_DRIVERS_HEADER
+	LSL TEMP_H														;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
+	MOV TEMP_L,TEMP_H
+	LSL TEMP_H
+	RJMP _C5_PROC_HEADER_GET__END
+_C5_PROC_HEADER_GET__TASK:
+	LDI_Z _C5_TASKS_HEADER
+	MOV TEMP_L,TEMP_H												;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
+	LSL TEMP_L
+	ADD TEMP_H,TEMP_L
+	LSL TEMP_L
+	LSL TEMP_L
+_C5_PROC_HEADER_GET__END:
+	ADD TEMP_L,TEMP_H
+	ADD ZL,TEMP_L
+	ADC ZH,C0x00
+
+	POP TEMP_L
+	POP TEMP_H
+	RET
+
+.if TS_MODE != TS_MODE_NO
 ;--------------------------------------------------------
 _C5_RESUME:
 ;--------------------------------------------------------
 ;Продолжаем выполнение задачи
-;IN: PID - ид задачи, Z - адрес заголовка задачи
+;IN: PID-ид задачи, Z-адрес заголовка задачи
 ;--------------------------------------------------------
 	MCALL C5_DISPATCHER_LOCK
 	;Записываем адрес стека ядра
@@ -949,7 +1107,7 @@ _C5_RESUME:
 	STS SPH,TEMP_H
 	STS SPL,TEMP_L
 
-	;Восстанавливаю SREG
+	;Восстанавливаем SREG
 	POP TEMP
 	STS SREG,TEMP
 	_C5_MACRO__POP_RDS
@@ -991,18 +1149,18 @@ C5_SUSPEND:
 ;IN: _PID
 ;--------------------------------------------------------
 	LDS r0,SREG
-	;Записываем в стек 16 старших регистров(могут быть проинициализированы при вызове процедуры)
+	;Помещаем в стек 16 старших регистров(могут быть проинициализированы при вызове процедуры)
 	_C5_MACRO__PUSH_RDS
 	;Записываем SREG
 	PUSH r0
 
-	MOV PID,_PID														;Затираю PID, так как он уже записан в стек
+	MOV PID,_PID														;Затираем PID, так как он уже записан в стек
 	MCALL _C5_PROC_HEADER_GET
 
 	LDD TEMP,Z+_C5_PROC_STATE
 	SBRS TEMP,C5_PROCID_OPT_TIMER
 	RJMP __C5_SUSPEND_NO_TIMER
-	;Записываю новую временную метку запуска задачи на базе времени текущего запуска и времени ожидания
+	;Записываем новую временную метку запуска задачи на базе времени текущего запуска и времени ожидания
 	LDD YH,Z+_C5_TASK_STACK_OFFSET+0x00
 	LDD YL,Z+_C5_TASK_STACK_OFFSET+0x01
 	SBIW YL,0x05
@@ -1028,7 +1186,7 @@ __C5_SUSPEND_TIMER:
 	RET
 ;--------------------------------------------------------
 _C5_SUSPEND__BODY:
-	MOV PID,_PID														;Затираю PID, так как он уже должен быть записан в стек
+	MOV PID,_PID														;Затираем PID, так как он уже должен быть записан в стек
 	MCALL _C5_PROC_HEADER_GET
 
 	LDD ACCUM,Z+_C5_PROC_STATE
@@ -1052,18 +1210,19 @@ _C5_SUSPEND__BODY:
 	LDS TEMP,_C5_CORE_STACK+0x01
 	STS SPL,TEMP
 
-	;проверяем на выход стека в зону общего буфера задач
+	;Проверяем на выход стека в зону выделяемой памяти
 	;TODO нет проверки на защитный порог(_C5_RAM_BORDER_SIZE)
 	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x00
 	CP TEMP,TEMP_H
 	BRCS _C5_SUSPEND__CORRECT_STACK_SIZE
-	LDI TEMP,_C5_FAULT_HUGE_STACK
-	MJMP C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
+	BRNE _C5_SUSPEND__HUGE_STACK
 	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x01
 	CP TEMP,TEMP_L
 	BRCS _C5_SUSPEND__CORRECT_STACK_SIZE
+_C5_SUSPEND__HUGE_STACK:
 	LDI TEMP,_C5_FAULT_HUGE_STACK
-	MJMP C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
+	MJMP C5_OUT_COREFAULT											;Стеки значения не имеют, ядро упало
+	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x01
 _C5_SUSPEND__CORRECT_STACK_SIZE:
 
 	;Получаем начало стека задачи
@@ -1074,8 +1233,8 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	SBC TEMP_EH,TEMP_H
 	TST TEMP_EH
 	BREQ PC+0x04
-	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK
-	MCALL C5_LOG_COREFAULT											;Стеки значения не имеют, ядро упало
+	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK2
+	MCALL C5_OUT_COREFAULT											;Стеки значения не имеют, ядро упало
 
 	;Обновляем длину стека задачи
 	STD Z+_C5_TASK_STACK_SIZE,TEMP_EL
@@ -1090,48 +1249,6 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	RET
 
 ;--------------------------------------------------------
-_C5_PROC_HEADER_GET:
-;--------------------------------------------------------
-;Возвращает смещение на заголовок процесса
-;IN:PID-ид драйвера
-;OUT:Z-смещение
-;--------------------------------------------------------
-	PUSH TEMP_H
-	PUSH TEMP_L
-
-	SBRS PID,C5_PROCID_OPT_DRV
-	RJMP _C5_PROC_HEADER_GET__TASK
-_C5_PROC_HEADER_GET__DRIVER:
-	LDI ZH,high(_C5_DRIVERS_HEADER)
-	LDI ZL,low(_C5_DRIVERS_HEADER)
-	MOV TEMP_H,PID													;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
-	ANDI TEMP_H,0x0f
-	LSL TEMP_H
-	MOV TEMP_L,TEMP_H
-	LSL TEMP_H
-	ADD TEMP_L,TEMP_H
-	RJMP _C5_PROC_HEADER_GET__END
-_C5_PROC_HEADER_GET__TASK:
-	LDI ZL,low(_C5_TASKS_HEADER)
-	LDI ZH,high(_C5_TASKS_HEADER)
-	MOV TEMP_H,PID													;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
-	ANDI TEMP_H,0x0f
-	MOV TEMP_L,TEMP_H
-	LSL TEMP_L
-	ADD TEMP_H,TEMP_L
-	LSL TEMP_L
-	LSL TEMP_L
-	ADD TEMP_L,TEMP_H
-_C5_PROC_HEADER_GET__END:
-	ADD ZL,TEMP_L
-	CLR TEMP_H
-	ADC ZH,TEMP_H
-
-	POP TEMP_L
-	POP TEMP_H
-	RET
-
-;--------------------------------------------------------
 _C5_STACK_TO_TOP:
 ;--------------------------------------------------------
 ;Переносим стек задачи наверх
@@ -1139,7 +1256,7 @@ _C5_STACK_TO_TOP:
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH PID
-	;Проверка если стек задачи и так наверху
+	;Проверка, если стек задачи и так наверху
 	;Получаем размер стека текущей задачи
 	LDD TEMP_EL,Z+_C5_TASK_STACK_SIZE
 	LDD TEMP_H,Z+_C5_TASK_STACK_OFFSET+0x00
@@ -1170,17 +1287,17 @@ _C5_STACK_TO_TOP:
 	MOV LOOP_CNTR,TEMP_EL
 	MCALL RAM_COPY8_DESC
 
-	;Записываю старое смещение на стек текущей задачи
+	;Записываем старое смещение на стек текущей задачи
 	MOV ZH,XH
 	MOV ZL,XL
-	;Получаю смещение на следующий стек задачи
+	;Получаем смещение на следующий стек задачи
 	SUB XL,TEMP_EL
 	SBCI XH,0x00
 
 	POP TEMP_L
 	POP TEMP_H
 
-	;Вычисляю размер копируемых данных(Z-старый адрес стека задачи, TEMP_H/L - вершина стека задач)
+	;Вычисляем размер копируемых данных(Z-старый адрес стека задачи, TEMP_H/L-вершина стека задач)
 	PUSH_Z
 	SUB ZL,TEMP_L
 	SBC ZH,TEMP_H
@@ -1188,7 +1305,7 @@ _C5_STACK_TO_TOP:
 	MOV TEMP_L,ZL
 	POP_Z
 	PUSH_Z
-	;Копирую данные
+	;Копируем данные
 	MCALL RAM_COPY16_DESC
 	POP_X																	;X теперь хранит страое смещение на стек задачи
 
@@ -1228,3 +1345,4 @@ _C5_STACK_TO_TOP__END:
 	POP PID
 	POP_Z
 	RET
+.endif

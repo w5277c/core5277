@@ -1,10 +1,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;28.05.2020  w5277c@gmail.com        Начало
-;01.08.2020  w5277c@gmail.com        Разбиение на файлы
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
-;28.10.2020  w5277c@gmail.com        Обновляю размер выделенной памяти в заголовке задачи
+;28.05.2020	w5277c@gmail.com			Начало
+;01.08.2020	w5277c@gmail.com			Разбиение на файлы
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;28.10.2020	w5277c@gmail.com			Обновляю размер выделенной памяти в заголовке задачи
+;03.07.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_RAM_EXTEND
 .else
@@ -21,12 +22,12 @@
 C5_RAM_EXTEND:
 ;--------------------------------------------------------
 ;Увеличиваем блок выделенной памяти
-;IN: PID, ACCUM - размер, на который нужно увеличить
+;IN: PID, ACCUM-размер, на который нужно увеличить
 ;общий выделенный объем(сумма не может превышать 0x100)
-;OUT: Z - адрес на всю выделенную часть, Y - адрес на
-;добавленную часть, flag Z(false - error,owerflow)
+;OUT: Y-адрес на всю выделенную часть, X-адрес на
+;добавленную часть, flag Z(false-error,owerflow)
 ;--------------------------------------------------------
-	PUSH_X
+	PUSH_Z
 	PUSH TEMP
 	PUSH ACCUM
 	MCALL C5_DISPATCHER_LOCK
@@ -54,11 +55,9 @@ C5_RAM_EXTEND:
 	BRNE _C5_RAM_EXTEND__ERROR
 
 	;Проверяем, нужно ли обновлять вершину выделяемой памяти
-	MOV XH,YH
-	MOV XL,YL
+	MOVW XL,YL
 	ADD XL,ACCUM
-	LDI ACCUM,0x00
-	ADC XH,ACCUM
+	ADC XH,C0x00
 	PUSH ACCUM
 	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x00
 	CP ACCUM,XH
@@ -82,12 +81,12 @@ _C5_RAM_EXTEND__ALLOCATED:
 	BRNE _C5_RAM_EXTEND__ERROR
 
 _C5_RAM_EXTEND__SUCCESS:
+	STD Z+_C5_PROC_RAM_OFFSET+0x00,YH
+	STD Z+_C5_PROC_RAM_OFFSET+0x01,YL
 	STD Z+_C5_PROC_RAM_SIZE,ACCUM
-	MOV ZH,YH
-	MOV ZL,YL
-	ADD YL,TEMP
-	CLR ACCUM
-	ADC YH,ACCUM
+	MOVW XL,YL
+	ADD XL,TEMP
+	ADC XH,C0x00
 	SEZ
 	RJMP _C5_RAM_EXTEND__END
 _C5_RAM_EXTEND__ERROR:
@@ -96,6 +95,6 @@ _C5_RAM_EXTEND__END:
 	MCALL C5_DISPATCHER_UNLOCK
 	POP ACCUM
 	POP TEMP
-	POP_X
+	POP_Z
 	RET
 .endif
