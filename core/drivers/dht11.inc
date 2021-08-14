@@ -7,8 +7,9 @@
 .ifdef DEF__C5_DRV_DHT11
 .else
 .set DEF__C5_DRV_DHT11 = 1
-.message "Included driver DHT11 v0.2"
+.message "Included driver DHT11 v0.3"
 
+.include	"./core/drivers/_dht.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./io/port_mode_in.inc"
@@ -33,11 +34,6 @@
 	;---
 	.EQU	_DRV_DHT11_RAM_SIZE					= 0x0b			;11 байт необходимо выделить
 
-;---RESULTS---
-	.EQU	DRV_DHT11_RESULT_OK					= 0x00
-	.EQU	DRV_DHT11_RESULT_ABSENT				= 0x01
-	.EQU	DRV_DHT11_RESULT_ERROR				= 0x02
-
 ;--------------------------------------------------------
 DRV_DHT11_INIT:
 ;--------------------------------------------------------
@@ -60,7 +56,7 @@ DRV_DHT11_INIT:
 	PUSH_Y
 	PUSH ACCUM
 
-	MCALL C5_RAM_OFFSET
+	MCALL C5_RAM_OFFSET_Y
 	LDD ACCUM,Y+_DRV_DHT11_PORT
 	MCALL PORT_MODE_OUT												;BE
 	MCALL PORT_SET_LO
@@ -97,7 +93,7 @@ DRV_DHT11_INIT:
 
 	LDD TEMP,Y+_DRV_DHT11_OFFSET
 	CPI TEMP,41
-	LDI TEMP,DRV_DHT11_RESULT_ABSENT
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
 	BREQ PC+0x02
 	RJMP _DRV_DHT11_PROC__END
 
@@ -112,14 +108,14 @@ DRV_DHT11_INIT:
 	ADD ACCUM,TEMP_L
 	LDD TEMP,Y+_DRV_DHT11_BUFFER+0x04
 	CP TEMP,ACCUM
-	LDI TEMP,DRV_DHT11_RESULT_ERROR
+	LDI TEMP,DRV_DHT_RESULT_ERROR
 	BRNE _DRV_DHT11_PROC__ERROR
-	LDI TEMP,DRV_DHT11_RESULT_OK
+	LDI TEMP,DRV_DHT_RESULT_OK
 
 _DRV_DHT11_PROC__ERROR:
 	RJMP _DRV_DHT11_PROC__END
 _DRV_DHT11_PROC__ABSENT:
-	LDI TEMP,DRV_DHT11_RESULT_ABSENT
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
 	MCALL C5_DISPATCHER_UNLOCK
 _DRV_DHT11_PROC__END:
 	PUSH TEMP
