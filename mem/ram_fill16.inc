@@ -5,6 +5,7 @@
 ;01.08.2020	w5277c@gmail.com			Разбиение на файлы
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			с5
+;15.08.2020	w5277c@gmail.com			Оптимизация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_RAM_FILL16
 .else
@@ -19,22 +20,18 @@ RAM_FILL16:
 ;--------------------------------------------------------
 ;Заполнение блока памяти значением
 ;IN: X-адрес, TEMP-значение, TEMP_H/TEMP_L-длина
-;-START--------------------------------------------------
-	PUSH XH
-	PUSH ZL
-	PUSH TEMP_H
-	PUSH TEMP_L
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Y
+
+	MOV YH,TEMP_H
+	MOV YL,TEMP_L
 _RAM_FILL16__LOOP:
 	ST X+,TEMP
-	SUBI TEMP_L,0x01
-	SBCI TEMP_H,0x00
-	CPI TEMP_H,0x00
+	SBIW YL,0x01
 	BRNE _RAM_FILL16__LOOP
-	CPI TEMP_L,0x00
-	BRNE _RAM_FILL16__LOOP
-	POP TEMP_H
-	POP TEMP_L
-	POP XL
-	POP XH
+
+	POP_Y
+	POP_X
 	RET
 .endif
