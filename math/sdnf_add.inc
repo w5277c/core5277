@@ -54,7 +54,8 @@ SDNF_ADD:																;Signed Digital aNd Fractional
 	BREQ _SDNF_ADD__ADD
 	;Иначе вычитание, но сначала нужно перенести большее по модулю в X
 	CP XH,ZH
-	BRCC _SDNF_ADD_L1
+	BREQ _SDNF_ADD_L1
+	BRCC _SDNF_ADD__SUB
 	MOV TEMP,XH
 	MOV XH,ZH
 	MOV ZH,TEMP
@@ -67,7 +68,7 @@ SDNF_ADD:																;Signed Digital aNd Fractional
 	RJMP _SDNF_ADD__SUB
 _SDNF_ADD_L1:
 	CP XL,ZL
-	BRCC PC+0x0a
+	BRCC _SDNF_ADD__SUB
 	MOV TEMP,XH
 	MOV XH,ZH
 	MOV ZH,TEMP
