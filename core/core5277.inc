@@ -40,6 +40,8 @@
 ;Некоторые драйверы имеют жесткую привязку к портам, например SD, так как процедуры PORT... для них слишком медленны
 ;Функционал драйверов (также как и различные дополнительные процедуры) дорабатывается по мере необходимости
 
+;Обработчики программных таймеров и таймера C могут не сохранять значения регистров ZH,ZL
+
 ;TODO TIMER-TASK отрабатывает немного чаще, почему?
 ;TODO нужна еще одна модель динамической памяти но с 16 битным размером. Плюс возможность задавать модель в main-е.
 ;TODO проверить использование _PID, специално введен, чтобы драйвер знал кто его вызвал (не нужно передавать отдельно
@@ -228,7 +230,20 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	OUTSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.3.8",0x0d,0x0a,0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.8 [",0x00,0x00
+	OUTSTR_MCUSR_NO:
+	.db   "NO ",0x00
+	OUTSTR_MCUSR_WD:
+	.db   "WD ",0x00
+	OUTSTR_MCUSR_BO:
+	.db   "BO ",0x00
+	OUTSTR_MCUSR_EX:
+	.db   "EX ",0x00
+	OUTSTR_MCUSR_PO:
+	.db   "PO ",0x00
+	OUTSTR_MCUSR_RESET:
+	.db   "reset]",0x0d,0x0a,0x00,0x00
+
 	.INCLUDE "./core/io/out_init.inc"
 	.INCLUDE	"./core/io/out_romstr.inc"
 	.INCLUDE	"./core/io/out_tasksdump.inc"
@@ -554,7 +569,8 @@ C5_INIT:
 ;--------------------------------------------------------
 	;Запрещение прерываний
 	CLI
-
+	LDS FLAGS,MCUSR
+	
 	;WATCHDOG STOP
 	WDR
 	LDS ACCUM,MCUSR
@@ -569,8 +585,35 @@ C5_INIT:
 	;Инициализация логирования
 .ifdef LOGGING_PORT
 	MCALL C5_OUT_INIT
-.endif
-.ifdef LOGGING_PORT
+
+	LDI_Z OUTSTR_CORE|0x8000
+	MCALL C5_OUT_STR
+	SBRS FLAGS,WDRF
+	RJMP PC+0x05
+	LDI_Z OUTSTR_MCUSR_WD|0x8000
+	MCALL C5_OUT_STR
+	SBRS FLAGS,BORF
+	RJMP PC+0x05
+	LDI_Z OUTSTR_MCUSR_BO|0x8000
+	MCALL C5_OUT_STR
+	SBRS FLAGS,EXTRF
+	RJMP PC+0x05
+	LDI_Z OUTSTR_MCUSR_EX|0x8000
+	MCALL C5_OUT_STR
+	SBRS FLAGS,PORF
+	RJMP PC+0x05
+	LDI_Z OUTSTR_MCUSR_PO|0x8000
+	MCALL C5_OUT_STR
+	MOV TEMP,FLAGS
+	ANDI TEMP,(1<<WDRF)|(1<<BORF)|(1<<EXTRF)|(1<<PORF)
+	BRNE PC+0x05
+	LDI_Z OUTSTR_MCUSR_NO|0x8000
+	MCALL C5_OUT_STR
+	LDI_Z OUTSTR_MCUSR_RESET|0x8000
+	MCALL C5_OUT_STR
+	
+	SBRC FLAGS,PORF
+	RJMP PC+0x03
 	MCALL C5_OUT_TASKSDUMP
 .endif
 
@@ -767,8 +810,6 @@ C5_START:
 ;--------------------------------------------------------
 ;Запуск ядра
 ;--------------------------------------------------------
-	C5_OUT_ROMSTR OUTSTR_CORE
-
 	;Запуск таймера
 	_CORRE5277_TIMERA_START
 	;Разрешаем прерывания

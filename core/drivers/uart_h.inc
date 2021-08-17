@@ -9,6 +9,7 @@
 ;07.06.2021	w5277c@gmail.com			Ввод функционала MAGIC(незамедлительная реакция при получении определенных 2х байт)
 ;14.06.2021	w5277c@gmail.com			Корректная передача MAGIC PID
 ;04.07.2021	w5277c@gmail.com			Z->Y, необходимо тестирование
+;18.08.2021	w5277c@gmail.com			Вынесена проверка на значение порта 0xff в процедуры порта
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_H
 .else
@@ -98,19 +99,13 @@ DRV_UART_H_INIT:
 	STD Y+_DRV_UART_H_RX_PORT,TEMP
 	;Инициализирую порт направления данных
 	POP ACCUM
-	CPI ACCUM,0xff
-	BREQ _DRV_UART_H_INIT__NO_DR_PORT
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
-_DRV_UART_H_INIT__NO_DR_PORT:
 	STD Y+_DRV_UART_H_DR_PORT,ACCUM
 	;Инициализирую порт индикации
 	POP ACCUM
-	CPI ACCUM,0xff
-	BREQ _DRV_UART_H_INIT__NO_LED_PORT
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
-_DRV_UART_H_INIT__NO_LED_PORT:
 	STD Y+_DRV_UART_H_LED_PORT,ACCUM
 	;Инициализирую порт RX
 	LDI ACCUM,RXD
@@ -194,8 +189,6 @@ _DRV_UART_H_INIT__NO_LED_PORT:
 	BREQ _DRV_UART_H_PROC__TX_SKIP
 	;Включаю индикатор передачи
 	LDD ACCUM,Y+_DRV_UART_H_LED_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_HI
 	;Сброс позиции в буфере
 	CLR TEMP
@@ -217,8 +210,6 @@ _DRV_UART_H_PROC__SENDING_WAIT:
 	BRNE _DRV_UART_H_PROC__SENDING_WAIT
 	;Выключаю индикатор
 	LDD ACCUM,Y+_DRV_UART_H_LED_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_LO
 _DRV_UART_H_PROC__TX_SKIP:
 
@@ -311,8 +302,6 @@ _DRV_UART_H_TX_EVENT:
 	BRNE _DRV_UART_H_TX_EVENT__SKIP_DR
 	;Порт направления в HI
 	LDD ACCUM,Y+_DRV_UART_H_DR_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_HI
 _DRV_UART_H_TX_EVENT__SKIP_DR:
 	;Если все данные переданы то завершаем работу TX
@@ -365,8 +354,6 @@ _DRV_UART_H_TX_EVENT__NO_BREAK:
 	MCALL PORT_SET_HI
 	;Порт направления в LO
 	LDD ACCUM,Y+_DRV_UART_H_DR_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_LO
 	;Останавливаю таймер
 	LDD TEMP,Y+_DRV_UART_H_TIMER_ID
@@ -509,8 +496,6 @@ _DRV_UART_H_TIMER_EVENT__NOT_RECEIVING:
 	BRNE _DRV_UART_H_TIMER_EVENT__END
 	;Порт направления в LO
 	LDD ACCUM,Y+_DRV_UART_H_DR_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_LO
 	;Устанавливаю состояние READY
 	LDI TEMP,DRV_UART_ST_READY
