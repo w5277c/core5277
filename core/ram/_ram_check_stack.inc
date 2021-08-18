@@ -27,7 +27,7 @@ _C5_RAM_CHECK_STACK:
 	LDS XH,_C5_TOP_OF_STACK+0x00
 	LDS XL,_C5_TOP_OF_STACK+0x01
 	;Находим разницу
-	SUB XL,YL
+	SUB XL,YL	;TODO SUBW XL,YL?
 	SBC XH,YH
 	BRCS _C5_RAM_CHECK_STACK__FAIL
 	;Учитываем минимально допустимый размер

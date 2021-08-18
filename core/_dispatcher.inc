@@ -185,22 +185,16 @@ C5_DISPATCHER_LOCK:
 ;--------------------------------------------------------
 ;Блокировка диспетчера
 ;--------------------------------------------------------
-	PUSH TEMP
-	LDI TEMP,0xff
-	CP _C5_DISPATCHER_LOCK_CNTR,TEMP
+	CP _C5_DISPATCHER_LOCK_CNTR,C0xff
 	BREQ PC+0x02
 	INC _C5_DISPATCHER_LOCK_CNTR
-	POP TEMP
 	RET
 ;--------------------------------------------------------
 C5_DISPATCHER_UNLOCK:
 ;--------------------------------------------------------
 ;Блокировка диспетчера
 ;--------------------------------------------------------
-	PUSH TEMP
-	LDI TEMP,0x00
-	CP _C5_DISPATCHER_LOCK_CNTR,TEMP
-	POP TEMP
+	CP _C5_DISPATCHER_LOCK_CNTR,C0x00
 	BREQ _C5_DISPATCHER_UNLOCK__END
 
 	SBRS _C5_COREFLAGS,_CFL_DISPATCHER_ORDER
