@@ -24,14 +24,11 @@ C5_TIMER_STOP:
 ;IN TEMP - номер таймера(0-...)
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH TEMP
 
 	MCALL _C5_TIMER_OFFSET
 
-	LDI TEMP,0xff
-	STD Z+_C5_TIMER_PROC_ID,TEMP
+	STD Z+_C5_TIMER_PROC_ID,C0xff
 
-	POP TEMP
 	POP_Z
 	RET
 .endif
