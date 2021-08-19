@@ -25,8 +25,8 @@ C5_WAIT_2MS:
 ;--------------------------------------------------------
 .if TS_MODE == TS_MODE_TIME
 	_C5_MACRO__PUSH_RDS												;Пмещаем в стек рабочие регистры задачи
-	LDS TEMP,SREG
-	PUSH TEMP															;Помещаем в стек регистр флагов
+	LDS FLAGS,SREG
+	PUSH FLAGS															;Помещаем в стек регистр флагов
 
 	MOV PID,_PID														;Затираю PID, так как он уже записан в стек
 	MCALL _C5_PROC_HEADER_GET
