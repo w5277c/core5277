@@ -95,7 +95,7 @@ DRV_ADC_INIT:
 ;	MCALL C5_RES_LOCK
 ;	POP ACCUM
 
-	;Увеличиваем размер выделенной памяти на _DRV_ADC_STRUCT_SIZE
+	;Получаем адрес на выделенную память
 	MCALL C5_RAM_OFFSET_Y
 
 	STD Y+_DRV_ADC_ZERO_VAL+0x00,XH
@@ -114,7 +114,7 @@ DRV_ADC_INIT:
 	;Задаю параметры ADC и запускаю
 	OR ACCUM,TEMP_EH
 	STS ADMUX,ACCUM													;ADLAR=0 - направление представления байт (right)
-	ORI TEMP_EL,(0<<ADEN)|(1<<ADSC)|(1<<ADIE)|(1<<ADATE)	;ADIE=1 - Разрешаем прерывание по окончанию кнвертирования
+	ORI TEMP_EL,(0<<ADEN)|(1<<ADSC)|(1<<ADIE)|(0<<ADATE)	;ADIE=1 - Разрешаем прерывание по окончанию кнвертирования
 	STS ADCSRA,TEMP_EL												;ADATE=0 - Выключен режим AutoTriggering
 
 
@@ -232,9 +232,8 @@ _DRV_ADC_EVENT__NO_MOD:
 	LDD TEMP,Y+_DRV_ADC_SUM+0x01
 	ADC TEMP,TEMP_H
 	STD Y+_DRV_ADC_SUM+0x01,TEMP
-	LDI TEMP_L,0x00
 	LDD TEMP,Y+_DRV_ADC_SUM+0x00
-	ADC TEMP,TEMP_L
+	ADC TEMP,C0x00
 	STD Y+_DRV_ADC_SUM+0x00,TEMP
 
 	;Инкрементирую итерацию и проверяю на конец
