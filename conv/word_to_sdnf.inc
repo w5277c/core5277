@@ -1,32 +1,51 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019	w5277c@gmail.com			Начало
-;01.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;10.12.2020	w5277c@gmail.com			-с5
+;26.08.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_BCD_BYTE_TO_STR
+.ifdef DEF_WORD_TO_SDNF
 .else
-.set DEF_BCD_BYTE_TO_STR = 1
+.set DEF_WORD_TO_SDNF = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included BCD_BYTE_TO_STR"
+.message "included WORD_TO_SDNF"
 .endif
 
+.include	"./math/div100.inc"
+
 ;--------------------------------------------------------
-BCD_BYTE_TO_STR:
+WORD_TO_SDNF:
 ;--------------------------------------------------------
-;Конвертация байта в формате BCD в STR (2 ASCII символа)
-;IN: TEMP-байт
-;OUT: TEMP_H,TEMP_L-ASCII
+;Конвертация 2 байта сотых в SDNF
+;IN: TEMP_H/TEMP_L-беззнаковое слово
+;OUT: TEMP_H/TEMP_L-SDNF
 ;--------------------------------------------------------
-	MOV TEMP_H,TEMP
-	SWAP TEMP_H
-	ANDI TEMP_H,0x0f
-	SUBI TEMP_H,(0x100-0x30)
-	MOV TEMP_L,TEMP
-	ANDI TEMP_L,0x0f
-	SUBI TEMP_L,(0x100-0x30)
+	PUSH TEMP_EH
+	PUSH TEMP_EL
+	PUSH ACCUM
+	PUSH TEMP
+
+	LDI TEMP,0x64
+	MOV TEMP_EH,TEMP_H
+	MOV TEMP_EL,TEMP_L
+	MCALL DIV16X8
+	MOV ACCUM,TEMP_L
+	CPI TEMP_H,0x00
+	BREQ PC+0x04
+	LDI TEMP_H,0xff
+	LDI TEMP_L,0xff
+	RJMP _WORD_TO_SDNF__END
+	PUSH TEMP_EL
+	MCALL MUL16X8
+	POP TEMP_EL
+	SUB TEMP_EL,TEMP_L
+	MOV TEMP_H,ACCUM
+	MOV TEMP_L,TEMP_EL
+
+_WORD_TO_SDNF__END:
+	POP TEMP
+	POP ACCUM
+	POP TEMP_EL
+	POP TEMP_EH
 	RET
 .endif
