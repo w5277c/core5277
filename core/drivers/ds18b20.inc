@@ -6,9 +6,11 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;12.02.2020	w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
 ;03.07.2021	w5277c@gmail.com			Z->Y
+;26.08.2021	w5277c@gmail.com			Вывод приведен к общему виду с драйвером AM2301 и DHT11
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO: Не пройден тест, ERROR
 ;-----------------------------------------------------------------------------------------------------------------------
+.include	"./core/drivers/_dht.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/wait_2ms.inc"
@@ -24,7 +26,7 @@
 	.EQU		_DRV_DS18B20_BUFFER_CRC			= 0x08
 	.EQU	_DRV_DS18B20_1W_DRV					= 0x09			;1b - идентификатор драйвера 1w
 ;---
-	.EQU	_DRV_DS18B20_DELAY					= 750/2			;750с
+	.EQU	_DRV_DS18B20_DELAY					= 750/2			;750ms
 	.EQU	_DRV_DS18B20_BUFFER_SIZE			= 0x09
 
 	.EQU	_DRV_DS18B20_RAM_SIZE				= 0x0a			;10 байт необходимо выделить
@@ -56,15 +58,13 @@ DRV_DS18B20_INIT:
 ;--------------------------------------------------------
 ;Основной код, опрос датчика
 ;OUT: TEMP_H,TEMP_L-значение температуры в SDNF формате
-;TEMP_L-0xff-ошибка, код в TEMP_H:
-;0x01,0x02-датчик не обнаружен, 0x03-ошибка CRC
+;TEMP-результат (DRV_DHT_RESULT_...)
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
 	PUSH_Z
 	PUSH TEMP_EH
 	PUSH TEMP_EL
-	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 
@@ -76,10 +76,9 @@ DRV_DS18B20_INIT:
 	LDI TEMP_H,0x02
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
-
 	CPI TEMP,0x00
 	BREQ PC+0x03
-	LDI TEMP,DRV_DS18B20_RESULT_ABSENT1
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
 	RJMP _DRV_DS18B20_PROC__ERROR
 
 	LDI TEMP_H,BYTE3(_DRV_DS18B20_DELAY)
@@ -95,7 +94,7 @@ DRV_DS18B20_INIT:
 	MCALL C5_EXEC
 	CPI TEMP,0x00
 	BREQ PC+0x03
-	LDI TEMP,DRV_DS18B20_RESULT_ABSENT2
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
 	RJMP _DRV_DS18B20_PROC__ERROR
 
 	LDI LOOP_CNTR,0x08
@@ -105,7 +104,7 @@ DRV_DS18B20_INIT:
 	LDD TEMP,Y+_DRV_DS18B20_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03
-	LDI TEMP,0x03
+	LDI TEMP,DRV_DHT_RESULT_ERROR
 	RJMP _DRV_DS18B20_PROC__ERROR
 
 	LDD TEMP_H,Y+_DRV_DS18B20_BUFFER_TH
@@ -129,16 +128,16 @@ DRV_DS18B20_INIT:
 	POP TEMP_H
 	BRTC PC+0x02														;Переносим знак в новый формат
 	ORI TEMP_L,0x80
+	LDI TEMP,DRV_DHT_RESULT_OK
 	RJMP _DRV_DS18B20_PROC__END
 
 _DRV_DS18B20_PROC__ERROR:
 	LDI TEMP_L,0xff
-	MOV TEMP_H,TEMP
+	LDI TEMP_H,0xff
 
 _DRV_DS18B20_PROC__END:
 	POP LOOP_CNTR
 	POP ACCUM
-	POP TEMP
 	POP TEMP_EL
 	POP TEMP_EH
 	POP_Z
