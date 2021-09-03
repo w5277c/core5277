@@ -6,6 +6,7 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;10.12.2020	w5277c@gmail.com			-с5
 ;06.07.2021	w5277c@gmail.com			Y->Z
+;03.09.2021	w5277c@gmail.com			Значение 0xff для целой части корректно
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_SDNF_ADD
 .else
@@ -28,12 +29,8 @@ SDNF_ADD:																;Signed Digital aNd Fractional
 	PUSH TEMP
 
 	;Проверка на корректность значений
-	CPI XH,0xff
-	BRNE PC+0x03
 	CPI XL,0xff
 	BREQ _SDNF_ADD__ERROR
-	CPI ZH,0xff
-	BRNE PC+0x03
 	CPI ZL,0xff
 	BREQ _SDNF_ADD__ERROR
 	;Выношу знаки в отдельные регистры
@@ -99,7 +96,6 @@ _SDNF_ADD__ADD:
 	OR XL,TEMP_H														;Восстанавливаю знак
 	RJMP _SDNF_ADD__END
 _SDNF_ADD__ERROR:
-	LDI XH,0xff
 	LDI XL,0xff
 _SDNF_ADD__END:
 	POP TEMP
