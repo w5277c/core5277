@@ -25,6 +25,7 @@
 ;															разрешимые коллизии.
 ;29.06.2021	w5277c@gmail.com			v0.3.8	Множественные, мелкие изменения в основном TIMER_C, введен OPT_MODE
 ;22.08.2021	w5277c@gmail.com			Атомарная операция записи адреса вершины стека.
+;05.09.2021	w5277c@gmail.com			INPUT_PORT->C5_IN_PORT
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -147,7 +148,7 @@
 	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_PID+0x01							;1B-счетчик таймера ядра (каждые 0.000050с)
 .endif
 	.EQU	_C5_MAIN_TIMER_TRHLD					= _C5_MAIN_TIMER_CNTR+0x01						;1B-порог срабатывания таймера ядра
-.IFDEF INPUT_PORT
+.IFDEF C5_IN_PORT
 	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01					;xB-буфер ввода
 	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE		;1B-позиция в буфере на свободный элемент
 	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE+0x01	;xB-таблица таймеров(TIMERS*5)
@@ -219,7 +220,7 @@
 	.INCLUDE "./mem/ram_copy16_desc.inc"
 .endif
 	.INCLUDE "./conv/bitnum_to_num.inc"
-.IFDEF INPUT_PORT
+.IFDEF C5_IN_PORT
 	.INCLUDE "./core/ui/input.inc"
 .ENDIF
 
@@ -254,7 +255,7 @@
 	.MESSAGE "######## LOGGING DISABLED"
 	.INCLUDE "./core/io/out_fake.inc"
 .ENDIF
-.IFDEF INPUT_PORT
+.IFDEF C5_IN_PORT
 	.MESSAGE "######## INPUT ENABLED"
 .ENDIF
 .IF TS_MODE == TS_MODE_TIME
@@ -680,7 +681,7 @@ C5_REINIT:
 	STS _C5_MAIN_TIMER_CNTR,C0x00
 	LDI TEMP,_C5_TIMER_PERIOD
 	STS _C5_MAIN_TIMER_TRHLD,TEMP
-.IFDEF INPUT_PORT
+.IFDEF C5_IN_PORT
 	MCALL C5_INPUT_INIT
 .ENDIF
 .IF TIMERS > 0x00
