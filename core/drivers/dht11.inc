@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.06.2021	w5277c@gmail.com			Начало
 ;04.07.2021	w5277c@gmail.com			Z->Y, оптимизация
+;07.09.2021	w5277c@gmail.com			Багфикс
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_DHT11
 .else
@@ -55,6 +56,7 @@ DRV_DHT11_INIT:
 	PUSH_X
 	PUSH_Y
 	PUSH ACCUM
+	PUSH FLAGS
 
 	MCALL C5_RAM_OFFSET_Y
 	LDD ACCUM,Y+_DRV_DHT11_PORT
@@ -126,6 +128,7 @@ _DRV_DHT11_PROC__END:
 	MCALL C5_EXEC
 	POP TEMP
 
+	POP FLAGS
 	POP ACCUM
 	POP_Y
 	POP_X
@@ -186,7 +189,7 @@ _DRV_DHT11_EVENT__HI:
 
 _DRV_DHT11_EVENT__NEXT:
 	INC TEMP_H
-	STD Z+_DRV_DHT11_OFFSET,TEMP_H
+	STD Y+_DRV_DHT11_OFFSET,TEMP_H
 _DRV_DHT11_EVENT__END:
 
 	POP_Y

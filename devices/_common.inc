@@ -34,14 +34,20 @@
 
 	.SET	BUFFER_SIZE								= 0x0000
 
+.ifdef REPORT_INCLUDES
+.else
 	.SET	REPORT_INCLUDES						= 0x00
+.endif
 .ifdef TIMER_C_ENABLE
 .else
 	.SET	TIMER_C_ENABLE							= 0x00
 .endif
 	.SET	REALTIME									= 0x00
 	.SET	TIMERS									= 0x00
+.ifdef AVRA
+.else
 	.SET	AVRA										= 0x00
+.endif
 	.SET	MUL_SUPPORT								= 0x01
 
 .ifdef CORE_FREQ
