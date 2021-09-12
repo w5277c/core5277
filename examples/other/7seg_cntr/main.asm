@@ -3,20 +3,22 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;20.05.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-	.SET	CORE_FREQ										= 0x08
+	.EQU	FW_VERSION										= 1
+	.SET	CORE_FREQ										= 8	;2-20
 	.EQU	TIMER_C_ENABLE									= 0	;0-1
+	.SET	AVRA												= 1	;0-1
+	.SET	REPORT_INCLUDES								= 1	;0-1
+	;---подключаем библиотеку устройства---
 	.INCLUDE "./devices/atmega8.inc"
 
 	;Важные, но не обязательные параметры ядра
 ;---CONSTANTS--------------------------------------------
 	;---MAIN-CONSTANTS---
-	.SET	REPORT_INCLUDES								= 0x01
-	.EQU	TS_MODE											= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
+	.EQU	TS_MODE											= TS_MODE_EVENT		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
 	.EQU	OPT_MODE											= OPT_MODE_SPEED	;OPT_MODE_SPEED/OPT_MODE_SIZE
-	.SET	AVRA												= 1		;0-1
 	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US
 	.SET	TIMERS											= 4		;0-...
-	.SET	LOGGING_PORT									= MOSI
+	.SET	LOGGING_PORT									= SCK
 
 	;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -29,8 +31,6 @@
 	;Блок задач
 	;---
 	;Дополнительно
-	.include	"./math/mul16x8.inc"
-	.include	"./math/div16x8.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -124,21 +124,6 @@ MAIN:
 	LDI LOOP_CNTR,0x04
 	LDI FLAGS,DRV_7SEGLD_MODE_HDIG_HSEG
 	MCALL C5_CREATE
-	;Устаналвиваем порты цифр
-	LDI TEMP,PID_7SEGLD_DRV
-	LDI ACCUM,DIG1_PORT
-	LDI FLAGS,DRV_7SEGLD_OP_SET_PORT
-	LDI TEMP_L,0x00
-	MCALL C5_EXEC
-	LDI ACCUM,DIG2_PORT
-	LDI TEMP_L,0x01
-	MCALL C5_EXEC
-	LDI ACCUM,DIG3_PORT
-	LDI TEMP_L,0x02
-	MCALL C5_EXEC
-	LDI ACCUM,DIG4_PORT
-	LDI TEMP_L,0x03
-	MCALL C5_EXEC
 
 	;Инициализация задачи тестирования
 	LDI PID,PID_TASK
@@ -155,10 +140,20 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
+	;Устаналвиваем и включаем порты цифр
 	LDI TEMP,PID_7SEGLD_DRV
-	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
-	LDI ACCUM,0xff
+	LDI FLAGS,DRV_7SEGLD_OP_SET_PORT
+	LDI ACCUM,DIG1_PORT
 	LDI TEMP_L,0x00
+	MCALL C5_EXEC
+	LDI ACCUM,DIG2_PORT
+	LDI TEMP_L,0x01
+	MCALL C5_EXEC
+	LDI ACCUM,DIG3_PORT
+	LDI TEMP_L,0x02
+	MCALL C5_EXEC
+	LDI ACCUM,DIG4_PORT
+	LDI TEMP_L,0x03
 	MCALL C5_EXEC
 
 	MCALL _TASK_GET_BAT_V
@@ -239,7 +234,24 @@ _TASK_ITERATION__NO_SHORT_PRESS:
 	CPI TEMP_L,0b00010001
 	BRNE _TASK__LOOP2_NEXT
 	MCALL _TASK_SHUTDOWN
-	;TODO POWER OFF
+	;Переходим в Idle mode
+	LDS TEMP,GICR
+	ORI TEMP,(1<<INT1)
+	STS GICR,TEMP
+	LDI TEMP,(1<<SM2)|(1<<SM1)|(0<<SM0)|(1<<SE)|(0<<ISC11)|(0<<ISC10)
+	STS MCUCR,TEMP
+	SLEEP
+	LDS TEMP,GICR
+	ANDI TEMP,low(~(1<<INT1))
+	STS GICR,TEMP
+	;После пробуждения ждем 200мс, очищаем очередь кнопок и переходим на начало задачи
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x00
+	LDI TEMP,0x64
+	MCALL C5_WAIT_2MS
+	LDI TEMP,PID_BUTTONS_DRV
+	LDI FLAGS,DRV_BUTTONS_OP_CLEAR
+	MCALL C5_EXEC
 	RJMP TASK
 
 _TASK__LOOP2_NEXT:
@@ -286,9 +298,6 @@ _TASK_SHUTDOWN:
 	LDI TEMP,PID_COUNTER_DRV
 	LDI FLAGS,DRV_COUNTER_OP_RESET
 	MCALL C5_EXEC
-
-	LDI TEMP,0x01
-	MCALL C5_WAIT_1S
 
 	RET
 
@@ -420,6 +429,7 @@ _TASK_DISPLAY_OFF:
 	PUSH TEMP
 	PUSH FLAGS
 	PUSH ACCUM
+	PUSH TEMP_H
 	PUSH TEMP_L
 
 	LDI TEMP,PID_7SEGLD_DRV
@@ -434,7 +444,28 @@ _TASK_DISPLAY_OFF:
 	LDI TEMP_L,0x03
 	MCALL C5_EXEC
 
+	;Ждем 300 мс чтобы драйвер 7segld успел потушить всю индикацию
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x00
+	LDI TEMP,(300/2)
+	MCALL C5_WAIT_2MS
+
+	;Выключаем порты цифр
+	LDI ACCUM,DIG1_PORT
+	MCALL PORT_SET_LO
+	MCALL PORT_MODE_IN
+	LDI ACCUM,DIG2_PORT
+	MCALL PORT_SET_LO
+	MCALL PORT_MODE_IN
+	LDI ACCUM,DIG3_PORT
+	MCALL PORT_SET_LO
+	MCALL PORT_MODE_IN
+	LDI ACCUM,DIG4_PORT
+	MCALL PORT_SET_LO
+	MCALL PORT_MODE_IN
+
 	POP TEMP_L
+	POP TEMP_H
 	POP ACCUM
 	POP FLAGS
 	POP TEMP

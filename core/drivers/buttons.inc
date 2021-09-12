@@ -58,6 +58,8 @@
 	.EQU	DRV_BUTTONS_OP_ADD							= 0x00
 	.EQU	DRV_BUTTONS_OP_GET							= 0x01
 	.EQU	DRV_BUTTONS_OP_WAIT							= 0x02
+	.EQU	DRV_BUTTONS_OP_CLEAR							= 0x03
+
 
 	.EQU	_DRV_BUTTONS_RAM_SIZE						= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
 ;--------------------------------------------------------
@@ -112,6 +114,9 @@ DRV_BUTTONS_INIT:
 	CPI FLAGS,DRV_BUTTONS_OP_WAIT
 	BRNE PC+0x04
 	MCALL _DRV_BUTTONS_OP_WAIT
+	CPI FLAGS,DRV_BUTTONS_OP_CLEAR
+	BRNE PC+0x04
+	MCALL _DRV_BUTTONS_OP_CLEAR
 
 _DRV_BUTTONS_PROC_END:
 	POP TEMP
@@ -221,6 +226,14 @@ _DRV_BUTTONS_PULL_QUEUE__END:
 	POP_X
 	POP LOOP_CNTR
 	POP ACCUM
+	RET
+
+;--------------------------------------------------------
+_DRV_BUTTONS_OP_CLEAR:
+;--------------------------------------------------------
+;Очищаем очередь нажатий
+;--------------------------------------------------------
+	STD Y+_DRV_BUTTONS_QUEUE_SIZE,C0x00
 	RET
 
 ;--------------------------------------------------------
