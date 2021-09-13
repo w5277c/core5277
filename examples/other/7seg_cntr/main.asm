@@ -72,6 +72,8 @@
 	.include	"./conv/num16_to_strf.inc"
 	.include	"./conv/num_to_7seg.inc"
 	.include	"./core/wait_1s.inc"
+	.include "./core/uptime_copy.inc"
+	.include "./core/uptime_delta.inc"
 	;---
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
@@ -125,7 +127,7 @@ MAIN:
 	LDI FLAGS,DRV_7SEGLD_MODE_HDIG_HSEG
 	MCALL C5_CREATE
 
-	;Инициализация задачи тестирования
+	;Инициализация задачи
 	LDI PID,PID_TASK
 	LDI_Z TASK__INIT
 	MCALL C5_CREATE
@@ -134,12 +136,19 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
-	LDI ACCUM,0x05
+	;Выделяем память под UPTIME,последнее значение счетчика и буфер для преобразования числа в строку
+	LDI ACCUM,0x05+0x02+0x05
 	MCALL C5_RAM_REALLOC
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
+	;Обновляем временную метку
+	MCALL C5_UPTIME_COPY
+	;Устанавливаем старое значение счетчика в 0(для отслеживания изменения значения счетчика)
+	STD Y+0x05,C0x00
+	STD Y+0x06,C0x00
+
 	;Устаналвиваем и включаем порты цифр
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI FLAGS,DRV_7SEGLD_OP_SET_PORT
@@ -156,6 +165,7 @@ TASK:
 	LDI TEMP_L,0x03
 	MCALL C5_EXEC
 
+	;Получаем текущее напряжение батареи и выводим на дисплей
 	MCALL _TASK_GET_BAT_V
 	LDI LOOP_CNTR,0b00000100
 	MCALL _TASK_LED_UPDATE
@@ -164,9 +174,11 @@ TASK:
 	LDI ACCUM,0b00111000
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
-	LDI TEMP,0x03
+	;Ждем секунду
+	LDI TEMP,0x01
 	MCALL C5_WAIT_1S
 
+	;Считываем последнее значение счетчика, и выводи на дисплей(если есть значение)
 	MCALL _TASK_READ_LAST_VALUE
 	CPI TEMP_H,0xff
 	BREQ _TASK__NO_LAST_VALUE
@@ -177,10 +189,12 @@ TASK:
 	LDI ACCUM,0b00011000
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
-	LDI TEMP,0x03
+	;Ждем 2 секунды
+	LDI TEMP,0x02
 	MCALL C5_WAIT_1S
 
 _TASK__NO_LAST_VALUE:
+	;Выводим нули - начало отсчета
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
 	LDI ACCUM,0x00
@@ -191,7 +205,13 @@ _TASK__NO_LAST_VALUE:
 	LDI TEMP_L,0x03
 	MCALL C5_EXEC
 
+	;Очищаем очередь кнопки
+	LDI TEMP,PID_BUTTONS_DRV
+	LDI FLAGS,DRV_BUTTONS_OP_CLEAR
+	MCALL C5_EXEC
+
 TASK_LOOP:
+	;Получаем напряжение батареи
 	LDI ACCUM,0b10000000
 	MCALL _TASK_GET_BAT_V
 	CPI TEMP_H,0x00
@@ -203,8 +223,10 @@ TASK_LOOP:
 	BRCC PC+0x02
 	LDI ACCUM,0b00010000
 
-	LDI LOOP_CNTR,0x10
+	;32 итераций без опроса батареи
+	LDI LOOP_CNTR,0x20
 _TASK__LOOP2:
+	;Отображаем заряд батареи на дисплее
 	LDI TEMP_L,0x00
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
@@ -218,13 +240,17 @@ _TASK__LOOP2:
 	MCALL C5_EXEC
 	MCALL TASK_COUNTER_UPDATE
 
+	;Считываем очередь нажатий кнопки
 	LDI TEMP,PID_BUTTONS_DRV
 	LDI FLAGS,DRV_BUTTONS_OP_GET
 	MCALL C5_EXEC
 	POP ACCUM
+	;Следующая итерация если нажатий не было
 	CPI TEMP_H,0xff
 	BREQ _TASK__LOOP2_NEXT
-	;Проверка на короткое нажатие
+	;Обновляем временную метку
+	MCALL C5_UPTIME_COPY
+	;Проверка на единичное короткое нажатие
 	CPI TEMP_L,0b00010000
 	BRNE PC+0x04
 	MCALL _TASK_SHUTDOWN
@@ -233,6 +259,7 @@ _TASK_ITERATION__NO_SHORT_PRESS:
 	;Проверка на единичное длинное нажатие
 	CPI TEMP_L,0b00010001
 	BRNE _TASK__LOOP2_NEXT
+_TASK_ITERATION__POWER_OFF:
 	MCALL _TASK_SHUTDOWN
 	;Переходим в Idle mode
 	LDS TEMP,GICR
@@ -244,34 +271,58 @@ _TASK_ITERATION__NO_SHORT_PRESS:
 	LDS TEMP,GICR
 	ANDI TEMP,low(~(1<<INT1))
 	STS GICR,TEMP
-	;После пробуждения ждем 200мс, очищаем очередь кнопок и переходим на начало задачи
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
-	LDI TEMP,0x64
-	MCALL C5_WAIT_2MS
-	LDI TEMP,PID_BUTTONS_DRV
-	LDI FLAGS,DRV_BUTTONS_OP_CLEAR
-	MCALL C5_EXEC
 	RJMP TASK
 
 _TASK__LOOP2_NEXT:
 	DEC LOOP_CNTR
 	BRNE _TASK__LOOP2
+	;Проверяем на 3 мин. таймаут
+	MCALL C5_UPTIME_DELTA
+	CPI TEMP_EH,0x00
+	BRNE _TASK_ITERATION__POWER_OFF
+	CPI TEMP_EL,0x00
+	BRNE _TASK_ITERATION__POWER_OFF
+	CPI TEMP_H,0x01
+	BRCS _TASK__NO_TIMEOUT
+	BRNE _TASK_ITERATION__POWER_OFF
+	CPI TEMP_L,0x5f
+	BRCS _TASK__NO_TIMEOUT
+	BRNE _TASK_ITERATION__POWER_OFF
+	CPI TEMP,0x90
+	BRCS _TASK__NO_TIMEOUT
+	BRNE _TASK_ITERATION__POWER_OFF
+_TASK__NO_TIMEOUT:
 	RJMP TASK_LOOP
 
+;--------------------------------------------------------
 TASK_COUNTER_UPDATE:
+;--------------------------------------------------------
+;Получаем значение счетчика и выводим на экран,
+;выдерживаем паузу
+;--------------------------------------------------------
 	PUSH_FT
 	PUSH LOOP_CNTR
 
 	LDI TEMP,PID_COUNTER_DRV
 	LDI FLAGS,DRV_COUNTER_OP_GET
 	MCALL C5_EXEC
+	LDD TEMP,Y+0x05
+	CP TEMP,TEMP_H
+	BRNE PC+0x04
+	LDD TEMP,Y+0x06
+	CP TEMP,TEMP_L
+	BREQ PC+0x05
+	;Счетчик изменился, обновляем временную метку
+	MCALL C5_UPTIME_COPY
+	STD Y+0x05,TEMP_H
+	STD Y+0x06,TEMP_L
+
 	LDI LOOP_CNTR,0x00
 	MCALL _TASK_LED_UPDATE
 
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
-	LDI TEMP,0x64/2
+	LDI TEMP,0x32/2
 	MCALL C5_WAIT_2MS
 
 	POP LOOP_CNTR
@@ -283,6 +334,19 @@ _TASK_SHUTDOWN:
 ;--------------------------------------------------------
 ;Заверение работы(сброс или выключение)
 ;--------------------------------------------------------
+	;Выключаем дисплей
+	LDI TEMP,PID_7SEGLD_DRV
+	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
+	LDI ACCUM,0x00
+	LDI TEMP_L,0x00
+	MCALL C5_EXEC
+	LDI TEMP_L,0x01
+	MCALL C5_EXEC
+	LDI TEMP_L,0x02
+	MCALL C5_EXEC
+	LDI TEMP_L,0x03
+	MCALL C5_EXEC
+
 	LDI TEMP,PID_COUNTER_DRV
 	LDI FLAGS,DRV_COUNTER_OP_GET
 	MCALL C5_EXEC
@@ -292,8 +356,6 @@ _TASK_SHUTDOWN:
 	CPI TEMP_L,0x00
 	BREQ PC+0x03
 	MCALL _TASK_WRITE_LAST_VALUE
-
-	MCALL _TASK_DISPLAY_OFF
 
 	LDI TEMP,PID_COUNTER_DRV
 	LDI FLAGS,DRV_COUNTER_OP_RESET
@@ -314,17 +376,12 @@ _TASK_GET_BAT_V:
 
 	LDI TEMP,PID_ADC_DRV
 	LDI ACCUM,ADC5
-	LDI TEMP_EH,ADC_VREF_AVCC	;LDI TEMP_EH,ADC_VREF_2_56_CAP
+	LDI TEMP_EH,ADC_VREF_AVCC
 	LDI TEMP_EL,DRV_ADC_PRESC_AUTO
-	LDI TEMP_H,0x10
+	LDI TEMP_H,0x04
 	LDI TEMP_L,0x85
 	LDI_X 0x0000
 	MCALL C5_EXEC
-
-	;LSR TEMP_H
-	;ROR TEMP_L
-	;LSR TEMP_H
-	;ROR TEMP_L
 
 	LDI TEMP,10
 	MCALL MUL16X8
@@ -349,8 +406,9 @@ _TASK_LED_UPDATE:
 	PUSH FLAGS
 
 	MOVW ZL,YL
+	ADIW ZL,0x07
 	MCALL NUM16_TO_STRF
-	LDD TEMP,Y+0x02
+	LDD TEMP,Y+0x09
 	SUBI TEMP,0x30
 	MCALL NUM_TO_7SEG
 	MOV ACCUM,TEMP
@@ -360,7 +418,7 @@ _TASK_LED_UPDATE:
 	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
 	LDI TEMP_L,0x01
 	MCALL C5_EXEC
-	LDD TEMP,Y+0x03
+	LDD TEMP,Y+0x0a
 	SUBI TEMP,0x30
 	MCALL NUM_TO_7SEG
 	MOV ACCUM,TEMP
@@ -369,7 +427,7 @@ _TASK_LED_UPDATE:
 	LDI TEMP,PID_7SEGLD_DRV
 	LDI TEMP_L,0x02
 	MCALL C5_EXEC
-	LDD TEMP,Y+0x04
+	LDD TEMP,Y+0x0b
 	SUBI TEMP,0x30
 	MCALL NUM_TO_7SEG
 	MOV ACCUM,TEMP
@@ -405,6 +463,7 @@ _TASK_WRITE_LAST_VALUE:
 
 	POP TEMP
 	RET
+
 ;--------------------------------------------------------
 _TASK_READ_LAST_VALUE:
 ;--------------------------------------------------------
@@ -420,53 +479,5 @@ _TASK_READ_LAST_VALUE:
 	MCALL EEPROM_READ_BYTE
 	MOV TEMP_L,TEMP
 	POP TEMP_H
-	POP TEMP
-	RET
-
-;--------------------------------------------------------
-_TASK_DISPLAY_OFF:
-;--------------------------------------------------------
-	PUSH TEMP
-	PUSH FLAGS
-	PUSH ACCUM
-	PUSH TEMP_H
-	PUSH TEMP_L
-
-	LDI TEMP,PID_7SEGLD_DRV
-	LDI FLAGS,DRV_7SEGLD_OP_SET_VAL
-	LDI ACCUM,0x00
-	LDI TEMP_L,0x00
-	MCALL C5_EXEC
-	LDI TEMP_L,0x01
-	MCALL C5_EXEC
-	LDI TEMP_L,0x02
-	MCALL C5_EXEC
-	LDI TEMP_L,0x03
-	MCALL C5_EXEC
-
-	;Ждем 300 мс чтобы драйвер 7segld успел потушить всю индикацию
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
-	LDI TEMP,(300/2)
-	MCALL C5_WAIT_2MS
-
-	;Выключаем порты цифр
-	LDI ACCUM,DIG1_PORT
-	MCALL PORT_SET_LO
-	MCALL PORT_MODE_IN
-	LDI ACCUM,DIG2_PORT
-	MCALL PORT_SET_LO
-	MCALL PORT_MODE_IN
-	LDI ACCUM,DIG3_PORT
-	MCALL PORT_SET_LO
-	MCALL PORT_MODE_IN
-	LDI ACCUM,DIG4_PORT
-	MCALL PORT_SET_LO
-	MCALL PORT_MODE_IN
-
-	POP TEMP_L
-	POP TEMP_H
-	POP ACCUM
-	POP FLAGS
 	POP TEMP
 	RET
