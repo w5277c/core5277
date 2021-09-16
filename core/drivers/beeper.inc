@@ -185,7 +185,7 @@ DRV_BEEPER_INIT:
 	PUSH LOOP_CNTR
 
 	;Считываем информацию о пине
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	;Умножаем на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
@@ -316,7 +316,7 @@ _DRV_BEEPER_TIMER_EVENT:
 	PUSH_Y
 
 	;Сичтываем информацию о пине
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	LDD XH,Y+_DRV_BEEPER_TIMER_CNTR+0x00
 	LDD XL,Y+_DRV_BEEPER_TIMER_CNTR+0x01

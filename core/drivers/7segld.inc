@@ -20,7 +20,7 @@
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./math/div16x8.inc"
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 .include	"./core/timer_set.inc"
 .include	"./core/timer_start.inc"
 .include	"./io/port_mode_in.inc"
@@ -101,7 +101,7 @@ DRV_7SEGLD_INIT:
 	MOVW XL,YL
 	ADIW XL,_DRV_7SEGLD_RAM_DIG_DATA
 	LDI TEMP,0xff
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 	POP LOOP_CNTR
 
 	;Инициализируем таймер с периодом в 100Hz для всех цифр
@@ -128,7 +128,7 @@ DRV_7SEGLD_INIT:
 	PUSH_Y
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	CPI FLAGS,DRV_7SEGLD_OP_SET_PORT
 	BRNE PC+0x04
@@ -246,7 +246,7 @@ DRV_7SEGLD_TIMER_EVENT:
 	PUSH_Y
 	PUSH_Z
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	LDD FLAGS,Y+_DRV_7SEGLD_RAM_FLAGS
 	LDD TEMP_H,Y+_DRV_7SEGLD_RAM_DIG_QNT

@@ -8,7 +8,7 @@
 .set DEF_DRIVER_FS_MKDIR = 1
 
 .include	"./mem/ram_fill16.inc"
-.include	"./mem/ram_copy8.inc"
+.include	"./mem/ram_copy.inc"
 .include	"./core/drivers/sd/sd_read_block.inc"
 .include	"./core/drivers/sd/sd_write_block.inc"
 
@@ -108,7 +108,7 @@ _DRV_FS_OP_MKDIR__GOT_ITEM_ID:
 	MOV ZH,YH
 	MOV ZL,YL
 	ADIW ZL,DRV_FS_ITEM_NAME
-	MCALL RAM_COPY8
+	MCALL RAM_COPY
 	CPI LOOP_CNTR,DRV_FS_NAME_SIZE
 	BREQ PC+0x04	;TODO надо проверить
 	ADIW YL,LOOP_CNTR

@@ -3,11 +3,14 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;26.12.2020	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO C5_RAM_OFFSET Z->Y
+;-----------------------------------------------------------------------------------------------------------------------
+
 .ifdef DEF_C5_FS_COMMON
 .else
 .set DEF_C5_FS_COMMON = 1
 
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 
 	;---OFFSETS---
 	.EQU	_DRV_FS_SD_DRV_ID											= 0x00;1B ИД драйвера SD карты
@@ -97,7 +100,7 @@ DRV_FS_INIT:
 	MOV XL,ZL
 	LDI TEMP,0x00
 	MOV LOOP_CNTR,ACCUM
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 
 	POP ACCUM
 	STD Z+_DRV_FS_SD_DRV_ID+0x00,ACCUM
@@ -170,7 +173,7 @@ _DRV_FS_ITEM_INFO:
 	LDD ZL,Z+_DRV_FS_ITEM_BUFFER+0x01
 	MOV ZH,TEMP
 	LDI LOOP_CNTR,DRV_FS_ITEM_SIZE
-	MCALL RAM_COPY8
+	MCALL RAM_COPY
 	LDI FLAGS,C5_FS_RESULT_OK
 
 C5_FS_ITEM_INFO__END:

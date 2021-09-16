@@ -18,7 +18,7 @@
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/ram/ram_extend.inc"
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 .include	"./core/wait.inc"
 .include	"./core/timer_set.inc"
 .include	"./core/timer_start.inc"
@@ -81,7 +81,7 @@ DRV_BUTTONS_INIT:
 	MOVW XL,YL
 	ADIW XL,_DRV_BUTTONS_QUEUE
 	LDI TEMP,0x00
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 
 	;Инициализирую таймер с периодом в 0.002*_DRV_BUTTONS_TIMER_PERIOD
 	MOV TEMP,ACCUM
@@ -101,7 +101,7 @@ DRV_BUTTONS_INIT:
 	PUSH_Y
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	CPI FLAGS,DRV_BUTTONS_OP_ADD
 	BRNE PC+0x04
@@ -219,7 +219,7 @@ _DRV_BUTTONS_OP_GET:
 	ADC XH,YH
 	MOVW ZL,YL
 	ADIW ZL,_DRV_BUTTONS_QUEUE
-	MCALL RAM_COPY8
+	MCALL RAM_COPY
 _DRV_BUTTONS_PULL_QUEUE__END:
 	STS SREG,ACCUM
 
@@ -247,7 +247,8 @@ DRV_BUTTONS_TIMER_EVENT:
 	PUSH LOOP_CNTR
 	PUSH_Y
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
+
 	LDD LOOP_CNTR,Y+_DRV_BUTTONS_BUTTONS_QNT
 	CPI LOOP_CNTR,0x00
 	BRNE PC+0x02

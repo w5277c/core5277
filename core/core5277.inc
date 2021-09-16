@@ -26,6 +26,7 @@
 ;29.06.2021	w5277c@gmail.com			v0.3.8	Множественные, мелкие изменения в основном TIMER_C, введен OPT_MODE
 ;22.08.2021	w5277c@gmail.com			Атомарная операция записи адреса вершины стека.
 ;05.09.2021	w5277c@gmail.com			INPUT_PORT->C5_IN_PORT
+;16.09.2021	w5277c@gmail.com			v0.3.9	Множественные, незначительные изменения.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -213,10 +214,10 @@
 	.DEF	_PID										= r15				;ИД корневого процесса(обычно задачи)
 
 
-	.INCLUDE	"./mem/ram_copy8.inc"
+	.INCLUDE	"./mem/ram_copy.inc"
 	.INCLUDE	"./mem/ram_fill16.inc"
 .if TS_MODE != TS_MODE_NO
-	.INCLUDE "./mem/ram_copy8_desc.inc"
+	.INCLUDE "./mem/ram_copy_desc.inc"
 	.INCLUDE "./mem/ram_copy16_desc.inc"
 .endif
 	.INCLUDE "./conv/bitnum_to_num.inc"
@@ -233,7 +234,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	OUTSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.3.8 [",0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.3.9 [",0x00,0x00
 	OUTSTR_MCUSR_NO:
 	.db   "NO ",0x00
 	OUTSTR_MCUSR_WD:
@@ -496,7 +497,7 @@ _C5_TIMER_C_IR:
 	LDS YH,_C5_TIMER_C_Y+0x00
 	LDS YL,_C5_TIMER_C_Y+0x01
 .else
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 .endif
 	LDS ZH,_C5_TIMER_C_VECTOR+0x00
 	LDS ZL,_C5_TIMER_C_VECTOR+0x01
@@ -1334,7 +1335,7 @@ _C5_STACK_TO_TOP:
 	;Копируем стек задачи наверх
 	;TODO из смещений нужно вычесть длину стека задачи(+/-1)
 	MOV LOOP_CNTR,TEMP_EL
-	MCALL RAM_COPY8_DESC
+	MCALL RAM_COPY_DESC
 
 	;Записываем старое смещение на стек текущей задачи
 	MOV ZH,XH

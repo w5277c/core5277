@@ -60,7 +60,7 @@ _C5_RES_UNLOCK__DATA_MOVE:
 	BRNE _C5_RES_UNLOCK__QUEUE_NEXT
 	;Сдвигаю элементы очереди на один
 	SUBI LOOP_CNTR,0x02
-	MCALL RAM_COPY8
+	MCALL RAM_COPY
 	;Записываем нули в последнюю ячейку
 	LDI TEMP,0x00
 	STS _C5_RESOURCE_QUEUE+_C5_RES_QUEUE_SIZE-0x02,TEMP

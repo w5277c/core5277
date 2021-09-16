@@ -28,7 +28,7 @@
 	.include	"./mem/eeprom_write_byte.inc"
 	.include	"./mem/eeprom_read_byte.inc"
 	.include	"./core/wait_1s.inc"
-	.include	"./mem/ram_fill8.inc"
+	.include	"./mem/ram_fill.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -84,7 +84,7 @@ TASK__INFINITE_LOOP:
 	LDI TEMP,0x00
 	MOV XH,ZH
 	MOV XL,ZL
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 
 	LDI TEMP,PID_UART_DRV
 	LDI YH,high(TASK_DATA)|0x80

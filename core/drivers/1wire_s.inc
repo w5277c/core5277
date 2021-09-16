@@ -59,7 +59,7 @@ DRV_1WIRE_INIT:
 	PUSH ACCUM
 
 	;Сичтываем информацию о пине
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 	LDD ACCUM,Y+_DRV_1WIRE_PORT
 
 	;Умножаем на 2 адрес рабоыт с ROM

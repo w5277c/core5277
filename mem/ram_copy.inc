@@ -6,36 +6,30 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_RAM_COPY8_DESC
+;TODO: убрать 8 из имени у всех 8битных процедур, число нужно только не 8битным процедурам
+;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF_RAM_COPY
 .else
-.set DEF_RAM_COPY8_DESC = 1
+.set DEF_RAM_COPY = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included RAM_COPY8_DESC"
+.message "included RAM_COPY"
 .endif
 
+.include	"./mem/ram_copy16.inc"
+
 ;--------------------------------------------------------
-RAM_COPY8_DESC:
+RAM_COPY:
 ;--------------------------------------------------------
-;Копирование блока памяти(с декрементом смещений)
+;Копирование блока памяти
 ;IN: X-SRC адрес, Z-DST адрес, LOOP_CNTR-длина
 ;--------------------------------------------------------
-	PUSH_X
-	PUSH_Z
-	PUSH LOOP_CNTR
-	PUSH TEMP
-
-	ADIW XL,0x01
-	ADIW ZL,0x01
-_RAM_COPY8_DESC__LOOP:
-	LD TEMP,-X
-	ST -Z,TEMP
-	DEC LOOP_CNTR
-	BRNE _RAM_COPY8_DESC__LOOP
-
-	POP TEMP
-	POP LOOP_CNTR
-	POP_Z
-	POP_X
+	PUSH TEMP_H
+	PUSH TEMP_L
+	CLR TEMP_H
+	MOV TEMP_L,LOOP_CNTR
+	MCALL RAM_COPY16
+	POP TEMP_L
+	POP TEMP_H
 	RET
 .endif

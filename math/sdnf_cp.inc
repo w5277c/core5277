@@ -7,6 +7,7 @@
 ;10.12.2020	w5277c@gmail.com			-с5
 ;06.07.2021	w5277c@gmail.com			Y->Z
 ;03.09.2021	w5277c@gmail.com			Значение 0xff для целой части корректно
+;15.09.2021	w5277c@gmail.com			Equal(null==null), если оба значения сотых = 0xff
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_SDNF_CP
 .else
@@ -29,9 +30,13 @@ SDNF_CP:																	;Signed Digital aNd Fractional
 	PUSH TEMP_L
 	;Проверка на корректность значений
 	CPI XL,0xff
-	BREQ _SDNF_CP__ERROR
+	BREQ PC+03
 	CPI ZL,0xff
-	BREQ _SDNF_CP__ERROR
+	BRNE PC+0x04
+	CP XL,ZL
+	BREQ _SDNF_CP__EQUAL
+	RJMP _SDNF_CP__ERROR
+
 	;Выношу знаки в отдельные регистры
 	MOV TEMP_H,XL
 	ANDI TEMP_H,0x80

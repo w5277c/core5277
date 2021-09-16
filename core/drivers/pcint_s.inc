@@ -2,7 +2,9 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;25.05.2021	w5277c@gmail.com			Начало, не тестировано
+;16.09.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
+
 .ifdef DEF__C5_DRV_PCINT_S
 .else
 .set DEF__C5_DRV_PCINT_S = 1
@@ -10,7 +12,7 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 .include	"./io/port_mode_in.inc"
 .include	"./io/port_set.inc"
 
@@ -41,13 +43,12 @@ DRV_PCINT_S_INIT:
 	SUBI ACCUM,(0x100-0x01)
 	MCALL C5_RAM_REALLOC
 	;Записываем длину
-	STD Z+_DRV_PCINT_S_RAM_ITEMS_QNT,LOOP_CNTR
+	STD Y+_DRV_PCINT_S_RAM_ITEMS_QNT,LOOP_CNTR
 	;Заполняем
-	MOV XH,ZH
-	MOV XL,ZL
+	MOVW XL,YL
 	MOV LOOP_CNTR,ACCUM
 	LDI TEMP,0xff
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 
 	POP ACCUM
 	;Настраиваем и запускаем таймер
@@ -62,9 +63,9 @@ DRV_PCINT_S_INIT:
 ;--------------------------------------------------------
 ;Основной код, устанавливаем параметры порта
 ;IN: ACCUM-порт(7bit-подтяжка), TEMP_L-номер порта
-;Y-адрес обработчика, FLAGS-PID(0xFF - отключить)
+;Z-адрес обработчика, FLAGS-PID(0xFF - отключить)
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_Y
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -78,9 +79,8 @@ DRV_PCINT_S_INIT:
 	LSL TEMP
 	ADD TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x01)
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
+	ADD YL,TEMP
+	ADC YH,C0x00
 
 	;Настраиваем порт
 	MOV TEMP,ACCUM
@@ -90,20 +90,20 @@ DRV_PCINT_S_INIT:
 	MCALL PORT_SET
 
 	LDI TEMP,0xff
-	ST Z+_DRV_PCINT_S_ITEM_PID,TEMP
-	ST Z+_DRV_PCINT_S_ITEM_LAST_STATE,TEMP
+	ST Y+_DRV_PCINT_S_ITEM_PID,TEMP
+	ST Y+_DRV_PCINT_S_ITEM_LAST_STATE,TEMP
 	MCALL PORT_OFFSETS
-	ST Z+_DRV_PCINT_S_ITEM_PORT+0x00,TEMP
-	ST Z+_DRV_PCINT_S_ITEM_PORT+0x01,ACCUM
-	ST Z+_DRV_PCINT_S_ITEM_ADDR+0x00,YH
-	ST Z+_DRV_PCINT_S_ITEM_ADDR+0x01,YL
-	ST Z+_DRV_PCINT_S_ITEM_PID,FLAGS
+	ST Y+_DRV_PCINT_S_ITEM_PORT+0x00,TEMP
+	ST Y+_DRV_PCINT_S_ITEM_PORT+0x01,ACCUM
+	ST Y+_DRV_PCINT_S_ITEM_ADDR+0x00,ZH
+	ST Y+_DRV_PCINT_S_ITEM_ADDR+0x01,ZL
+	ST Y+_DRV_PCINT_S_ITEM_PID,FLAGS
 
 	POP ACCUM
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
-	POP_Z
+	POP_Y
 	RET
 
 ;--------------------------------------------------------
@@ -122,40 +122,38 @@ _DRV_PCINT_S_TIMER_EVENT:
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 
-	LD FLAGS,Z+															;_DRV_PCINT_S_RAM_ITEMS_QNT
+	LD FLAGS,Y+															;_DRV_PCINT_S_RAM_ITEMS_QNT
 	MOV LOOP_CNTR,FLAGS
 _DRV_PCINT_S_TIMER_EVENT__ITEMS_LOOP:
-	LDD TEMP,Z+_DRV_PCINT_S_ITEM_PID
+	LDD TEMP,Y+_DRV_PCINT_S_ITEM_PID
 	CPI TEMP,0xff
 	BREQ _DRV_PCINT_S_TIMER_EVENT__ITEMS_NEXT
-	LDI YH,0x00
-	LDD YL,Z+_DRV_PCINT_S_ITEM_PORT+0x00
-	LDS TEMP_H,Y
+	LDI ZH,0x00
+	LDD ZL,Y+_DRV_PCINT_S_ITEM_PORT+0x00
+	LDS TEMP_H,Z
 	AND TEMP_H,ACCUM
-	LDD TEMP_L,Z+_DRV_PCINT_S_ITEM_LAST_STATE
-	LDD ACCUM,Z+_DRV_PCINT_S_ITEM_PORT+0x01
+	LDD TEMP_L,Y+_DRV_PCINT_S_ITEM_LAST_STATE
+	LDD ACCUM,Y+_DRV_PCINT_S_ITEM_PORT+0x01
 	CPI TEMP_L,0xff
 	BRNE PC+0x03
-	STD Z+_DRV_PCINT_S_ITEM_LAST_STATE,TEMP_H
+	STD Y+_DRV_PCINT_S_ITEM_LAST_STATE,TEMP_H
 	RJMP _DRV_PCINT_S_TIMER_EVENT__ITEMS_NEXT
 	EOR TEMP_L,TEMP_H
 	BREQ _DRV_PCINT_S_TIMER_EVENT__ITEMS_NEXT
-	STD Z+_DRV_PCINT_S_ITEM_LAST_STATE,TEMP_H
+	STD Y+_DRV_PCINT_S_ITEM_LAST_STATE,TEMP_H
 	CLR ACCUM
 	CPI TEMP_H,0x00
 	BRNE PC+0x02
 	LDI ACCUM,0x01
-	PUSH_Z
 	PUSH FLAGS
-	LDD TEMP,Z+_DRV_PCINT_S_ITEM_ADDR+0x00
-	LDD ZL,Z+_DRV_PCINT_S_ITEM_ADDR+0x01
+	LDD TEMP,Y+_DRV_PCINT_S_ITEM_ADDR+0x00
+	LDD ZL,Y+_DRV_PCINT_S_ITEM_ADDR+0x01
 	MOV ZH,TEMP
 	SUB FLAGS,LOOP_CNTR
 	ICALL																	;FLAGS-состояние пина(0bit), accum-номер
 	POP FLAGS
-	POP_Z
 _DRV_PCINT_S_TIMER_EVENT__ITEMS_NEXT:
-	ADIW ZL,0x06
+	ADIW YL,0x06
 	DEC LOOP_CNTR
 	BRNE _DRV_PCINT_S_TIMER_EVENT__ITEMS_LOOP
 

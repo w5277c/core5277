@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.02.2021  w5277c@gmail.com			Начало
+;16.09.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_TIME32_DELTA
 .else
@@ -26,7 +27,7 @@ C5_TIME32_DELTA:
 ;выделенную память
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH_Z
+	PUSH_Y
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH TEMP_H
@@ -34,28 +35,27 @@ C5_TIME32_DELTA:
 	PUSH TEMP
 
 	MCALL C5_RAM_OFFSET
-	ADD ZL,TEMP
-	CLR TEMP_EH
-	ADC ZH,TEMP_EH
+	ADD YL,TEMP
+	ADC YH,C0x00
 
-	LDD TEMP_EH,Z+0x00
-	LDD TEMP_EL,Z+0x01
-	LDD TEMP_H,Z+0x02
-	LDD TEMP_L,Z+0x03
+	LDD TEMP_EH,Y+0x00
+	LDD TEMP_EL,Y+0x01
+	LDD TEMP_H,Y+0x02
+	LDD TEMP_L,Y+0x03
 
 	;Используем TEMP!
 	MCALL C5_TIME32_MARK
 
-	LDD TEMP,Z+0x03
+	LDD TEMP,Y+0x03
 	SUB TEMP,TEMP_L
 	MOV TEMP_L,TEMP
-	LDD TEMP,Z+0x02
+	LDD TEMP,Y+0x02
 	SUB TEMP,TEMP_H
 	MOV TEMP_H,TEMP
-	LDD TEMP,Z+0x01
+	LDD TEMP,Y+0x01
 	SBC TEMP,TEMP_EL
 	MOV TEMP_EL,TEMP
-	LDD TEMP,Z+0x00
+	LDD TEMP,Y+0x00
 	SBC TEMP,TEMP_EH
 	MOV TEMP_EH,TEMP
 
@@ -82,17 +82,17 @@ _C5_TIME32_DELTA__BY_CNTR:
 	MCALL MUL16X8
 	CLR TEMP_EH
 _C5_TIME32_DELTA__STORE:
-	STD Z+0x00,TEMP_EH
-	STD Z+0x01,TEMP_EL
-	STD Z+0x02,TEMP_H
-	STD Z+0x03,TEMP_L
+	STD Y+0x00,TEMP_EH
+	STD Y+0x01,TEMP_EL
+	STD Y+0x02,TEMP_H
+	STD Y+0x03,TEMP_L
 
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP_EL
 	POP TEMP_EH
-	POP_Z
+	POP_Y
 	POP_X
 	RET
 .endif
