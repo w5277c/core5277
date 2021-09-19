@@ -40,13 +40,6 @@
 	.EQU	TID_UART									= 0
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
-	CLI
-	;Инициализация стека
-	LDI TEMP,high(RAMEND)
-	STS SPH,TEMP
-	LDI TEMP,low(RAMEND)
-	STS SPL,TEMP
-
 	;Инициализация ядра
 	MCALL C5_INIT
 

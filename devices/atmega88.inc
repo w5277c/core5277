@@ -420,7 +420,7 @@
 	.SET	INT1_PORT								= PD3
 
 .ORG 0x0000
-	RJMP	MAIN															; Reset Handler
+	RJMP	APPLICATION_BLOCK											; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
 	RCALL	_C5_IR														; External Interrupt1 Handler
 	RCALL	_C5_IR														; Pin Change Interrupt Request 0
@@ -459,6 +459,16 @@ INT_TABLE:
 	.db	(1<<INT0),(1<<INT1)
 
 APPLICATION_BLOCK:
+	CLI
+	;Инициализация стека
+	LDI TEMP,high(RAMEND)
+	STS SPH,TEMP
+	LDI TEMP,low(RAMEND)
+	STS SPL,TEMP
+	EOR C0x00,C0x00
+	LDI TEMP,0xff
+	MOV C0xff,TEMP
+	RJMP MAIN
 
 .MACRO MCALL
 	RCALL @0

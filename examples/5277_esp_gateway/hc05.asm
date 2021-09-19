@@ -57,13 +57,6 @@
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
-	CLI
-	;Инициализация стека
-	LDI TEMP,high(RAMEND)
-	STS SPH,TEMP
-	LDI TEMP,low(RAMEND)
-	STS SPL,TEMP
-
 	;Инициализация портов
 	LDI ACCUM,INIT_LED_PORT
 	MCALL PORT_MODE_OUT
