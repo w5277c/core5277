@@ -466,7 +466,7 @@
 	.SET	INT7_PORT								= PE7
 
 .ORG 0x0000
-	JMP	APPLICATION_BLOCK											; Reset Handler
+	JMP	_INIT															; Reset Handler
 	CALL	_C5_IR														; External Interrupt0 Handler
 	CALL	_C5_IR														; External Interrupt1 Handler
 	CALL	_C5_IR														; External Interrupt2 Handler
@@ -514,8 +514,7 @@ PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00,0x00,0x00,0x00
 INT_TABLE:
 	.db	(1<<INT0),(1<<INT1),(1<<INT2),(1<<INT3),(1<<INT4),(1<<INT5),(1<<INT6),(1<<INT7)
-
-APPLICATION_BLOCK:
+_INIT:
 	CLI
 	;Инициализация стека
 	LDI TEMP,high(RAMEND)
@@ -526,6 +525,8 @@ APPLICATION_BLOCK:
 	LDI TEMP,0xff
 	MOV C0xff,TEMP
 	JMP MAIN
+
+APPLICATION_BLOCK:
 
 .MACRO MCALL
 	CALL @0

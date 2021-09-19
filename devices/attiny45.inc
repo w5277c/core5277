@@ -260,7 +260,7 @@
 
 .ORG 0x0000
 .ifdef CORE_FREQ
-	RJMP	APPLICATION_BLOCK											; Reset Handler
+	RJMP	_INIT															; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
 	RCALL	_C5_IR														; Pin Change Interrupt Request 0
 .IF TIMER_C_ENABLE == 0x01
@@ -286,8 +286,7 @@ PCINT_TABLE:
 	.db	0x00,PCMSK,0x00,0x00
 INT_TABLE:
 	.db	(1<<INT0)
-
-APPLICATION_BLOCK:
+_INIT:
 	CLI
 	;Инициализация стека
 	LDI TEMP,high(RAMEND)
@@ -298,6 +297,8 @@ APPLICATION_BLOCK:
 	LDI TEMP,0xff
 	MOV C0xff,TEMP
 	RJMP MAIN
+
+APPLICATION_BLOCK:
 
 .MACRO _C5_TIMERA_INIT
 	LDS TEMP,PRR

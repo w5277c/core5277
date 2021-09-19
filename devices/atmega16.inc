@@ -287,7 +287,7 @@
 	.SET	INT1_PORT								= PD3
 
 .ORG 0x0000
-	JMP	APPLICATION_BLOCK											; Reset
+	JMP	_INIT															; Reset
 	CALL	_C5_IR														; External Interrupt0
 	CALL	_C5_IR														; External Interrupt1
 .IF TIMER_C_ENABLE == 0x01
@@ -319,8 +319,7 @@ PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00
 INT_TABLE:
 	.db	(1<<INT0),(1<<INT1),(1<<INT2)
-
-APPLICATION_BLOCK:
+_INIT:
 	CLI
 	;Инициализация стека
 	LDI TEMP,high(RAMEND)
@@ -331,6 +330,8 @@ APPLICATION_BLOCK:
 	LDI TEMP,0xff
 	MOV C0xff,TEMP
 	JMP MAIN
+
+APPLICATION_BLOCK:
 
 .MACRO MCALL
 	CALL @0
