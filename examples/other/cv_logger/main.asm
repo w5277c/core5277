@@ -14,30 +14,39 @@
 
 	;---CONSTANTS--------------------------------------------
 	.EQU	INIT_LED_PORT									= PD5		;Порт индикации пройденной инициализации
-	.EQU	ACT_LED_PORT									= PD2		;Порт индикации активности
+	.EQU	ACT_LED_PORT									= PB2		;Порт индикации активности
+	.EQU	I2C2_SDA											= SDA;PC0
+	.EQU	I2C2_SDA_RES									= PC3
+	.EQU	I2C2_SCL											= SCL;PC1
+	.EQU	I2C2_SCL_RES									= PC2
 
 	;Идентификаторы драйверов(0-7|0-15)
-	.EQU	PID_XXX_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
-	;Идентификаторы задач(0-3|0-15)
-	.EQU	PID_TASK									= 0
+	.EQU	PID_I2C1_DRV									= 0|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_I2C2_DRV									= 1|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_ADC_C_DRV									= 2|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_ADC_V_DRV									= 3|(1<<C5_PROCID_OPT_DRV)
+		;Идентификаторы задач(0-3|0-15)
+	.EQU	PID_TASK											= 0
 	;Идентификаторы таймеров
-	.EQU	TID_XXX									= 0
+	.EQU	TID_I2C2											= 0
 	;---
 
 ;---CORE-SETTINGS----------------------------------------
 	.SET	TS_MODE											= TS_MODE_EVENT
 	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US	;25/50us
-	.SET	TIMERS											= 0		;0-...
+	.SET	TIMERS											= 1		;0-...
 	.SET	BUFFER_SIZE										= 0		;Размер общего буфера
 .if FLASH_SIZE >= 0x4000
-	.SET	LOGGING_PORT									= SCK		;PA0-PF7
+;	.SET	LOGGING_PORT									= SCK		;PA0-PF7
 .endif
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;---
 	;Блок драйверов
-	;.INCLUDE "./core/drivers/xxx.inc"
+	.INCLUDE "./core/drivers/i2c_h.inc"
+	.INCLUDE "./core/drivers/i2c_ms.inc"
+	.INCLUDE "./core/drivers/ltc2451.inc"
 	;---
 	;Блок задач
 	;---
@@ -59,21 +68,49 @@ MAIN:
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
 
+	LDI ACCUM,I2C2_SDA_RES
+	MCALL PORT_MODE_OUT
+	MCALL PORT_SET_HI
+	LDI ACCUM,I2C2_SCL_RES
+	MCALL PORT_MODE_OUT
+	MCALL PORT_SET_HI
+
+	LDI ACCUM,PD2
+	MCALL PORT_MODE_OUT
+	MCALL PORT_SET_LO
 	
 	;Инициализация ядра
 	MCALL C5_INIT
 
-	;Инициализация драйвера
-;	LDI PID,PID_XXX_DRV
-;	LDI ZH,high(DRV_XXX_INIT)
-;	LDI ZL,low(DRV_XXX_INIT)
+	;Инициализация драйвера I2C 1
+	LDI PID,PID_I2C1_DRV
+	LDI_Z DRV_I2C_H_INIT
+	LDI XL,DRV_I2C_FREQ_400KHZ
+	LDI ACCUM,ACT_LED_PORT
+;	MCALL C5_CREATE
+	;Инициализация драйвера ADC(LTC2451)
+	LDI PID,PID_ADC_C_DRV
+	LDI_Z DRV_LTC2451_INIT
+	LDI ACCUM,PID_I2C1_DRV
 ;	MCALL C5_CREATE
 
+	;Инициализация драйвера I2C 2
+	LDI PID,PID_I2C2_DRV
+	LDI_Z DRV_I2C_MS_INIT
+	LDI TEMP_H,I2C2_SDA
+	LDI TEMP_L,I2C2_SCL
+	LDI TEMP_EH,TID_I2C2
+	MCALL C5_CREATE
+	;Инициализация драйвера ADC(LTC2451)
+	LDI PID,PID_ADC_V_DRV
+	LDI_Z DRV_LTC2451_INIT
+	LDI ACCUM,PID_I2C2_DRV
+;	MCALL C5_CREATE
 
 	;Инициализация задачи
 	LDI PID,PID_TASK
-	LDI ZH,high(TASK__INIT)
-	LDI ZL,low(TASK__INIT)
+	LDI ZH,high(TASK_INIT)
+	LDI ZL,low(TASK_INIT)
 	MCALL C5_CREATE
 
 	LDI ACCUM,INIT_LED_PORT
@@ -82,13 +119,41 @@ MAIN:
 	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
-TASK__INIT:
+TASK_INIT:
+	
+	LDI ACCUM,0x04
+	MCALL C5_RAM_REALLOC
+	
+	LDI TEMP,0x40
+	STD Y+0x00,TEMP
+	
+	LDI TEMP,0x40
+	STD Y+0x01,TEMP
+	
+	LDI TEMP,0x03
+	STD Y+0x02,TEMP
+	
+	LDI TEMP,0x80
+	STD Y+0x03,TEMP
+
 	MCALL C5_READY
 ;--------------------------------------------------------
-TASK__INFINITE_LOOP:
+TASK_INFINITE_LOOP:
+
+	LDI TEMP,PID_I2C2_DRV
+	MOVW ZL,YL
+	MOVW XL,YL
+	LDI TEMP_H,0x04
+	LDI TEMP_L,0x00
+	LDI ACCUM,0x10
+	MCALL C5_EXEC	
+	
+	RET
+
+
 	;TODO
 
 
 ;	LDI TEMP,0x01														;Пауза в 1 сеунду
 ;	MCALL C5_WAIT_1S
-	RJMP TASK__INFINITE_LOOP
+	;RJMP TASK_INFINITE_LOOP
