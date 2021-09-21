@@ -16,10 +16,9 @@ _C5_TIMER_OFFSET:
 ;--------------------------------------------------------
 	PUSH TEMP
 
-	MOV ZL,TEMP
 	LSL TEMP
 	LSL TEMP
-	ADD TEMP,ZL
+	LSL TEMP
 
 	LDI_Z _C5_TIMERS
 	ADD ZL,TEMP

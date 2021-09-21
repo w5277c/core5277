@@ -6,7 +6,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 	.EQU	FW_VERSION										= 1	;0-255
 	.SET	CORE_FREQ										= 16	;2-20Mhz
-	.EQU	TIMER_C_ENABLE									= 0	;0-1
+	.EQU	TIMER_C_ENABLE									= 1	;0-1
 	.SET	AVRA												= 0	;0-1
 	.SET	REPORT_INCLUDES								= 1	;0-1
 	;---подключаем библиотеку устройства---
@@ -99,7 +99,8 @@ MAIN:
 	LDI_Z DRV_I2C_MS_INIT
 	LDI TEMP_H,I2C2_SDA
 	LDI TEMP_L,I2C2_SCL
-	LDI TEMP_EH,TID_I2C2
+	LDI TEMP_EH,TID_TIMER_C;TID_I2C2
+	LDI TEMP_EL,DRV_I2C_MS_TC_FREQ_DEFAULT
 	MCALL C5_CREATE
 	;Инициализация драйвера ADC(LTC2451)
 	LDI PID,PID_ADC_V_DRV

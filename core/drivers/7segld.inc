@@ -235,6 +235,8 @@ _DRV_7SEGLD_OP_SET_VAL__END:
 DRV_7SEGLD_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по таймеру(переключение цифр)
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
 	PUSH FLAGS
 	PUSH TEMP_H
@@ -243,10 +245,6 @@ DRV_7SEGLD_TIMER_EVENT:
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 	PUSH_X
-	PUSH_Y
-	PUSH_Z
-
-	MCALL C5_RAM_OFFSET
 
 	LDD FLAGS,Y+_DRV_7SEGLD_RAM_FLAGS
 	LDD TEMP_H,Y+_DRV_7SEGLD_RAM_DIG_QNT
@@ -322,8 +320,6 @@ _DRV_7SEGLD_TIMER_EVENT__LOOP_SKIP_ITER:
 	ST X,TEMP
 DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG:
 
-	POP_Z
-	POP_Y
 	POP_X
 	POP LOOP_CNTR
 	POP ACCUM

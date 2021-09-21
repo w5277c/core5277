@@ -3,7 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;21.09.2021	w5277c@gmail.com			Начало, черновой(в процессе)
 ;-----------------------------------------------------------------------------------------------------------------------
-;Программный I2C в режиме ведущего, с частотой 10/20КГц(зависит от TIMERS_SPEED_xxUS)
+;Программный I2C в режиме ведущего, с частотой 10/20КГц(зависит от TIMERS_SPEED_xxUS) или 100КГц(таймер C)
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF__C5_DRV_I2C_MS
@@ -20,6 +20,12 @@
 	.include	"./io/reg_bit_get.inc"
 	.include	"./io/reg_bit_iset.inc"
 	.include	"./core/wait.inc"
+
+	.EQU	DRV_I2C_MS_TC_FREQ_40KHz			= CORE_FREQ*125000/80000-1	;Не рекомендуется, максимальная загрузка для 16Mhz
+	.EQU	DRV_I2C_MS_TC_FREQ_20KHz			= CORE_FREQ*125000/40000-1	;~50% загрузки на 1МГц
+	.EQU	DRV_I2C_MS_TC_FREQ_10KHz			= CORE_FREQ*125000/20000-1
+	.EQU	DRV_I2C_MS_TC_FREQ_5KHz				= CORE_FREQ*125000/10000-1
+	.EQU	DRV_I2C_MS_TC_FREQ_DEFAULT			= DRV_I2C_MS_TC_FREQ_20KHz
 
 	.EQU	_DRV_I2C_MR_ST_READY					= 0x00
 	.EQU	_DRV_I2C_MR_ST_START					= 0x01
@@ -57,7 +63,9 @@ DRV_I2C_MS_INIT:
 ;--------------------------------------------------------
 ;Инициализация
 ;IN: TEMP_H-порт SDA, TEMP_L-порт SCL
-;TEMP_EH-ид таймера
+;TEMP_EH-ид таймера(0x83 - используем таймер C)
+;TEMP_EL-период для тамйреа С _DRV_I2C_MS_TC_FREQ_...
+;(при использовании)
 ;--------------------------------------------------------
 	LDI ACCUM,_DRV_I2C_MS_RAM_SIZE
 	MCALL C5_RAM_REALLOC
@@ -91,11 +99,18 @@ DRV_I2C_MS_INIT:
 	STD Y+_DRV_I2C_MS_SCL_PN,ACCUM
 
 	;Инициализирую таймер
+	CPI TEMP_EH,0x83
+	BREQ PC+0x08
 	MOV TEMP,TEMP_EH
 	LDI TEMP_H,high(_DRV_I2C_MS_EVENT)
 	LDI TEMP_L,low(_DRV_I2C_MS_EVENT)
 	LDI ACCUM,0x01														;0.000050-20КГц/0.000025-40КГц
 	MCALL C5_TIMER_SET
+	RJMP PC+0x08
+	LDI_X _DRV_I2C_MS_EVENT
+	MCALL C5_TIMER_C_SET_VECTOR
+	MOV TEMP,TEMP_EL
+	MCALL C5_TIMER_C_SET_PERIOD
 
 	MCALL C5_READY
 
@@ -142,7 +157,11 @@ DRV_I2C_MS_INIT:
 	STD Y+_DRV_I2C_MS_STATE,TEMP
 	;Запускаю таймер
 	LDD TEMP,Y+_DRV_I2C_MS_TIMER_ID
+	CPI TEMP,0x83
+	BREQ PC+0x04
 	MCALL C5_TIMER_START
+	RJMP PC+0x03
+	MCALL C5_TIMER_C_START
 	;Жду окончания передачи
 _DRV_I2C_MS_PROC__SENDING_WAIT:
 	LDD TEMP,Y+_DRV_I2C_MS_STATE
@@ -172,7 +191,11 @@ _DRV_I2C_MS_PROC__TR_SKIP:
 	STD Y+_DRV_I2C_MS_STATE,TEMP
 	;Запускаю таймер
 	LDD TEMP,Y+_DRV_I2C_MS_TIMER_ID
+	CPI TEMP,0x83
+	BREQ PC+0x04
 	MCALL C5_TIMER_START
+	RJMP PC+0x03
+	MCALL C5_TIMER_C_START
 	;Жду окончания приема
 _DRV_I2C_MS_PROC__RECEIVING_WAIT:
 	LDD TEMP,Y+_DRV_I2C_MS_STATE
@@ -195,20 +218,15 @@ _DRV_I2C_MS_PROC__RC_SKIP:
 _DRV_I2C_MS_EVENT:
 ;--------------------------------------------------------
 ;Событие от таймера
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
-	;Обработчики программных таймеров могут не сохранять значения регистров ZH,ZL,TEMP,ACCUM
-	PUSH_Y
-	PUSH_Z
 	PUSH TEMP_EH
 	PUSH TEMP_EL
-	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
 	PUSH ACCUM
 
-	MCALL C5_RAM_OFFSET
-
-	LDD TEMP_H,Y+_DRV_I2C_MS_BUFFER_POS
 	LDD TEMP_L,Y+_DRV_I2C_MS_BIT_NUM
 	LDD TEMP_EH,Y+_DRV_I2C_MS_STATE
 	MOV TEMP_EL,TEMP_EH
@@ -270,11 +288,12 @@ _DRV_I2C_MS_EVENT__NOT_START:
 		CPI TEMP_L,0x00
 		BRNE _DRV_I2C_MS_EVENT__TR_DATA_NOT_FIRST_BIT
 			;Есть, актуализируем аккумулятор
+			LDD TEMP,Y+_DRV_I2C_MS_BUFFER_POS
 			LDD ZH,Y+_DRV_I2C_MS_SRC_ADDR+0x00
 			LDD ZL,Y+_DRV_I2C_MS_SRC_ADDR+0x01
 			MOV ACCUM,ZH
 			ANDI ZH,0x7f
-			ADD ZL,TEMP_H
+			ADD ZL,TEMP
 			ADC ZH,C0x00
 			;Считываем с буфера байт и передаем
 			SBRS ACCUM,0x07
@@ -305,10 +324,12 @@ _DRV_I2C_MS_EVENT__TR_DATA_NOT_WAIT_ACK:
 ;			LDI TEMP_EH,_DRV_I2C_MR_ST_STOP_LO|(1<<_DRV_I2C_MR_ERROR_BIT)
 ;			RJMP _DRV_I2C_MS_EVENT__TICK
 			;ACK
-			INC TEMP_H
+			LDD ACCUM,Y+_DRV_I2C_MS_BUFFER_POS
+			INC ACCUM
+			STD Y+_DRV_I2C_MS_BUFFER_POS,ACCUM
 			;Есть еще данные?
 			LDD TEMP,Y+_DRV_I2C_MS_TR_LEN
-			CP TEMP_H,TEMP
+			CP ACCUM,TEMP
 			BRNE PC+0x04
 			ANDI TEMP_EH,0xf0
 			ORI TEMP_EH,_DRV_I2C_MR_ST_STOP_LO
@@ -345,7 +366,11 @@ _DRV_I2C_MS_EVENT__NOT_STOP_LO:
 	;Устанавливаем состояние DONE
 	ORI TEMP_EH,(1<<_DRV_I2C_MR_DONE_BIT)
 	LDD TEMP,Y+_DRV_I2C_MS_TIMER_ID
+	CPI TEMP,0x83
+	BREQ PC+0x04
 	MCALL C5_TIMER_STOP
+	RJMP PC+0x03
+	MCALL C5_TIMER_C_STOP
 	RJMP _DRV_I2C_MS_EVENT__END
 _DRV_I2C_MS_EVENT__NOT_STOP_HI:
 
@@ -361,17 +386,13 @@ _DRV_I2C_MS_EVENT__NEXT_BIT:
 	INC TEMP_L
 _DRV_I2C_MS_EVENT__END:
 	STD Y+_DRV_I2C_MS_STATE,TEMP_EH
-	STD Y+_DRV_I2C_MS_BUFFER_POS,TEMP_H
 	STD Y+_DRV_I2C_MS_BIT_NUM,TEMP_L
 
 	POP ACCUM
 	POP TEMP
 	POP TEMP_L
-	POP TEMP_H
 	POP TEMP_EL
 	POP TEMP_EH
-	POP_Z
-	POP_Y
 	RET
 
 ;--------------------------------------------------------

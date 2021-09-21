@@ -170,11 +170,11 @@ DRV_ADC__WAIT_END:
 _DRV_ADC_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик по таймеру
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
 	PUSH TEMP
-	PUSH_Y
 
-	MCALL C5_RAM_OFFSET
 	LDD TEMP,Y+_DRV_ADC_STATE
 	CPI TEMP,_DRV_ADC_ST_DONE
 	BREQ _DRV_ADC_TIMER_EVENT__STOP
@@ -188,7 +188,6 @@ _DRV_ADC_TIMER_EVENT__STOP:
 	MCALL C5_TIMER_STOP
 _DRV_ADC_TIMER_EVENT__END:
 
-	POP_Y
 	POP TEMP
 	RET
 ;--------------------------------------------------------

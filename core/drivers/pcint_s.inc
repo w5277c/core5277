@@ -110,17 +110,14 @@ DRV_PCINT_S_INIT:
 _DRV_PCINT_S_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик таймера
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH_Z
 	PUSH ACCUM
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH LOOP_CNTR
-
-	;Получаем адрес выделенной памяти
-	MCALL C5_RAM_OFFSET
 
 	LD FLAGS,Y+															;_DRV_PCINT_S_RAM_ITEMS_QNT
 	MOV LOOP_CNTR,FLAGS
@@ -162,7 +159,5 @@ _DRV_PCINT_S_TIMER_EVENT__ITEMS_NEXT:
 	POp TEMP_H
 	POP TEMP
 	POP ACCUM
-	POP_Z
-	POP_Y
 	RET
 .endif

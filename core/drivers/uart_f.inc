@@ -312,16 +312,14 @@ _DRV_UART_F_PROC__DONE:
 _DRV_UART_F_EVENT:
 ;--------------------------------------------------------
 ;Событие от таймера
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
-	PUSH_Y
-	PUSH_Z
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH ACCUM
 	PUSH FLAGS
-
-	MCALL C5_RAM_OFFSET
 
 	LDD TEMP,Y+_DRV_UART_F_STATE
 	CPI TEMP,DRV_UART_ST_SENDING
@@ -487,8 +485,6 @@ __DRV_UART_F_EVENT__END:
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
-	POP_Z
-	POP_Y
 	RET
 
 ;--------------------------------------------------------

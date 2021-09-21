@@ -241,13 +241,12 @@ _DRV_BUTTONS_OP_CLEAR:
 DRV_BUTTONS_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по таймеру(анализ портов)
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
-	PUSH_Y
-
-	MCALL C5_RAM_OFFSET
 
 	LDD LOOP_CNTR,Y+_DRV_BUTTONS_BUTTONS_QNT
 	CPI LOOP_CNTR,0x00
@@ -294,7 +293,6 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	SEI
 
 	PUSH_X
-	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH FLAGS
@@ -456,12 +454,10 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE_END:
 	POP FLAGS
 	POP TEMP_L
 	POP TEMP_H
-	POP_Z
 	POP_X
 	POP TEMP
 	STS SREG,TEMP
 DRV_BUTTONS_TIMER_EVENT__END:
-	POP_Y
 	POP LOOP_CNTR
 	POP ACCUM
 	POP TEMP

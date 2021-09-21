@@ -474,12 +474,11 @@ _DRV_UART_H_RX_EVENT__END:
 _DRV_UART_H_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Событие от таймера
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
-	PUSH_Y
 	PUSH TEMP
 	PUSH ACCUM
-
-	MCALL C5_RAM_OFFSET
 
 	LDD TEMP,Y+_DRV_UART_H_STATE
 	CPI TEMP,DRV_UART_ST_RECEIVING
@@ -508,6 +507,5 @@ _DRV_UART_H_TIMER_EVENT__NOT_RECEIVING:
 _DRV_UART_H_TIMER_EVENT__END:
 	POP ACCUM
 	POP TEMP
-	POP_Y
 	RET
 .endif

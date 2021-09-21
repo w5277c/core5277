@@ -108,13 +108,12 @@ _DRV_COUNTER__END:
 _DRV_COUNTER_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик по таймеру
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
-	PUSH_Y
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH ACCUM
-
-	MCALL C5_RAM_OFFSET
 
 	LDD TEMP_H,Y+_DRV_COUNTER_SUMM
 	LDD TEMP_L,Y+_DRV_COUNTER_CNTR
@@ -168,6 +167,5 @@ _DRV_COUNTER_TIMER_EVENT__END:
 	POP ACCUM
 	POP TEMP_L
 	POP TEMP_H
-	POP_Y
 	RET
 .endif
