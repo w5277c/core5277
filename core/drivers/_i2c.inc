@@ -34,4 +34,8 @@
 	.EQU	DRV_I2C_STATE_RC						= 0x02
 	.EQU	DRV_I2C_STATE_OK						= 0x80
 	.EQU	DRV_I2C_STATE_ERROR					= 0x81
+	;---UNIVERSAL-OFFSETS---
+	.EQU	DRV_I2C_SDA_PORT						= 0x00			;1B-SDA порт
+	.EQU	DRV_I2C_SCL_PORT						= 0x01			;1B-SCL порт
+
 .endif

@@ -25,16 +25,18 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
-	.EQU	_DRV_I2C_H_ADDR						= 0x00			;1B - адрес I2C_H(0 - режим мастера)
-	.EQU	_DRV_I2C_H_LED_PORT					= 0x01			;1B - порт индикатора активности
-	.EQU	_DRV_I2C_H_POSITION					= 0x02			;1B - позиция в блоке данных
-	.EQU	_DRV_I2C_H_TX_LEN						= 0x03			;1B - размер данных для передачи
-	.EQU	_DRV_I2C_H_RX_LEN						= 0x04			;1B - размер данных для приема
-	.EQU	_DRV_I2C_H_SRC_ADDR					= 0x05			;2b - адрес блока данных для передачи
-	.EQU	_DRV_I2C_H_DST_ADDR					= 0x07			;2b - адрес блока данных для приема
-	.EQU	_DRV_I2C_H_STATE						= 0x09			;1b - состояние/результат
+	.EQU	_DRV_I2C_H_SDA_PORT					= DRV_I2C_SDA_PORT	;1B - SDA порт
+	.EQU	_DRV_I2C_H_SCL_PORT					= DRV_I2C_SCL_PORT	;1B - SCL порт
+	.EQU	_DRV_I2C_H_ADDR						= 0x02			;1B - адрес I2C_H(0 - режим мастера)
+	.EQU	_DRV_I2C_H_LED_PORT					= 0x03			;1B - порт индикатора активности
+	.EQU	_DRV_I2C_H_POSITION					= 0x04			;1B - позиция в блоке данных
+	.EQU	_DRV_I2C_H_TX_LEN						= 0x05			;1B - размер данных для передачи
+	.EQU	_DRV_I2C_H_RX_LEN						= 0x06			;1B - размер данных для приема
+	.EQU	_DRV_I2C_H_SRC_ADDR					= 0x07			;2b - адрес блока данных для передачи
+	.EQU	_DRV_I2C_H_DST_ADDR					= 0x09			;2b - адрес блока данных для приема
+	.EQU	_DRV_I2C_H_STATE						= 0x0b			;1b - состояние/результат
 	;---
-	.EQU	_DRV_I2C_H_RAM_SIZE					= 0x0a
+	.EQU	_DRV_I2C_H_RAM_SIZE					= 0x0c
 
 ;--------------------------------------------------------
 DRV_I2C_H_INIT:
@@ -95,6 +97,7 @@ _DRV_I2C_H_INIT__DONE:
 	MCALL C5_IR_VECTOR_SET
 
 	MCALL C5_READY
+
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;IN: Z-адрес на блок данных на передачу
