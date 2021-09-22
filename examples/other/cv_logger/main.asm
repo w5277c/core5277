@@ -106,7 +106,7 @@ MAIN:
 	LDI PID,PID_ADC_V_DRV
 	LDI_Z DRV_LTC2451_INIT
 	LDI ACCUM,PID_I2C2_DRV
-;	MCALL C5_CREATE
+	MCALL C5_CREATE
 
 	;Инициализация задачи
 	LDI PID,PID_TASK
@@ -122,31 +122,11 @@ MAIN:
 ;--------------------------------------------------------;Задача
 TASK_INIT:
 	
-	LDI ACCUM,0x04
-	MCALL C5_RAM_REALLOC
-	
-	LDI TEMP,0x40
-	STD Y+0x00,TEMP
-	
-	LDI TEMP,0x40
-	STD Y+0x01,TEMP
-	
-	LDI TEMP,0x03
-	STD Y+0x02,TEMP
-	
-	LDI TEMP,0x80
-	STD Y+0x03,TEMP
-
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK_INFINITE_LOOP:
 
-	LDI TEMP,PID_I2C2_DRV
-	MOVW ZL,YL
-	MOVW XL,YL
-	LDI TEMP_H,0x04
-	LDI TEMP_L,0x00
-	LDI ACCUM,0x10
+	LDI TEMP,PID_ADC_V_DRV
 	MCALL C5_EXEC	
 	
 	RET
