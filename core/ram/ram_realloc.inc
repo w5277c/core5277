@@ -51,8 +51,7 @@ _C5_RAM_REALLOC__EP2:
 	;Проверяем, нужно ли обновлять вершину выделяемой памяти
 	MOVW XL,YL
 	ADD XL,ACCUM
-	LDI ACCUM,0x00
-	ADC XH,ACCUM
+	ADC XH,C0x00
 	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x00
 	CP ACCUM,XH
 	BRCS PC+0x05

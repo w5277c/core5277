@@ -20,7 +20,7 @@
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./math/div16x8.inc"
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 .include	"./core/timer_set.inc"
 .include	"./core/timer_start.inc"
 .include	"./io/port_mode_in.inc"
@@ -101,7 +101,7 @@ DRV_7SEGLD_INIT:
 	MOVW XL,YL
 	ADIW XL,_DRV_7SEGLD_RAM_DIG_DATA
 	LDI TEMP,0xff
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 	POP LOOP_CNTR
 
 	;Инициализируем таймер с периодом в 100Hz для всех цифр
@@ -128,7 +128,7 @@ DRV_7SEGLD_INIT:
 	PUSH_Y
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	CPI FLAGS,DRV_7SEGLD_OP_SET_PORT
 	BRNE PC+0x04
@@ -160,6 +160,7 @@ _DRV_7SEGLD_OP_SET_PORT:
 
 	MCALL _DRV_7SEGLD_GET_DIG_OFFSET
 
+;надо проверить!
 	CPI ACCUM,0xff
 	BRNE PC+0x07
 	LDI TEMP_H,0xff
@@ -207,6 +208,25 @@ _DRV_7SEGLD_OP_SET_VAL:
 	ST Z,ACCUM
 
 	POP ACCUM
+	PUSH ACCUM
+	CPI ACCUM,0x00
+	BRNE _DRV_7SEGLD_OP_SET_VAL__END
+	;Выключаем цифру
+	LDI XH,0x00
+	LDD XL,Z+0x01														;PORT addr
+	CPI XL,0xff
+	BREQ _DRV_7SEGLD_OP_SET_VAL__END
+	LDD ACCUM,Z+0x02													;PIN num
+	COM ACCUM
+	LD TEMP,X
+;	SBRC FLAGS,0x01
+	AND TEMP,ACCUM
+;	SBRS FLAGS,0x01
+;	OR TEMP,ACCUM
+	ST X,TEMP
+
+_DRV_7SEGLD_OP_SET_VAL__END:
+	POP ACCUM
 	POP FLAGS
 	POP_Z
 	RET
@@ -215,6 +235,8 @@ _DRV_7SEGLD_OP_SET_VAL:
 DRV_7SEGLD_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по таймеру(переключение цифр)
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
 	PUSH FLAGS
 	PUSH TEMP_H
@@ -223,10 +245,6 @@ DRV_7SEGLD_TIMER_EVENT:
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 	PUSH_X
-	PUSH_Y
-	PUSH_Z
-
-	MCALL C5_RAM_OFFSET_Y
 
 	LDD FLAGS,Y+_DRV_7SEGLD_RAM_FLAGS
 	LDD TEMP_H,Y+_DRV_7SEGLD_RAM_DIG_QNT
@@ -284,6 +302,10 @@ _DRV_7SEGLD_TIMER_EVENT__LOOP_SKIP_ITER:
 	POP_Y
 	POP TEMP_H
 
+	;Если ноль, то цифру не включаем
+	LDD ACCUM,Z+0x00													;Value
+	CPI ACCUM,0x00
+	BREQ DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG
 	;Включаем цифру
 	LDI XH,0x00
 	LDD XL,Z+0x01														;PORT addr
@@ -298,8 +320,6 @@ _DRV_7SEGLD_TIMER_EVENT__LOOP_SKIP_ITER:
 	ST X,TEMP
 DRV_7SEGLD_TIMER_EVENT__SKIP_TURN_ON_DIG:
 
-	POP_Z
-	POP_Y
 	POP_X
 	POP LOOP_CNTR
 	POP ACCUM

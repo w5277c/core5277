@@ -6,28 +6,29 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_RAM_COPY8
+.ifdef DEF_RAM_FILL
 .else
-.set DEF_RAM_COPY8 = 1
+.set DEF_RAM_FILL = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included RAM_COPY8"
+.message "included RAM_FILL"
 .endif
 
-.include	"./mem/ram_copy16.inc"
+;--------------------------------------------------------
+RAM_FILL:
+;--------------------------------------------------------
+;Заполнение блока памяти значением
+;IN: X-адрес, TEMP-значение, LOOP_CNTR-длина
+;--------------------------------------------------------
+	PUSH_X
+	PUSH LOOP_CNTR
 
-;--------------------------------------------------------
-RAM_COPY8:
-;--------------------------------------------------------
-;Копирование блока памяти
-;IN: X-SRC адрес, Z-DST адрес, LOOP_CNTR-длина
-;--------------------------------------------------------
-	PUSH TEMP_H
-	PUSH TEMP_L
-	CLR TEMP_H
-	MOV TEMP_L,LOOP_CNTR
-	MCALL RAM_COPY16
-	POP TEMP_L
-	POP TEMP_H
+_RAM_FILL__LOOP:
+	ST X+,TEMP
+	DEC LOOP_CNTR
+	BRNE _RAM_FILL__LOOP
+
+	POP LOOP_CNTR
+	POP_X
 	RET
 .endif

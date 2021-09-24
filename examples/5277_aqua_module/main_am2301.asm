@@ -42,13 +42,6 @@
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
-	CLI
-	;Инициализация стека
-	LDI TEMP,high(RAMEND)
-	STS SPH,TEMP
-	LDI TEMP,low(RAMEND)
-	STS SPL,TEMP
-
 	;Инициализация ядра
 	MCALL C5_INIT
 
@@ -82,7 +75,7 @@ TASK__INIT:
 TASK__INFINITE_LOOP:
 	LDI TEMP,PID_AM2301_DRV
 	MCALL C5_EXEC
-	CPI TEMP,DRV_AM2301_RESULT_OK
+	CPI TEMP,DRV_DHT_RESULT_OK
 	BRNE TASK__ERROR
 
 	LDI TEMP,'T'

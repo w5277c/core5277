@@ -3,7 +3,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.02.2021	w5277c@gmail.com			Начало (не проверено)
 ;03.03.2021	w5277c@gmail.com			PUSH/POP LOOP_CNTR
+;16.09.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
+
 .ifdef DEF_C5_OUT_TIME32
 .else
 .set DEF_C5_OUT_TIME32 = 1
@@ -35,13 +37,13 @@ C5_OUT_TIME32:
 	PUSH TEMP_L
 
 	MCALL C5_RAM_OFFSET
-	ADD ZL,TEMP
-	ADC ZH,C0x00
+	ADD YL,TEMP
+	ADC YH,C0x00
 
-	LDD TEMP_EH,Z+0x00
-	LDD TEMP_EL,Z+0x01
-	LDD TEMP_H,Z+0x02
-	LDD TEMP_L,Z+0x03
+	LDD TEMP_EH,Y+0x00
+	LDD TEMP_EL,Y+0x01
+	LDD TEMP_H,Y+0x02
+	LDD TEMP_L,Y+0x03
 
 	MOV YH,TEMP_EH
 	MOV YL,TEMP_EL
@@ -109,7 +111,6 @@ C5_OUT_TIME32__LOOP_US:
 	BRTS PC+0x04
 	LDI TEMP,'0'
 	MCALL C5_OUT_CHAR
-
 
 	POP TEMP
 	STS SREG,TEMP

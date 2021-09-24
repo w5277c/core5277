@@ -87,7 +87,7 @@ DRV_LOGGER_INIT:
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	;Адрес Z в FLASH?
 	SBRS ZH,0x07
@@ -164,13 +164,12 @@ DRV_LOGGER__BUFFER_NOT_FULL:
 DRV_LOGGER_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Событие от таймера
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
-	PUSH_Y
 	PUSH_FT
 	PUSH ACCUM
 	CLI
-
-	MCALL C5_RAM_OFFSET_Y
 
 	LDD TEMP_EH,Y+_DRV_LOGGER_BIT_NUM
 	CPI TEMP_EH,0x00
@@ -244,6 +243,5 @@ __DRV_LOGGER_TIMER_EVENT__END:
 	SEI
 	POP ACCUM
 	POP_FT
-	POP_Y
 	RET
 .endif

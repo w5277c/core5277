@@ -3,12 +3,14 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;02.06.2021	w5277c@gmail.com			Начало
 ;04.07.2021	w5277c@gmail.com			Z->Y, оптимизация
+;07.09.2021	w5277c@gmail.com			Багфикс
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_DHT11
 .else
 .set DEF__C5_DRV_DHT11 = 1
-.message "Included driver DHT11 v0.2"
+.message "Included driver DHT11 v0.3"
 
+.include	"./core/drivers/_dht.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./io/port_mode_in.inc"
@@ -33,11 +35,6 @@
 	;---
 	.EQU	_DRV_DHT11_RAM_SIZE					= 0x0b			;11 байт необходимо выделить
 
-;---RESULTS---
-	.EQU	DRV_DHT11_RESULT_OK					= 0x00
-	.EQU	DRV_DHT11_RESULT_ABSENT				= 0x01
-	.EQU	DRV_DHT11_RESULT_ERROR				= 0x02
-
 ;--------------------------------------------------------
 DRV_DHT11_INIT:
 ;--------------------------------------------------------
@@ -54,13 +51,15 @@ DRV_DHT11_INIT:
 ;Основной код, опрос датчика
 ;OUT: TEMP_H,TEMP_L-значение температуры в SDNF формате
 ;TEMP_EH,TEMP_EL-значение влажности в SDNF формате
-;TEMP-код результата DRV_DHT11_RESULT_...
+;TEMP-код результата DRV_DHT_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
 	PUSH ACCUM
+	PUSH FLAGS
 
 	MCALL C5_RAM_OFFSET
+
 	LDD ACCUM,Y+_DRV_DHT11_PORT
 	MCALL PORT_MODE_OUT												;BE
 	MCALL PORT_SET_LO
@@ -97,7 +96,7 @@ DRV_DHT11_INIT:
 
 	LDD TEMP,Y+_DRV_DHT11_OFFSET
 	CPI TEMP,41
-	LDI TEMP,DRV_DHT11_RESULT_ABSENT
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
 	BREQ PC+0x02
 	RJMP _DRV_DHT11_PROC__END
 
@@ -112,14 +111,14 @@ DRV_DHT11_INIT:
 	ADD ACCUM,TEMP_L
 	LDD TEMP,Y+_DRV_DHT11_BUFFER+0x04
 	CP TEMP,ACCUM
-	LDI TEMP,DRV_DHT11_RESULT_ERROR
+	LDI TEMP,DRV_DHT_RESULT_ERROR
 	BRNE _DRV_DHT11_PROC__ERROR
-	LDI TEMP,DRV_DHT11_RESULT_OK
+	LDI TEMP,DRV_DHT_RESULT_OK
 
 _DRV_DHT11_PROC__ERROR:
 	RJMP _DRV_DHT11_PROC__END
 _DRV_DHT11_PROC__ABSENT:
-	LDI TEMP,DRV_DHT11_RESULT_ABSENT
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
 	MCALL C5_DISPATCHER_UNLOCK
 _DRV_DHT11_PROC__END:
 	PUSH TEMP
@@ -130,6 +129,7 @@ _DRV_DHT11_PROC__END:
 	MCALL C5_EXEC
 	POP TEMP
 
+	POP FLAGS
 	POP ACCUM
 	POP_Y
 	POP_X
@@ -147,7 +147,8 @@ _DRV_DHT11_EVENT:
 	PUSH ACCUM
 	PUSH_Y
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
+
 	LDD ACCUM,Y+_DRV_DHT11_TCNT
 	MCALL C5_TCNT_GET
 	STD Y+_DRV_DHT11_TCNT,TEMP
@@ -190,7 +191,7 @@ _DRV_DHT11_EVENT__HI:
 
 _DRV_DHT11_EVENT__NEXT:
 	INC TEMP_H
-	STD Z+_DRV_DHT11_OFFSET,TEMP_H
+	STD Y+_DRV_DHT11_OFFSET,TEMP_H
 _DRV_DHT11_EVENT__END:
 
 	POP_Y

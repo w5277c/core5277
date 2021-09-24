@@ -18,7 +18,7 @@
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/ram/ram_extend.inc"
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 .include	"./core/wait.inc"
 .include	"./core/timer_set.inc"
 .include	"./core/timer_start.inc"
@@ -46,9 +46,9 @@
 	.EQU	_DRV_BUTTONS_TIMER_PERIOD					= 0x02	;Период таймера (x*0.002) (анализ 32мс)
 	.EQU	_DRV_BUTTONS_MAX_CNTR						= 0x08	;Количество необходимых итераций перед анализом
 	;---
-	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME		= 300/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
-	.EQU	_DRV_BUTTONS_HOLD_TIME						= 1000/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
-	.EQU	_DRV_BUTTONS_TIMEOUT							= 800/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR)
+	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME		= 200/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 300
+	.EQU	_DRV_BUTTONS_HOLD_TIME						= 600/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 1000
+	.EQU	_DRV_BUTTONS_TIMEOUT							= 400/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 800
 	;---Флаги---
 	.EQU	_DRV_BUTTONS_FL_INIT							= 0x04	;Ожидание начала цикла опроса
 	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN					= 0x05	;Первый опрос(нет предыдущего занчения)
@@ -58,6 +58,8 @@
 	.EQU	DRV_BUTTONS_OP_ADD							= 0x00
 	.EQU	DRV_BUTTONS_OP_GET							= 0x01
 	.EQU	DRV_BUTTONS_OP_WAIT							= 0x02
+	.EQU	DRV_BUTTONS_OP_CLEAR							= 0x03
+
 
 	.EQU	_DRV_BUTTONS_RAM_SIZE						= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
 ;--------------------------------------------------------
@@ -79,7 +81,7 @@ DRV_BUTTONS_INIT:
 	MOVW XL,YL
 	ADIW XL,_DRV_BUTTONS_QUEUE
 	LDI TEMP,0x00
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 
 	;Инициализирую таймер с периодом в 0.002*_DRV_BUTTONS_TIMER_PERIOD
 	MOV TEMP,ACCUM
@@ -99,7 +101,7 @@ DRV_BUTTONS_INIT:
 	PUSH_Y
 	PUSH TEMP
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	CPI FLAGS,DRV_BUTTONS_OP_ADD
 	BRNE PC+0x04
@@ -112,6 +114,10 @@ DRV_BUTTONS_INIT:
 	CPI FLAGS,DRV_BUTTONS_OP_WAIT
 	BRNE PC+0x04
 	MCALL _DRV_BUTTONS_OP_WAIT
+	RJMP _DRV_BUTTONS_PROC_END
+	CPI FLAGS,DRV_BUTTONS_OP_CLEAR
+	BRNE PC+0x03
+	MCALL _DRV_BUTTONS_OP_CLEAR
 
 _DRV_BUTTONS_PROC_END:
 	POP TEMP
@@ -213,7 +219,7 @@ _DRV_BUTTONS_OP_GET:
 	ADC XH,YH
 	MOVW ZL,YL
 	ADIW ZL,_DRV_BUTTONS_QUEUE
-	MCALL RAM_COPY8
+	MCALL RAM_COPY
 _DRV_BUTTONS_PULL_QUEUE__END:
 	STS SREG,ACCUM
 
@@ -224,16 +230,24 @@ _DRV_BUTTONS_PULL_QUEUE__END:
 	RET
 
 ;--------------------------------------------------------
+_DRV_BUTTONS_OP_CLEAR:
+;--------------------------------------------------------
+;Очищаем очередь нажатий
+;--------------------------------------------------------
+	STD Y+_DRV_BUTTONS_QUEUE_SIZE,C0x00
+	RET
+
+;--------------------------------------------------------
 DRV_BUTTONS_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по таймеру(анализ портов)
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
-	PUSH_Y
 
-	MCALL C5_RAM_OFFSET_Y
 	LDD LOOP_CNTR,Y+_DRV_BUTTONS_BUTTONS_QNT
 	CPI LOOP_CNTR,0x00
 	BRNE PC+0x02
@@ -279,7 +293,6 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	SEI
 
 	PUSH_X
-	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH FLAGS
@@ -441,12 +454,10 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE_END:
 	POP FLAGS
 	POP TEMP_L
 	POP TEMP_H
-	POP_Z
 	POP_X
 	POP TEMP
 	STS SREG,TEMP
 DRV_BUTTONS_TIMER_EVENT__END:
-	POP_Y
 	POP LOOP_CNTR
 	POP ACCUM
 	POP TEMP

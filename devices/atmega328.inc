@@ -427,7 +427,7 @@
 	.SET	INT1_PORT								= PD3
 
 .ORG 0x0000
-	JMP	MAIN															; Reset Handler
+	JMP	_INIT															; Reset Handler
 	CALL	_C5_IR														; External Interrupt0 Handler
 	CALL	_C5_IR														; External Interrupt1 Handler
 	CALL	_C5_IR														; Pin Change Interrupt Request 0
@@ -464,7 +464,17 @@ PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2
 INT_TABLE:
 	.db	(1<<INT0),(1<<INT1)
-
+_INIT:
+	CLI
+	;Инициализация стека
+	LDI TEMP,high(RAMEND)
+	STS SPH,TEMP
+	LDI TEMP,low(RAMEND)
+	STS SPL,TEMP
+	EOR C0x00,C0x00
+	LDI TEMP,0xff
+	MOV C0xff,TEMP
+	JMP MAIN
 APPLICATION_BLOCK:
 
 .MACRO MCALL

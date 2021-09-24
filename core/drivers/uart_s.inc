@@ -10,13 +10,17 @@
 ;14.06.2021	w5277c@gmail.com			Локализация C5_SOFT_UART_MODE_SET/RESET
 ;23.07.2021	w5277c@gmail.com			Z->Y, необходимо тестирование
 ;02.08.2021	w5277c@gmail.com			Поддержка BREAK
+;18.08.2021	w5277c@gmail.com			Вынесена проверка на значение порта 0xff в процедуры порта, багфиксинг
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO поддержка MAGIC?
+;TODO перейти с /io/port_... на /io/reg_...
+;TODO привести PCINT_H и PCINT_S к одному виду
+;TODO блокировать диспетчер при DRV_UART_ST_RECEIVING
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
 .set DEF__C5_DRV_UART_S = 1
-.message "Included driver software UART v0.5"
+.message "Included driver software UART v0.6"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -108,29 +112,21 @@ DRV_UART_S_INIT:
 	STD Z+_DRV_UART_S_OPTIONS,FLAGS
 	;Инициализирую порт направления данных
 	MOV ACCUM,YH
-	CPI ACCUM,0xff
-	BREQ Pc+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
 	STD Z+_DRV_UART_S_DR_PORT,ACCUM
 	;Инициализирую порт индикации
 	MOV ACCUM,YL
-	CPI ACCUM,0xff
-	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
 	STD Z+_DRV_UART_S_LED_PORT,ACCUM
 	;Инициализирую порт RX
 	MOV ACCUM,TEMP_H
-	CPI ACCUM,0xff
-	BREQ PC+0x05
 	MCALL PORT_MODE_IN
 	MCALL PORT_SET_HI
 	STD Z+_DRV_UART_S_RX_PORT,ACCUM
 	;Инициализирую порт TX
 	MOV ACCUM,TEMP_L
-	CPI ACCUM,0xff
-	BREQ PC+0x05
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 	STD Z+_DRV_UART_S_TX_PORT,ACCUM
@@ -158,7 +154,7 @@ DRV_UART_S_INIT:
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	;Запоминаем таймаут ожидания первого байта
 	STD Y+_DRV_UART_S_FIRST_TIMEOUT+0x00,TEMP_H
@@ -177,8 +173,6 @@ DRV_UART_S_INIT:
 	LDD ACCUM,Y+_DRV_UART_S_TIMER_PERIOD
 	MCALL C5_TIMER_SET
 
-;;;	MCALL C5_DISPATCHER_LOCK
-
 	;Блок передачи
 	CPI TEMP_EH,0x00
 	BREQ _DRV_UART_S_PROC__TX_SKIP
@@ -193,13 +187,10 @@ DRV_UART_S_INIT:
 	STD Y+_DRV_UART_S_SRC_ADDR+0x01,ZL
 
 	;Сброс позиции в буфере
-	CLR TEMP
-	STD Y+_DRV_UART_S_BUFFER_POS,TEMP
-	STD Y+_DRV_UART_S_BIT_NUM,TEMP
+	STD Y+_DRV_UART_S_BUFFER_POS,C0x00
+	STD Y+_DRV_UART_S_BIT_NUM,C0x00
 	;Включаю индикатор передачи
 	LDD ACCUM,Y+_DRV_UART_S_LED_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_HI
 
 	;Запуск передачи
@@ -207,8 +198,6 @@ DRV_UART_S_INIT:
 	STD Y+_DRV_UART_S_STATE,TEMP
 	;Порт направления в HI
 	LDD ACCUM,Y+_DRV_UART_S_DR_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_HI
 	;Запускаю таймер
 	MCALL C5_SOFT_UART_MODE_SET
@@ -221,16 +210,11 @@ _DRV_UART_S_PROC__SENDING_WAIT:
 	BRNE _DRV_UART_S_PROC__SENDING_WAIT
 
 	MCALL C5_SOFT_UART_MODE_RESET
-
 	;Порт направления в LO
 	LDD ACCUM,Y+_DRV_UART_S_DR_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_LO
 	;Выключаю индикатор
 	LDD ACCUM,Y+_DRV_UART_S_LED_PORT
-	CPI ACCUM,0xff
-	BREQ PC+0x03
 	MCALL PORT_SET_LO
 _DRV_UART_S_PROC__TX_SKIP:
 
@@ -253,25 +237,28 @@ _DRV_UART_S_PROC__TX_SKIP:
 	;Включаю прерывание для RX порта
 	LDD TEMP,Y+_DRV_UART_S_PCINT_DRV_ID
 	SBRC TEMP,0x07
-	RJMP PC+0x0c
+	RJMP _DRV_UART_S_PROC__RX_PCINT_ENABLE
 	MOV TEMP_H,TEMP
 	LDI TEMP_L,C5_ISC_FALLING_EDGE
 	PUSH_Y
 	LDI_Y _DRV_UART_S_EINT_EVENT
 	MCALL C5_EINT_ENABLE
 	POP_Y
-	RJMP PC+0x07
+	RJMP _DRV_UART_S_PROC__RX_PCINT_INT_ENABLE_DONE
+_DRV_UART_S_PROC__RX_PCINT_ENABLE:
 	LDD ACCUM,Y+_DRV_UART_S_RX_PORT
-	LDI_Y _DRV_UART_S_PCINT_EVENT
+	PUSH_X
+	LDI_X _DRV_UART_S_PCINT_EVENT
 	MOV FLAGS,PID
 	MCALL C5_EXEC
+	POP_X
+_DRV_UART_S_PROC__RX_PCINT_INT_ENABLE_DONE:
 
-;;;	MCALL C5_DISPATCHER_UNLOCK
-
-	;TODO проверить на возможность использования C5_WAIT при ожидании начала данных
-	;Запоминаем текущий UPTIME
+	;Запоминаем метку времени для отсчета таймаута ожидания данных
+	CLI
 	LDS ZH,_C5_UPTIME+0x03
 	LDS ZL,_C5_UPTIME+0x04
+	SEI
 _DRV_UART_S_PROC__RECEIVING_WAIT:
 	LDD TEMP,Y+_DRV_UART_S_STATE
 	CPI TEMP,DRV_UART_ST_RECEIVING
@@ -285,8 +272,10 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 		BRNE PC+0x03
 		CPI ACCUM,0x00
 		BREQ _DRV_UART_S_PROC__RECEIVING_WAIT
+		CLI
 		LDS TEMP_H,_C5_UPTIME+0x03
 		LDS TEMP_L,_C5_UPTIME+0x04
+		SEI
 		SUB TEMP_L,ZL
 		SBC TEMP_H,ZH
 		CP TEMP_H,TEMP
@@ -300,18 +289,8 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 		;Останавливаю таймер
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
 		MCALL C5_TIMER_STOP
-		;Выключаю прерывание для RX порта
-		LDD TEMP,Y+_DRV_UART_S_PCINT_DRV_ID
-		SBRC TEMP,0x07
-		RJMP PC+0x05
-		MOV TEMP_H,TEMP
-		MCALL C5_EINT_DISABLE
-		RJMP PC+0x05
-		LDD ACCUM,Y+_DRV_UART_S_RX_PORT
-		LDI FLAGS,0xff
-		MCALL C5_EXEC
+		MCALL _DRV_UART_S_INT_DISABLE
 _DRV_UART_S_PROC__RX_SKIP:
-;;;	MCALL C5_DISPATCHER_UNLOCK
 _DRV_UART_S_PROC__DONE:
 
 	;Результат
@@ -330,11 +309,12 @@ _DRV_UART_S_PROC__DONE:
 _DRV_UART_S_EVENT:
 ;--------------------------------------------------------
 ;Событие от таймера
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
-	PUSH_Y
 	PUSH TEMP
+	PUSH ACCUM
 
-	MCALL C5_RAM_OFFSET_Y
 	LDD TEMP,Y+_DRV_UART_S_STATE
 	CPI TEMP,DRV_UART_ST_SENDING
 	BRNE PC+0x04
@@ -354,16 +334,13 @@ _DRV_UART_S_EVENT:
 		MCALL PORT_SET_HI
 		;Порт направления в LO
 		LDD ACCUM,Y+_DRV_UART_S_DR_PORT
-		CPI ACCUM,0xff
-		BREQ PC+0x03
 		MCALL PORT_SET_LO
 		;Устанавливаю состояние READY
 		LDI TEMP,DRV_UART_ST_READY
 		STD Y+_DRV_UART_S_STATE,TEMP
-
 __DRV_UART_S_EVENT__END:
+	POP ACCUM
 	POP TEMP
-	POP_Y
 	RET
 
 ;--------------------------------------------------------
@@ -371,10 +348,8 @@ _DRV_UART_S_SEND_EVENT:
 ;--------------------------------------------------------
 ;Оптравка 1 бита
 ;--------------------------------------------------------
-	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH ACCUM
 
 	LDD TEMP_H,Y+_DRV_UART_S_BIT_NUM
 	CPI TEMP_H,0x00
@@ -421,6 +396,9 @@ __DRV_UART_S_SEND_EVENT__NO_BREAK:
 		;Останавливаю таймер
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
 		MCALL C5_TIMER_STOP
+		;Порт TX в HI
+		LDD ACCUM,Y+_DRV_UART_S_TX_PORT
+		MCALL PORT_SET_HI
 		LDI TEMP,DRV_UART_ST_READY
 		STD Y+_DRV_UART_S_STATE,TEMP
 		RJMP __DRV_UART_S_SEND_EVENT__END
@@ -438,8 +416,7 @@ __DRV_UART_S_SEND_EVENT__STOP:
 		;STOP (TX=HI)
 		LDD ACCUM,Y+_DRV_UART_S_TX_PORT
 		MCALL PORT_SET_HI
-		LDI TEMP,0x00
-		STD Y+_DRV_UART_S_BIT_NUM,TEMP
+		STD Y+_DRV_UART_S_BIT_NUM,C0x00
 		LDD TEMP_L,Y+_DRV_UART_S_BUFFER_POS
 		INC TEMP_L
 		STD Y+_DRV_UART_S_BUFFER_POS,TEMP_L
@@ -447,18 +424,14 @@ __DRV_UART_S_SEND_EVENT__STOP:
 		CP TEMP_L,TEMP
 		BRNE __DRV_UART_S_SEND_EVENT__END
 		;Делаю метку для выхода
-		LDI TEMP,0xff
-		STD Y+_DRV_UART_S_BIT_NUM,TEMP
-		RJMP __DRV_UART_S_SEND_EVENT__END
+		LDI TEMP_H,0xfe
 __DRV_UART_S_SEND_EVENT__NEXT:
 	INC TEMP_H
 	STD Y+_DRV_UART_S_BIT_NUM,TEMP_H
 __DRV_UART_S_SEND_EVENT__END:
 
-	POP ACCUM
 	POP TEMP_L
 	POP TEMP_H
-	POP_Z
 	RET
 
 ;--------------------------------------------------------
@@ -468,11 +441,9 @@ _DRV_UART_S_RECV_EVENT:
 ;--------------------------------------------------------
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH ACCUM
-	PUSH_Z
 	PUSH FLAGS
 
-	;Читаем состояние порта и пишем его в флаг T
+	;Читаем состояние порта и пишем его в FLAG
 	LDD ACCUM,Y+_DRV_UART_S_RX_PORT
 	MCALL PORT_GET
 	ROR FLAGS
@@ -487,6 +458,7 @@ _DRV_UART_S_RECV_EVENT:
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
 		MCALL C5_TIMER_STOP
 		MCALL C5_SOFT_UART_MODE_RESET
+		MCALL _DRV_UART_S_INT_DISABLE
 
 		;Прием данных завершен
 		LDI TEMP,DRV_UART_ST_READY
@@ -511,7 +483,7 @@ __DRV_UART_S_RECV_EVENT__DATA:
 		;На бит раньше включаю прерывание для RX порта (так как позже могу не успеть)
 		LDD TEMP,Y+_DRV_UART_S_PCINT_DRV_ID
 		SBRC TEMP,0x07
-		RJMP PC+0x0e
+		RJMP _DRV_UART_S_RECV_EVENT__PCINT_ENABLE
 		PUSH TEMP_H
 		MOV TEMP_H,TEMP
 		LDI TEMP_L,C5_ISC_FALLING_EDGE
@@ -521,12 +493,13 @@ __DRV_UART_S_RECV_EVENT__DATA:
 		POP_Y
 		POP TEMP_H
 		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BIT
+_DRV_UART_S_RECV_EVENT__PCINT_ENABLE:
 		LDD ACCUM,Y+_DRV_UART_S_RX_PORT
-		PUSH_Y
-		LDI_Y _DRV_UART_S_PCINT_EVENT
+		PUSH_X
+		LDI_X _DRV_UART_S_PCINT_EVENT
 		MOV FLAGS,PID
 		MCALL C5_EXEC
-		POP_Y
+		POP_X
 		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BIT
 __DRV_UART_S_RECV_EVENT__STOP:
 		;STOP (TX=HI)
@@ -535,7 +508,8 @@ __DRV_UART_S_RECV_EVENT__STOP:
 		LDD TEMP_L,Y+_DRV_UART_S_BUFFER_POS
 		LDD ACCUM,Y+_DRV_UART_S_RX_LEN
 		CP TEMP_L,ACCUM
-		BREQ __DRV_UART_S_RECV_EVENT__NEXT_BYTE
+		BRNE PC+0x02			;BREQ __DRV_UART_S_RECV_EVENT__NEXT_BYTE
+		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BYTE
 		LDD ACCUM,Y+_DRV_UART_S_ACCUM
 		LDD ZH,Y+_DRV_UART_S_DST_ADDR+0x00
 		LDD ZL,Y+_DRV_UART_S_DST_ADDR+0x01
@@ -544,19 +518,9 @@ __DRV_UART_S_RECV_EVENT__STOP:
 		ST Z,ACCUM
 		INC TEMP_L
 		STD Y+_DRV_UART_S_BUFFER_POS,TEMP_L
-;		LDD TEMP,Y+_DRV_UART_S_RX_LEN
-;		CP TEMP_L,TEMP
-;		BRNE __DRV_UART_S_RECV_EVENT__NEXT_BYTE
-;		;Останавливаю таймер
-;		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
-;		MCALL C5_TIMER_STOP
-;		LDI TEMP,DRV_UART_ST_READY
-;		STD Y+_DRV_UART_S_STATE,TEMP
-;		RJMP __DRV_UART_S_RECV_EVENT__END
 __DRV_UART_S_RECV_EVENT__NEXT_BYTE:
 		;Сбрасываю номер бита
-		CLR TEMP_H
-		STD Y+_DRV_UART_S_BIT_NUM,TEMP_H
+		STD Y+_DRV_UART_S_BIT_NUM,C0x00
 		;Задаю новый период таймеру для отсчета таймаута
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
 		LDD ACCUM,Y+_DRV_UART_S_NEXT_TIMEOUT
@@ -575,8 +539,6 @@ __DRV_UART_S_RECV_EVENT__NEXT_BIT:
 __DRV_UART_S_RECV_EVENT__END:
 
 	POP FLAGS
-	POP_Y
-	POP ACCUM
 	POP TEMP_L
 	POP TEMP_H
 	RET
@@ -584,7 +546,7 @@ __DRV_UART_S_RECV_EVENT__END:
 ;--------------------------------------------------------
 _DRV_UART_S_PCINT_EVENT:
 ;--------------------------------------------------------
-;Обработчик смены состояния пина
+;Обработчик смены состояния пина(PCINT/EINT)
 ;Первый бит FLAGS содержит состояние пина
 ;--------------------------------------------------------
 	SBRC FLAGS,0x00
@@ -596,40 +558,19 @@ _DRV_UART_S_EINT_EVENT:
 	PUSH ACCUM
 	PUSH FLAGS
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
+
 	LDD TEMP,Y+_DRV_UART_S_BIT_NUM
 	CPI TEMP,0x00
 	BRNE __DRV_UART_S_PCINT_EVENT__END
 
 	MCALL C5_SOFT_UART_MODE_SET
 
-	;Выключаю прерывание для RX порта
-	LDD TEMP,Y+_DRV_UART_S_PCINT_DRV_ID
-	SBRC TEMP,0x07
-	RJMP __DRV_UART_S_PCINT_EVENT__PCINT
-	PUSH TEMP_H
-	MOV TEMP_H,TEMP
-	MCALL C5_EINT_DISABLE
-	POP TEMP_H
+	MCALL _DRV_UART_S_INT_DISABLE
 	LDI TEMP,(TIMERS_SPEED/4)*3
-	MCALL __DRV_UART_S_PCINT_EVENT__CORRECTOR
-	RJMP __DRV_UART_S_PCINT_EVENT__END
-__DRV_UART_S_PCINT_EVENT__PCINT:
-;	PUSH TEMP
+	LDD ACCUM,Y+_DRV_UART_S_PCINT_DRV_ID
+	SBRC ACCUM,0x07
 	LDI TEMP,(TIMERS_SPEED/3)*1
-	MCALL __DRV_UART_S_PCINT_EVENT__CORRECTOR
-;	POP TEMP
-	LDD ACCUM,Y+_DRV_UART_S_RX_PORT
-	LDI FLAGS,0xff
-	MCALL C5_EXEC
-
-__DRV_UART_S_PCINT_EVENT__END:
-	POP FLAGS
-	POP ACCUM
-	POP TEMP
-	POP_Y
-	RET
-__DRV_UART_S_PCINT_EVENT__CORRECTOR:
 	LDS FLAGS,SREG
 	CLI
 	_CORRE5277_TIMERA_CORRECTOR TEMP
@@ -642,5 +583,39 @@ __DRV_UART_S_PCINT_EVENT__CORRECTOR:
 	LDI TEMP,DRV_UART_ST_RECEIVING
 	STD Y+_DRV_UART_S_STATE,TEMP
 	STS SREG,FLAGS
+
+__DRV_UART_S_PCINT_EVENT__END:
+	POP FLAGS
+	POP ACCUM
+	POP TEMP
+	POP_Y
+	RET
+
+
+;--------------------------------------------------------
+_DRV_UART_S_INT_DISABLE:
+;--------------------------------------------------------
+;Отключаю обработку PCINT/EINT
+;IN: Y-адрес на выделенную память
+;--------------------------------------------------------
+	PUSH TEMP
+	LDD TEMP,Y+_DRV_UART_S_PCINT_DRV_ID
+	SBRC TEMP,0x07
+	RJMP _DRV_UART_S_INT_DISABLE__PCINT
+	PUSH TEMP_H
+	MOV TEMP_H,TEMP
+	MCALL C5_EINT_DISABLE
+	POP TEMP_H
+	RJMP _DRV_UART_S_INT_DISABLE__END
+_DRV_UART_S_INT_DISABLE__PCINT:
+	PUSH ACCUM
+	PUSH FLAGS
+	LDD ACCUM,Y+_DRV_UART_S_RX_PORT
+	LDI FLAGS,0xff
+	MCALL C5_EXEC
+	POP FLAGS
+	POP ACCUM
+_DRV_UART_S_INT_DISABLE__END:
+	POP TEMP
 	RET
 .endif

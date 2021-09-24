@@ -52,13 +52,6 @@
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
-	CLI
-	;Инициализация стека
-	LDI TEMP,high(RAMEND)
-	STS SPH,TEMP
-	LDI TEMP,low(RAMEND)
-	STS SPL,TEMP
-
 	;Инициализация ядра
 	MCALL C5_INIT
 
@@ -177,14 +170,14 @@ FREEMEM_TASK__INFINITE_LOOP:
 	POP_Y
 	LDD TEMP_H,Y+0x02
 	LDD TEMP_L,Y+0x03
-	MCALL C5_OUT_NUMx16
+	MCALL C5_OUT_NUM16
 	PUSH_Y
 	LDI_Y FREEMEM_TASK__STR2|0x8000
 	MCALL C5_OUT_STR
 	POP_Y
 	LDD TEMP_H,Y+0x00
 	LDD TEMP_L,Y+0x01
-	MCALL C5_OUT_NUMx16
+	MCALL C5_OUT_NUM16
 	MCALL C5_OUT_CR
 	MCALL C5_DISPATCHER_UNLOCK
 

@@ -95,8 +95,8 @@ DRV_ADC_INIT:
 ;	MCALL C5_RES_LOCK
 ;	POP ACCUM
 
-	;Увеличиваем размер выделенной памяти на _DRV_ADC_STRUCT_SIZE
-	MCALL C5_RAM_OFFSET_Y
+	;Получаем адрес на выделенную память
+	MCALL C5_RAM_OFFSET
 
 	STD Y+_DRV_ADC_ZERO_VAL+0x00,XH
 	STD Y+_DRV_ADC_ZERO_VAL+0x01,XL
@@ -114,7 +114,7 @@ DRV_ADC_INIT:
 	;Задаю параметры ADC и запускаю
 	OR ACCUM,TEMP_EH
 	STS ADMUX,ACCUM													;ADLAR=0 - направление представления байт (right)
-	ORI TEMP_EL,(0<<ADEN)|(1<<ADSC)|(1<<ADIE)|(1<<ADATE)	;ADIE=1 - Разрешаем прерывание по окончанию кнвертирования
+	ORI TEMP_EL,(0<<ADEN)|(1<<ADSC)|(1<<ADIE)|(0<<ADATE)	;ADIE=1 - Разрешаем прерывание по окончанию кнвертирования
 	STS ADCSRA,TEMP_EL												;ADATE=0 - Выключен режим AutoTriggering
 
 
@@ -170,11 +170,11 @@ DRV_ADC__WAIT_END:
 _DRV_ADC_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик по таймеру
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
 	PUSH TEMP
-	PUSH_Y
 
-	MCALL C5_RAM_OFFSET_Y
 	LDD TEMP,Y+_DRV_ADC_STATE
 	CPI TEMP,_DRV_ADC_ST_DONE
 	BREQ _DRV_ADC_TIMER_EVENT__STOP
@@ -188,7 +188,6 @@ _DRV_ADC_TIMER_EVENT__STOP:
 	MCALL C5_TIMER_STOP
 _DRV_ADC_TIMER_EVENT__END:
 
-	POP_Y
 	POP TEMP
 	RET
 ;--------------------------------------------------------
@@ -202,7 +201,7 @@ _DRV_ADC_EVENT:
 	LDS TEMP_L,ADCL
 	LDS TEMP_H,ADCH
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 	LDD TEMP_EH,Y+_DRV_ADC_ZERO_VAL+0x00
 	LDD TEMP_EL,Y+_DRV_ADC_ZERO_VAL+0x01
 	;Проверка на вычисление по модулю
@@ -232,9 +231,8 @@ _DRV_ADC_EVENT__NO_MOD:
 	LDD TEMP,Y+_DRV_ADC_SUM+0x01
 	ADC TEMP,TEMP_H
 	STD Y+_DRV_ADC_SUM+0x01,TEMP
-	LDI TEMP_L,0x00
 	LDD TEMP,Y+_DRV_ADC_SUM+0x00
-	ADC TEMP,TEMP_L
+	ADC TEMP,C0x00
 	STD Y+_DRV_ADC_SUM+0x00,TEMP
 
 	;Инкрементирую итерацию и проверяю на конец

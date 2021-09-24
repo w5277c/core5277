@@ -12,8 +12,9 @@
 .ifdef DEF__C5_DRV_AM2301
 .else
 .set DEF__C5_DRV_AM2301 = 1
-.message "Included driver AM2301 v0.4"
+.message "Included driver AM2301 v0.5"
 
+.include	"./core/drivers/_dht.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/wait_2ms.inc"
@@ -41,11 +42,6 @@
 	;---
 	.EQU	_DRV_AM2301_RAM_SIZE					= 0x0b			;11 байт необходимо выделить
 
-;---RESULTS---
-	.EQU	DRV_AM2301_RESULT_OK					= 0x00
-	.EQU	DRV_AM2301_RESULT_ABSENT			= 0x01
-	.EQU	DRV_AM2301_RESULT_ERROR				= 0x02
-
 ;--------------------------------------------------------
 DRV_AM2301_INIT:
 ;--------------------------------------------------------
@@ -62,14 +58,15 @@ DRV_AM2301_INIT:
 ;Основной код, опрос датчика
 ;OUT: TEMP_H,TEMP_L-значение температуры в SDNF формате
 ;TEMP_EH,TEMP_EL-значение влажности в SDNF формате
-;TEMP-код результата DRV_AM2301_RESULT_...
+;TEMP-код результата DRV_DHT_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
 	PUSH ACCUM
 	PUSH FLAGS
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
+
 	LDD ACCUM,Y+_DRV_AM2301_PORT
 	MCALL PORT_MODE_OUT											;BE
 	MCALL PORT_SET_LO
@@ -106,7 +103,7 @@ DRV_AM2301_INIT:
 
 	LDD TEMP,Y+_DRV_AM2301_OFFSET
 	CPI TEMP,41
-	LDI TEMP,DRV_AM2301_RESULT_ABSENT
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
 	BREQ PC+0x02
 	RJMP _DRV_AM2301_PROC__END
 
@@ -121,7 +118,7 @@ DRV_AM2301_INIT:
 	ADD ACCUM,TEMP
 	LDD TEMP,Y+_DRV_AM2301_BUFFER+0x04
 	CP TEMP,ACCUM
-	LDI TEMP,DRV_AM2301_RESULT_ERROR
+	LDI TEMP,DRV_DHT_RESULT_ERROR
 	BRNE _DRV_AM2301_PROC__ERROR
 
 	LDD TEMP_H,Y+_DRV_AM2301_BUFFER_HH
@@ -156,12 +153,17 @@ DRV_AM2301_INIT:
 	ORI TEMP_L,0x80
 	POP TEMP_H
 
-	LDI TEMP,DRV_AM2301_RESULT_OK
+	LDI TEMP,DRV_DHT_RESULT_OK
+	RJMP _DRV_AM2301_PROC__END
 
 _DRV_AM2301_PROC__ERROR:
+	LDI TEMP_EL,0xff
+	LDI TEMP_L,0xff
 	RJMP _DRV_AM2301_PROC__END
 _DRV_AM2301_PROC__ABSENT:
-	LDI TEMP,DRV_AM2301_RESULT_ABSENT
+	LDI TEMP,DRV_DHT_RESULT_ABSENT
+	LDI TEMP_EL,0xff
+	LDI TEMP_L,0xff
 	MCALL C5_DISPATCHER_UNLOCK
 _DRV_AM2301_PROC__END:
 	PUSH TEMP
@@ -192,7 +194,7 @@ _DRV_AM2301_EVENT:
 	PUSH_Y
 	PUSH_Z
 
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	LDD ACCUM,Y+_DRV_AM2301_TCNT
 	MCALL C5_TCNT_GET

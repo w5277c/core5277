@@ -1,14 +1,16 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;18.11.2020  w5277c@gmail.com        Начало
+;18.11.2020	w5277c@gmail.com			Начало
+;16.09.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO реализовать прием данных
+;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./math/mul8x8.inc"
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_MAX7219_SPI_ID								= 0x00;1b - ид драйвера SPI
@@ -47,16 +49,15 @@ DRV_MAX7219_INIT:
 	POP FLAGS
 	POP TEMP_L
 	;Очищаем память
-	LDI XL,_DRV_MAX7219_RAM_SIZE
-	ADD XL,ZL
-	LDI XH,0x00
-	ADD XH,ZH
+	MOVW XL,YL
+	ADIW XL,_DRV_MAX7219_RAM_SIZE
+	LDI TEMP,0x00;???
 	MOV LOOP_CNTR,ACCUM
-	MCALL RAM_COPY8
+	MCALL RAM_FILL
 
-	STD Z+_DRV_MAX7219_SPI_ID,TEMP_H
-	STD Z+_DRV_MAX7219_QNT,TEMP_L
-	STD Z+_DRV_MAX7219_SCANLIMIT,FLAGS
+	STD Y+_DRV_MAX7219_SPI_ID,TEMP_H
+	STD Y+_DRV_MAX7219_QNT,TEMP_L
+	STD Y+_DRV_MAX7219_SCANLIMIT,FLAGS
 
 	;Инициализируем порт SCK
 	MOV ACCUM,TEMP_EH
@@ -64,30 +65,24 @@ DRV_MAX7219_INIT:
 	MCALL PORT_SET_HI
 	;Инициализируем порт MISO
 	MOV ACCUM,TEMP_EL
-	CPI ACCUM,0xff
-	BREQ PC+0x07
 	MCALL PORT_MODE_IN
 	MCALL PORT_SET_HI
 	;Инициализируем порт MOSI
 	MOV ACCUM,TEMP_H
-	CPI ACCUM,0xff
-	BREQ PC+0x07
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 	;Инициализируем порт SS
 	MOV ACCUM,TEMP_L
-	CPI ACCUM,0xff
-	BREQ PC+0x07
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, передача данных
-;IN: Y - адрес на блок данных на запись
-;(15-ый бит false - RAM, true - ROM)
-;TEMP_H - количество чипов,
-;TEMP_L - длина данных 1-го устройства,
+;IN: Z-адрес на блок данных на запись
+;(15-ый бит false-RAM, true-ROM)
+;TEMP_H-количество чипов,
+;TEMP_L-длина данных 1-го устройства,
 ;--------------------------------------------------------
 	PUSH_Y
 	PUSH_Z
@@ -102,10 +97,6 @@ DRV_MAX7219_INIT:
 
 	;Загружаем в Y адрес на выделенный блок памяти
 	MCALL C5_RAM_OFFSET
-	PUSH_Z
-	MOV ZH,YH
-	MOV ZL,YL
-	POP_Y
 	;Умножаем Z на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
 	RJMP PC+0x04

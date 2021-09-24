@@ -40,18 +40,8 @@
 	;Идентификаторы таймеров
 	;---
 
-	.dw	C5_OUT_NUMx8,DIV10
-
-
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
 MAIN:
-	CLI
-	;Инициализация стека
-	LDI TEMP,high(RAMEND)
-	STS SPH,TEMP
-	LDI TEMP,low(RAMEND)
-	STS SPL,TEMP
-
 	;Инициализация ядра
 	MCALL C5_INIT
 
@@ -79,11 +69,11 @@ TASK__INIT:
 	LDI LOOP_CNTR,0x00
 TASK__LOOP:
 	MOV TEMP,LOOP_CNTR
-	MCALL C5_OUT_NUMx8
+	MCALL C5_OUT_NUM8
 	C5_OUT_ROMSTR TASK__LOGSTR1
 	MCALL DIV10
 	MOV TEMP,TEMP_L
-	MCALL C5_OUT_NUMx8
+	MCALL C5_OUT_NUM8
 	C5_OUT_ROMSTR TASK__LOGSTR2
 	MCALL C5_OUT_BYTE
 	C5_OUT_ROMSTR TASK__LOGSTR3
@@ -95,7 +85,7 @@ TASK__LOOP:
 	LDI TEMP_L,low(59942)
 	C5_OUT_ROMSTR TASK__LOGSTR4
 	MCALL DIV100
-	MCALL C5_OUT_NUMx16
+	MCALL C5_OUT_NUM16
 
 	RET
 

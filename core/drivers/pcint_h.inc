@@ -12,7 +12,7 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./mem/ram_fill8.inc"
+.include	"./mem/ram_fill.inc"
 .include	"./io/port_mode_in.inc"
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_set_hi.inc"
@@ -37,7 +37,7 @@ DRV_PCINT_H_INIT:
 	MOVW XL,YL
 	MOV LOOP_CNTR,ACCUM
 	LDI TEMP,0xff
-	MCALL RAM_FILL8
+	MCALL RAM_FILL
 	;Активируем прерывания
 	LDI TEMP_H,high(_DRV_PCINT_H_EVENT)
 	LDI TEMP_L,low(_DRV_PCINT_H_EVENT)
@@ -99,7 +99,8 @@ _DRV_PCINT_H_PROC__NOT_RESET:
 	ROL TEMP_H
 
 	;Получаем адрес выделенной памяти
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
+
 	MOVW ZL,YL
 	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES)
 	ADD ZL,TEMP
@@ -192,7 +193,8 @@ _DRV_PCINT_H_EVENT:
 	PUSH TEMP
 	PUSH FLAGS
 	;Получаем адрес выделенной памяти
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
+
 	MOVW XL,YL
 	;Получаем адрес предидущих состояний
 	LDI TEMP,low(_DRV_PCINT_H_RAM_PREV_STATES+0x01)

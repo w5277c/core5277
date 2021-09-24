@@ -97,7 +97,8 @@ DRV_SPI_MS_INIT:
 	PUSH LOOP_CNTR
 
 	;Загружаем в Y адрес на выделенный блок памяти
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
+
 	;Умножаем Z на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
 	RJMP PC+0x04

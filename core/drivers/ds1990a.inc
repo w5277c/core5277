@@ -5,6 +5,7 @@
 ;13.09.2020  w5277c@gmail.com			Актуализирован
 ;27.10.2020  w5277c@gmail.com			Обновлена информация об авторских правах
 ;12.02.2020  w5277c@gmail.com			CRC8_MAXIM_BLOCK->CRC8_BLOCK
+;16.09.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .include	"./core/ram/ram_offset.inc"
@@ -40,14 +41,15 @@ DRV_DS1990A_INIT:
 	LDI ACCUM,_DRV_DS1990A_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 	POP ACCUM
-	STD Z+_DRV_DS1990A_1W_DRV,ACCUM
+	STD Y+_DRV_DS1990A_1W_DRV,ACCUM
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, опрос датчика
-;OUT: Z - адрес на блок UID(6 байт)
-;TEMP - код результата
+;OUT: Z-адрес на блок UID(6 байт)
+;TEMP-код результата
 ;--------------------------------------------------------
+	PUSH_X
 	PUSH_Y
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -55,7 +57,7 @@ DRV_DS1990A_INIT:
 	PUSH LOOP_CNTR
 
 	MCALL C5_RAM_OFFSET
-	LDD ACCUM,Z+_DRV_DS1990A_1W_DRV
+	LDD ACCUM,Y+_DRV_DS1990A_1W_DRV
 
 	CPI ACCUM,0xFF
 	BRNE PC+0x03
@@ -63,12 +65,10 @@ DRV_DS1990A_INIT:
 	RJMP _DRV_DS1990A_PROC__ERROR
 
 	MOV TEMP,ACCUM
-	LDI YH,high(_DRV_DS1990A_READ_ROM)|0x80
-	LDI YL,low(_DRV_DS1990A_READ_ROM)
+	LDI_Z _DRV_DS1990A_READ_ROM)|0x8000
 	LDI TEMP_H,0x01
 	LDI TEMP_L,0x08
-	MOV XH,ZH
-	MOV XL,ZL
+	MOVW XL,YL
 	MCALL C5_EXEC
 	CPI TEMP,0x00
 	BREQ PC+0x03
@@ -76,14 +76,16 @@ DRV_DS1990A_INIT:
 	RJMP _DRV_DS1990A_PROC__END
 
 	LDI LOOP_CNTR,0x07
-	LDI_Y CRC8_MAXIM
+	MOVW XL,YL
+	LDI_Z CRC8_MAXIM
 	MCALL CRC8_BLOCK
-	LDD TEMP,Z+DRV_DS1990A_BUFFER_CRC
+	LDD TEMP,Y+DRV_DS1990A_BUFFER_CRC
 	CP TEMP,ACCUM
 	BREQ PC+0x03
 	LDI TEMP,DRV_DS1990A_RESULT_BAD_CRC
 	RJMP _DRV_DS1990A_PROC__ERROR
 
+	MOVW ZL,YL
 	LDI TEMP,DRV_DS1990A_RESULT_OK
 _DRV_DS1990A_PROC__ERROR:
 _DRV_DS1990A_PROC__END:
@@ -92,4 +94,5 @@ _DRV_DS1990A_PROC__END:
 	POP TEMP_L
 	POP TEMP_H
 	POP_Y
+	POP_X
 	RET

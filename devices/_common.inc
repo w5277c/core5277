@@ -20,9 +20,6 @@
 	.EQU	TS_MODE_NO								= 0xff			;Простое переключение, механизмы ядра для переключения задач отсутствуют
 	.EQU	TS_MODE_EVENT							= 0x00			;Кооперативная
 	.EQU	TS_MODE_TIME							= 0x01			;Вытесняющая многозадачность
-;---OPTIMIZATION-MODES-----------------------------------;Режим оптимизации работы ядра
-	.EQU	OPT_MODE_SIZE							= 0x00			;Снижение размера прошивки			
-	.EQU	OPT_MODE_SPEED							= 0x01			;Снидение времени выполнения функционала
 ;---LOGGING----------------------------------------------;Параметры логирования
 	.EQU	LOGGING_LVL_DIS						= 0x00
 	.EQU	LOGGING_LVL_ERR						= 0x01
@@ -34,14 +31,20 @@
 
 	.SET	BUFFER_SIZE								= 0x0000
 
+.ifdef REPORT_INCLUDES
+.else
 	.SET	REPORT_INCLUDES						= 0x00
+.endif
 .ifdef TIMER_C_ENABLE
 .else
 	.SET	TIMER_C_ENABLE							= 0x00
 .endif
 	.SET	REALTIME									= 0x00
 	.SET	TIMERS									= 0x00
+.ifdef AVRA
+.else
 	.SET	AVRA										= 0x00
+.endif
 	.SET	MUL_SUPPORT								= 0x01
 
 .ifdef CORE_FREQ

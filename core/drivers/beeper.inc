@@ -185,7 +185,7 @@ DRV_BEEPER_INIT:
 	PUSH LOOP_CNTR
 
 	;Считываем информацию о пине
-	MCALL C5_RAM_OFFSET_Y
+	MCALL C5_RAM_OFFSET
 
 	;Умножаем на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
@@ -311,12 +311,10 @@ _DRV_BEEPER_PLAY_BYTE__SILENT:
 _DRV_BEEPER_TIMER_EVENT:
 ;--------------------------------------------------------
 ;Обработчик перывания по таймеру
+;*обработчики программных таймеров могут не сохранять
+;значения регистров Y,Z
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH_Y
-
-	;Сичтываем информацию о пине
-	MCALL C5_RAM_OFFSET_Y
 
 	LDD XH,Y+_DRV_BEEPER_TIMER_CNTR+0x00
 	LDD XL,Y+_DRV_BEEPER_TIMER_CNTR+0x01
@@ -340,7 +338,6 @@ _DRV_BEEPER_TIMER_EVENT:
 	POP ACCUM
 
 _DRV_BEEPER_TIMER_EVENT__END:
-	POP_Y
 	POP_X
 	RET
 .endif

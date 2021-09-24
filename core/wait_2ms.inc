@@ -24,18 +24,15 @@ C5_WAIT_2MS:
 ;IN TEMP_H,TEMP_L,TEMP - время в 0.002s
 ;--------------------------------------------------------
 .if TS_MODE == TS_MODE_TIME
-	LDS r2,SREG															;Запоминаем регистр флагов
-	MCALL C5_DISPATCHER_LOCK
 	_C5_MACRO__PUSH_RDS												;Пмещаем в стек рабочие регистры задачи
-	PUSH r2																;Помещаем в стек регистр флагов
+	LDS FLAGS,SREG
+	PUSH FLAGS															;Помещаем в стек регистр флагов
 
 	MOV PID,_PID														;Затираю PID, так как он уже записан в стек
 	MCALL _C5_PROC_HEADER_GET
 
-	MOV r3,ACCUM														;Точно необходимо?
 	;Записываем время окончания паузы
-	LDS ACCUM,SREG
-	PUSH ACCUM
+	LDS FLAGS,SREG
 	CLI
 	LDS ACCUM,_C5_UPTIME+0x04
 	ADD ACCUM,TEMP
@@ -46,9 +43,7 @@ C5_WAIT_2MS:
 	LDS ACCUM,_C5_UPTIME+0x02
 	ADC ACCUM,TEMP_H
 	STD Z+_C5_TASK_EXECTIME+0x00,ACCUM
-	POP ACCUM
-	STS SREG,ACCUM
-	MOV ACCUM,r3
+	STS SREG,FLAGS
 
 	LDI TEMP,_C5_PROC_STATE_TIME_WAIT
 	MCALL _C5_SUSPEND__BODY
