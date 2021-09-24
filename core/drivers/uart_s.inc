@@ -11,11 +11,13 @@
 ;23.07.2021	w5277c@gmail.com			Z->Y, необходимо тестирование
 ;02.08.2021	w5277c@gmail.com			Поддержка BREAK
 ;18.08.2021	w5277c@gmail.com			Вынесена проверка на значение порта 0xff в процедуры порта, багфиксинг
+;24.08.2021	w5277c@gmail.com			Октет таймаут-2 бита, поддержка TIMER_C, поддержка INT_x, переход на /io/reg_ В процессе
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO поддержка MAGIC?
 ;TODO перейти с /io/port_... на /io/reg_...
 ;TODO привести PCINT_H и PCINT_S к одному виду
 ;TODO блокировать диспетчер при DRV_UART_ST_RECEIVING
+;TODO учитывать доступность BAUDRATE для разных CORE_FREQ
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
@@ -78,6 +80,33 @@
 	.EQU	DRV_UART_S_BAUDRATE_19200			= 0x02			;Только совместно с C5_IR_INTn
 .ENDIF
 
+;При использовании таймера C доступый BAUDRATE зависит от частоты CPU, минимальное кол-во тактов-256(TODO нужно проверить, достаточно ли?)
+.IF TIMER_C_ENABLE == 1
+	.IF CORE_FREQ < 5
+		.EQU	DRV_UART_S_BAUDRATE_C9600		= CORE_FREQ*125000/4800-1
+	.ENDIF
+	.IF CORE_FREQ > 2 & CORE_FREQ < 10
+		.EQU	DRV_UART_S_BAUDRATE_C9600		= CORE_FREQ*125000/9600-1
+	.ENDIF
+	.IF CORE_FREQ > 3 & CORE_FREQ < 15
+		.EQU	DRV_UART_S_BAUDRATE_C14400		= CORE_FREQ*125000/14400-1
+	.ENDIF
+	.IF CORE_FREQ > 4 & CORE_FREQ < 20
+		.EQU	DRV_UART_S_BAUDRATE_C19200		= CORE_FREQ*125000/19200-1
+	.ENDIF
+	.IF CORE_FREQ > 7
+		.EQU	DRV_UART_S_BAUDRATE_C28800		= CORE_FREQ*125000/28800-1
+	.ENDIF
+	.IF CORE_FREQ > 9
+		.EQU	DRV_UART_S_BAUDRATE_C38400		= CORE_FREQ*125000/38400-1
+	.ENDIF
+	.IF CORE_FREQ > 14
+		.EQU	DRV_UART_S_BAUDRATE_C57600		= CORE_FREQ*125000/57600-1
+	.ENDIF
+	.IF CORE_FREQ > 19
+		.EQU	DRV_UART_S_BAUDRATE_C76800		= CORE_FREQ*125000/76800-1
+	.ENDIF
+.ENDIF
 ;--------------------------------------------------------
 DRV_UART_S_INIT:
 ;--------------------------------------------------------
@@ -130,11 +159,29 @@ DRV_UART_S_INIT:
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_HI
 	STD Z+_DRV_UART_S_TX_PORT,ACCUM
+
+	;Инициализирую таймер
+.IF TIMER_C_ENABLE == 1
+	CPI TEMP_EH,0x83
+	BREQ PC+0x08
+.ENDIF
+	MOV TEMP,TEMP_EH
+	LDI TEMP_H,high(_DRV_UART_S_EVENT)
+	LDI TEMP_L,low(_DRV_UART_S_EVENT)
+	MOV ACCUM,TEMP_EL
+	MCALL C5_TIMER_SET
+	RJMP PC+0x08
+.IF TIMER_C_ENABLE == 1
+	LDI_X _DRV_UART_S_EVENT
+	MCALL C5_TIMER_C_SET_VECTOR
+	MOV TEMP,TEMP_EL
+	;TODO преобразовать в период для TIMER_C
+	MCALL C5_TIMER_C_SET_PERIOD
+.ENDIF
+
 	;Записываю период таймера
 	STD Z+_DRV_UART_S_TIMER_PERIOD,TEMP_EL
 	;Расчитываю NEXT TIMEOUT
-	LSL TEMP_EL
-	LSL TEMP_EL
 	LSL TEMP_EL
 	STD Z+_DRV_UART_S_NEXT_TIMEOUT,TEMP_EL
 
@@ -166,13 +213,6 @@ DRV_UART_S_INIT:
 	LDI TEMP,DRV_UART_ST_READY
 	STD Y+_DRV_UART_S_STATE,TEMP
 
-	;Инициализирую таймер
-	LDD TEMP,Y+_DRV_UART_S_TIMER_ID
-	LDI TEMP_H,high(_DRV_UART_S_EVENT)
-	LDI TEMP_L,low(_DRV_UART_S_EVENT)
-	LDD ACCUM,Y+_DRV_UART_S_TIMER_PERIOD
-	MCALL C5_TIMER_SET
-
 	;Блок передачи
 	CPI TEMP_EH,0x00
 	BREQ _DRV_UART_S_PROC__TX_SKIP
@@ -199,10 +239,18 @@ DRV_UART_S_INIT:
 	;Порт направления в HI
 	LDD ACCUM,Y+_DRV_UART_S_DR_PORT
 	MCALL PORT_SET_HI
-	;Запускаю таймер
-	MCALL C5_SOFT_UART_MODE_SET
+	;Запускаем таймер
 	LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+.IF TIMER_C_ENABLE == 1
+	CPI TEMP,0x83
+	BREQ PC+0x06
+.ENDIF
+	MCALL C5_SOFT_UART_MODE_SET
 	MCALL C5_TIMER_START
+.IF TIMER_C_ENABLE == 1
+	RJMP PC+0x03
+	MCALL C5_TIMER_C_START
+.ENDIF
 	;Жду окончания передачи
 _DRV_UART_S_PROC__SENDING_WAIT:
 	LDD TEMP,Y+_DRV_UART_S_STATE
@@ -286,9 +334,18 @@ _DRV_UART_S_PROC__RECEIVING_WAIT:
 		;Достигли таймаута
 		LDI TEMP,DRV_UART_ST_FAIL
 		STD Y+_DRV_UART_S_STATE,TEMP
-		;Останавливаю таймер
+		;Останавливаем таймер
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+.IF TIMER_C_ENABLE == 0x01
+		CPI TEMP,0x83
+		BREQ PC+0x06
+.ENDIF
+		MCALL C5_SOFT_UART_MODE_RESET
 		MCALL C5_TIMER_STOP
+.IF TIMER_C_ENABLE == 0x01
+		RJMP PC+0x03
+		MCALL C5_TIMER_C_STOP
+.ENDIF
 		MCALL _DRV_UART_S_INT_DISABLE
 _DRV_UART_S_PROC__RX_SKIP:
 _DRV_UART_S_PROC__DONE:
@@ -326,9 +383,17 @@ _DRV_UART_S_EVENT:
 	RJMP __DRV_UART_S_EVENT__END
 	CPI TEMP,DRV_UART_ST_BREAK
 	BRNE __DRV_UART_S_EVENT__END
-		;Останавливаю таймер
+		;Останавливаем таймер
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+.IF TIMER_C_ENABLE == 1
+		CPI TEMP,0x83
+		BREQ PC+0x04
+.ENDIF
 		MCALL C5_TIMER_STOP
+.IF TIMER_C_ENABLE == 1
+		RJMP PC+0x03
+		MCALL C5_TIMER_C_STOP
+.ENDIF
 		;Порт TX в HI
 		LDD ACCUM,Y+_DRV_UART_S_TX_PORT
 		MCALL PORT_SET_HI
@@ -390,12 +455,28 @@ __DRV_UART_S_SEND_EVENT__NO_START:
 		LDD ACCUM,Y+_DRV_UART_S_NEXT_TIMEOUT
 		LSL ACCUM
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+.IF TIMER_C_ENABLE == 0x01
+		CPI TEMP,0x83
+		BREQ PC+0x04
+.ENDIF
 		MCALL C5_TIMER_START_AT	;TODO оптимизировать
+.IF TIMER_C_ENABLE == 1
+		RJMP PC+0x03
+		MCALL C5_TIMER_C_START_AT
+.ENDIF
 		RJMP __DRV_UART_S_SEND_EVENT__END
 __DRV_UART_S_SEND_EVENT__NO_BREAK:
-		;Останавливаю таймер
+		;Останавливаем таймер
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+.IF TIMER_C_ENABLE == 1
+		CPI TEMP,0x83
+		BREQ PC+0x04
+.ENDIF
 		MCALL C5_TIMER_STOP
+.IF TIMER_C_ENABLE == 0x01
+		RJMP PC+0x03
+		MCALL C5_TIMER_C_STOP
+.ENDIF
 		;Порт TX в HI
 		LDD ACCUM,Y+_DRV_UART_S_TX_PORT
 		MCALL PORT_SET_HI
@@ -454,9 +535,17 @@ _DRV_UART_S_RECV_EVENT:
 	CPI TEMP_H,0x00
 	BRNE __DRV_UART_S_RECV_EVENT__NO_NEXT_TIMEOUT
 		;Отработал таймер после STOP, т.е. прошло времени на несколько бит и START не был обнаружен
-		;Останавливаю таймер
+		;Останавливаем таймер
 		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+.IF TIMER_C_ENABLE == 0x01
+		CPI TEMP,0x83
+		BREQ PC+0x04
+.ENDIF
 		MCALL C5_TIMER_STOP
+.IF TIMER_C_ENABLE == 0x01
+		RJMP PC+0x03
+		MCALL C5_TIMER_C_STOP
+.ENDIF
 		MCALL C5_SOFT_UART_MODE_RESET
 		MCALL _DRV_UART_S_INT_DISABLE
 
@@ -527,9 +616,17 @@ __DRV_UART_S_RECV_EVENT__NEXT_BYTE:
 		MCALL C5_TIMER_START_AT
 		RJMP __DRV_UART_S_RECV_EVENT__END
 __DRV_UART_S_RECV_EVENT__ERROR:
-	;Останавливаю таймер
-	LDD TEMP,Y+_DRV_UART_S_TIMER_ID
-	MCALL C5_TIMER_STOP
+		;Останавливаем таймер
+		LDD TEMP,Y+_DRV_UART_S_TIMER_ID
+.IF TIMER_C_ENABLE == 0x01
+		CPI TEMP,0x83
+		BREQ PC+0x04
+.ENDIF
+		MCALL C5_TIMER_STOP
+.IF TIMER_C_ENABLE == 0x01
+		RJMP PC+0x03
+		MCALL C5_TIMER_C_STOP
+.ENDIF
 	LDI TEMP,DRV_UART_ST_FAIL
 	STD Y+_DRV_UART_S_STATE,TEMP
 	RJMP __DRV_UART_S_RECV_EVENT__END
