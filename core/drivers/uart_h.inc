@@ -30,9 +30,9 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
-	.EQU	_DRV_UART_H_RX_PORT					= DRV_UART_RX_PORT	;1B - Порт для задания направления прием/передача
-	.EQU	_DRV_UART_H_TX_PORT					= DRV_UART_TX_PORT	;1B - Порт для задания направления прием/передача
-	.EQU	_DRV_UART_H_DR_PORT					= DRV_UART_DR_PORT	;1B - Порт для задания направления прием/передача
+	.EQU	_DRV_UART_H_RX_PORT					= 0x00			;1B - Порт для задания направления прием/передача
+	.EQU	_DRV_UART_H_TX_PORT					= 0x01			;1B - Порт для задания направления прием/передача
+	.EQU	_DRV_UART_H_DR_PORT					= 0x02			;1B - Порт для задания направления прием/передача
 	.EQU	_DRV_UART_H_LED_PORT					= 0x03			;1B - Порт индикации
 	.EQU	_DRV_UART_H_STATE						= 0x04			;1B - Статус драйвера
 	.EQU	_DRV_UART_H_TIMER_ID					= 0x05			;1B - ИД программного таймера
