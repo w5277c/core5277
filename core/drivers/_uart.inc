@@ -17,8 +17,4 @@
 	.EQU	DRV_UART_ST_RECEIVING				= 0x04;
 	.EQU	DRV_UART_ST_FAIL						= 0x05;
 	.EQU	DRV_UART_ST_OVERFLOW					= 0x06;
-	;---UNIVERSAL-OFFSETS---
-	.EQU	DRV_UART_RX_PORT						= 0x00			;1B - Порт для приема данных
-	.EQU	DRV_UART_TX_PORT						= 0x01			;1B - Порт для передачи данных
-	.EQU	DRV_UART_DR_PORT						= 0x02			;1B - Порт для задания направления прием/передача
 .endif

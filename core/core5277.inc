@@ -85,8 +85,8 @@
 	.EQU	_C5_PROCST_OPT_RESERV2				= 0x06			;Зарезервировано
 	.EQU	_C5_PROCST_OPT_RESERV3				= 0x07			;Зарезервировано
 
-;---TIMER-STRUCTURE---------------------------------------(5b);
-	.EQU	_C5_TIMER_STRUCT_SIZE				= 0x05			;Длина блока таймера
+;---TIMER-STRUCTURE--------------------------------------;Структура таймера(8B)
+	.EQU	_C5_TIMER_STRUCT_SIZE				= 0x08			;Длина блока таймера
 	.EQU	_C5_TIMER_PROC_ID						= 0x00			;1B-ид процедуры(0-..., 0xff - не исп.)
 	.EQU	_C5_TIMER_HANDLER						= 0x01			;2B-адрес обработчика
 	.EQU	_C5_TIMER_RAM_ADDR					= 0x03			;2B-адрес на выделенную память
@@ -388,7 +388,7 @@ _C5_TIMER_A_IR__HF_LOOP:
 	ANDI TEMP,0x7f
 	STD Y+_C5_TIMER_CNTR,TEMP
 _C5_TIMER_A_IR__HF_NEXT:
-	ADIW YL,0x05
+	ADIW YL,_C5_TIMER_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BRNE _C5_TIMER_A_IR__HF_LOOP
 
@@ -463,7 +463,7 @@ _C5_TIMER_A_IR__LF_LOOP:
 	ANDI TEMP,0x7f
 	STD Y+_C5_TIMER_CNTR,TEMP
 _C5_TIMER_A_IR__LF_NEXT:
-	ADIW YL,0x05
+	ADIW YL,_C5_TIMER_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BRNE _C5_TIMER_A_IR__LF_LOOP
 
@@ -692,8 +692,8 @@ C5_REINIT:
 .ENDIF
 .IF TIMERS > 0x00
 	;Установка таймеров как не используемых
-	LDI TEMP_H,high(TIMERS*0x05)
-	LDI TEMP_L,low(TIMERS*0x05)
+	LDI TEMP_H,high(TIMERS*_C5_TIMER_STRUCT_SIZE)
+	LDI TEMP_L,low(TIMERS*_C5_TIMER_STRUCT_SIZE)
 	LDI TEMP,0xff
 	LDI_X _C5_TIMERS
 	MCALL RAM_FILL16
