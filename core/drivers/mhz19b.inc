@@ -54,8 +54,8 @@ DRV_MHZ19B_INIT:
 	MOVW XL,YL
 	LDI TEMP_EH,0x09													;Размер запроса
 	LDI TEMP_EL,0x09													;Размер буфера
-	LDI TEMP_H,0x00													;100ms
-	LDI TEMP_L,0x32
+	LDI TEMP_H,0x00													;10ms
+	LDI TEMP_L,0x05
 	MCALL C5_EXEC
 	
 	LDI TEMP,DRV_RESULT_ABSENT
