@@ -1,0 +1,152 @@
+;-----------------------------------------------------------------------------------------------------------------------
+;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
+;-----------------------------------------------------------------------------------------------------------------------
+;01.10.2021	w5277c@gmail.com			Код вынесен из esp8266.inc
+;-----------------------------------------------------------------------------------------------------------------------
+
+.ifdef DEF_DRIVER_ESP8266_SEND_DATA
+.else
+.set DEF_DRIVER_ESP8266_SEND_DATA = 1
+
+_DRV_ESP8266_AT_SEND:						.db "AT+CIPSEND=0,",0x00;+XXX+END
+
+_DRV_ESP8266_WIFI_READY_TIMEOUT:			.db 0x00,0x00,0x49,0xe0	;TIME VAR = 0.3 сек.
+
+;--------------------------------------------------------
+_DRV_ESP8266__OP_SEND_DATA:
+;--------------------------------------------------------
+;Передаем данные данные
+;IN: Z-адрес на выделенную память, Y-адрес на начало
+;передаваемых данных, TEMP_L-размер данных
+;OUT:TEMP_H-результат
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Y
+	PUSH TEMP
+	PUSH TEMP_L
+	PUSH TEMP_EH
+	PUSH TEMP_EL
+
+	LDI XH,0x00
+	LDI XL,_DRV_ESP8266_BUFFER
+	ADD XL,ZL
+	ADC XH,ZH
+
+	PUSH TEMP_L
+	PUSH_X
+	PUSH_Y
+	LDI_Y _DRV_ESP8266_AT_SEND|0x8000
+	MCALL STR_TO_RAM
+	POP_Y
+	PUSH_Z
+	MOV ZH,XH
+	MOV ZL,XL
+	MOV TEMP,TEMP_L
+	LDI TEMP_H,0x00
+	MCALL NUM16_TO_STR
+	MOV XH,ZH
+	MOV XL,ZL
+	POP_Z
+	PUSH_Y
+	LDI_Y _DRV_ESP8266_AT_NEW_LINE|0x8000
+	MCALL STR_TO_RAM
+	POP_Y
+	MOV TEMP_H,XL
+	SUB TEMP_H,ZL
+	SUBI TEMP_H,_DRV_ESP8266_BUFFER
+	POP_X
+	MCALL _DRV_ESP8266__OP_RAW
+	MCALL _DRV_ESP8266_CHECK_RESP_OK
+	CPI TEMP_H,DRV_RESULT_OK
+	POP TEMP_EH
+	BREQ PC+0x02
+	RJMP __DRV_ESP8266__OP_SEND_DATA__END
+
+
+	;Считываем сообщения ожидая ">" в течении 0.3 секунд
+	LDI TEMP,_DRV_ESP8266_TIME_START
+	MCALL C5_TIME32_MARK
+__DRV_ESP8266__OP_SEND_DATA__READ_LOOP:
+
+	;Только читаем
+	LDI XH,0x00
+	LDI XL,_DRV_ESP8266_BUFFER
+	ADD XL,ZL
+	ADC XH,ZH
+	PUSH_Y
+	MOV YH,XH
+	MOV YL,XL
+	LDI TEMP_EH,0x00
+	LDI TEMP_EL,(_DRV_ESP8266_BUFFER_SIZE-0x01)
+	LDI TEMP_H,high(300/2)
+	LDI TEMP_L,low(300/2)
+	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
+	MCALL C5_EXEC
+	POP_Y
+	CPI TEMP_H,DRV_UART_ST_READY
+	BREQ PC+0x02
+	RJMP __DRV_ESP8266__OP_SEND_DATA__NO_ANSWER
+	CPI TEMP_L,0x00
+	BRNE PC+0x02
+	RJMP __DRV_ESP8266__OP_SEND_DATA__NO_ANSWER
+	PUSH_X
+	ADD XL,TEMP_L
+	LDI TEMP,0x00
+	ADC XH,TEMP
+	ST X,TEMP
+	POP_X
+
+	LDI_Y _DRV_ESP8266_AT_RESP_READY|0x8000
+	MCALL STR_FIND
+	CPI TEMP_H,0xff
+	BRNE __DRV_ESP8266__OP_SEND_DATA__SUCCESS
+
+__DRV_ESP8266__OP_SEND_DATA__NO_ANSWER:
+	LDI ACCUM,PRIM_INT
+	LDI TEMP_H,_DRV_ESP8266_TIME_DELTA
+	LDI TEMP_L,_DRV_ESP8266_TIME_START
+	MCALL PRIM_MOV
+	LDI TEMP,_DRV_ESP8266_TIME_DELTA
+	MCALL C5_TIME32_DELTA
+	LDI_Y _DRV_ESP8266_WIFI_READY_TIMEOUT|0x8000
+	MCALL PRIM_CPI
+	BRCC PC+0x02
+	RJMP __DRV_ESP8266__OP_SEND_DATA__READ_LOOP
+	RJMP __DRV_ESP8266__OP_SEND_DATA__ERROR
+__DRV_ESP8266__OP_SEND_DATA__SUCCESS:
+
+	LDI TEMP_EL,0x00;(_DRV_ESP8266_BUFFER_SIZE-0x01)
+.ifdef _DRV_ESP8266__LOG_REQV_BYTES
+	MCALL _DRV_ESP8266__LOG_REQV_BYTES
+.endif
+	LDI TEMP_H,high(1000/2)
+	LDI TEMP_L,low(1000/2)
+	LDD TEMP,Z+_DRV_ESP8266_UART_DRV_ID
+	MCALL C5_EXEC
+	CPI TEMP_H,DRV_RESULT_OK
+	BRNE __DRV_ESP8266__OP_SEND_DATA__ERROR
+.ifdef _DRV_ESP8266__LOG_RESP
+	MOV YH,XH
+	MOV YL,XL
+	MCALL _DRV_ESP8266__LOG_RESP
+.endif
+
+	;TODO CHECK 'SEND OK'
+
+	CPI TEMP_H,DRV_UART_ST_READY
+	BRNE __DRV_ESP8266__OP_SEND_DATA__ERROR
+	LDI TEMP_H,DRV_RESULT_OK
+	RJMP __DRV_ESP8266__OP_SEND_DATA__END
+__DRV_ESP8266__OP_SEND_DATA__ERROR:
+	LDI TEMP_H,DRV_RESULT_ERROR
+__DRV_ESP8266__OP_SEND_DATA__END:
+
+	POP TEMP_EL
+	POP TEMP_EH
+	POP TEMP_L
+	POP TEMP
+	POP_Y
+	POP_X
+	RET
+
+.endif
