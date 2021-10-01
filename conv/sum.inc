@@ -1,37 +1,36 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;29.04.2021	w5277c@gmail.com			Начало
-;01.10.2021	w5277c@gmail.com			Y->X
+;27.09.2021  w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_STR_LEN
+.ifdef DEF_SUM
 .else
-.set DEF_STR_LEN = 1
+.set DEF_SUM = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included STR_LEN"
+.message "included SUM"
 .endif
 
 ;--------------------------------------------------------
-STR_LEN:
+SUM:
 ;--------------------------------------------------------
-;Вычисление размера строки
-;IN: X-SRC адрес
-;OUT: TEMP-размер без учета 0x00 (0xff-переполнение)
+;Сумма блока
+;IN: X-адрес начала блока, LOOP_CNTR-длина
+;OUT: ACCUM-сумма
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH ACCUM
+	PUSH LOOP_CNTR
+	PUSH TEMP
 
-STR_LEN__LOOP:
-	LD ACCUM,X+
-	CPI ACCUM,0x00
-	BREQ STR_LEN__END
-	INC TEMP
-	CPI TEMP,0xff
-	BRNE STR_LEN__LOOP
+	CLR ACCUM
+_SUM__LOOP:
+	LD TEMP,X+
+	ADD ACCUM,TEMP
+	DEC LOOP_CNTR
+	BRNE _SUM__LOOP
 
-STR_LEN__END:
-	POP ACCUM
+	POP TEMP
+	POP LOOP_CNTR
 	POP_X
 	RET
 .endif

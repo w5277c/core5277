@@ -22,6 +22,8 @@
 ;TODO привести PCINT_H и PCINT_S к одному виду
 ;TODO блокировать диспетчер при DRV_UART_ST_RECEIVING
 ;TODO учитывать доступность BAUDRATE для разных CORE_FREQ
+;TODO стр.602, если данных принято RX_LEN, то включается ST_OVERFLOW(временно отключил), негде хранить признак
+;переполнения.
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_S
 .else
@@ -283,8 +285,9 @@ DRV_UART_S_INIT:
 	LDD ACCUM,Y+_DRV_UART_S_TIMER_PERIOD
 	MCALL C5_TIMER_START_AT
 .IF TIMER_C_ENABLE == 1
-	RJMP PC+0x03
-	MCALL C5_TIMER_C_START
+	RJMP PC+0x04
+	LDD TEMP,Y+_DRV_UART_S_TIMER_PERIOD
+	MCALL C5_TIMER_C_START_AT
 .ENDIF
 	;Жду окончания передачи
 _DRV_UART_S_PROC__SENDING_WAIT:
@@ -599,11 +602,11 @@ _DRV_UART_S_RECV_EVENT:
 
 		;Прием данных завершен
 		LDI TEMP,DRV_UART_ST_READY
-		LDD TEMP_L,Y+_DRV_UART_S_BUFFER_POS
-		LDD ACCUM,Y+_DRV_UART_S_RX_LEN
-		CP TEMP_L,ACCUM
-		BRNE PC+0x02
-		LDI TEMP,DRV_UART_ST_OVERFLOW
+;		LDD TEMP_L,Y+_DRV_UART_S_BUFFER_POS
+;		LDD ACCUM,Y+_DRV_UART_S_RX_LEN
+;		CP TEMP_L,ACCUM
+;		BRNE PC+0x02
+;		LDI TEMP,DRV_UART_ST_OVERFLOW
 		STD Y+_DRV_UART_S_STATE,TEMP
 		RJMP __DRV_UART_S_RECV_EVENT__END
 __DRV_UART_S_RECV_EVENT__NO_NEXT_TIMEOUT:
