@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;16.01.2021	w5277c@gmail.com			Начало, не проверено
+;01.10.2021	w5277c@gmail.com			Y->X
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_STR_TRIM
 .else
@@ -14,18 +15,17 @@
 ;--------------------------------------------------------
 STR_TRIM:
 ;--------------------------------------------------------
-;Удаление пробелов вначале и конеце строки
+;Игнорирование пробелов в начале и в конце строки
 ;(пререписывает конец строки)
-;IN: Y-адрес на строку
-;OUT: Y-адрес на новое начало строки
+;IN: X-адрес на строку
+;OUT: X-адрес на новое начало строки
 ;--------------------------------------------------------
-	PUSH_X
+	PUSH_Y
 	PUSH TEMP
 
 _STR_TRIM__LEFT_DIR:
-	MOV XH,YH
-	MOV XL,YL
-	LD TEMP,Y+
+	MOVW YL,XL
+	LD TEMP,X+
 	CPI TEMP,0x00
 	BREQ _STR_TRIM__RIGHT_DIR
 	CPI TEMP,0x09
@@ -38,18 +38,18 @@ _STR_TRIM__LEFT_DIR:
 	BREQ _STR_TRIM__LEFT_DIR
 
 _STR_TRIM__BODY_SKIP_LOOP:
-	LD TEMP,Y+
+	LD TEMP,X+
 	CPI TEMP,0x00
 	BRNE _STR_TRIM__BODY_SKIP_LOOP
 
 _STR_TRIM__RIGHT_DIR:
-	SBIW YL,0x01
-	CP XL,YL
+	SBIW XL,0x01
+	CP YL,XL
 	BRNE PC+0x03
-	CP XH,YH
+	CP YH,XH
 	BREQ _STR_TRIM__END
 _STR_TRIM__RIGHT_DIR_LOOP:
-	LD TEMP,-Y
+	LD TEMP,-X
 	CPI TEMP,0x09
 	BREQ _STR_TRIM__RIGHT_DIR_LOOP
 	CPI TEMP,0x0a
@@ -58,15 +58,13 @@ _STR_TRIM__RIGHT_DIR_LOOP:
 	BREQ _STR_TRIM__RIGHT_DIR_LOOP
 	CPI TEMP,0x20
 	BREQ _STR_TRIM__RIGHT_DIR_LOOP
-	ADIW YL,0x01
-	LDI TEMP,0x00
-	ST Y,TEMP
+	ADIW XL,0x01
+	ST X,C0x00
 
 _STR_TRIM__END:
-	MOV YH,XH
-	MOV YL,XL
+	MOVW XL,YL
 
 	POP TEMP
-	POP_X
+	POP_Y
 	RET
 .endif
