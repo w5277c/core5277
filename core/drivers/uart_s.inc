@@ -49,7 +49,7 @@
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
 	.EQU	_DRV_UART_S_RX_PORT					= 0x00			;1B - сдвоенный порт для приема данных
-	.EQU	_DRV_UART_S_RX_IA						= 0x01			;1B - DDR адрес для приема данных
+	.EQU	_DRV_UART_S_RX_IA						= 0x01			;1B - PIN адрес для приема данных
 	.EQU	_DRV_UART_S_RX_BN						= 0x02			;1B - число пина для приема данных
 	.EQU	_DRV_UART_S_TX_PA						= 0x03			;1B - PORT адрес для передачи данных
 	.EQU	_DRV_UART_S_TX_BN						= 0x04			;1B - число пина для передачи данных
@@ -637,9 +637,11 @@ __DRV_UART_S_RECV_EVENT__DATA:
 _DRV_UART_S_RECV_EVENT__PCINT_ENABLE:
 		LDD ACCUM,Y+_DRV_UART_S_RX_PORT
 		PUSH_X
+		PUSH FLAGS
 		LDI_X _DRV_UART_S_PCINT_EVENT
 		MOV FLAGS,PID
 		MCALL C5_EXEC
+		POP FLAGS
 		POP_X
 		RJMP __DRV_UART_S_RECV_EVENT__NEXT_BIT
 __DRV_UART_S_RECV_EVENT__STOP:

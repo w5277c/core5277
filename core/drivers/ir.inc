@@ -35,19 +35,18 @@
 	.EQU	_DRV_IR_LED_PA									= 0x04	;1B - Адрес порта для индикации
 	.EQU	_DRV_IR_LED_PN									= 0x05	;1B - Число для пина порта индикации
 	.EQU	_DRV_IR_INT_ID									= 0x06	;1B - ИД прерывания C5_IR_INTn
-	.EQU	_DRV_IR_FREQ									= 0x07	;1B - Частота передатчика
-	.EQU	_DRV_IR_STATE									= 0x08	;1B - Состояние драйвера
-	.EQU	_DRV_IR_ACCUM									= 0x09	;1B - Аккумулятор
-	.EQU	_DRV_IR_PULSE_CNTR							= 0x0b	;2B - Счетчик пульсаций
-	.EQU	_DRV_IR_TIMEOUT								= 0x0d	;2B - Таймаут ожидания данных
-	.EQU	_DRV_IR_SRC_ADDR								= 0x0f	;2B - Адрес блока данных для передачи
-	.EQU	_DRV_IR_DST_ADDR								= 0x11	;2B - Адрес блока данных для приема
-	.EQU	_DRV_IR_BIT_POS								= 0x13	;1B - Позиция текущего бита
-	.EQU	_DRV_IR_BYTE_POS								= 0x14	;1B - Позиция текущего байта
-	.EQU	_DRV_IR_TX_LEN									= 0x15	;1B - Количество бит для передачи
-	.EQU	_DRV_IR_RX_LEN									= 0x16	;1B - Максимальное количество бит для приема
+	.EQU	_DRV_IR_STATE									= 0x07	;1B - Состояние драйвера
+	.EQU	_DRV_IR_ACCUM									= 0x08	;1B - Аккумулятор
+	.EQU	_DRV_IR_PULSE_CNTR							= 0x09	;2B - Счетчик пульсаций
+	.EQU	_DRV_IR_TIMEOUT								= 0x0b	;2B - Таймаут ожидания данных
+	.EQU	_DRV_IR_SRC_ADDR								= 0x0d	;2B - Адрес блока данных для передачи
+	.EQU	_DRV_IR_DST_ADDR								= 0x0f	;2B - Адрес блока данных для приема
+	.EQU	_DRV_IR_BIT_POS								= 0x11	;1B - Позиция текущего бита
+	.EQU	_DRV_IR_BYTE_POS								= 0x12	;1B - Позиция текущего байта
+	.EQU	_DRV_IR_TX_LEN									= 0x13	;1B - Количество бит для передачи
+	.EQU	_DRV_IR_RX_LEN									= 0x14	;1B - Максимальное количество бит для приема
 	;---
-	.EQU	_DRV_IR_RAM_SIZE								= 0x17	;Необходимо выделить
+	.EQU	_DRV_IR_RAM_SIZE								= 0x15	;Необходимо выделить
 	;---
 
 	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*313)/(100*2)-1
@@ -98,11 +97,11 @@ DRV_IR_INIT:
 	;Настройка таймера C
 	LDI_X _DRV_IR_TIMER_C_EVENT
 	MCALL C5_TIMER_C_SET_VECTOR
+	MOV TEMP,FLAGS
+	MCALL C5_TIMER_C_SET_PERIOD
 
 	;C5_IR_INTn
 	STD Y+_DRV_IR_INT_ID,TEMP_EH
-	;FREQ
-	STD Y+_DRV_IR_FREQ,FLAGS
 	;RX
 	MOV ACCUM,TEMP_H
 	STD Y+_DRV_IR_RX_PA,C0xff
@@ -201,7 +200,6 @@ DRV_IR_INIT:
 	LDI_X _DRV_IR_PREN
 	STD Y+_DRV_IR_PULSE_CNTR+0x00,XH
 	STD Y+_DRV_IR_PULSE_CNTR+0x01,XL
-	LDD TEMP,Y+_DRV_IR_FREQ
 	MCALL C5_TIMER_C_START
 	;Жду окончания передачи
 _DRV_IR_PROC__SENDING_WAIT:
@@ -426,7 +424,6 @@ _DRV_IR_EINT_EVENT:
 	LDI_X _DRV_IR_PRMAX
 	STD Y+_DRV_IR_PULSE_CNTR+0x00,XH
 	STD Y+_DRV_IR_PULSE_CNTR+0x01,XL
-	LDD TEMP,Y+_DRV_IR_FREQ
 	MCALL C5_TIMER_C_START
 	LDI TEMP,_DRV_IR_ST_PR
 	STD Y+_DRV_IR_STATE,TEMP
