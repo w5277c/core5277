@@ -6,6 +6,7 @@
 ;19.08.2020	w5277c@gmail.com			Отсчет с нуля
 ;20.10.2020	w5277c@gmail.com			Убран параметр периода, вынесен в отдельную процедуру
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;04.10.2021	w5277c@gmail.com			Добавлен код таймера C
 ;-----------------------------------------------------------------------------------------------------------------------
 .if TIMERS > 0x00
 .ifdef DEF_C5_TIMER_START
@@ -22,15 +23,23 @@
 C5_TIMER_START:
 ;--------------------------------------------------------
 ;Запуск таймера
-;IN: PID,TEMP-номер таймера(0-...),
+;IN: PID,TEMP-номер таймера(0-... или TID_TIMER_C)
 ;--------------------------------------------------------
+.if TIMER_C_ENABLE == 0x01
+	CPI TEMP,TID_TIMER_C
+	BREQ _C5_TIMER_START__TIMER_C
+.endif
 	PUSH_Z
-
 	MCALL _C5_TIMER_OFFSET
-
 	STD Z+_C5_TIMER_PROC_ID,PID
-
 	POP_Z
 	RET
+.if TIMER_C_ENABLE == 0x01
+_C5_TIMER_START__TIMER_C:
+	PUSH TEMP
+	_C5_TIMERC_START
+	POP TEMP
+	RET
+.endif
 .endif
 .endif
