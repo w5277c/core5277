@@ -49,11 +49,6 @@
 	.EQU	_DRV_IR_RAM_SIZE								= 0x15	;Необходимо выделить
 	;---
 
-	.EQU	DRV_IR_FREQ_40K								= (CORE_FREQ*313)/(100*2)-1
-	.EQU	DRV_IR_FREQ_38K								= (CORE_FREQ*325)/(100*2)-1
-	.EQU	DRV_IR_FREQ_36K								= (CORE_FREQ*350)/(100*2)-1
-
-
 	;---TIMINGS---
 	.EQU	_DRV_IR_PLEN									= 0x002c-2						;44*0.000013=0.000572, минимальная длина пульсации
 	.EQU	_DRV_IR_PREN									= _DRV_IR_PLEN*0x10		;0.009152, первая часть преамбулы

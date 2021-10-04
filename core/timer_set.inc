@@ -6,6 +6,7 @@
 ;19.08.2020	w5277c@gmail.com			Отсчет с нуля
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;22.09.2021	w5277c@gmail.com			Добавлен адрес на выделенную память
+;04.10.2021	w5277c@gmail.com			Добавлен код таймера C
 ;-----------------------------------------------------------------------------------------------------------------------
 .if TIMERS > 0x00
 .ifdef DEF_C5_TIMER_SET
@@ -29,11 +30,13 @@ C5_TIMER_SET:
 ;7-й бит включен - итерация по 0.002c иначе по 0.000 050с
 ;диапазон значений 0x01-0x7f
 ;--------------------------------------------------------
+.if TIMER_C_ENABLE == 0x01
+	CPI TEMP,TID_TIMER_C
+	BREQ _C5_TIMER_SETT__TIMER_C
+.endif
 	PUSH_Z
 	PUSH ACCUM
-
 	MCALL _C5_TIMER_OFFSET
-
 	STD Z+_C5_TIMER_DEFAULT,ACCUM
 	ANDI ACCUM,0x7f
 	STD Z+_C5_TIMER_CNTR,ACCUM
@@ -43,9 +46,21 @@ C5_TIMER_SET:
 	STD Z+_C5_TIMER_HANDLER+0x01,TEMP_L
 	STD Z+_C5_TIMER_RAM_ADDR+0x00,YH
 	STD Z+_C5_TIMER_RAM_ADDR+0x01,YL
-
 	POP ACCUM
 	POP_Z
 	RET
+.if TIMER_C_ENABLE == 0x01
+_C5_TIMER_SETT__TIMER_C:
+	STS _C5_TIMER_C_PID,PID
+	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER1*3+0x00,TEMP_H
+	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER1*3+0x01,TEMP_L
+	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER2*3+0x00,XH
+	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER2*3+0x01,XL
+	PUSH TEMP
+	MOV TEMP,ACCUM
+	_C5_TIMERC_SET_PERIOD
+	POP TEMP
+	RET
+.endif
 .endif
 .endif
