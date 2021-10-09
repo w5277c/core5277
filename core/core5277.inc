@@ -28,6 +28,7 @@
 ;05.09.2021	w5277c@gmail.com			INPUT_PORT->C5_IN_PORT
 ;16.09.2021	w5277c@gmail.com			v0.3.9	Множественные, незначительные изменения.
 ;22.09.2021	w5277c@gmail.com			v0.4.0	Все программные таймеры содержат адрес выделенной памяти
+;09.10.2021	w5277c@gmail.com			v0.4.1	Оптимизация, убраны NOP из макросов MCALL и MJMP
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -40,7 +41,7 @@
 ;Ядро использует один из таймеров, обычно TIMER0, остальные - свободны(если не заявлено использование timer C).
 ;Стоит использовать только в исключительных ситуациях, т.к. использование не универсально и не имеет отношения к ядру
 ;В пределах процедуры можно использовать RJMP, в остальных случаях макросы MJMP и MCALL
-;Острожно с записями типа 'BRTC PC+0x03' макрос MJMP и MCALL занимает 3 слова(смещение +0x03)
+;Осторожно с записями типа 'BREQ PC+0x02' макрос MJMP и MCALL занимает 1/2 слова, т.е. BREQ PC+0x01+_MCALL_SIZE
 ;Некоторые драйверы имеют жесткую привязку к портам, например SD, так как процедуры PORT... для них слишком медленны
 ;Функционал драйверов (также как и различные дополнительные процедуры) дорабатывается по мере необходимости
 
@@ -234,7 +235,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	OUTSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.4.0 [",0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.4.1 [",0x00,0x00
 	OUTSTR_MCUSR_NO:
 	.db   "NO ",0x00
 	OUTSTR_MCUSR_WD:
@@ -308,7 +309,7 @@ _C5_IR:
 	;Находим смещение в таблице прерываний _C5_IR_VECTORS_TABLE
 	LDI_Z _C5_IR_VECTORS_TABLE
 
-.if _IV_STEP == 2
+.if _MCALL_SIZE == 2
 	LSR _C5_TEMP_L
 .endif
 	DEC _C5_TEMP_L														;Получено на базе адреса выхода из процедуры(не входа), т.е. увеличен на 1
@@ -609,31 +610,31 @@ C5_INIT:
 	LDI_Z OUTSTR_CORE|0x8000
 	MCALL C5_OUT_STR
 	SBRS FLAGS,WDRF
-	RJMP PC+0x05
+	RJMP PC+0x03+_MCALL_SIZE
 	LDI_Z OUTSTR_MCUSR_WD|0x8000
 	MCALL C5_OUT_STR
 	SBRS FLAGS,BORF
-	RJMP PC+0x05
+	RJMP PC+0x03+_MCALL_SIZE
 	LDI_Z OUTSTR_MCUSR_BO|0x8000
 	MCALL C5_OUT_STR
 	SBRS FLAGS,EXTRF
-	RJMP PC+0x05
+	RJMP PC+0x03+_MCALL_SIZE
 	LDI_Z OUTSTR_MCUSR_EX|0x8000
 	MCALL C5_OUT_STR
 	SBRS FLAGS,PORF
-	RJMP PC+0x05
+	RJMP PC+0x03+_MCALL_SIZE
 	LDI_Z OUTSTR_MCUSR_PO|0x8000
 	MCALL C5_OUT_STR
 	MOV TEMP,FLAGS
 	ANDI TEMP,(1<<WDRF)|(1<<BORF)|(1<<EXTRF)|(1<<PORF)
-	BRNE PC+0x05
+	BRNE PC+0x03+_MCALL_SIZE
 	LDI_Z OUTSTR_MCUSR_NO|0x8000
 	MCALL C5_OUT_STR
 	LDI_Z OUTSTR_MCUSR_RESET|0x8000
 	MCALL C5_OUT_STR
 
 	SBRC FLAGS,PORF
-	RJMP PC+0x03
+	RJMP PC+0x01+_MCALL_SIZE
 	MCALL C5_OUT_TASKSDUMP
 .endif
 
@@ -1014,7 +1015,7 @@ C5_READY:
 	SBC TEMP_H,r0
 	;Проверка на размер стека более 255 байт
 	TST TEMP_H
-	BREQ PC+0x04
+	BREQ PC+0x02+_MCALL_SIZE
 	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK
 	MCALL C5_OUT_COREFAULT
 	STD Z+_C5_TASK_STACK_SIZE,TEMP_L
@@ -1294,7 +1295,7 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	SUB TEMP_EL,TEMP_L
 	SBC TEMP_EH,TEMP_H
 	TST TEMP_EH
-	BREQ PC+0x04
+	BREQ PC+0x02+_MCALL_SIZE
 	LDI TEMP,_C5_FAULT_HUGE_TASK_STACK2
 	MCALL C5_OUT_COREFAULT											;Стеки значения не имеют, ядро упало
 

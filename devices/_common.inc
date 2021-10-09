@@ -48,7 +48,6 @@
 	.SET	MUL_SUPPORT								= 0x01
 
 .ifdef CORE_FREQ
-	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	TIMERS_SPEED_50US						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
 	.EQU	TIMERS_SPEED_25US						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US

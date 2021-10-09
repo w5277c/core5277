@@ -33,7 +33,7 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA16
 	.MESSAGE "######## DEVICE ATmega16"
-	.SET	_IV_STEP									= 0x02;			;Шаг между адресами переходов на обработчики прерываний
+	.EQU	_MCALL_SIZE								= 0x02			;Размер MCALL
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT

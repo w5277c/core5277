@@ -53,7 +53,7 @@ DRV_COUNTER_INIT:
 	MCALL PORT_MODE_IN
 	;Включаем подтяжку, если необходимо
 	SBRS TEMP_H,0x07
-	RJMP PC+0x03
+	RJMP PC+0x01+_MCALL_SIZE
 	MCALL PORT_SET_HI
 
 	LDI TEMP,0xff
