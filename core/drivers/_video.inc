@@ -26,15 +26,16 @@
 
 	;---OPERATIONS---
 	.EQU	DRV_VIDEO_OP_INIT								= 0x00	;Подготовить экран к работе
-	.EQU	DRV_VIDEO_OP_GET_MODES						= 0x01	;Получить поддерживаемые текстовые и графические режимы
-	.EQU	DRV_VIDEO_OP_GET_MODE						= 0x02	;Получить текущий графический или текстовый режим
-	.EQU	DRV_VIDEO_OP_SET_MODE						= 0x03	;Задать текущий графический или текстовый режим
-	.EQU	DRV_VIDEO_OP_GET_SIZE						= 0x04	;Получить размер экрана
-	.EQU	DRV_VIDEO_OP_SET_XY							= 0x05	;Задать текущую координату
-	.EQU	DRV_VIDEO_OP_SET_TEXT						= 0x06	;Вывести текст с текущей позиции
+	.EQU	DRV_VIDEO_OP_SET_PARAM						= 0x01	;Записываем параметр
+	.EQU	DRV_VIDEO_OP_GET_PARAM						= 0x02	;Считываем параметр
+	.EQU	DRV_VIDEO_OP_GET_MODES						= 0x03	;Получить поддерживаемые текстовые и графические режимы
+	.EQU	DRV_VIDEO_OP_GET_MODE						= 0x04	;Получить текущий графический или текстовый режим
+	.EQU	DRV_VIDEO_OP_SET_MODE						= 0x05	;Задать текущий графический или текстовый режим
+	.EQU	DRV_VIDEO_OP_GET_SIZE						= 0x06	;Получить размер экрана
+	.EQU	DRV_VIDEO_OP_SET_XY							= 0x07	;Задать текущую координату
+	.EQU	DRV_VIDEO_OP_SET_TEXT						= 0x08	;Вывести текст с текущей позиции
 
-	;---RESULTS---
-	.EQU	DRV_VIDEO_RESULT_OK					= 0x00
-	.EQU	DRV_VIDEO_RESULT_UNSUPPORTED		= 0x01
+	;---PARAMETERS---
+	;TODO
 
 .endif
