@@ -16,21 +16,22 @@
 ;	.EQU	DRV_VIDEO_MODE_TXT4B							= 0x02	;Текст, 16 цветов (4б, 1б на каждый цвет, 1 бит яркости)
 	;---GRX-MODES(BITS)---
 	.EQU	DRV_VIDEO_MODE_GRX1B							= 0x00	;Графический, монохромный (1б)
-;	.EQU	DRV_VIDEO_MODE_GRX3B							= 0x01	;Графический, 8цветов (3б)
-;	.EQU	DRV_VIDEO_MODE_GRX4B							= 0x02	;Графический, 16 цветов (4б, 1б на каждый цвет, 1 бит яркости)
-;	.EQU	DRV_VIDEO_MODE_GRX6B							= 0x03	;Графический, 64 цвета (6б, 2б на каждый цвет)
-;	.EQU	DRV_VIDEO_MODE_GRX9B							= 0x04	;Графический, 512 цветов (9б, 3б на каждый цвет)
-;	.EQU	DRV_VIDEO_MODE_GRX12B						= 0x05	;Графический, 4К цветов (12б, 4б на каждый цвет)
-;	.EQU	DRV_VIDEO_MODE_GRX15B						= 0x06	;Графический, 32К цветов (15б, 5б на каждый цвет)
-;	.EQU	DRV_VIDEO_MODE_GRX24B						= 0x07	;Графический, 16М цветов (24б, 8б на каждый цвет)
-;	.EQU	DRV_VIDEO_MODE_GRX30B						= 0x08	;Графический, 1Г цветов (30б, 10б на каждый цвет)
+	.EQU	DRV_VIDEO_MODE_GRX3B							= 0x01	;Графический, 8цветов (3б)
+	.EQU	DRV_VIDEO_MODE_GRX4B							= 0x02	;Графический, 16 цветов (4б, 1б на каждый цвет, 1 бит яркости)
+	.EQU	DRV_VIDEO_MODE_GRX9B							= 0x03	;Графический, 512 цветов (9б, 3б на каждый цвет)
+	.EQU	DRV_VIDEO_MODE_GRX12B						= 0x04	;Графический, 4К цветов (12б, 4б на каждый цвет)
+	.EQU	DRV_VIDEO_MODE_GRX15B						= 0x05	;Графический, 32К цветов (15б, 5б на каждый цвет)
+	.EQU	DRV_VIDEO_MODE_GRX24B						= 0x06	;Графический, 16М цветов (24б, 8б на каждый цвет)
+	.EQU	DRV_VIDEO_MODE_GRX30B						= 0x07	;Графический, 1Г цветов (30б, 10б на каждый цвет)
 
 	;---OPERATIONS---
-	.EQU	DRV_VIDEO_OP_GET_MODES						= 0x00	;Получить поддерживаемые текстовые и графические режимы
-	.EQU	DRV_VIDEO_OP_SET_MODE						= 0x01	;Задать текущий графический или текстовый режим
-	.EQU	DRV_VIDEO_OP_GET_SIZE						= 0x02	;Получить размер экрана
-	.EQU	DRV_VIDEO_OP_SET_XY							= 0x03;	Задать текущую координату
-	.EQU	DRV_VIDEO_OP_SET_TEXT						= 0x04;	Вывести текст с текущей позиции
+	.EQU	DRV_VIDEO_OP_INIT								= 0x00	;Подготовить экран к работе
+	.EQU	DRV_VIDEO_OP_GET_MODES						= 0x01	;Получить поддерживаемые текстовые и графические режимы
+	.EQU	DRV_VIDEO_OP_GET_MODE						= 0x02	;Получить текущий графический или текстовый режим
+	.EQU	DRV_VIDEO_OP_SET_MODE						= 0x03	;Задать текущий графический или текстовый режим
+	.EQU	DRV_VIDEO_OP_GET_SIZE						= 0x04	;Получить размер экрана
+	.EQU	DRV_VIDEO_OP_SET_XY							= 0x05	;Задать текущую координату
+	.EQU	DRV_VIDEO_OP_SET_TEXT						= 0x06	;Вывести текст с текущей позиции
 
 	;---RESULTS---
 	.EQU	DRV_VIDEO_RESULT_OK					= 0x00
