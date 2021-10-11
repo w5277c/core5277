@@ -20,7 +20,7 @@
 
 	;Идентификаторы драйверов(0-7|0-15)
 	.EQU	PID_I2C_DRV										= 0|(1<<C5_PROCID_OPT_DRV)
-	.EQU	PID_WH_DRV										= 1|(1<<C5_PROCID_OPT_DRV)
+	.EQU	PID_LCD_DRV										= 1|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK											= 0
 	;Идентификаторы таймеров
@@ -35,7 +35,7 @@
 	;---
 	;Блок драйверов
 	.INCLUDE "./core/drivers/i2c_h.inc"
-	.INCLUDE "./core/drivers/wh.inc"
+	.INCLUDE "./core/drivers/hd44780.inc"
 	;---
 	;Блок задач
 	;---
@@ -54,14 +54,14 @@ MAIN:
 	LDI ACCUM,ACT_LED_PORT
 	MCALL C5_CREATE
 
-	LDI PID,PID_WH_DRV
-	LDI_Z DRV_WH1602_PCF8574_INIT
-	LDI TEMP_EH,PID_I2C_DRV
+	LDI PID,PID_LCD_DRV
+	LDI_Z DRV_HD44780_INIT
+	LDI ACCUM,PID_I2C_DRV
 	LDI FLAGS,(1<<DRV_HD44780_FL_C)|(1<<DRV_HD44780_FL_RL)|(1<<DRV_HD44780_FL_N)|(1<<DRV_HD44780_FL_I2C)
 	MCALL C5_CREATE
 
 	;Инициализация задачи
-	LDI PID,PID_MASTER
+	LDI PID,PID_TASK
 	LDI_Z TASK_INIT
 	MCALL C5_CREATE
 
