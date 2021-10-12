@@ -33,7 +33,8 @@
 	.EQU	DRV_VIDEO_OP_SET_MODE						= 0x05	;Задать текущий графический или текстовый режим
 	.EQU	DRV_VIDEO_OP_GET_SIZE						= 0x06	;Получить размер экрана
 	.EQU	DRV_VIDEO_OP_SET_XY							= 0x07	;Задать текущую координату
-	.EQU	DRV_VIDEO_OP_SET_TEXT						= 0x08	;Вывести текст с текущей позиции
+	.EQU	DRV_VIDEO_OP_SET_SYMBOL						= 0x08	;Вывести символ
+	.EQU	DRV_VIDEO_OP_SET_TEXT						= 0x09	;Вывести текст с текущей позиции
 
 	;---PARAMETERS---
 	;TODO

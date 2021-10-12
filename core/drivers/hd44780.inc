@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;10.10.2020	w5277c@gmail.com			Начало, черновой вариант
+;12.10.2020	w5277c@gmail.com			Первый успешный тест для I2C
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер символьных LCD экранов на базе HD44780 с поддержкой PCF8574(I2C интерфейс)
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -122,6 +123,11 @@ _DRV_HD44780_INIT__PORTS_SKIP:
 	CPI FLAGS,DRV_VIDEO_OP_SET_XY
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_HD44780_PROC_SET_XY
+	RJMP _DRV_HD44780__END
+
+	CPI FLAGS,DRV_VIDEO_OP_SET_SYMBOL
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_HD44780_PROC_SET_SYMBOL
 	RJMP _DRV_HD44780__END
 
 	CPI FLAGS,DRV_VIDEO_OP_SET_TEXT
@@ -270,6 +276,23 @@ _DRV_HD44780_PROC_SET_XY__END:
 	RET
 
 ;--------------------------------------------------------
+_DRV_HD44780_PROC_SET_SYMBOL:
+;--------------------------------------------------------
+;Выводим символ на экран
+;IN: ACCUM-символ
+;OUT: TEMP-DRV_RESULT_...
+;--------------------------------------------------------
+	PUSH FLAGS
+
+	LDD FLAGS,Y+_DRV_HD44780_FLAGS
+	MCALL _DRV_HD44780__SEND_DATABYTE
+
+	LDI TEMP,DRV_RESULT_OK
+
+	POP FLAGS
+	RET
+
+;--------------------------------------------------------
 _DRV_HD44780_PROC_SET_TEXT:
 ;--------------------------------------------------------
 ;Задаем текущую позицию
@@ -293,8 +316,8 @@ _DRV_HD44780_PROC_SET_TEXT:
 	CPI LOOP_CNTR,0x00
 	BREQ _DRV_HD44780_PROC_SET_TEXT__ERROR
 
-_DRV_HD44780_PROC_SET_TEXT__LOOP:
 	MOV TEMP,ZH
+_DRV_HD44780_PROC_SET_TEXT__LOOP:
 	ANDI ZH,0x7f
 	SBRS TEMP,0x07
 	LD ACCUM,Z+
@@ -336,7 +359,7 @@ _DRV_HD44780__SEND_CMDBYTE:
 	PUSH ACCUM
 
 	RCALL _DRV_HD44780__RS_LO
-	SBRC FLAGS,DRV_HD44780_FL_DL
+	SBRS FLAGS,DRV_HD44780_FL_DL
 	RJMP _DRV_HD44780__SEND_CMDBYTE_4BIT
 _DRV_HD44780__SEND_CMDBYTE_8BIT:
 	RCALL _DRV_HD44780__E_HI
@@ -369,7 +392,7 @@ _DRV_HD44780__SEND_DATABYTE:
 	PUSH ACCUM
 
 	RCALL _DRV_HD44780__RS_HI
-	SBRC FLAGS,DRV_HD44780_FL_DL
+	SBRS FLAGS,DRV_HD44780_FL_DL
 	RJMP _DRV_HD44780__SEND_DATABYTE_4BIT
 _DRV_HD44780__SEND_DATABYTE_8BIT:
 	RCALL _DRV_HD44780__E_HI
@@ -428,24 +451,21 @@ _DRV_HD44780__SEND_NIBBLE_4BIT:
 	ST Z,TEMP
 	STS SREG,TEMP_EL
 	POP_Z
-	RJMP _DRV_HD44780__SEND_NIBBLE_FINISH
+	RCALL _DRV_HD44780__E_HI
+	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__E_LO
+	RCALL _DRV_HD44780__WAIT_20US
+	RJMP _DRV_HD44780__SEND_NIBBLE_END
 _DRV_HD44780__SEND_NIBBLE_I2C:
 	LDD TEMP,Y+_DRV_HD44780_I2C_BUFFER
 	ANDI TEMP,0x0f
 	OR TEMP,ACCUM
 	STD Y+_DRV_HD44780_I2C_BUFFER,TEMP
-	LDD TEMP,Y+_DRV_HD44780_PORT
-	MOVW ZL,YL
-	LDI ACCUM,_DRV_HD44780_PCF8574_I2C_ADDR
-	LDI TEMP_H,0x01
-	LDI TEMP_L,0x00
-	MCALL C5_EXEC
-
-_DRV_HD44780__SEND_NIBBLE_FINISH:
 	RCALL _DRV_HD44780__E_HI
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__I2C_EXEC
 	RCALL _DRV_HD44780__E_LO
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__I2C_EXEC
+_DRV_HD44780__SEND_NIBBLE_END:
 
 	POP TEMP
 	POP TEMP_L
@@ -453,6 +473,22 @@ _DRV_HD44780__SEND_NIBBLE_FINISH:
 	POP TEMP_EL
 	POP ACCUM
 	POP_Z
+	RET
+
+;--------------------------------------------------------
+_DRV_HD44780__I2C_EXEC:
+;--------------------------------------------------------
+	LDD TEMP,Y+_DRV_HD44780_I2C_BUFFER
+	ORI TEMP,0x08
+	STD Y+_DRV_HD44780_I2C_BUFFER,TEMP
+
+	LDD TEMP,Y+_DRV_HD44780_PORT
+	MOVW ZL,YL
+	LDI ACCUM,_DRV_HD44780_PCF8574_I2C_ADDR
+	LDI TEMP_H,0x01
+	LDI TEMP_L,0x00
+	MCALL C5_EXEC
+	RCALL _DRV_HD44780__WAIT_20US
 	RET
 
 ;--------------------------------------------------------
@@ -539,4 +575,4 @@ _DRV_HD44780__WAIT_20US:
 	MCALL _C5_WAIT_500NS
 	POP TEMP
 	RET
-
+.endif
