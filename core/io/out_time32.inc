@@ -16,7 +16,7 @@
 .include	"./math/mul16x8.inc"
 .include	"./math/mul32x16.inc"
 .include	"./core/io/out_num16.inc"
-.include	"./core/io/out_numx32.inc"
+.include	"./core/io/out_num32.inc"
 
 ;--------------------------------------------------------
 C5_OUT_TIME32:
