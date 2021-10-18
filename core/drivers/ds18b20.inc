@@ -109,6 +109,7 @@ DRV_DS18B20_INIT:
 
 	LDD TEMP_H,Y+_DRV_DS18B20_BUFFER_TH
 	LDD TEMP_L,Y+_DRV_DS18B20_BUFFER_TL
+	;TODO использовать WORD_TO_SDNF
 	;Пребразовываем в SDNF
 	MOV TEMP,TEMP_L													;Преобразуем в человеческий вид целую часть
 	ANDI TEMP,0xF0

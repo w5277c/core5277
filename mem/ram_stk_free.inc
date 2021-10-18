@@ -1,33 +1,43 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2020	w5277c@gmail.com			Начало
-;08.10.2020	w5277c@gmail.com			Все плохо, храмает точность, например для 59942
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;10.12.2020	w5277c@gmail.com			-с5
-;03.07.2021	w5277c@gmail.com			Основа div16x8
+;18.10.2021	w5277c@gmail.com			Начало, не тестировано
 ;-----------------------------------------------------------------------------------------------------------------------
-
-.ifdef DEF_DIV100
+.ifdef DEF_RAM_STK_FREE
 .else
-.set DEF_DIV100 = 1
+.set DEF_RAM_STK_FREE = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included DIV100"
+.message "included RAM_STK_FREE"
 .endif
 
-.include	"./math/div16x8.inc"
-
 ;--------------------------------------------------------
-DIV100:
+RAM_STK_FREE:
 ;--------------------------------------------------------
-;Деление 16b числа на 100
-;IN: TEMP_H/TEMP_L-16b число
-;OUT: TEMP_H/TEMP_L-результат
+;Освобождаем в стеке блок памяти
+;IN: ACCUM-размер в байтах
+;OUT: Y-0x0000
 ;--------------------------------------------------------
-	PUSH TEMP
-	LDI TEMP,0x64
-	MCALL DIV16X8
-	POP TEMP
+	PUSH FLAGS
+	LDS FLAGS,SREG
+	CLI
+	LDS YH,SPH
+	LDS YL,SPL
+	ADD YL,ACCUM
+	ADC YH,C0x00
+	ADIW YL,0x03
+	STS SPH,YH
+	STS SPL,YL
+	SUB YL,ACCUM
+	SBC YH,C0x00
+	STS SREG,FLAGS
+	SBIW YL,0x02
+	LDD FLAGS,Y+0x02
+	PUSH FLAGS
+	LDD FLAGS,Y+0x01
+	PUSH FLAGS
+	LDD FLAGS,Y+0x00
+	CLR YH
+	CLR YL
 	RET
 .endif

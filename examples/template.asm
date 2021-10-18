@@ -65,15 +65,13 @@ MAIN:
 
 	;Инициализация драйвера
 ;	LDI PID,PID_XXX_DRV
-;	LDI ZH,high(DRV_XXX_INIT)
-;	LDI ZL,low(DRV_XXX_INIT)
+;	LDI_Z DRV_XXX_INIT
 ;	MCALL C5_CREATE
 
 
 	;Инициализация задачи
 	LDI PID,PID_TASK
-	LDI ZH,high(TASK__INIT)
-	LDI ZL,low(TASK__INIT)
+	LDI_Z TASK__INIT
 	MCALL C5_CREATE
 
 	LDI ACCUM,INIT_LED_PORT

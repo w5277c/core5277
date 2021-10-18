@@ -8,8 +8,6 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./math/mul16x8.inc"
-.include	"./math/div16x8.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_LTC2451_FREQ_60Hz				= 0x00			;Частота преобразования - 60Гц
