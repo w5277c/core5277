@@ -52,6 +52,7 @@
 	.include "./io/port_set_lo.inc"
 	.include "./core/wait_1s.inc"
 	.include "./core/io/out_uptime.inc"
+	.include "./core/io/out_num16.inc"
 	;---
 
 
