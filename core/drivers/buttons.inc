@@ -6,11 +6,12 @@
 ;28.10.2020	w5277c@gmail.com			Корректировка таймингов
 ;23.04.2021	w5277c@gmail.com			Багфиксинг и успешный первый тест
 ;04.07.2021	w5277c@gmail.com			Z->Y, оптимизация
+;25.10.2021	w5277c@gmail.com			Добавлена поддержка кнопки с фиксацией(не тестировано)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_BUTTONS
 .else
 .set DEF__C5_DRV_BUTTONS = 1
-.message "Included driver Buttons v0.3"
+.message "Included driver Buttons v0.4"
 
 ;TODO Фиксируется 5-ое длинное нажатие (вероятно с потерей первого значения) из 4 допустимых
 
@@ -44,21 +45,23 @@
 	.EQU	_DRV_BUTTONS_RESULT							= 0x03	;Результат |rqqqssss|, r - повтор, q-кол-во нажатий(1-4), s-состояния(история 0-короткое/1-длинное)
 	;---Тайминги---
 	.EQU	_DRV_BUTTONS_TIMER_PERIOD					= 0x02	;Период таймера (x*0.002) (анализ 32мс)
-	.EQU	_DRV_BUTTONS_MAX_CNTR						= 0x08	;Количество необходимых итераций перед анализом
+	.EQU	_DRV_BUTTONS_MAX_CNTR						= 0x04	;Количество необходимых итераций перед анализом
 	;---
 	.EQU	_DRV_BUTTONS_SHORT_PRESS_MAX_TIME		= 200/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 300
 	.EQU	_DRV_BUTTONS_HOLD_TIME						= 600/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 1000
 	.EQU	_DRV_BUTTONS_TIMEOUT							= 400/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 800
 	;---Флаги---
+	.EQU	_DRV_BUTTONS_FL_FIX							= 0x03	;Кнопка с фиксацией-1, без фиксации-0
 	.EQU	_DRV_BUTTONS_FL_INIT							= 0x04	;Ожидание начала цикла опроса
 	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN					= 0x05	;Первый опрос(нет предыдущего занчения)
 	.EQU	_DRV_BUTTONS_FL_HOLD							= 0x06	;Удерживание
 	.EQU	_DRV_BUTTONS_FL_STATE						= 0x07	;Текущее состояние порта
 	;---OPERATIONS---
-	.EQU	DRV_BUTTONS_OP_ADD							= 0x00
-	.EQU	DRV_BUTTONS_OP_GET							= 0x01
-	.EQU	DRV_BUTTONS_OP_WAIT							= 0x02
-	.EQU	DRV_BUTTONS_OP_CLEAR							= 0x03
+	.EQU	DRV_BUTTONS_OP_ADD							= 0x00	;Добавляем кнопку без фиксации
+	.EQU	DRV_BUTTONS_OP_ADD_FIX						= 0x01	;Добавляем кнопку с фиксацией
+	.EQU	DRV_BUTTONS_OP_GET							= 0x02	;Считываем нажатие
+	.EQU	DRV_BUTTONS_OP_WAIT							= 0x03	;Ожидаем нажатие
+	.EQU	DRV_BUTTONS_OP_CLEAR							= 0x04	;Очищаем очередь нажатий
 
 
 	.EQU	_DRV_BUTTONS_RAM_SIZE						= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
@@ -107,6 +110,10 @@ DRV_BUTTONS_INIT:
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_BUTTONS_OP_ADD
 	RJMP _DRV_BUTTONS_PROC_END
+	CPI FLAGS,DRV_BUTTONS_OP_ADD_FIX
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_BUTTONS_OP_ADD
+	RJMP _DRV_BUTTONS_PROC_END
 	CPI FLAGS,DRV_BUTTONS_OP_GET
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_BUTTONS_OP_GET
@@ -129,6 +136,7 @@ _DRV_BUTTONS_OP_ADD:
 ;--------------------------------------------------------
 ;Добавляем кнопку
 ;IN: ACCUM-порт кнопки(7-бит-включать подтяжку)
+;FLAGS-тип кнопки(0x00-без фиксации, 0x01-с фиксацией)
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH_X
@@ -158,6 +166,10 @@ _DRV_BUTTONS_OP_ADD:
 
 	;Записываем данные кнопки
 	LDI TEMP,(1<<_DRV_BUTTONS_FL_INIT)
+	CPI FLAGS,DRV_BUTTONS_OP_ADD_FIX
+	BRNE PC+0x02
+	ORI TEMP,(1<<_DRV_BUTTONS_FL_FIX)
+
 	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
 	STD Z+_DRV_BUTTONS_TIME,C0x00
 	STD Z+_DRV_BUTTONS_RESULT,C0x00
@@ -271,8 +283,8 @@ DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
 	;Инкрементирую счетчик
 	LDD TEMP,Y+_DRV_BUTTONS_CNTR_N_FLAGS
 	MOV ACCUM,TEMP
-	ANDI TEMP,0xf0
-	ANDI ACCUM,0x0f
+	ANDI TEMP,0xf8
+	ANDI ACCUM,0x07
 	INC ACCUM
 	OR TEMP,ACCUM
 	STD Y+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
@@ -308,14 +320,14 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
 	;Считываю счетчик и флаги
 	LDD TEMP_H,Z+_DRV_BUTTONS_CNTR_N_FLAGS
-	;Считываем предыдущее состояние порта в T
+	;Считываем предыдущее состояние порта в FLAGS
 	CLR FLAGS
 	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	ORI FLAGS,(1<<_DRV_BUTTONS_FL_STATE)
 	MOV TEMP_L,TEMP_H
 	;Сбрасываем счетчик и состояние в 0
 	ANDI TEMP_H,low(~((1<<_DRV_BUTTONS_FL_STATE)|0x0f))
-	ANDI TEMP_L,0x0f
+	ANDI TEMP_L,0x07
 	LDI TEMP,_DRV_BUTTONS_MAX_CNTR/2
 	CP TEMP,TEMP_L
 	BRCC PC+0x02
@@ -328,9 +340,9 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
 	;Проверяем на только что добавленную кнопку
 	SBRS TEMP_H,_DRV_BUTTONS_FL_INIT
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT
-	CLR TEMP_H
-	STD Z+_DRV_BUTTONS_TIME,TEMP_H
-	STD Z+_DRV_BUTTONS_RESULT,TEMP_H
+	STD Z+_DRV_BUTTONS_TIME,C0x00
+	STD Z+_DRV_BUTTONS_RESULT,c0x00
+	ANDI TEMP_H,(1<<_DRV_BUTTONS_FL_FIX)
 	ORI TEMP_H,(1<<_DRV_BUTTONS_FL_FIRST_SCAN)
 	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
@@ -339,17 +351,32 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT:
 	;Проверяем на первое сканирование
 	SBRS TEMP_H,_DRV_BUTTONS_FL_FIRST_SCAN
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN
+	;В режиме FIX не нужно ждать когда кнопку разомкнут
+	SBRS TEMP_H,_DRV_BUTTONS_FL_FIX
+	RJMP PC+0x04
+	ANDI TEMP_H,(1<<_DRV_BUTTONS_FL_FIX)|(1<<_DRV_BUTTONS_FL_STATE)
+	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN
 	;Если кнопка нажата, то остаемся в режиме первого сканирования
 	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	;Иначе, конпка не нажата, сбрасываем флаг первого сканирования
-	CLR TEMP_H
+	ANDI TEMP_H,(1<<_DRV_BUTTONS_FL_FIX)
 	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN:
 	;_DRV_BUTTONS_FL_STATE бит FLAGS хранит старое значение, в TEMP_H хранит новое(true-нажата)
 	EOR FLAGS,TEMP_H
+	;FIX? - просто добавляем результат в очередь
+	SBRS TEMP_H,_DRV_BUTTONS_FL_FIX
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_FOR_WO_FIX
+	;Добавяем результат
+	LDI ACCUM,0x10
+	MCALL _DRV_BUTTONS__QUEUE_ADD
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_FOR_WO_FIX:
 	SBRC FLAGS,_DRV_BUTTONS_FL_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED
 
