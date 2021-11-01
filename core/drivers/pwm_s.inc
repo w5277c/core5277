@@ -19,14 +19,12 @@
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_PWM_S_RAM_CHNLS_QNT				= 0x00		;1B - количество каналов
 	.EQU	_DRV_PWM_S_RAM_CNTR						= 0x01		;1B - счетчик
-	.EQU	_DRV_PWM_S_RAM_CNTR_TOP					= 0x02		;1B - верхний предел счетчика
+	.EQU	_DRV_PWM_S_RAM_CNTR_TOP					= 0x02		;1B - верхний предел счетчика(максимальная мощность)
 	.EQU	_DRV_PWM_S_RAM_ITEMS_DATA				= 0x03		;xB - структура данных для каждого канала
 	;---ITEM-STRUCT---
 	.EQU	_DRV_PWM_S_ITEM_PA						= 0x00		;1B - адрес PORT
 	.EQU	_DRV_PWM_S_ITEM_BN						= 0x01		;1B - номер бита
 	.EQU	_DRV_PWM_S_ITEM_THRLD					= 0x02		;1B - граница срабатывания
-	.EQU	_DRV_PWM_S_ITEM_RESERVED				= 0x03		;1B - заразервировано
-
 	;---OPERATIONS---
 	.EQU	DRV_PWM_S_OP_PORT_SET					= 0x00		;Устанавливаем порт канала
 	.EQU	DRV_PWM_S_OP_POWER_SET					= 0x01		;Устанавливаем мощность канала
@@ -38,7 +36,7 @@ DRV_PWM_S_INIT:
 ;--------------------------------------------------------
 ;IN: LOOP_CNTR-количество каналов, TEMP_H-ид таймера,
 ;TEMP_L-периодичность таймера(см. C5_TIMER_SET),
-;TEMP-верхний предел счетчика
+;TEMP-верхний предел счетчика(максимальная мощность)
 ;--------------------------------------------------------
 	;Выделяем память (кол-во каналов*4+2)
 	MOV ACCUM,LOOP_CNTR
@@ -49,11 +47,16 @@ DRV_PWM_S_INIT:
 
 	;Записываем максимальное число для счетчиков
 	STD Y+_DRV_PWM_S_RAM_CNTR_TOP,TEMP
-	;Записываем длину
+	;Записываем кол-во каналов
 	STD Y+_DRV_PWM_S_RAM_CHNLS_QNT,LOOP_CNTR
+	;Устанавливаем счетчик в 0
+	STD Y+_DRV_PWM_S_RAM_CNTR,C0x00
+
 	;Заполняем
 	MOVW XL,YL
 	MOV LOOP_CNTR,ACCUM
+	ADIW XL,_DRV_PWM_S_RAM_ITEMS_DATA
+	SUBI LOOP_CNTR,_DRV_PWM_S_RAM_ITEMS_DATA
 	LDI TEMP,0x00
 	MCALL RAM_FILL
 
@@ -104,7 +107,7 @@ _DRV_PWM_S_OP_PORT_SET:
 	MOV TEMP,TEMP_L
 	LSL TEMP_L
 	ADD TEMP_L,TEMP
-	SBIW TEMP_L,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
+	SUBI TEMP_L,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
 	ADD YL,TEMP_L
 	ADC YH,C0x00
 
@@ -133,7 +136,7 @@ _DRV_PWM_S_OP_POWER_SET:
 	MOV TEMP,TEMP_L
 	LSL TEMP_L
 	ADD TEMP_L,TEMP
-	SBIW TEMP_L,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
+	SUBI TEMP_L,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
 	ADD YL,TEMP_L
 	ADC YH,C0x00
 
@@ -198,10 +201,10 @@ _DRV_PWM_S_TIMER_EVENT__CNTR_CHECK_LOOP:
 	BRNE _DRV_PWM_S_TIMER_EVENT__CNTR_CHECK_LOOP
 
 _DRV_PWM_S_TIMER_EVENT__DONE:
+	INC TEMP_L
 	CP TEMP_H,TEMP_L
 	BRNE PC+0x02
-	LDI TEMP_L,0xff
-	INC TEMP_L
+	CLR TEMP_L
 	STD Y+_DRV_PWM_S_RAM_CNTR,TEMP_L
 
 _DRV_PWM_S_TIMER_EVENT__END:

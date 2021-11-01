@@ -149,6 +149,31 @@
 	.DEF	ZL											= r30
 	.DEF	ZH											= r31
 
+	;---Часто-используемые-константы-для-частот-программного-таймера---
+;TODO делить на 2?
+.if TIMERS_SPEED == TIMERS_SPEED_50US
+	.EQU	TIMER_FREQ_20KHz						= 1
+	.EQU	TIMER_FREQ_10KHz						= 2
+	.EQU	TIMER_FREQ_5KHz						= 4
+	.EQU	TIMER_FREQ_4KHz						= 5
+	.EQU	TIMER_FREQ_2KHz						= 10
+	.EQU	TIMER_FREQ_1KHz						= 20
+	.EQU	TIMER_FREQ_500Hz						= 40
+	.EQU	TIMER_FREQ_250Hz						= 80
+	.EQU	TIMER_FREQ_100Hz						= 200
+.else
+	.EQU	TIMER_FREQ_40KHz						= 1
+	.EQU	TIMER_FREQ_20KHz						= 2
+	.EQU	TIMER_FREQ_10KHz						= 4
+	.EQU	TIMER_FREQ_5KHz						= 8
+	.EQU	TIMER_FREQ_4KHz						= 10
+	.EQU	TIMER_FREQ_2KHz						= 20
+	.EQU	TIMER_FREQ_1KHz						= 40
+	.EQU	TIMER_FREQ_500Hz						= 80
+	.EQU	TIMER_FREQ_250Hz						= 160
+	.EQU	TIMER_FREQ_200Hz						= 200
+.endif
+
 	;---Часто-используемые-константы-для-частот-таймера-С---
 	.EQU	TIMER_C_FREQ_76800Hz					= (CORE_FREQ*125000/(76800*2))-1
 	.EQU	TIMER_C_FREQ_57600Hz					= (CORE_FREQ*125000/(57600*2))-1
