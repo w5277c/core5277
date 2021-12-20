@@ -113,6 +113,10 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR;
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
 	;--FAKE-PRR---
 	.EQU	PRR										= 0xff
 	.EQU		PRTWI									= 0x00
@@ -277,6 +281,13 @@
 	.EQU		PGWRT									= 0x02
 	.EQU		PGERS									= 0x01
 	.EQU		SPMEN									= 0x00
+	;---WATCHDOG---
+	.EQU	WDTCR										= 0x41
+	.EQU		WDCE									= 0x04
+	.EQU		WDE									= 0x03
+	.EQU		WDP2									= 0x02
+	.EQU		WDP1									= 0x01
+	.EQU		WDP0									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)

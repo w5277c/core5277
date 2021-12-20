@@ -4,13 +4,13 @@
 ;02.06.2021	w5277c@gmail.com			Начало
 ;04.07.2021	w5277c@gmail.com			Z->Y, оптимизация
 ;07.09.2021	w5277c@gmail.com			Багфикс
+;20.12.2021	w5277c@gmail.com			Приведение результата к виду DRV_RESULT_...
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_DHT11
 .else
 .set DEF__C5_DRV_DHT11 = 1
-.message "Included driver DHT11 v0.3"
+.message "Included driver DHT11 v0.4"
 
-.include	"./core/drivers/_dht.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./io/port_mode_in.inc"
@@ -51,7 +51,7 @@ DRV_DHT11_INIT:
 ;Основной код, опрос датчика
 ;OUT: TEMP_H,TEMP_L-значение температуры в SDNF формате
 ;TEMP_EH,TEMP_EL-значение влажности в SDNF формате
-;TEMP-код результата DRV_DHT_RESULT_...
+;TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -96,7 +96,7 @@ DRV_DHT11_INIT:
 
 	LDD TEMP,Y+_DRV_DHT11_OFFSET
 	CPI TEMP,41
-	LDI TEMP,DRV_DHT_RESULT_ABSENT
+	LDI TEMP,DRV_RESULT_ABSENT
 	BRNE _DRV_DHT11_PROC__ERROR
 
 	CLR ACCUM
@@ -110,13 +110,13 @@ DRV_DHT11_INIT:
 	ADD ACCUM,TEMP_L
 	LDD TEMP,Y+_DRV_DHT11_BUFFER+0x04
 	CP TEMP,ACCUM
-	LDI TEMP,DRV_DHT_RESULT_ERROR
+	LDI TEMP,DRV_RESULT_ERROR
 	BRNE _DRV_DHT11_PROC__ERROR
-	LDI TEMP,DRV_DHT_RESULT_OK
+	LDI TEMP,DRV_RESULT_OK
 	RJMP _DRV_DHT11_PROC__END
 
 _DRV_DHT11_PROC__ABSENT:
-	LDI TEMP,DRV_DHT_RESULT_ABSENT
+	LDI TEMP,DRV_RESULT_ABSENT
 	MCALL C5_DISPATCHER_UNLOCK
 _DRV_DHT11_PROC__ERROR:
 	LDI TEMP_EL,0xff
