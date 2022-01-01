@@ -28,6 +28,8 @@
 	;---
 	;Дополнительно
 	.include "./dt/timestamp_to_dt.inc"
+	.include "./conv/dt_to_str.inc"
+	.include "./core/ram/ram_realloc.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
@@ -50,10 +52,13 @@ MAIN:
 
 	MJMP C5_START
 
-	.EQU	TIMESTAMP		= 4102444799;
+	.EQU	TIMESTAMP		= 1601404252;
 
 ;--------------------------------------------------------;Задача
 TASK__INIT:
+	LDI ACCUM,0x20
+	MCALL C5_RAM_REALLOC
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
@@ -62,5 +67,7 @@ TASK:
 	LDI TEMP_H, (TIMESTAMP>>0x08 &0xff)
 	LDI TEMP_L, (TIMESTAMP>>0x00 &0xff)
 	MCALL TIMESTAMP_TO_DT
-
+	MOVW ZL,YL
+	MCALL DT_TO_STR
+	ST Z,C0x00
 	RET
