@@ -26,3 +26,5 @@ examples/5277_io_gayeway/wh1602/Debug/
 *.bak
 
 examples/5277_io_gayeway/cv_logger/Debug/
+
+examples/5277_io_gayeway/datetime/Debug/
