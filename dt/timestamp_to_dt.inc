@@ -17,16 +17,15 @@
 
 .include	"./math/div32x16.inc"
 
-	.EQU	TIMESTAMP_TO_DT_01032000			=	951868800	;01 March 2000
-	.EQU	TIMESTAMP_TO_DT_4Y					=	365*4 + 1	;4 years
-	.EQU	TIMESTAMP_TO_DT_1Y					=	365			;1 year
-
-_TIMESTAMP_TO_DT__DAYS_IN_MONTH:
-	.db	31,30,31,30,31,31,30,31,30,31,31,29,00
+	.EQU	_TIMESTAMP_TO_DT_01032000			=	951868800	;01 March 2000
+	.EQU	_TIMESTAMP_TO_DT_4Y					=	365*4 + 1	;4 years
+	.EQU	_TIMESTAMP_TO_DT_1Y					=	365			;1 year
+	.EQU	_TIMESTAMP_TO_DT_DAYS_IN_MONTH	= 	0x99A668		;2bit pairs
 ;--------------------------------------------------------
 TIMESTAMP_TO_DT:
 ;--------------------------------------------------------
-;Конвертация unix timestamp в дату и время
+;Конвертация unix timestamp в дату и время(рабочий
+;диапазон 01.03.2000 00:00:00-31.12.2099 23:59:59)
 ;IN: TEMP_EH/EL/H,L-unix timestamp
 ;OUT: TEMP_EH-год(0=2000), TEMP_EL-месяц(1-12),
 ;TEMP-день месяца(1-31, 0x80-ошика), TEMP_H-часы(0-23),
@@ -64,15 +63,10 @@ TIMESTAMP_TO_DT:
 
 	PUSH TEMP_H
 	PUSH TEMP_L
-	CLR TEMP_EH
-	CLR TEMP_EL
 	LDI_X TIMESTAMP_TO_DT_4Y
 	MCALL DIV32X16
 	MOV ZH,TEMP_L
-	CPI ZH,25
-	BRNE PC+0x02
-	DEC ZH
-	MOV TEMP,ZH
+	MOV TEMP,TEMP_L
 	LDI TEMP_H,high(TIMESTAMP_TO_DT_4Y)
 	LDI TEMP_L,low(TIMESTAMP_TO_DT_4Y)
 	MCALL MUL16X8
@@ -108,9 +102,20 @@ TIMESTAMP_TO_DT:
 	MOV TEMP_EH,ZH														;year
 
 	LDI TEMP_EL,0x01
-	LDI_Z _TIMESTAMP_TO_DT__DAYS_IN_MONTH
+	LDI ZH,(_TIMESTAMP_TO_DT_DAYS_IN_MONTH>>0x10 & 0xff)
+	LDI ZL,(_TIMESTAMP_TO_DT_DAYS_IN_MONTH>>0x08 & 0xff)
+	LDI XL,(_TIMESTAMP_TO_DT_DAYS_IN_MONTH>>0x00 & 0xff)
 _TIMESTAMP_TO_DT__LOOP:
-	LPM TEMP,Z+
+	CLR TEMP
+	ROL XL
+	ROR ZL
+	ROR ZH
+	LSR TEMP
+	ROR XL
+	ROR ZL
+	ROR ZH
+	LSR TEMP
+	SUBI TEMP,(0x100-29)
 	CPI TEMP_H,0x00
 	BRNE PC+0x03
 	CP TEMP_L,TEMP
