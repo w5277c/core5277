@@ -30,6 +30,7 @@
 	;---
 	;Дополнительно
 	.include "./dt/timestamp_to_dt.inc"
+	.include "./dt/dt_to_timestamp.inc"
 	.include "./conv/dt_to_str.inc"
 	.include "./core/ram/ram_realloc.inc"
 	.include "./core/io/out_str.inc"
@@ -95,7 +96,13 @@ TASK_LOOP:
 	;Выводим
 	MOVW ZL,YL
 	MCALL C5_OUT_STR
+
+	;MCALL DT_TO_TIMESTAMP
+	;TOTO вывести TIMESTAMP
+
 	MCALL C5_OUT_CR
+
+
 
 	;Засыпаем до следующего события от таймера
 	MCALL C5_SUSPEND
