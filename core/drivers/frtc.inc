@@ -3,16 +3,24 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;26.12.2020	w5277c@gmail.com			Начало
 ;16.09.2021	w5277c@gmail.com			Z->Y
+;06.01.2022	w5277c@gmail.com			Акутализация кода
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_FRTC
 .else
 .set DEF_C5_FRTC = 1
 .message "Included driver Fake RTC v0.1"
 
+.include	"./core/ram/ram_offset.inc"
+.include	"./core/drivers/_rtc.inc"
+.include	"./mem/ram_fill.inc"
+.include	"./core/uptime_copy.inc"
+.include	"./math/divnx16.inc"
+
 	;---OFFSETS---
-	.EQU	_DRV_FRTC_TIMESTAMP										= 0x00;4B Значение времени при UPTIME=0
+	.EQU	_DRV_FRTC_UPTIME											= 0x00;5B Значение UPTIME для вычислений
+	.EQU	_DRV_FRTC_TIMESTAMP										= 0x05;4B Значение TIMESTAMP при UPTIME=0
 	;---
-	.EQU	_DRV_FRTC_VARS_SIZE										= 0x04;
+	.EQU	_DRV_FRTC_RAM_SIZE										= 0x09;
 
 ;--------------------------------------------------------
 DRV_FRTC_INIT:
@@ -20,20 +28,19 @@ DRV_FRTC_INIT:
 ;Инициализация драйвера
 ;--------------------------------------------------------
 	;Выделяем память
-	LDI ACCUM,_DRV_FRTC_VARS_SIZE
+	LDI ACCUM,_DRV_FRTC_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
-	LDI ACCUM,0x00
-	STD Y+_DRV_FRTC_TIMESTAMP+0x00,ACCUM
-	STD Y+_DRV_FRTC_TIMESTAMP+0x01,ACCUM
-	STD Y+_DRV_FRTC_TIMESTAMP+0x02,ACCUM
-	STD Y+_DRV_FRTC_TIMESTAMP+0x03,ACCUM
-
+	LDI LOOP_CNTR,_DRV_FRTC_RAM_SIZE
+	LDI TEMP,0x00
+	MOVW XL,YL
+	MCALL RAM_FILL
+	
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;IN: ACCUM-тип операции
-;OUT: FLAGS-результат DRV_RTC_RESULT_...
+;OUT: TEMP-результат DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_Y
 
@@ -50,7 +57,7 @@ DRV_FRTC_INIT:
 	RJMP _DRV_FRTC__END
 	;...
 
-	LDI FLAGS,DRV_RTC_RESULT_UNSUPPORTED
+	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_FRTC__END:
 
 	POP_Y
@@ -59,92 +66,81 @@ _DRV_FRTC__END:
 ;--------------------------------------------------------
 _DRV_FRTC_SET_TIMESTAMP:
 ;--------------------------------------------------------
-;Устанвливаем TIMESTAMP с учетом UPTIME=0
-;IN: TEMP_EH/EL/H,L-временная метка в сек.
-;OUT: FLAGS-результат DRV_RTC_RESULT_...
+;Устанвливаем TIMESTAMP с учетом UPTIME
+;IN: TEMP_EH/EL/H/L-временная метка в сек.
+;OUT: TEMP-результат DRV_RTC_RESULT_...
 ;--------------------------------------------------------
+	PUSH_X
+	PUSH ACCUM
 	PUSH TEMP_EH
 	PUSH TEMP_EL
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH TEMP
-
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP_H
-	PUSH TEMP_L
-	MCALL C5_UPTIME_GET
-	LSR TEMP_EH
-	ROR TEMP_EL
-	ROR TEMP_H
-	ROR TEMP_L
-
+	
 	MCALL C5_DISPATCHER_LOCK
-	POP TEMP
-	SUB TEMP,TEMP_L
-	STD Y+_DRV_FRTC_TIMESTAMP+0x03,TEMP
-	POP TEMP
-	SBC TEMP,TEMP_H
-	STD Y+_DRV_FRTC_TIMESTAMP+0x02,TEMP
-	POP TEMP
-	SBC TEMP,TEMP_EL
-	STD Y+_DRV_FRTC_TIMESTAMP+0x01,TEMP
-	POP TEMP
-	SBC TEMP,TEMP_EH
-	STD Y+_DRV_FRTC_TIMESTAMP+0x00,TEMP
+	MCALL C5_UPTIME_COPY
+	LDI_X 500
+	LDI ACCUM,0x05
+	MCALL DIVNX16
+
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x04
+	SUB TEMP_L,TEMP
+	STD Y+_DRV_FRTC_TIMESTAMP+0x03,TEMP_L
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x03
+	SBC TEMP_H,TEMP
+	STD Y+_DRV_FRTC_TIMESTAMP+0x02,TEMP_H
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x02
+	SBC TEMP_EL,TEMP
+	STD Y+_DRV_FRTC_TIMESTAMP+0x01,TEMP_EL
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x01
+	SBC TEMP_EH,TEMP
+	STD Y+_DRV_FRTC_TIMESTAMP+0x00,TEMP_EH
+
 	MCALL C5_DISPATCHER_UNLOCK
+	LDI TEMP,DRV_RESULT_OK
 
-	LDI FLAGS,DRV_RTC_RESULT_OK
-
-	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP_EL
 	POP TEMP_EH
+	POP ACCUM
+	POP_X
 	RET
 
 ;--------------------------------------------------------
 _DRV_FRTC_GET_TIMESTAMP:
 ;--------------------------------------------------------
 ;Возвращаем текущий TIMESTAMP
-;OUT TEMP_EH/EL/H,L-временная метка в сек.,
-;FLAGS-результат DRV_RTC_RESULT_...
+;OUT TEMP_EH/EL/H/L-временная метка в сек.,
+;TEMP-результат DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH TEMP
-
-	MCALL C5_UPTIME_GET
-	LSR TEMP_EH
-	ROR TEMP_EL
-	ROR TEMP_H
-	ROR TEMP_L
-
-	LDI FLAGS,0x00
+	PUSH_X
+	PUSH ACCUM
+	
 	MCALL C5_DISPATCHER_LOCK
-	LDD TEMP,Y+_DRV_FRTC_TIMESTAMP+0x03
-	OR FLAGS,TEMP
+	MCALL C5_UPTIME_COPY
+	LDI_X 500
+	LDI ACCUM,0x05
+	MCALL DIVNX16
+
+	MCALL C5_DISPATCHER_LOCK
+	LDD TEMP_L,Y+_DRV_FRTC_TIMESTAMP+0x03
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x04
 	ADD TEMP_L,TEMP
-	LDD TEMP,Y+_DRV_FRTC_TIMESTAMP+0x02
-	OR FLAGS,TEMP
+	LDD TEMP_H,Y+_DRV_FRTC_TIMESTAMP+0x02
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x03
 	ADC TEMP_H,TEMP
-	LDD TEMP,Y+_DRV_FRTC_TIMESTAMP+0x01
-	OR FLAGS,TEMP
+	LDD TEMP_EL,Y+_DRV_FRTC_TIMESTAMP+0x01
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x02
 	ADC TEMP_EL,TEMP
-	LDD TEMP,Y+_DRV_FRTC_TIMESTAMP+0x00
-	OR FLAGS,TEMP
+	LDD TEMP_EH,Y+_DRV_FRTC_TIMESTAMP+0x00
+	LDD TEMP,Y+_DRV_FRTC_UPTIME+0x01
 	ADC TEMP_EH,TEMP
+
 	MCALL C5_DISPATCHER_UNLOCK
+	LDI TEMP,DRV_RESULT_OK
 
-	CPI FLAGS,0x00
-	BRNE _DRV_FRTC_GET_TIMESTAMP__END
-	CLR TEMP_EH
-	CLR TEMP_EL
-	CLR TEMP_H
-	CLR TEMP_L
-
-_DRV_FRTC_GET_TIMESTAMP__END:
-	LDI FLAGS,DRV_RTC_RESULT_OK
-
-	POP TEMP
+	POP ACCUM
+	POP_X
 	RET
-
 .endif
