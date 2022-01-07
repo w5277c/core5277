@@ -120,6 +120,7 @@
 	.EQU	DRV_RESULT_TIMEOUT					= 0x83			;Не получен ответ за определенный таймаут
 	.EQU	DRV_RESULT_INVALID_DATA				= 0x84			;Не корректные данные(например, не сошлось CRC)
 	.EQU	DRV_RESULT_UNSUPPORTED				= 0x85			;Не поддерживается
+	.EQU	DRV_RESULT_INVALID_RESOURCE		= 0x86			;Не коректный ресурс(например PID драйвера)
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_C5_DRIVER_HEADER_SIZE				= 0x06			;Размер заголовка драйвера

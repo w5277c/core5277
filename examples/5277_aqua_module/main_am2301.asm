@@ -2,23 +2,29 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;03.10.2020	w5277c@gmail.com			Начало
+;07.01.2022	w5277c@gmail.com			Актуализация кода
 ;-----------------------------------------------------------------------------------------------------------------------
-;BUILD: avra  -I ../../ main.asm
+;Необходим проект https://github.com/w5277c/core5277
 
-	.SET	CORE_FREQ								= 16	;2-20Mhz
-	.SET	TIMER_C_ENABLE							= 0	;0-1
+	.EQU	CORE_FREQ								= 16	;2-20Mhz
+	.EQU	TIMER_C_ENABLE							= 0	;0-1
+	.SET	AVRA										= 0	;0-1
+	.SET	REPORT_INCLUDES						= 1	;0-1
+	;---подключаем библиотеку устройства---
 	.INCLUDE "./devices/atmega328.inc"
 
-	.SET	TS_MODE									= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
-	.SET	AVRA										= 1	;0-1
-	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
-	.SET	TIMERS									= 1	;0-4
-	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
-	.SET	LOGGING_PORT							= SCK	;PA0-PC7
+;---CORE-SETTINGS----------------------------------------
+	.SET	TS_MODE											= TS_MODE_TIME
+	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US	;25/50us
+	.SET	TIMERS											= 0	;0-...
+.if FLASH_SIZE >= 0x4000
+	.SET	LOGGING_PORT									= SCK	;PA0-PC7
+	.SET	LOGGING_LEVEL									= LOGGING_LVL_PNC
+.endif
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
-	;Блок драйверов
+	;Блок драйверов (дополнительные включения должны быть перед основным)
 	.INCLUDE "./core/drivers/pcint_h.inc"
 	.INCLUDE "./core/drivers/am2301.inc"
 	;Блок задач
@@ -35,7 +41,7 @@
 	.EQU	PID_PCINT_DRV							= 0|(1<<C5_PROCID_OPT_DRV)
 	.EQU	PID_AM2301_DRV							= 1|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
-	.EQU	PID_TASK									= 0
+	.EQU	PID_TASK									= 0|(1<<C5_PROCID_OPT_TIMER)
 	;Идентификаторы таймеров
 	;---
 
@@ -46,8 +52,7 @@ MAIN:
 
 	;Инициализация PCINT
 	LDI PID,PID_PCINT_DRV
-	LDI ZH,high(DRV_PCINT_H_INIT)
-	LDI ZL,low(DRV_PCINT_H_INIT)
+	LDI_Z DRV_PCINT_H_INIT
 	MCALL C5_CREATE
 
 	;Инициализация AM2301
@@ -60,6 +65,9 @@ MAIN:
 	;Инициализация задачи тестирования AM2301
 	LDI PID,PID_TASK
 	LDI_Z TASK__INIT
+	LDI TEMP_H,(5000/2)>>0x10 & 0xff
+	LDI TEMP_L,(5000/2)>>0x08 & 0xff
+	LDI TEMP,  (5000/2)>>0x00 & 0xff
 	MCALL C5_CREATE
 
 	MJMP C5_START
@@ -100,8 +108,5 @@ TASK__ERROR:
 	MCALL C5_OUT_CR
 
 TASK__DONE:
-	LDI TEMP_H,BYTE3(1000/2)
-	LDI TEMP_L,BYTE2(1000/2)
-	LDI TEMP,BYTE1(1000/2)
-	MCALL C5_WAIT_2MS											;Ждем 1с
+	MCALL C5_SUSPEND
 	RJMP TASK__INFINITE_LOOP

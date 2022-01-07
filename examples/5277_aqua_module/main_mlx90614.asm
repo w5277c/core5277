@@ -3,23 +3,25 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;13.09.2020	w5277c@gmail.com			Начало
 ;28.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;07.01.2022	w5277c@gmail.com			Актуализация кода
 ;-----------------------------------------------------------------------------------------------------------------------
-;BUILD: avra  -I ../../ main.asm
+;Необходим проект https://github.com/w5277c/core5277
 
-	.SET	CORE_FREQ								= 16	;2-20Mhz
-	.SET	TIMER_C_ENABLE							= 0	;0-1
+	.EQU	CORE_FREQ								= 16	;2-20Mhz
+	.EQU	TIMER_C_ENABLE							= 0	;0-1
+	.SET	AVRA										= 0	;0-1
+	.SET	REPORT_INCLUDES						= 1	;0-1
+	;---подключаем библиотеку устройства---
 	.INCLUDE "./devices/atmega328.inc"
 
-	.SET	TS_MODE									= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
-	.SET	AVRA										= 1	;0-1
+	.SET	TS_MODE									= TS_MODE_TIME
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
-	.SET	TIMERS									= 1	;0-4
-	.SET	BUFFER_SIZE								= 0x00;Размер общего буфера
+	.SET	TIMERS									= 0	;0-4
 	.SET	LOGGING_PORT							= SCK	;PA0-PC7
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
-	;Блок драйверов
+	;Блок драйверов (дополнительные включения должны быть перед основным)
 	.INCLUDE "./core/drivers/i2c_h.inc"
 	.INCLUDE "./core/drivers/mlx90614.inc"
 	;Блок задач
@@ -35,7 +37,7 @@
 	.EQU	PID_I2C_DRV								= 0|(1<<C5_PROCID_OPT_DRV)
 	.EQU	PID_MLX90614_DRV						= 1|(1<<C5_PROCID_OPT_DRV)
 	;Идентификаторы задач(0-3|0-15)
-	.EQU	PID_TASK									= 0
+	.EQU	PID_TASK									= 0|(1<<C5_PROCID_OPT_TIMER)
 	;Идентификаторы таймеров
 	;---
 
@@ -61,6 +63,9 @@ MAIN:
 	;Инициализация задачи тестирования MLX90614
 	LDI PID,PID_TASK
 	LDI_Z TASK__INIT
+	LDI TEMP_H,(500/2)>>0x10 & 0xff
+	LDI TEMP_L,(500/2)>>0x08 & 0xff
+	LDI TEMP,  (500/2)>>0x00 & 0xff
 	MCALL C5_CREATE
 
 	MJMP C5_START
@@ -70,17 +75,13 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
-	LDI TEMP_H,BYTE3(500/2)
-	LDI TEMP_L,BYTE2(500/2)
-	LDI TEMP,BYTE1(500/2)
-	MCALL C5_WAIT_2MS													;Ждем 500мс
-
 	LDI TEMP,PID_MLX90614_DRV
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
-	BRNE TASK__INFINITE_LOOP
+	BRNE TASK__DONE
 
 	MCALL C5_OUT_SDNF
 	MCALL C5_OUT_CR
+TASK__DONE:
+	MCALL C5_SUSPEND
 	RJMP TASK__INFINITE_LOOP
-
