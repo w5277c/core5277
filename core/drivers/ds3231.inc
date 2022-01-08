@@ -1,513 +1,193 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;08.06.2020  w5277c@gmail.com        Начало
-;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
-;-----------------------------------------------------------------------------------------------------------------------
-;TODO привести к виду _rtc.inc
-;TODO C5_RAM_OFFSET Z->Y
+;08.06.2020	w5277c@gmail.com			Начало
+;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
+;09.01.2022	w5277c@gmail.com			Все по новой
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF_DRIVER_DS3231
 .else
 .set DEF_DRIVER_DS3231 = 1
 
+.include "./core/drivers/_rtc.inc"
+.include	"./conv/bcd_to_byte.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./conv/bcd_byte_to_str.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	DRV_DS3231__I2C_ADDR					= 0x68			;Адрес устройства на шине I2C
-	.EQU	DRV_DS3231__BUFFER_SIZE				= 0x13			;Размер буфера
-	.EQU	DRV_DS3231__TIME_STR_SIZE			= 0x09			;Размер строки времени (ЧЧ:ММ:СС+0x00)
-	.EQU	DRV_DS3231__DATE_STR_SIZE			= 0x09			;Размер строки даты (ДД.ММ.ГГ+0x00)
-	.EQU	DRV_DS3231__DATETIME_STR_SIZE		= 0x12			;Размер строки даты и времени (ЧЧ:ММ:СС ДД.ММ.ГГ+0x00)
-	;---VARS---
-	.EQU	DRV_DS3231__VAR_HOUR					= 0x00
-	.EQU	DRV_DS3231__VAR_MINUTE				= 0x01
-	.EQU	DRV_DS3231__VAR_SECOND				= 0x02
-	.EQU	DRV_DS3231__VAR_DATE					= 0x03
-	.EQU	DRV_DS3231__VAR_MONTH				= 0x04
-	.EQU	DRV_DS3231__VAR_YEAR					= 0x05
-	.EQU	DRV_DS3231__VAR_I2C_DRV_ID			= 0x06
+	.EQU	DRV_DS3231_I2C_ADDR					= 0x68			;Адрес устройства на шине I2C
+	;---I2C-DATA-OFFSETS----------------------------------
+	.EQU	_DRV_DS3231_BUFFER_DT_OFFSET		= 0x00
+	.EQU	_DRV_DS3231_BUFFER_A1_OFFSET		= 0x07
+	.EQU	_DRV_DS3231_BUFFER_A2_OFFSET		= 0x0b
+	.EQU	_DRV_DS3231_BUFFER_CNTR_OFFSET	= 0x0e
+	.EQU	_DRV_DS3231_BUFFER_TEMP_OFFSET	= 0x10
+	;---BUFFER-OFFSETS------------------------------------
+	.EQU	_DRV_DS3231_I2C_DRV_ID				= 0x00			;1Б
+	.EQU	_DRV_DS3231_BUFFER_OFFSET			= 0x01			;1Б
+	.EQU	_DRV_DS3231_BUFFER_DATA				= 0x02
+	;------CURRENT-DATE/TIME------------------------------
+	.EQU		_DRV_DS3231_BUFFER_DT_SECONDS	= 0x02			;1Б
+	.EQU		_DRV_DS3231_BUFFER_DT_MINUTES	= 0x03			;1Б
+	.EQU		_DRV_DS3231_BUFFER_DT_HOUR		= 0x04			;1Б
+	.EQU		_DRV_DS3231_BUFFER_DT_DAY		= 0x05			;1Б
+	.EQU		_DRV_DS3231_BUFFER_DT_DATE		= 0x06			;1Б
+	.EQU		_DRV_DS3231_BUFFER_DT_MONTH	= 0x07			;1Б
+	.EQU		_DRV_DS3231_BUFFER_DT_YEAR		= 0x08			;1Б
+	.EQU		_DRV_DS3231_BUFFER_DT_SIZE		= 0x09
+	;------ALARM1-----------------------------------------
+	.EQU		_DRV_DS3231_BUFFER_A1_SECONDS	= 0x02			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A1_MINUTES	= 0x03			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A1_HOUR		= 0x04			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A1_DAY		= 0x05			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A1_DATE		= 0x06			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A1_SIZE		= 0x07
+	;------ALARM2-----------------------------------------
+	.EQU		_DRV_DS3231_BUFFER_A2_MINUTES	= 0x02			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A2_HOUR		= 0x03			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A2_DATE		= 0x04			;1Б
+	.EQU		_DRV_DS3231_BUFFER_A2_SIZE		= 0x05
+	;------CONTROL/STATUS---------------------------------
+	.EQU		_DRV_DS3231_BUFFER_CNTR_H		= 0x02			;2Б
+	.EQU		_DRV_DS3231_BUFFER_CNTR_L		= 0x03			;2Б
+	.EQU		_DRV_DS3231_BUFFER_CNTR_SIZE	= 0x04
+	;------TEMPERATURE------------------------------------
+	.EQU		_DRV_DS3231_BUFFER_TEMP_AGING	= 0x02			;1Б
+	.EQU		_DRV_DS3231_BUFFER_TEMP_H		= 0x03			;1Б
+	.EQU		_DRV_DS3231_BUFFER_TEMP_L		= 0x04			;1Б
+	.EQU		_DRV_DS3231_BUFFER_TEMP_SIZE	= 0x05
+	;---VARS----------------------------------------------
+	
 	;---OPERATIONS---
-	.EQU	DRV_DS3231__OP_READ_DATA			= 0x00
-	.EQU	DRV_DS3231__OP_WRITE_DATA			= 0x01
-	.EQU	DRV_DS3231__OP_GET_TIME_STR		= 0x02
-	.EQU	DRV_DS3231__OP_GET_DATE_STR		= 0x03
-	.EQU	DRV_DS3231__OP_GET_DATETIME_STR	= 0x04
-	.EQU	DRV_DS3231__OP_GET_ALARM			= 0x05
-	.EQU	DRV_DS3231__OP_SET_ALARM			= 0x06
-	.EQU	DRV_DS3231__OP_ENABLE_ALARM		= 0x07
-	.EQU	DRV_DS3231__OP_DISABLE_ALARM		= 0x08
-	.EQU	DRV_DS3231__OP_GET_STATUS_REG		= 0x09
-	.EQU	DRV_DS3231__OP_GET_CONTROL_REG	= 0x0a
-	.EQU	DRV_DS3231__OP_SET_CONTROL_REG	= 0x0b
-	.EQU	DRV_DS3231__OP_GET_TEMP				= 0x0c
+	.EQU	DRV_DS3231_OP_SET_DT					= 0x80
+	.EQU	DRV_DS3231_OP_GET_DT					= 0x81
+	.EQU	DRV_DS3231_OP_SET_ALARM				= 0x82
+	.EQU	DRV_DS3231_OP_GET_ALARM				= 0x83
+	.EQU	DRV_DS3231_OP_ENABLE_ALARM			= 0x84
+	.EQU	DRV_DS3231_OP_DISABLE_ALARM		= 0x85
+	.EQU	DRV_DS3231_OP_SET_CR					= 0x86
+	.EQU	DRV_DS3231_OP_GET_SR					= 0x87
+	.EQU	DRV_DS3231_OP_GET_TEMP				= 0x88
 
-_DRV_DS3231_SET_0_OFFSET:
-	.db   0x00
+	.EQU	_DRV_DS3231_RAM_SIZE					= _DRV_DS3231_BUFFER_DT_SIZE
 
 ;--------------------------------------------------------
 DRV_DS3231_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: ACCUM - ид драйвера i2c
+;IN: ACCUM-ид драйвера I2C
 ;--------------------------------------------------------
-	MOV TEMP,DRIVER_ID
-	MOV TEMP_L,ACCUM
-	LDI ACCUM,DRV_DS3231__VAR_I2C_DRV_ID
-	MCALL C5_VAR_SET
-
-	MOV TEMP,DRIVER_ID
-	LDI ACCUM,DRV_DS3231__BUFFER_SIZE
+	PUSH ACCUM
+	LDI ACCUM,_DRV_DS3231_RAM_SIZE
 	MCALL C5_RAM_REALLOC
+	POP ACCUM
+	STD Y+_DRV_DS3231_I2C_DRV_ID,ACCUM
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, работа с часами
-;IN: ACCUM - тип операции
-;OUT: флаг Z(true - успешно) + данные процедуры
+;IN: FLAGS-код операции
+;OUT: TEMP-результат(DRV_RESULT_...)
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH TEMP
+	PUSH_Y
 
-	MOV TEMP,DRIVER_ID
 	MCALL C5_RAM_OFFSET
 
-	CPI ACCUM,DRV_DS3231__OP_READ_DATA
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_READ_DATA
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_WRITE_DATA
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_WRITE_DATA
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_TIME_STR
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_GET_TIME_STR
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_DATE_STR
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_GET_DATE_STR
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_DATETIME_STR
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_GET_DATETIME_STR
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_ALARM
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_GET_ALARM
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_ALARM
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_SET_ALARM
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_ENABLE_ALARM
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_ENABLE_ALARM
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_DISABLE_ALARM
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_DISABLE_ALARM
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_STATUS_REG
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_GET_STATUS_REG
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_CONTROL_REG
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_GET_CONTROL_REG
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_SET_CONTROL_REG
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_SET_CONTROL_REG
-	RJMP _DRV_DS3231_PROC_END
-	CPI ACCUM,DRV_DS3231__OP_GET_TEMP
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_DS3231__OP_GET_TEMP
-	RJMP _DRV_DS3231_PROC_END
-	CLZ
+	LDD TEMP,Y+_DRV_DS3231_I2C_DRV_ID
 
+;	CPI FLAGS,DRV_RTC_SET_TIMESTAMP
+;	BRNE PC+0x01+_MCALL_SIZE+0x01
+;	MCALL _DRV_DS3231__OP_SET_TIMESTAMP
+;	RJMP _DRV_DS3231_PROC_END
+	CPI FLAGS,DRV_RTC_GET_TIMESTAMP
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_DS3231__OP_GET_TIMESTAMP
+	RJMP _DRV_DS3231_PROC_END
+	
+
+	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_DS3231_PROC_END:
-	POP TEMP
-	POP_Z
+	POP_Y
 	RET
 
 ;--------------------------------------------------------
-_DRV_DS3231__OP_READ_DATA:
+_DRV_DS3231__OP_GET_TIMESTAMP:
 ;--------------------------------------------------------
-;Считываем данные
-;OUT: флаг Z(true - успешно)
+;Считываем DATE/TIME данные и конвертируем в TIMESTAMP
+;IN: Y-адрес на переменные, TEMP-I2C drv id
+;OUT: TEMP_EH/EL/H/L-TIMESTAMP,
+;TEMP-результат(DRV_RESULT_...)
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP_EH
-	PUSH TEMP_EL
 	PUSH_X
-	PUSH_Y
+	PUSH_Z
 
-	MOV TEMP,DRIVER_ID
-	LDI ACCUM,DRV_DS3231__VAR_I2C_DRV_ID
-	MCALL C5_VAR_GET
-	MOV TEMP,TEMP_L
-	LDI YH,high(_DRV_DS3231_SET_0_OFFSET)|0x80
-	LDI YL,low(_DRV_DS3231_SET_0_OFFSET)
-	MOV XH,ZH
-	MOV XL,ZL
-	LDI TEMP_EH,0x01
-	LDI TEMP_EL,DRV_DS3231__BUFFER_SIZE
-	LDI ACCUM,DRV_DS3231__I2C_ADDR
+	LDI ACCUM,_DRV_DS3231_BUFFER_DT_OFFSET
+	STD Y+_DRV_DS3231_BUFFER_OFFSET,ACCUM
+	MOVW ZL,YL
+	ADIW ZL,_DRV_DS3231_BUFFER_OFFSET
+	MOVW XL,YL
+	ADIW XL,_DRV_DS3231_BUFFER_DATA
+	LDI TEMP_H,0x01
+	LDI TEMP_L,_DRV_DS3231_BUFFER_DT_SIZE
+	LDI ACCUM,DRV_DS3231_I2C_ADDR
 	MCALL C5_DRIVER_EXEC
-	CPI TEMP,DRV_I2C_STATE_OK
-	BRNE _DRV_DS3231__OP_READ_DATA_ERROR
-	;Копирую данные о времени и дате в переменные
-	MOV TEMP,DRIVER_ID
-	MCALL C5_VARS_GET_OFFSET
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_DS3231__OP_READ_DATA_END
+	
+	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_YEAR
+	MCALL BCD_TO_BYTE
+	MOV TEMP_EH,TEMP
+	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_MONTH
+	MOV TEMP_EL,TEMP
+	ANDI TEMP_EL,0x0f
+	SBRC TEMP,0x04
+	SUBI TEMP_EL,(0x100-0x0a)
+	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_HOUR
+	MCALL _DRV_DS3231_FORMAT24
+	MOV TEMP_H,TEMP
+	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_MINUTES
+	MCALL BCD_TO_BYTE
+	MOV TEMP_L,TEMP
+	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_SECONDS
+	MCALL BCD_TO_BYTE
+	MOV XH,TEMP
+	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_DATE
+	MCALL BCD_TO_BYTE
 
-	LD TEMP,X+
-	STD Z+DRV_DS3231__VAR_SECOND,TEMP
-	LD TEMP,X+
-	STD Z+DRV_DS3231__VAR_MINUTE,TEMP
-	LD TEMP,X+
-	ANDI TEMP,0x3f
-	STD Z+DRV_DS3231__VAR_HOUR,TEMP
-	LD TEMP,X+
-	LD TEMP,X+
-	STD Z+DRV_DS3231__VAR_DATE,TEMP
-	LD TEMP,X+
-	STD Z+DRV_DS3231__VAR_MONTH,TEMP
-	LD TEMP,X+
-	STD Z+DRV_DS3231__VAR_YEAR,TEMP
+	MCALL DT_TO_TIMESTAMP
+	LDI TEMP,DRV_RESULT_OK
 
-	SEZ
-	RJMP _DRV_DS3231__OP_READ_DATA_END
-_DRV_DS3231__OP_READ_DATA_ERROR:
-	CLZ
 _DRV_DS3231__OP_READ_DATA_END:
-	POP_Y
+	POP_Z
 	POP_X
-	POP TEMP_EL
-	POP TEMP_EH
-	POP TEMP_L
-	POP TEMP_H
-	POP ACCUM
 	RET
 
 ;--------------------------------------------------------
-_DRV_DS3231__OP_WRITE_DATA:
+_DRV_DS3231_FORMAT24:
 ;--------------------------------------------------------
-;Записываем данные
-;OUT: флаг Z(true - успешно)
+;Преобразуем значение часов в формат 24
+;IN: TEMP-значение от RTC
+;OUT: TEMP-значение в 24 формате
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH_X
-	PUSH_Y
 
+	MOV ACCUM,TEMP
+	ANDI TEMP,0x0f
+	SBRC ACCUM,0x04
+	SUBI TEMP,(0x100-0x0a)
+	SBRS ACCUM,0x06
+	RJMP _DRV_DS3231_FORMAT24__24
+_DRV_DS3231_FORMAT24__12:
+	SBRC ACCUM,0x05
+	SUBI TEMP,(0x100-0x0c)
+	RJMP _DRV_DS3231_FORMAT24__END
+_DRV_DS3231_FORMAT24__24:
+	SBRC ACCUM,0x05
+	SUBI TEMP,(0x100-0x14)
 
-	MOV TEMP,DRIVER_ID
-	LDI ACCUM,0x11
-	MCALL C5_RAM_EXTEND
-
-	;Формирую данные о новом времени и дате из переменных
-	MOV TEMP,DRIVER_ID
-	MCALL C5_VARS_GET_OFFSET
-	PUSH_X
-	LDI TEMP,0x00														;Адрес первой ячейки для записи DS3231
-	ST X+,TEMP
-	LDD TEMP,Z+DRV_DS3231__VAR_SECOND
-	ST X+,TEMP
-	LDD TEMP,Z+DRV_DS3231__VAR_MINUTE
-	ST X+,TEMP
-	LDD TEMP,Z+DRV_DS3231__VAR_HOUR
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDD TEMP,Z+DRV_DS3231__VAR_DATE
-	ST X+,TEMP
-	LDD TEMP,Z+DRV_DS3231__VAR_MONTH
-	ST X+,TEMP
-	LDD TEMP,Z+DRV_DS3231__VAR_YEAR
-	ST X+,TEMP
-
-	LDI TEMP,0x07
-	ADD ZL,TEMP
-	CLR TEMP
-	ADC ZH,TEMP
-	LDI LOOP_CNTR,0x09
-_DRV_DS3231__OP_WRITE_DATA_LOOP:
-	LD TEMP,Z+
-	ST X+,TEMP
-	DEC LOOP_CNTR
-	BRNE _DRV_DS3231__OP_WRITE_DATA_LOOP
-	POP_X
-
-	MOV TEMP,DRIVER_ID
-	LDI ACCUM,DRV_DS3231__VAR_I2C_DRV_ID
-	MCALL C5_VAR_GET
-	MOV TEMP,TEMP_L
-	MOV YH,XH
-	MOV YL,XL
-	LDI TEMP_EH,0x11
-	LDI TEMP_EL,0x00
-	LDI ACCUM,DRV_DS3231__I2C_ADDR
-	MCALL C5_DRIVER_EXEC
-	CPI TEMP,DRV_I2C_STATE_OK
-
-	MOV TEMP,DRIVER_ID
-	LDI ACCUM,0x11
-	MCALL C5_RAM_REDUCE
-
-	POP_Y
-	POP_X
-	POP TEMP_EL
-	POP TEMP_EH
-	POP TEMP_L
-	POP TEMP_H
+_DRV_DS3231_FORMAT24__END:
 	POP ACCUM
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_GET_TIME_STR:
-;--------------------------------------------------------
-;Формируем строку времени
-;IN: Y - адрес памяти, для записи строки
-;OUT: TEMP - длина строкис учетом 0x00,
-;флаг Z(true - успешно)
-;--------------------------------------------------------
-	PUSH_Y
-	PUSH TEMP_H
-	PUSH TEMP_L
-
-	LDD TEMP,Z+0x02
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,':'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x01
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,':'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x00
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,0x00
-	ST Y+,TEMP
-
-	SEZ
-	POP TEMP_L
-	POP TEMP_H
-	POP_Y
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_GET_DATE_STR:
-;--------------------------------------------------------
-;Формируем строку даты
-;IN: Y - адрес памяти, для записи строки
-;OUT: TEMP - длина строкис учетом 0x00,
-;флаг Z(true - успешно)
-;--------------------------------------------------------
-	PUSH_Y
-	PUSH TEMP_H
-	PUSH TEMP_L
-
-	LDD TEMP,Z+0x04
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,'.'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x05
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,'.'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x06
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,0x00
-	ST Y+,TEMP
-
-	SEZ
-	POP TEMP_L
-	POP TEMP_H
-	POP_Y
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_GET_DATETIME_STR:
-;--------------------------------------------------------
-;Формируем строку даты и времени
-;IN: Y - адрес памяти, для записи строки
-;OUT: TEMP - длина строкис учетом 0x00,
-;флаг Z(true - успешно)
-;--------------------------------------------------------
-	PUSH_Y
-	PUSH TEMP_H
-	PUSH TEMP_L
-
-	LDD TEMP,Z+0x02
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,':'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x01
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,':'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x00
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,' '
-	ST Y+,TEMP
-	LDD TEMP,Z+0x04
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,'.'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x05
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,'.'
-	ST Y+,TEMP
-	LDD TEMP,Z+0x06
-	MCALL BCD_BYTE_TO_STR
-	ST Y+,TEMP_H
-	ST Y+,TEMP_L
-	LDI TEMP,0x00
-	ST Y+,TEMP
-
-	POP TEMP_L
-	POP TEMP_H
-	POP_Y
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_GET_ALARM:
-;--------------------------------------------------------
-;Считываем данные будильника
-;IN: TEMP_L - номер будильника(1,2)
-;OUT: XH - hours(0-23), XL - minutes(0-59),
-;YH - seconds(0-59),
-;YL - date(1-31)/day(0x81-0x87)/(0x00-disabled),
-;флаг Z(true - успешно)
-;--------------------------------------------------------
-	;TODO
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_SET_ALARM:
-;--------------------------------------------------------
-;Записываем данные будильника
-;IN: TEMP_L - номер будильника(1,2)
-;XH - hours(0-23), XL - minutes(0-59),
-;YH - seconds(0-59),
-;YL - date(1-31)/day(0x81-0x87)
-;OUT: флаг Z(true - успешно)
-;--------------------------------------------------------
-	;TODO
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_DISABLE_ALARM:
-;--------------------------------------------------------
-;Отключаем будильник
-;IN: TEMP_L - номер будильника(1,2)
-;OUT: флаг Z(true - успешно)
-;--------------------------------------------------------
-	;TODO
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_ENABLE_ALARM:
-;--------------------------------------------------------
-;Включаем будильник
-;IN: TEMP_L - номер будильника(1,2)
-;OUT: флаг Z(true - успешно)
-;--------------------------------------------------------
-	;TODO
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_GET_STATUS_REG:
-;--------------------------------------------------------
-;Считыааем статус регистр
-;OUT: TEMP - значение регистра,
-;флаг Z(true - успешно)
-;--------------------------------------------------------
-	;TODO
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_GET_CONTROL_REG:
-;--------------------------------------------------------
-;Считываем регистр упроавления
-;OUT: TEMP - значение регистра,
-;флаг Z(true - успешно)
-;--------------------------------------------------------
-	;TODO
-	RET
-
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_SET_CONTROL_REG:
-;--------------------------------------------------------
-;Записываем регистр управления
-;IN: TEMP - значение регистра
-;OUT: флаг Z(true - успешно)
-;--------------------------------------------------------
-	;TODO
-	RET
-
-;--------------------------------------------------------
-_DRV_DS3231__OP_GET_TEMP:
-;--------------------------------------------------------
-;Считываем температуру
-;OUT: TEMP_H/TEMP_L - температура в формате SDNF
-;--------------------------------------------------------
-	PUSH TEMP_H
-	PUSH TEMP_L
-
-	CLR TEMP_L
-	LDD TEMP,Z+0x12
-	SWAP TEMP
-	LSR TEMP
-	LSR TEMP
-	CPI TEMP,0x00
-	BREQ _DRV_DS3231__OP_GET_TEMP__LOOP_SKIP
-_DRV_DS3231__OP_GET_TEMP__LOOP:
-	SUBI TEMP_L,(0x100-0x19)										;+25
-	DEC TEMP
-	BRNE _DRV_DS3231__OP_GET_TEMP__LOOP
-_DRV_DS3231__OP_GET_TEMP__LOOP_SKIP:
-	LDD TEMP_H,Z+0x11
-	SBRC TEMP_H,0x07
-	ORI TEMP_L,0x07
-	ANDI TEMP_H,0x7f
-
-	POP TEMP_L
-	POP TEMP_H
 	RET
 .endif
-
-
-
-
