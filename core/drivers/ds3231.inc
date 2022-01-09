@@ -12,8 +12,11 @@
 
 .include "./core/drivers/_rtc.inc"
 .include	"./conv/bcd_to_byte.inc"
+.include	"./conv/byte_to_bcd.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
+.include	"./dt/dt_to_timestamp.inc"
+.include	"./dt/timestamp_to_dt.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_DS3231_I2C_ADDR					= 0x68			;Адрес устройства на шине I2C
@@ -96,10 +99,10 @@ DRV_DS3231_INIT:
 
 	LDD TEMP,Y+_DRV_DS3231_I2C_DRV_ID
 
-;	CPI FLAGS,DRV_RTC_SET_TIMESTAMP
-;	BRNE PC+0x01+_MCALL_SIZE+0x01
-;	MCALL _DRV_DS3231__OP_SET_TIMESTAMP
-;	RJMP _DRV_DS3231_PROC_END
+	CPI FLAGS,DRV_RTC_SET_TIMESTAMP
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_DS3231__OP_SET_TIMESTAMP
+	RJMP _DRV_DS3231_PROC_END
 	CPI FLAGS,DRV_RTC_GET_TIMESTAMP
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_DS3231__OP_GET_TIMESTAMP
@@ -110,6 +113,70 @@ DRV_DS3231_INIT:
 _DRV_DS3231_PROC_END:
 	POP_Y
 	RET
+
+;--------------------------------------------------------
+_DRV_DS3231__OP_SET_TIMESTAMP:
+;--------------------------------------------------------
+;Записываем DATE/TIME из TIMESTAMP
+;IN: Y-адрес на переменные, TEMP-I2C drv id
+;TEMP_EH/EL/H/L-TIMESTAMP
+;OUT: TEMP-результат(DRV_RESULT_...)
+;--------------------------------------------------------
+	PUSH TEMP_EH
+	PUSH TEMP_EL
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH TEMP
+	PUSH ACCUM
+	PUSH_X
+	PUSH_Z
+
+	MCALL TIMESTAMP_TO_DT
+	;TODO RCALL _DRV_DS3231__OP_SET_DT
+	;TODO RET
+
+
+	MCALL BYTE_TO_BCD
+	STD Y+_DRV_DS3231_BUFFER_DT_DATE,TEMP	
+	MOV TEMP,XH
+	MCALL BYTE_TO_BCD
+	STD Y+_DRV_DS3231_BUFFER_DT_SECONDS,TEMP
+	MOV TEMP,TEMP_L
+	MCALL BYTE_TO_BCD
+	STD Y+_DRV_DS3231_BUFFER_DT_MINUTES,TEMP
+	MOV TEMP,TEMP_H
+	MCALL _DRV_DS3231_BYTE_TO_HOURS
+	STD Y+_DRV_DS3231_BUFFER_DT_HOUR,TEMP
+	STD Y+_DRV_DS3231_BUFFER_DT_DAY,C0x00
+	MOV TEMP,TEMP_EL
+	MCALL BYTE_TO_BCD
+	ORI TEMP,0x80
+	STD Y+_DRV_DS3231_BUFFER_DT_MONTH,TEMP
+	MOV TEMP,TEMP_EH
+	MCALL BYTE_TO_BCD
+	STD Y+_DRV_DS3231_BUFFER_DT_YEAR,TEMP
+
+	LDI ACCUM,_DRV_DS3231_BUFFER_DT_OFFSET
+	STD Y+_DRV_DS3231_BUFFER_OFFSET,ACCUM
+	MOVW ZL,YL
+	ADIW ZL,_DRV_DS3231_BUFFER_OFFSET
+	MOVW XL,YL
+	ADIW XL,_DRV_DS3231_BUFFER_DATA
+	LDI TEMP_H,_DRV_DS3231_BUFFER_DT_SIZE
+	LDI TEMP_L,0x01;???
+	LDI ACCUM,DRV_DS3231_I2C_ADDR
+	MCALL C5_EXEC
+
+	POP_Z
+	POP_X
+	POP ACCUM
+	POP TEMP
+	POP TEMP_L
+	POP TEMP_H
+	POP TEMP_EL
+	POP TEMP_EH
+	RET
+
 
 ;--------------------------------------------------------
 _DRV_DS3231__OP_GET_TIMESTAMP:
@@ -123,6 +190,8 @@ _DRV_DS3231__OP_GET_TIMESTAMP:
 	PUSH_X
 	PUSH_Z
 
+	;TODO RCALL _DRV_DS3231__OP_GET_DT
+
 	LDI ACCUM,_DRV_DS3231_BUFFER_DT_OFFSET
 	STD Y+_DRV_DS3231_BUFFER_OFFSET,ACCUM
 	MOVW ZL,YL
@@ -132,9 +201,9 @@ _DRV_DS3231__OP_GET_TIMESTAMP:
 	LDI TEMP_H,0x01
 	LDI TEMP_L,_DRV_DS3231_BUFFER_DT_SIZE
 	LDI ACCUM,DRV_DS3231_I2C_ADDR
-	MCALL C5_DRIVER_EXEC
+	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
-	BRNE _DRV_DS3231__OP_READ_DATA_END
+	BRNE _DRV_DS3231__OP_GET_TIMESTAMP__END
 	
 	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_YEAR
 	MCALL BCD_TO_BYTE
@@ -145,7 +214,7 @@ _DRV_DS3231__OP_GET_TIMESTAMP:
 	SBRC TEMP,0x04
 	SUBI TEMP_EL,(0x100-0x0a)
 	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_HOUR
-	MCALL _DRV_DS3231_FORMAT24
+	MCALL _DRV_DS3231_HOURS_TO_BYTE
 	MOV TEMP_H,TEMP
 	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_MINUTES
 	MCALL BCD_TO_BYTE
@@ -159,17 +228,39 @@ _DRV_DS3231__OP_GET_TIMESTAMP:
 	MCALL DT_TO_TIMESTAMP
 	LDI TEMP,DRV_RESULT_OK
 
-_DRV_DS3231__OP_READ_DATA_END:
+_DRV_DS3231__OP_GET_TIMESTAMP__END:
 	POP_Z
 	POP_X
 	RET
 
 ;--------------------------------------------------------
-_DRV_DS3231_FORMAT24:
+_DRV_DS3231_BYTE_TO_HOURS:
 ;--------------------------------------------------------
-;Преобразуем значение часов в формат 24
+;Преобразуем байт в часы
+;IN: TEMP-байт
+;OUT: TEMP-значение от RTC
+;--------------------------------------------------------
+	PUSH ACCUM
+
+	MOV ACCUM,TEMP
+	ANDI TEMP,0x0f
+	CPI ACCUM,0x14
+	BRCS PC+0x03
+	ORI TEMP,0x20
+	RJMP PC+0x04
+	CPI ACCUM,0x0a
+	BRCS PC+0x02
+	ORI TEMP,0x10
+
+	POP ACCUM
+	RET
+
+;--------------------------------------------------------
+_DRV_DS3231_HOURS_TO_BYTE:
+;--------------------------------------------------------
+;Преобразуем часы в байт
 ;IN: TEMP-значение от RTC
-;OUT: TEMP-значение в 24 формате
+;OUT: TEMP-байт
 ;--------------------------------------------------------
 	PUSH ACCUM
 
