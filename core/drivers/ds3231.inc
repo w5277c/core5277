@@ -97,8 +97,6 @@ DRV_DS3231_INIT:
 
 	MCALL C5_RAM_OFFSET
 
-	LDD TEMP,Y+_DRV_DS3231_I2C_DRV_ID
-
 	CPI FLAGS,DRV_RTC_SET_TIMESTAMP
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_DS3231__OP_SET_TIMESTAMP
@@ -108,6 +106,15 @@ DRV_DS3231_INIT:
 	MCALL _DRV_DS3231__OP_GET_TIMESTAMP
 	RJMP _DRV_DS3231_PROC_END
 	
+	CPI FLAGS,DRV_DS3231_OP_SET_DT
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_DS3231__OP_SET_DT
+	RJMP _DRV_DS3231_PROC_END
+	CPI FLAGS,DRV_DS3231_OP_GET_DT
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_DS3231__OP_GET_DT
+	RJMP _DRV_DS3231_PROC_END
+	;...
 
 	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_DS3231_PROC_END:
@@ -118,8 +125,7 @@ _DRV_DS3231_PROC_END:
 _DRV_DS3231__OP_SET_TIMESTAMP:
 ;--------------------------------------------------------
 ;Записываем DATE/TIME из TIMESTAMP
-;IN: Y-адрес на переменные, TEMP-I2C drv id
-;TEMP_EH/EL/H/L-TIMESTAMP
+;IN: Y-адрес на переменные, TEMP_EH/EL/H/L-TIMESTAMP
 ;OUT: TEMP-результат(DRV_RESULT_...)
 ;--------------------------------------------------------
 	PUSH TEMP_EH
@@ -127,14 +133,52 @@ _DRV_DS3231__OP_SET_TIMESTAMP:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
+
+	MCALL TIMESTAMP_TO_DT
+	MCALL _DRV_DS3231__OP_SET_DT
+
+	POP TEMP
+	POP TEMP_L
+	POP TEMP_H
+	POP TEMP_EL
+	POP TEMP_EH
+	RET
+
+;--------------------------------------------------------
+_DRV_DS3231__OP_GET_TIMESTAMP:
+;--------------------------------------------------------
+;Считываем DATE/TIME данные и конвертируем в TIMESTAMP
+;IN: Y-адрес на переменные
+;OUT: TEMP_EH/EL/H/L-TIMESTAMP,
+;TEMP-результат(DRV_RESULT_...)
+;--------------------------------------------------------
+	PUSH XH
+
+	MCALL _DRV_DS3231__OP_GET_DT
+	SBRC TEMP,0x07
+	RJMP PC+0x01+_MCALL_SIZE+0x01
+	MCALL DT_TO_TIMESTAMP
+	LDI TEMP,DRV_RESULT_OK
+	
+	POP XH
+	RET
+
+;--------------------------------------------------------
+_DRV_DS3231__OP_SET_DT:
+;--------------------------------------------------------
+;Записываем DATE/TIME
+;IN: Y-адрес на переменные,
+;TEMP_EH-год(0=2000), TEMP_EL-месяц(1-12),
+;TEMP-день месяца(1-31), TEMP_H-часы(0-23),
+;TEMP_L-минуты(0-59), XH-секунды(0-59),
+;OUT: TEMP-результат(DRV_RESULT_...)
+;--------------------------------------------------------
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH TEMP
 	PUSH ACCUM
 	PUSH_X
 	PUSH_Z
-
-	MCALL TIMESTAMP_TO_DT
-	;TODO RCALL _DRV_DS3231__OP_SET_DT
-	;TODO RET
-
 
 	MCALL BYTE_TO_BCD
 	STD Y+_DRV_DS3231_BUFFER_DT_DATE,TEMP	
@@ -156,6 +200,7 @@ _DRV_DS3231__OP_SET_TIMESTAMP:
 	MCALL BYTE_TO_BCD
 	STD Y+_DRV_DS3231_BUFFER_DT_YEAR,TEMP
 
+	LDD TEMP,Y+_DRV_DS3231_I2C_DRV_ID
 	LDI ACCUM,_DRV_DS3231_BUFFER_DT_OFFSET
 	STD Y+_DRV_DS3231_BUFFER_OFFSET,ACCUM
 	MOVW ZL,YL
@@ -173,25 +218,22 @@ _DRV_DS3231__OP_SET_TIMESTAMP:
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
-	POP TEMP_EL
-	POP TEMP_EH
 	RET
 
-
 ;--------------------------------------------------------
-_DRV_DS3231__OP_GET_TIMESTAMP:
+_DRV_DS3231__OP_GET_DT:
 ;--------------------------------------------------------
-;Считываем DATE/TIME данные и конвертируем в TIMESTAMP
-;IN: Y-адрес на переменные, TEMP-I2C drv id
-;OUT: TEMP_EH/EL/H/L-TIMESTAMP,
-;TEMP-результат(DRV_RESULT_...)
+;Считываем DATE/TIME
+;IN: Y-адрес на переменные
+;OUT: TEMP_EH-год(0=2000), TEMP_EL-месяц(1-12),
+;TEMP-день месяца(1-31,0x80-ошибка), TEMP_H-часы(0-23),
+;TEMP_L-минуты(0-59), XH-секунды(0-59),
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH_X
+	PUSH XL
 	PUSH_Z
 
-	;TODO RCALL _DRV_DS3231__OP_GET_DT
-
+	LDD TEMP,Y+_DRV_DS3231_I2C_DRV_ID
 	LDI ACCUM,_DRV_DS3231_BUFFER_DT_OFFSET
 	STD Y+_DRV_DS3231_BUFFER_OFFSET,ACCUM
 	MOVW ZL,YL
@@ -203,7 +245,7 @@ _DRV_DS3231__OP_GET_TIMESTAMP:
 	LDI ACCUM,DRV_DS3231_I2C_ADDR
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
-	BRNE _DRV_DS3231__OP_GET_TIMESTAMP__END
+	BRNE _DRV_DS3231__OP_GET_DT__END
 	
 	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_YEAR
 	MCALL BCD_TO_BYTE
@@ -225,13 +267,12 @@ _DRV_DS3231__OP_GET_TIMESTAMP:
 	LDD TEMP,Y+_DRV_DS3231_BUFFER_DT_DATE
 	MCALL BCD_TO_BYTE
 
-	MCALL DT_TO_TIMESTAMP
-	LDI TEMP,DRV_RESULT_OK
-
-_DRV_DS3231__OP_GET_TIMESTAMP__END:
+_DRV_DS3231__OP_GET_DT__END:
 	POP_Z
-	POP_X
+	POP XL
+	POP ACCUM
 	RET
+
 
 ;--------------------------------------------------------
 _DRV_DS3231_BYTE_TO_HOURS:
@@ -269,16 +310,13 @@ _DRV_DS3231_HOURS_TO_BYTE:
 	SBRC ACCUM,0x04
 	SUBI TEMP,(0x100-0x0a)
 	SBRS ACCUM,0x06
-	RJMP _DRV_DS3231_FORMAT24__24
-_DRV_DS3231_FORMAT24__12:
+	RJMP PC+0x04
 	SBRC ACCUM,0x05
 	SUBI TEMP,(0x100-0x0c)
-	RJMP _DRV_DS3231_FORMAT24__END
-_DRV_DS3231_FORMAT24__24:
+	RJMP PC+0x03
 	SBRC ACCUM,0x05
 	SUBI TEMP,(0x100-0x14)
 
-_DRV_DS3231_FORMAT24__END:
 	POP ACCUM
 	RET
 .endif

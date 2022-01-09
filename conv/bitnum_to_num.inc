@@ -17,7 +17,7 @@
 .endif
 
 
-BITNUM_TO_NUM_TABLE:
+_BITNUM_TO_NUM_TABLE:
 	.db	0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80
 ;--------------------------------------------------------
 BITNUM_TO_NUM:
@@ -27,7 +27,7 @@ BITNUM_TO_NUM:
 ;OUT: TEMP-число(1,2,4,8,16,32,64,128)
 ;--------------------------------------------------------
 	PUSH_Z										;4
-	LDI_Z BITNUM_TO_NUM_TABLE*2			;2
+	LDI_Z _BITNUM_TO_NUM_TABLE*2			;2
 	ADD ZL,TEMP									;1
 	ADC ZH,C0x00								;1
 	LPM TEMP,Z									;3

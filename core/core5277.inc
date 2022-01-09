@@ -898,7 +898,7 @@ C5_CREATE:
 
 	;Проверяем на признак драйвера, пропускаем блок кода для задачи, если признак есть
 	SBRC PID,C5_PROCID_OPT_DRV
-	RJMP C5_CREATE__TASK_CODE_SKIP
+	RJMP _C5_CREATE__TASK_CODE_SKIP
 
 	;Записываем начало стека на базе вершины стека задач
 	LDS r0,_C5_TOP_OF_STACK+0x00
@@ -911,7 +911,7 @@ C5_CREATE:
 	POP TEMP
 
 	SBRS PID,C5_PROCID_OPT_TIMER
-	RJMP C5_CREATE__TIMER_CODE_SKIP1
+	RJMP _C5_CREATE__TIMER_CODE_SKIP1
 	;Записываем время окончания паузы
 	PUSH ACCUM
 	LDS ACCUM,SREG
@@ -929,7 +929,7 @@ C5_CREATE:
 	POP ACCUM
 	STS SREG,ACCUM
 	POP ACCUM
-C5_CREATE__TIMER_CODE_SKIP1:
+_C5_CREATE__TIMER_CODE_SKIP1:
 
 	POP_Z
 	;Запоминаем текущее положение стека
@@ -943,7 +943,7 @@ C5_CREATE__TIMER_CODE_SKIP1:
 
 	;Если таймер - записываем таймаут в стек для восстановления
 	SBRS PID,C5_PROCID_OPT_TIMER
-	RJMP C5_CREATE__TIMER_CODE_SKIP2
+	RJMP _C5_CREATE__TIMER_CODE_SKIP2
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
@@ -956,7 +956,7 @@ C5_CREATE__TIMER_CODE_SKIP1:
 	LDS TEMP,_C5_UPTIME+0x04
 	PUSH TEMP															;т.к. EXECTIME может быть перезаписан процедурами WAIT
 	STS SREG,r1
-C5_CREATE__TIMER_CODE_SKIP2:
+_C5_CREATE__TIMER_CODE_SKIP2:
 
 	;Помещаем точку возврата
 	MOV r0,TEMP
@@ -975,12 +975,12 @@ C5_CREATE__TIMER_CODE_SKIP2:
 .endif
 	PUSH TEMP
 	MOV TEMP,r0
-	RJMP C5_CREATE__DRIVER_CODE_SKIP
+	RJMP _C5_CREATE__DRIVER_CODE_SKIP
 
-C5_CREATE__TASK_CODE_SKIP:
+_C5_CREATE__TASK_CODE_SKIP:
 	POP TEMP
 	POP_Z
-C5_CREATE__DRIVER_CODE_SKIP:
+_C5_CREATE__DRIVER_CODE_SKIP:
 	;Единственный процесс, нет предков
 	ANDI PID,(1<<C5_PROCID_OPT_DRV)|0x0f
 	MOV _PID,PID
@@ -1000,7 +1000,7 @@ C5_READY:
 	LDS r0,SREG
 
 	SBRC PID,C5_PROCID_OPT_DRV
-	RJMP C5_READY__IS_DRIVER
+	RJMP _C5_READY__IS_DRIVER
 
 	;Записываем в стек 16 старших регистров(могут быть проинициализированы при вызове процедуры)
 	_C5_MACRO__PUSH_RDS
@@ -1038,9 +1038,9 @@ C5_READY:
 	STS SPH,r5
 	LDS r5,_C5_CORE_STACK+0x01
 	STS SPL,r5
-	RJMP C5_READY__END
+	RJMP _C5_READY__END
 
-C5_READY__IS_DRIVER:
+_C5_READY__IS_DRIVER:
 	POP r0
 	POP r1
 	;Извлекаем точку входа на сновной код драйвера
@@ -1051,7 +1051,7 @@ C5_READY__IS_DRIVER:
 	STD Z+_C5_DRIVER_OFFSET+0x00,r0
 	STD Z+_C5_DRIVER_OFFSET+0x01,r1
 
-C5_READY__END:
+_C5_READY__END:
 	;Записываем состояние не меняя опций
 	LDD TEMP,Z+_C5_PROC_STATE
 	ANDI TEMP,0xf0
