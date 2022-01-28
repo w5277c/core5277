@@ -47,12 +47,16 @@ _C5_RES_WAIT_N_LOCK__WAIT_LOOP:
 	LDI_Z _C5_RESOURCE_QUEUE
 	LDI LOOP_CNTR,_C5_RES_QUEUE_SIZE/0x02						;Размер очереди должен быть кратный двум
 _C5_RES_WAIT_N_LOCK__QUEUE_LOOP:
-	LDD TEMP,Z+0x01													;Получаем из очереди PID задачи
+	LDD TEMP,Z+0x00													;Получаем из очереди RES_ID
 	CPI TEMP,0xff														;Проверка на конец списка
 	BREQ _C5_RES_WAIT_N_LOCK__UNLOCKED
-	LDD TEMP,Z+0x00													;Получаем из очереди RES_ID
 	CP TEMP,ACCUM
-	BREQ _C5_RES_WAIT_N_LOCK__WAIT								;Ресурс занят
+	BRNE PC+0x06														;Не наш ресурс
+	LDD TEMP,Z+0x01													;Получаем из очереди PID задачи
+	CPI TEMP,0xff
+	BRNE PC+0x02														;Ид ожидающей задачи уже задан
+	STD Z+0x01,_PID													;Записываем ид ожидающей задачи
+	RJMP _C5_RES_WAIT_N_LOCK__WAIT								;Ресурс занят
 	ADIW ZL,0x02
 	DEC LOOP_CNTR
 	BRNE _C5_RES_WAIT_N_LOCK__QUEUE_LOOP
@@ -81,7 +85,7 @@ _C5_RES_WAIT_N_LOCK__FAIL:
 	RJMP _C5_RES_WAIT_N_LOCK__END
 _C5_RES_WAIT_N_LOCK__UNLOCKED:
 	ST Z+,ACCUM															;Помещаем в очередь ид ресурса
-	ST Z,_PID															;И ид задачи
+	ST Z,C0xff															;Ид ожидаемой задачи не задан
 	MCALL C5_DISPATCHER_UNLOCK
 	SEZ
 

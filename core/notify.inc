@@ -16,13 +16,16 @@ C5_NOTIFY:
 ;--------------------------------------------------------
 ;Меняем стостояние задачи
 ;_C5_PROC_STATE_TIME_WAIT -> _C5_PROC_STATE_READY
-;IN:_PID-ид задачи
+;IN:ACCUM-ид задачи
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_X
 
 	MCALL C5_DISPATCHER_LOCK
+	PUSH PID
+	MOV PID,ACCUM
 	MCALL _C5_PROC_HEADER_GET
+	POP PID
 	LDD XH,Z+_C5_PROC_STATE
 	MOV XL,XH
 	ANDI XL,0x0f

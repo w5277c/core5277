@@ -34,11 +34,11 @@ C5_RES_UNLOCK:
 	LDI LOOP_CNTR,_C5_RES_QUEUE_SIZE/0x02						;Размер очереди должен быть кратный двум
 _C5_RES_UNLOCK__QUEUE_LOOP:
 	LD TEMP,Z+															;Получаем из очереди RES_ID
-	LD FLAGS,Z+															;Получаем из очереди PID задачи
-	CPI FLAGS,0xff														;Проверка на конец списка
+	CPI TEMP,0xff														;Проверка на конец списка
 	BREQ _C5_RES_UNLOCK__END
+	LD FLAGS,Z+															;Получаем из очереди PID задачи
 	CP TEMP,ACCUM
-	BREQ _C5_RES_UNLOCK__CONTAINS										;Запись найдена
+	BREQ _C5_RES_UNLOCK__CONTAINS									;Запись найдена
 	DEC LOOP_CNTR
 	BRNE _C5_RES_UNLOCK__QUEUE_LOOP
 	RJMP _C5_RES_UNLOCK__END
@@ -51,9 +51,14 @@ _C5_RES_UNLOCK__CONTAINS:
 	LSL LOOP_CNTR
 	MCALL RAM_COPY
 _C5_RES_UNLOCK__DATA_MOVE_SKIP:
-	STS _C5_RESOURCE_QUEUE+_C5_RES_QUEUE_SIZE-0x01,C0xff
+	STS _C5_RESOURCE_QUEUE+_C5_RES_QUEUE_SIZE-0x02,C0xff	;Конец списка
 
+	CPI FLAGS,0xff
+	BREQ PC+0x03+_MCALL_SIZE+0x01									;Пропускаем, если ид ожидаемой задачи не задан
+	PUSH ACCUM
+	MOV ACCUM,FLAGS
 	MCALL C5_NOTIFY
+	POP ACCUM
 
 _C5_RES_UNLOCK__END:
 	MCALL C5_DISPATCHER_UNLOCK
