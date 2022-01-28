@@ -7,6 +7,7 @@
 ;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
 ;29.05.2021	w5277c@gmail.com			Исправлен .DEVICE, ввод параметра MUL_SUPPORT
 ;09.10.2021	w5277c@gmail.com			Убран NOP из MCALL
+;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -49,7 +50,6 @@
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x0f			;Количество перырваний(без RESET)
-	.EQU	_C5_RES_QUEUE_SIZE					= 0x10			;Размер очереди к ресурсам(8 элементов по 2 байта)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x02			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра

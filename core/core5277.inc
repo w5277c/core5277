@@ -85,9 +85,8 @@
 	.EQU	_C5_PROC_STATE_GHOST					= 0x01			;Инициализируется или деактивация
 	.EQU	_C5_PROC_STATE_BUSY					= 0x02			;Выполняется
 	.EQU	_C5_PROC_STATE_TIME_WAIT			= 0x03			;Ждет истечения времени(только для задач)
-	.EQU	_C5_PROC_STATE_RES_WAIT				= 0x04			;Ждет освобождения ресурса(только для задач)
-	.EQU	_C5_PROC_STATE_TIMER_WAIT			= 0x05			;Ждет истечения времени для нового запуска
-	.EQU	_C5_PROC_STATE_READY					= 0x06			;Готова к выполнению
+	.EQU	_C5_PROC_STATE_TIMER_WAIT			= 0x04			;Ждет истечения времени для нового запуска
+	.EQU	_C5_PROC_STATE_READY					= 0x05			;Готова к выполнению
 ;---PROC-STATE-OPTIONS-----------------------------------;Опции процесса, размещаемые в статусе процесса(старшйи ниббл)
 	.EQU	_C5_PROCST_OPT_NOSUSP				= 0x04			;Запрещено диспетчеру прерывать выполнение
 	.EQU	_C5_PROCST_OPT_RESERV1				= 0x05			;Зарезервировано
@@ -133,6 +132,7 @@
 	.EQU	_C5_TASK_STACK_DEF_SIZE				= 0x13			;Размер стека задачи при создании (16 регистров+SREG+точка возврата)
 	.EQU	_C5_TASKS_ACTIVE_TIME				= 0x01			;Время работы задачи 1*2=2мс
 	.EQU	_C5_IRV_TABLE_SIZE					= 0x4b			;Размер таблицы прерываний
+	.EQU	_C5_RES_QUEUE_SIZE					= _C5_TASKS_MAX_QNT*0x02	;Размер очереди к ресурсам
 	.EQU	TID_TIMER_C								= 0x83			;Идентификатор тамера C
 	;---CORE-FAULTS---
 	.EQU	_C5_FAULT_HUGE_STACK					= 0x01			;Стек перешел границу выделяемой памяти
@@ -1070,13 +1070,15 @@ C5_EXEC:
 ;--------------------------------------------------------
 ;Выполнение процедуры драйвера
 ;IN: TEMP-ид вызываемого драйвера
+;OUT: как минимум TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH PID
-
 	;Процедура применима только для драйвера
 	SBRS TEMP,C5_PROCID_OPT_DRV
-	RJMP _C5_EXEC__DONE
+	RJMP _C5_EXEC__ERROR
+	CPI TEMP,0xff
+	BREQ _C5_EXEC__ERROR
 
+	PUSH PID
 	MCALL C5_DISPATCHER_LOCK
 	;Сохраняем значение Z
 	MOV _C5_DRIVER_EXEC_ZH,ZH
@@ -1105,7 +1107,9 @@ C5_EXEC:
 _C5_EXEC__DONE:
 	POP PID
 	RET
-
+_C5_EXEC__ERROR:
+	LDI TEMP,DRV_RESULT_UNSUPPORTED
+	RET
 ;--------------------------------------------------------
 _C5_PROC_HEADER_GET:
 ;--------------------------------------------------------

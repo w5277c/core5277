@@ -1,37 +1,39 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;19.01.2021  w5277c@gmail.com			Начало
+;28.01.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_CRC8_BLOCK
+.ifdef DEF_C5_NOTIFY
 .else
-.set DEF_CRC8_BLOCK = 1
+.set DEF_C5_NOTIFY = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included CRC8_BLOCK"
+.message "included C5_NOTIFY"
 .endif
 
 ;--------------------------------------------------------
-CRC8_BLOCK:
+C5_NOTIFY:
 ;--------------------------------------------------------
-;Подсчет блока CRC(8 бит)
-;IN: X-адрес начала блока, LOOP_CNTR - длина
-;Z-адрес процедуры для вычисления байта
-;ACCUM-начальная сумма
-;OUT: ACCUM-сумма
+;Меняем стостояние задачи
+;_C5_PROC_STATE_TIME_WAIT -> _C5_PROC_STATE_READY
+;IN:_PID-ид задачи
 ;--------------------------------------------------------
+	PUSH_Z
 	PUSH_X
-	PUSH LOOP_CNTR
-	PUSH TEMP
 
-_CRC8_BLOCK__LOOP:
-	LD TEMP,X+
-	ICALL
-	DEC LOOP_CNTR
-	BRNE _CRC8_BLOCK__LOOP
+	MCALL C5_DISPATCHER_LOCK
+	MCALL _C5_PROC_HEADER_GET
+	LDD XH,Z+_C5_PROC_STATE
+	MOV XL,XH
+	ANDI XL,0x0f
+	CPI XL,_C5_PROC_STATE_TIME_WAIT
+	BRNE PC+0x04
+	ANDI XH,0xf0
+	ORI XH,_C5_PROC_STATE_READY
+	STD Z+_C5_PROC_STATE,XH
+	MCALL C5_DISPATCHER_LOCK
 
-	POP TEMP
-	POP LOOP_CNTR
 	POP_X
+	POP_Z
 	RET
 .endif
