@@ -13,8 +13,8 @@
 .message "included C5_FLAG_RESET"
 .endif
 
-.include	"./inc/core/_flag_offset.inc"
-.include	"./inc/conv/bitnum_to_num.inc"
+.include	"./core/_flag_offset.inc"
+.include	"./conv/bitnum_to_num.inc"
 
 ;--------------------------------------------------------
 C5_FLAG_RESET:
