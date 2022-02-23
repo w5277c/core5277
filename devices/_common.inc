@@ -151,6 +151,7 @@
 
 	;---Часто-используемые-константы-для-частот-программного-таймера---
 ;TODO делить на 2?
+.ifdef TIMERS_SPEED
 .if TIMERS_SPEED == TIMERS_SPEED_50US
 	.EQU	TIMER_FREQ_20KHz						= 1
 	.EQU	TIMER_FREQ_10KHz						= 2
@@ -173,7 +174,8 @@
 	.EQU	TIMER_FREQ_250Hz						= 160
 	.EQU	TIMER_FREQ_200Hz						= 200
 .endif
-
+.endif
+.ifdef CORE_FREQ
 	;---Часто-используемые-константы-для-частот-таймера-С---
 	.EQU	TIMER_C_FREQ_76800Hz					= (CORE_FREQ*125000/(76800*2))-1
 	.EQU	TIMER_C_FREQ_57600Hz					= (CORE_FREQ*125000/(57600*2))-1
@@ -192,7 +194,7 @@
 	.EQU	TIMER_C_FREQ_4800Hz					= (CORE_FREQ*125000/(4800*2))-1
 .ENDIF
 	;---
-
+.endif
 	.MACRO _C5_MACRO__PUSH_RDS
 		PUSH r16
 		PUSH r17

@@ -8,13 +8,14 @@
 ;03.07.2021	w5277c@gmail.com			Z->Y
 ;26.08.2021	w5277c@gmail.com			Вывод приведен к общему виду с драйвером AM2301 и DHT11
 ;20.12.2021	w5277c@gmail.com			Приведение результата к виду DRV_RESULT_...
+;24.02.2022	w5277c@gmail.com			Исправлена ошибка при отрицательной температуре
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO: Не пройден тест, ERROR
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_DS18B20
 .else
 .set DEF__C5_DRV_DS18B20 = 1
-.message "Included driver DS18B20 v0.7"
+.message "Included driver DS18B20 v0.8"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -127,7 +128,11 @@ DRV_DS18B20_INIT:
 	MCALL DIV16x8														;В TEMP_L - дробная часть в человеческом формате 0-99
 
 	POP TEMP_H
-	BRTC PC+0x02														;Переносим знак в новый формат
+	SBRS TEMP_H,0x07													;Переносим знак в новый формат
+	RJMP PC+0x05
+	LDI TEMP,0xff
+	SUB TEMP,TEMP_H
+	MOV TEMP_H,TEMP
 	ORI TEMP_L,0x80
 	LDI TEMP,DRV_RESULT_OK
 	RJMP _DRV_DS18B20_PROC__END
