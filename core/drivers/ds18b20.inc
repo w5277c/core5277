@@ -113,8 +113,9 @@ DRV_DS18B20_INIT:
 	;TODO использовать WORD_TO_SDNF
 	;Пребразовываем в SDNF
 	MOV TEMP,TEMP_L													;Преобразуем в человеческий вид целую часть
-	ANDI TEMP,0xF0
+	ANDI TEMP,0xf0
 	SWAP TEMP
+	ANDI TEMP_H,0x0f
 	SWAP TEMP_H
 	OR TEMP_H,TEMP
 	PUSH TEMP_H
@@ -130,7 +131,7 @@ DRV_DS18B20_INIT:
 	POP TEMP_H
 	SBRS TEMP_H,0x07													;Переносим знак в новый формат
 	RJMP PC+0x05
-	LDI TEMP,0xff
+	LDI TEMP,0xff														;TODO не сответсвует для -55(1111 1100 1001 0000) дробная часть = 0?
 	SUB TEMP,TEMP_H
 	MOV TEMP_H,TEMP
 	ORI TEMP_L,0x80
