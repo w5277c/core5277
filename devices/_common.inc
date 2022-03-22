@@ -41,6 +41,7 @@
 .endif
 	.SET	REALTIME									= 0x00
 	.SET	TIMERS									= 0x00
+	.SET	TIMERS16									= 0x00
 .ifdef AVRA
 .else
 	.SET	AVRA										= 0x00

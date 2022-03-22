@@ -103,6 +103,14 @@
 	.EQU	_C5_TIMER_DEFAULT						= 0x06			;1B-порог 0x01-0x7f, 7-бит:период отсчета,H:0.002s,L:0.00005s)
 	.EQU	_C5_TIMER_RESERVED					= 0x07			;1B-зарезервировано
 
+;---TIMER16-STRUCTURE------------------------------------;Структура таймера 16бит(9B)
+	.EQU	_C5_TIMER16_STRUCT_SIZE				= 0x09			;Длина блока таймера
+	.EQU	_C5_TIMER16_PROC_ID					= 0x00			;1B-ид процедуры(0-..., 0xff - не исп.)
+	.EQU	_C5_TIMER16_HANDLER					= 0x01			;2B-адрес обработчика
+	.EQU	_C5_TIMER16_RAM_ADDR					= 0x03			;2B-адрес на выделенную память
+	.EQU	_C5_TIMER16_CNTR						= 0x05			;2B-счетчик таймера
+	.EQU	_C5_TIMER16_DEFAULT					= 0x07			;2B-порог(период отсчета 0.00005s)
+
 ;---PROC-STRUCTURE---------------------------------------;Заголовок процедуры(6B-драйвер, 11B-задача)
 	.EQU	_C5_PROC_STATE							= 0x00			;1B-статус процедуры(младший ниббл) и опции(старший ниббл)
 	.EQU	_C5_PROC_RAM_OFFSET					= 0x01			;2B-адрес начала выделенной памяти
@@ -156,16 +164,24 @@
 	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B-хранит вершину свободной памяти
 	.EQU	_C5_FLAGS								= RAMSTART+0x0b;4B-флагов (32 флага)
 	.EQU	_C5_TIMER_C_PID						= RAMSTART+0x0f;1B-PID задачи использующей таймер C
-	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_PID+0x01							;1B-счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_MAIN_TIMER_TRHLD					= _C5_MAIN_TIMER_CNTR+0x01						;1B-порог срабатывания таймера ядра
+	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_PID+0x01
+																			;1B-счетчик таймера ядра (каждые 0.000050с)
+	.EQU	_C5_MAIN_TIMER_TRHLD					= _C5_MAIN_TIMER_CNTR+0x01
+																			;1B-порог срабатывания таймера ядра
 .IFDEF C5_IN_PORT
-	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01					;xB-буфер ввода
-	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE		;1B-позиция в буфере на свободный элемент
-	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE+0x01	;xB-таблица таймеров(TIMERS*8)
+	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01
+																			;xB-буфер ввода
+	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE
+																			;1B-позиция в буфере на свободный элемент
+	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE+0x01
+																			;xB-таблица таймеров
 .ELSE
-	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01					;xB-таблица таймеров(TIMERS*8)
-.ENDIF																	;TIMERS*8
-	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS+TIMERS*8
+	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01
+																			;xB-таблица 8бит таймеров
+.ENDIF
+	.EQU	_C5_TIMERS16							= _C5_TIMERS+TIMERS*_C5_TIMER_STRUCT_SIZE
+																			;xB-таблица 16бит таймеров
+	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS16+TIMERS16*_C5_TIMER16_STRUCT_SIZE	
 																			;xB-таблица прерываний (_C5_IR_QNT*3 для каждого прерывания, исключая RESET)
 	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3
 																			;xB-заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
@@ -285,13 +301,16 @@ C5_DISPATCHER_UNLOCK:
 	.INCLUDE "./core/timer_start.inc"
 	.INCLUDE "./core/timer_start_at.inc"
 	.INCLUDE "./core/timer_stop.inc"
-.ELSE
+.ENDIF
+.IF TIMERS16 > 0x00
+	.MESSAGE "######## TIMERS16 ENABLED"
+	.INCLUDE "./core/timer16_set.inc"
+	.INCLUDE "./core/timer16_start.inc"
+	.INCLUDE "./core/timer16_start_at.inc"
+	.INCLUDE "./core/timer16_stop.inc"
+.ENDIF
+.IF TIMERS == 0x00 && TIMERS16 == 0 && TIMER_C_ENABLE ==0
 	.MESSAGE "######## TIMERS DISABLED"
-	C5_TIMER_SET:
-	C5_TIMER_START:
-	C5_TIMER_START_AT:
-	C5_TIMER_STOP:
-		RET
 .ENDIF
 
 ;========================================================================
@@ -369,6 +388,47 @@ _C5_TIMER_A_IR:
 
 	PUSH_Z
 
+.IF TIMERS16 > 0x0
+	PUSH ACCUM
+	PUSH LOOP_CNTR
+	PUSH PID
+	PUSH_Y
+
+	LDI_Y _C5_TIMERS16
+	LDI LOOP_CNTR,TIMERS16
+_C5_TIMER_A_IR__16_LOOP:
+	LDD PID,Y+_C5_TIMER16_PROC_ID
+	CPI PID,0xff
+	BREQ _C5_TIMER_A_IR__16_NEXT
+	LDD TEMP,Y+_C5_TIMER16_CNTR+0x01
+	SUBI TEMP,0x01
+	STD Y+_C5_TIMER16_CNTR+0x01,TEMP
+	LDD TEMP,Y+_C5_TIMER16_CNTR+0x00
+	SBCI TEMP,0x00
+	STD Y+_C5_TIMER16_CNTR+0x00,TEMP
+	BRCC _C5_TIMER_A_IR__16_NEXT
+	LDD ZH,Y+_C5_TIMER16_HANDLER+0x00
+	LDD ZL,Y+_C5_TIMER16_HANDLER+0x01
+	PUSH_Y
+	LDD TEMP,Y+_C5_TIMER16_RAM_ADDR+0x00
+	LDD YL,Y+_C5_TIMER16_RAM_ADDR+0x01
+	MOV YH,TEMP
+	ICALL
+	POP_Y
+	LDD TEMP,Y+_C5_TIMER16_DEFAULT+0x01
+	STD Y+_C5_TIMER16_CNTR+0x01,TEMP
+	LDD TEMP,Y+_C5_TIMER16_DEFAULT+0x00
+	STD Y+_C5_TIMER16_CNTR+0x00,TEMP
+_C5_TIMER_A_IR__16_NEXT:
+	ADIW YL,_C5_TIMER16_STRUCT_SIZE
+	DEC LOOP_CNTR
+	BRNE _C5_TIMER_A_IR__16_LOOP
+
+	POP_Y
+	POP PID
+	POP LOOP_CNTR
+	POP ACCUM
+.ENDIF
 .IF TIMERS > 0x00
 	PUSH ACCUM
 	PUSH LOOP_CNTR
@@ -712,6 +772,14 @@ C5_REINIT:
 	LDI TEMP_L,low(TIMERS*_C5_TIMER_STRUCT_SIZE)
 	LDI TEMP,0xff
 	LDI_X _C5_TIMERS
+	MCALL RAM_FILL16
+.ENDIF
+.IF TIMERS16 > 0x00
+	;Установка таймеров как не используемых
+	LDI TEMP_H,high(TIMERS16*_C5_TIMER16_STRUCT_SIZE)
+	LDI TEMP_L,low(TIMERS16*_C5_TIMER16_STRUCT_SIZE)
+	LDI TEMP,0xff
+	LDI_X _C5_TIMERS16
 	MCALL RAM_FILL16
 .ENDIF
 	;Чистка заголовков драйверов

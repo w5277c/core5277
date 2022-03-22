@@ -1,31 +1,29 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;19.02.2021	w5277c@gmail.com			Начало
+;22.03.2022	konstantin@5277.ru			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.if TIMERS>0x00
-.ifdef DEF_C5_TIMER_OFFSET
+.if TIMERS16>0x00
+.ifdef DEF_C5_TIMER16_STOP
 .else
-.set DEF_C5_TIMER_OFFSET = 1
+.set DEF_C5_TIMER16_STOP = 1
+
+.if REPORT_INCLUDES == 0x01
+.message "included C5_TIMER16_STOP"
+.endif
+
+.include "./core/_timer16_offset.inc"
 
 ;--------------------------------------------------------
-_C5_TIMER_OFFSET:
+C5_TIMER16_STOP:
 ;--------------------------------------------------------
-;Получаем адрес на данные 8 бит таймера
-;IN: PID,TEMP-номер таймера(0-31)
-;OUT: Z-адрес на данные таймера
+;Останов таймера
+;IN TEMP-номер таймера(0-31)
 ;--------------------------------------------------------
-	PUSH TEMP
-
-	LSL TEMP
-	LSL TEMP
-	LSL TEMP
-
-	LDI_Z _C5_TIMERS
-	ADD ZL,TEMP
-	ADC ZH,C0x00
-
-	POP TEMP
+	PUSH_Z
+	MCALL _C5_TIMER16_OFFSET
+	STD Z+_C5_TIMER16_PROC_ID,C0xff
+	POP_Z
 	RET
 .endif
 .endif
