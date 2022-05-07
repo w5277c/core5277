@@ -5,6 +5,7 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;10.12.2020	w5277c@gmail.com			-с5
 ;29.05.2021	w5277c@gmail.com			Использование MUL8X8
+;08.01.2022	w5277c@gmail.com			Оптимиация(существенно при программном MUL8x8)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_MUL10
 .else
@@ -14,8 +15,6 @@
 .message "included MUL10"
 .endif
 
-.include	"./math/mul8x8.inc"
-
 ;--------------------------------------------------------
 MUL10:
 ;--------------------------------------------------------
@@ -23,7 +22,18 @@ MUL10:
 ;IN: TEMP-8b число
 ;OUT: TEMP_H/L-результат
 ;--------------------------------------------------------
-	LDI TEMP_L,0x0a
-	MCALL MUL8X8
+	CLR TEMP_H
+	MOV TEMP_L,TEMP
+	LSL TEMP_L
+	ROL TEMP_H
+	LSL TEMP_L
+	ROL TEMP_H
+	LSL TEMP_L
+	ROL TEMP_H
+	ADD TEMP_L,TEMP
+	ADC TEMP_H,C0x00
+	ADD TEMP_L,TEMP
+	ADC TEMP_H,C0x00
+
 	RET
 .endif

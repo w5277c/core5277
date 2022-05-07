@@ -6,6 +6,7 @@
 ;19.01.2021	w5277c@gmail.com			Обновлен блок EEPROM
 ;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
+;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -33,13 +34,12 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA16
 	.MESSAGE "######## DEVICE ATmega16"
-	.SET	_IV_STEP									= 0x02;			;Шаг между адресами переходов на обработчики прерываний
+	.EQU	_MCALL_SIZE								= 0x02			;Размер MCALL
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x15			;Количество перырваний(без RESET)
-	.EQU	_C5_RES_QUEUE_SIZE					= 0x10			;Размер очереди к ресурсам(8 элементов по 2 байта)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x00			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x04			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
@@ -113,6 +113,10 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR;
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
 	;--FAKE-PRR---
 	.EQU	PRR										= 0xff
 	.EQU		PRTWI									= 0x00
@@ -277,6 +281,13 @@
 	.EQU		PGWRT									= 0x02
 	.EQU		PGERS									= 0x01
 	.EQU		SPMEN									= 0x00
+	;---WATCHDOG---
+	.EQU	WDTCR										= 0x41
+	.EQU		WDCE									= 0x04
+	.EQU		WDE									= 0x03
+	.EQU		WDP2									= 0x02
+	.EQU		WDP1									= 0x01
+	.EQU		WDP0									= 0x00
 
 	;---ADC-VOLTAGE-REFERENCE---
 	.EQU	ADC_VREF_AREF							= (0<<REFS1)|(0<<REFS0)

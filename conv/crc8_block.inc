@@ -17,13 +17,13 @@ CRC8_BLOCK:
 ;Подсчет блока CRC(8 бит)
 ;IN: X-адрес начала блока, LOOP_CNTR - длина
 ;Z-адрес процедуры для вычисления байта
-;OUT: ACCUM - сумма
+;ACCUM-начальная сумма
+;OUT: ACCUM-сумма
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH LOOP_CNTR
 	PUSH TEMP
 
-	CLR ACCUM
 _CRC8_BLOCK__LOOP:
 	LD TEMP,X+
 	ICALL

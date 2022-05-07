@@ -7,7 +7,6 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;04.10.2021	w5277c@gmail.com			Добавлен код таймера C
 ;-----------------------------------------------------------------------------------------------------------------------
-.if TIMERS > 0x00
 .ifdef DEF_C5_TIMER_STOP
 .else
 .set DEF_C5_TIMER_STOP = 1
@@ -39,6 +38,5 @@ _C5_TIMER_STOP__TIMER_C:
 	_C5_TIMERC_STOP
 	POP TEMP
 	RET
-.endif
 .endif
 .endif

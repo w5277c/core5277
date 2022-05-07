@@ -1,8 +1,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;29.10.2020  w5277c@gmail.com			Начало
-;10.12.2020  w5277c@gmail.com			-с5
+;29.10.2020	w5277c@gmail.com			Начало
+;10.12.2020	w5277c@gmail.com			-с5
+;18.10.2021	w5277c@gmail.com			Возврат остатка
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DIV32X16
 .else
@@ -15,21 +16,20 @@
 ;--------------------------------------------------------
 DIV32X16:
 ;--------------------------------------------------------
-;Деление 32b числа на 16б число (A/B=C)
-;IN: TEMP_EH,TEMP_EL,TEMP_H,TEMP_L - A, X - B
-;OUT: TEMP_EH,TEMP_EL,TEMP_H,TEMP_L - C
-;-START--------------------------------------------------
+;Деление 32b числа на 16б число
+;IN: TEMP_EH/EL/H/L-32b делимое, X-16b делитель
+;OUT: TEMP_EH/EL/H/L-32b результат, X-16b остаток
+;--------------------------------------------------------
 	PUSH LOOP_CNTR
 	PUSH TEMP
-	PUSH_Y
-	PUSH_Z
+	PUSH YH
+	PUSH YL
+	PUSH ZL
 
-	CLR TEMP
-	LDI LOOP_CNTR,33
+	LDI LOOP_CNTR,0x21
 	SUB YL,YL
 	CLR YH
 	CLR ZL
-	CLR ZH
 _DIV32X16__LOOP:
 	ROL TEMP_L
 	ROL TEMP_H
@@ -40,25 +40,24 @@ _DIV32X16__LOOP:
 	ROL YL
 	ROL YH
 	ROL ZL
-	ROL ZH
 	SUB YL,XL
 	SBC YH,XH
-	SBC ZL,TEMP
-	SBC ZH,TEMP
+	SBC ZL,C0x00
 	BRCC _DIV32X16__SKIP
 	ADD YL,XL
 	ADC YH,XH
-	ADC ZL,TEMP
-	ADC ZH,TEMP
+	ADC ZL,C0x00
 	CLC
 	RJMP _DIV32X16__LOOP
 _DIV32X16__SKIP:
 	SEC
 	RJMP _DIV32X16__LOOP
 _DIV32X16__END:
+	MOVW XL,YL
 
-	POP_Z
-	POP_Y
+	POP ZL
+	POP YL
+	POP YH
 	POP TEMP
 	POP LOOP_CNTR
 	RET

@@ -6,15 +6,15 @@
 ;26.04.2021	w5277c@gmail.com			Исправлена ошибка чтения первого бита
 ;03.06.2021	w5277c@gmail.com			Скорректирована модель анализа таймингов
 ;03.07.2021	w5277c@gmail.com			Z->Y
+;20.12.2021	w5277c@gmail.com			Приведение результата к виду DRV_RESULT_...
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO: Не пройден тест, DRV_AM2301_RESULT_ERROR
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_AM2301
 .else
 .set DEF__C5_DRV_AM2301 = 1
-.message "Included driver AM2301 v0.5"
+.message "Included driver AM2301 v0.6"
 
-.include	"./core/drivers/_dht.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/wait_2ms.inc"
@@ -58,7 +58,7 @@ DRV_AM2301_INIT:
 ;Основной код, опрос датчика
 ;OUT: TEMP_H,TEMP_L-значение температуры в SDNF формате
 ;TEMP_EH,TEMP_EL-значение влажности в SDNF формате
-;TEMP-код результата DRV_DHT_RESULT_...
+;TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -103,7 +103,7 @@ DRV_AM2301_INIT:
 
 	LDD TEMP,Y+_DRV_AM2301_OFFSET
 	CPI TEMP,41
-	LDI TEMP,DRV_DHT_RESULT_ABSENT
+	LDI TEMP,DRV_RESULT_ABSENT
 	BREQ PC+0x02
 	RJMP _DRV_AM2301_PROC__END
 
@@ -118,9 +118,10 @@ DRV_AM2301_INIT:
 	ADD ACCUM,TEMP
 	LDD TEMP,Y+_DRV_AM2301_BUFFER+0x04
 	CP TEMP,ACCUM
-	LDI TEMP,DRV_DHT_RESULT_ERROR
+	LDI TEMP,DRV_RESULT_ERROR
 	BRNE _DRV_AM2301_PROC__ERROR
 
+	;TODO использовать WORD_TO_SDNF?
 	LDD TEMP_H,Y+_DRV_AM2301_BUFFER_HH
 	LDD TEMP_L,Y+_DRV_AM2301_BUFFER_HL
 	LDI TEMP,0x0a
@@ -153,7 +154,7 @@ DRV_AM2301_INIT:
 	ORI TEMP_L,0x80
 	POP TEMP_H
 
-	LDI TEMP,DRV_DHT_RESULT_OK
+	LDI TEMP,DRV_RESULT_OK
 	RJMP _DRV_AM2301_PROC__END
 
 _DRV_AM2301_PROC__ERROR:
@@ -161,7 +162,7 @@ _DRV_AM2301_PROC__ERROR:
 	LDI TEMP_L,0xff
 	RJMP _DRV_AM2301_PROC__END
 _DRV_AM2301_PROC__ABSENT:
-	LDI TEMP,DRV_DHT_RESULT_ABSENT
+	LDI TEMP,DRV_RESULT_ABSENT
 	LDI TEMP_EL,0xff
 	LDI TEMP_L,0xff
 	MCALL C5_DISPATCHER_UNLOCK

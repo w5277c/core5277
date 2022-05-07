@@ -20,3 +20,11 @@ examples/other/7seg_cntr/7seg_cntr_old.lay6
 examples/other/cv_logger/map.map
 
 examples/other/cv_logger/Debug/
+
+examples/5277_io_gayeway/wh1602/Debug/
+
+*.bak
+
+examples/5277_io_gayeway/cv_logger/Debug/
+
+examples/5277_io_gayeway/datetime/Debug/

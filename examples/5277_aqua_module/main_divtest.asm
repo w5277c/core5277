@@ -30,7 +30,6 @@
 	.include	"./core/io/out_romstr.inc"
 	.include	"./core/io/out_cr.inc"
 	.include	"./math/div10.inc"
-	.include	"./math/div100.inc"
 	;---
 
 ;---CONSTANTS--------------------------------------------
@@ -60,8 +59,6 @@ MAIN:
 	.db   "[0x",0x00
 	TASK__LOGSTR3:
 	.db   "]",0x0a,0x0d,0x00
-	TASK__LOGSTR4:
-	.db   "59942/100(DIV100)=",0x00,0x00
 ;--------------------------------------------------------;Задача
 TASK__INIT:
 	MCALL C5_READY
@@ -80,12 +77,6 @@ TASK__LOOP:
 	INC LOOP_CNTR
 	CPI LOOP_CNTR,0x00
 	BRNE TASK__LOOP
-
-	LDI TEMP_H,high(59942)
-	LDI TEMP_L,low(59942)
-	C5_OUT_ROMSTR TASK__LOGSTR4
-	MCALL DIV100
-	MCALL C5_OUT_NUM16
 
 	RET
 

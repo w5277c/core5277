@@ -6,6 +6,8 @@
 ;26.01.2021	w5277c@gmail.com			Не выводим лишние нули
 ;03.07.2021	w5277c@gmail.com			Багфикс
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO Оптимизировать
+;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_OUT_NUM
 .else
 .set DEF_C5_OUT_NUM = 1
@@ -34,7 +36,7 @@ C5_OUT_NUM:
 	LDI TEMP,0x64
 	MCALL DIV16x8
 	OR FLAGS,TEMP_L
-	BREQ PC+0x05
+	BREQ PC+0x03+_MCALL_SIZE
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_OUT_CHAR
@@ -45,7 +47,7 @@ C5_OUT_NUM:
 	MOV TEMP,ACCUM
 	MCALL DIV10
 	OR FLAGS,TEMP_L
-	BREQ PC+0x05
+	BREQ PC+0x03+_MCALL_SIZE
 	MOV TEMP,TEMP_L
 	SUBI TEMP,(0x100-0x30)											;+0x30
 	MCALL C5_OUT_CHAR

@@ -11,10 +11,4 @@
 	.EQU	DRV_RTC_SET_TIMESTAMP				= 0x01			;Установить время
 	.EQU	DRV_RTC_GET_TIMESTAMP				= 0x02			;Считать время
 
-	;---RESULT-CODE---------------------------------------;Код результата
-	.EQU	DRV_RTC_RESULT_OK						= 0x00			;
-	.EQU	DRV_RTC_RESULT_OP_FAILED			= 0x81			;
-	.EQU	DRV_RTC_RESULT_UNSUPPORTED			= 0xFF			;
-
-
 .endif

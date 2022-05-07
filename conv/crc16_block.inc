@@ -16,7 +16,8 @@ CRC16_BLOCK:
 ;--------------------------------------------------------
 ;Подсчет блока CRC(16 бит)
 ;IN: X-адрес начала блока, TEMP_H/L-длина
-;Y-адрес процедуры для вычисления байта
+;TEMP_EH,EL-начальная сумма
+;Z-адрес процедуры для вычисления байта
 ;OUT: TEMP_EH,EL-сумма
 ;--------------------------------------------------------
 	PUSH_X
@@ -25,14 +26,8 @@ CRC16_BLOCK:
 	PUSH TEMP
 
 _CRC16_BLOCK__LOOP:
-	LDI TEMP,low(_CRC16_BLOCK__CODEPOINT)
-	PUSH TEMP
-	LDI TEMP,high(_CRC16_BLOCK__CODEPOINT)
-	PUSH TEMP
-	PUSH YL
-	PUSH YH
 	LD TEMP,X+
-	RET
+	ICALL
 _CRC16_BLOCK__CODEPOINT:
 	SUBI TEMP_L,0x01
 	SBCI TEMP_H,0x00

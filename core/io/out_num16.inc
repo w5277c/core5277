@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;25.01.2021	w5277c@gmail.com			Начало (не тестировано)
+;18.10.2021	w5277c@gmail.com			Оптимизация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_OUT_NUM16
 .else
@@ -9,61 +10,48 @@
 .ifdef LOGGING_PORT
 
 .include	"./math/div16x8.inc"
-.include	"./math/mul16x8.inc"
 .include	"./core/io/out_char.inc"
 
 ;--------------------------------------------------------
 C5_OUT_NUM16:
 ;--------------------------------------------------------
-;Логирование десятиричного числа(2 байта)
-;IN: TEMP_H/TEMP_L-слово
+;Логирование десятиричного 16b числа
+;IN: TEMP_H/L-16b число
 ;--------------------------------------------------------
-	PUSH ACCUM
-	PUSH TEMP_EL
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
 	PUSH LOOP_CNTR
-	PUSH_Y
 
-	MOV YH,TEMP_H
-	MOV YL,TEMP_L
+	LDI LOOP_CNTR,0x04
+_C5_OUT_NUM16__LOOP:
 	LDI TEMP,0x0a
-	LDI LOOP_CNTR,0x05
-_C5_OUT_NUM16__LOOP1:
-	MOV TEMP_H,YH
-	MOV TEMP_L,YL
-	PUSH TEMP_L
-	MCALL DIV16X8
-	MOV YH,TEMP_H
-	MOV YL,TEMP_L
-	MCALL MUL16X8
-	POP TEMP_H
-	SUB TEMP_H,TEMP_L
-	PUSH TEMP_H
+	MCALL DIV16x8
+	SUBI TEMP,(0x100-0x30)
+	PUSH TEMP
 	DEC LOOP_CNTR
-	BRNE _C5_OUT_NUM16__LOOP1
+	BRNE _C5_OUT_NUM16__LOOP
+	SUBI TEMP_L,(0x100-0x30)
+	PUSH TEMP_L
 
-	LDI TEMP_L,0x00
-	LDI LOOP_CNTR,0x05
+	LDI LOOP_CNTR,0x04
 _C5_OUT_NUM16__LOOP2:
 	POP TEMP
-	CPI LOOP_CNTR,0x01
+	SBRC TEMP_L,0x07
 	BREQ PC+0x03
-	OR TEMP_L,TEMP
-	BREQ PC+0x04
-	SUBI TEMP,(0x100-0x30)
+	CPI TEMP,0x30
+	BREQ PC+0x01+_MCALL_SIZE+0x01
 	MCALL C5_OUT_CHAR
+	ORI FLAGS,(1<<0x07)
 	DEC LOOP_CNTR
 	BRNE _C5_OUT_NUM16__LOOP2
+	POP TEMP
+	MCALL C5_OUT_CHAR
 
-	POP_Y
 	POP LOOP_CNTR
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
-	POP TEMP_EL
-	POP ACCUM
 	RET
 .endif
 .endif

@@ -21,7 +21,7 @@ PORT_ISET:
 ;IN: ACCUM - порт
 ;flag C - состояние порта(true = LO)
 ;--------------------------------------------------------
-	BRCC PC+0x03
+	BRCC PC+0x01+_MCALL_SIZE
 	MJMP PORT_SET_LO
 	MJMP PORT_SET_HI
 .endif

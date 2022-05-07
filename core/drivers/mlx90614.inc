@@ -4,12 +4,18 @@
 ;17.06.2020	w5277c@gmail.com			Начало
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;03.07.2021	w5277c@gmail.com			Z->Y
+;20.12.2021	w5277c@gmail.com			Приведение результата к виду DRV_RESULT_...
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO поддержка отрицательной температуры
+;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_MLX90614
+.else
+.set DEF__C5_DRV_MLX90614 = 1
+.message "Included driver MLX90614 v0.4"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./math/mul16x8.inc"
-.include	"./math/div16x8.inc"
+.include	"./conv/word_to_sdnf.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_MLX90614_K						= 27315			;1С=273.15К
@@ -23,7 +29,7 @@
 	.EQU	_DRV_MLX96014_RAM_SIZE				= 0x03
 
 _DRV_MLX90614_DATAPCKET:
-	.db 0x07																;Tobj1
+	.db 0x07,0x00														;Tobj1
 ;--------------------------------------------------------
 DRV_MLX90614_INIT:
 ;--------------------------------------------------------
@@ -39,14 +45,11 @@ DRV_MLX90614_INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, работа с датчиком
-;OUT: X-температура объекта,
-;Флаг Z-результат(true = успешно)
+;OUT: TEMP_H,L-температура объекта,
+;Флаг TEMP-результат DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH TEMP
-	PUSH TEMP_H
-	PUSH TEMP_L
-	PUSH TEMP_EL
+	PUSH_X
 	PUSH_Y
 	PUSH_Z
 
@@ -59,35 +62,25 @@ DRV_MLX90614_INIT:
 	LDI TEMP_L,_DRV_MLX90614_RECV_LEN
 	LDI ACCUM,_DRV_MLX90614_I2C_ADDR
 	MCALL C5_EXEC
-	CPI TEMP,DRV_I2C_STATE_OK
+	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_MLX90614__ERROR
 
 	LDD TEMP_H,Y+_DRV_MLX90614_RESULT+0x01
 	LDD TEMP_L,Y+_DRV_MLX90614_RESULT+0x00
-	LDI TEMP,0x02
-	MCALL MUL16X8
+	LSL TEMP_L
+	ROL TEMP_H
 	SUBI TEMP_L,low(_DRV_MLX90614_K)
 	SBCI TEMP_H,high(_DRV_MLX90614_K)
-	MOV ACCUM,TEMP_L
-	LDI TEMP,100
-	MCALL DIV16X8
-	MOV XH,TEMP_L
-	CLR TEMP_H
-	LDI TEMP,100
-	MCALL MUL16X8
-	MOV XL,ACCUM
-	SUB XL,TEMP_L
-	SEZ
+	MCALL WORD_TO_SDNF
+	LDI TEMP,DRV_RESULT_OK
 	RJMP _DRV_MLX90614__END
 _DRV_MLX90614__ERROR:
-
-	CLZ
+	LDI TEMP,DRV_RESULT_ERROR
 _DRV_MLX90614__END:
+
 	POP_Z
 	POP_Y
-	POP TEMP_EL
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP
+	POP_X
 	POP ACCUM
 	RET
+.endif

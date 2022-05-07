@@ -2,9 +2,9 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;05.01.2021	w5277c@gmail.com			Начало
+;18.10.2021	w5277c@gmail.com			Оптимизация
 ;-----------------------------------------------------------------------------------------------------------------------
-;TODO отказаться от T
-;-----------------------------------------------------------------------------------------------------------------------
+
 .ifdef DEF_NUM16_TO_STR
 .else
 .set DEF_NUM16_TO_STR = 1
@@ -13,70 +13,49 @@
 .message "included NUM16_TO_STR"
 .endif
 
-.include	"./math/div32x16.inc"
 .include	"./math/div16x8.inc"
-.include	"./math/mul16x8.inc"
 
 ;--------------------------------------------------------
 NUM16_TO_STR:
 ;--------------------------------------------------------
-;Конвертирование числа 2Б в текст
+;Конвертирование числа 16b в текст
 ;Конец строки не указывается
-;IN: TEMP_H,TEMP_L-число (0-65535),
-;Z - dst адрес
+;IN: TEMP_H/L-число (0-65535), Z-dst адрес
 ;OUT: Z-новое смещение
 ;--------------------------------------------------------
-	PUSH_X
 	PUSH LOOP_CNTR
 	PUSH TEMP
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH TEMP_EH
-	PUSH TEMP_EL
 
-;	CLT
-	LDI LOOP_CNTR,0x05
-	LDI XH,high(10000)
-	LDI XL,low(10000)
-__NUM16_TO_STR__LOOP:
-	LDI TEMP_EH,0x00
-	LDI TEMP_EL,0x00
-	PUSH TEMP_H
-	PUSH TEMP_L
-	MCALL DIV32X16
-;	BRTS PC+0x04
-;	CPI TEMP_L,0x00
-;	BREQ __NUM16_TO_STR__SKIP_CHAR
-;	SET
-	LDI TEMP,0x30
-	ADD TEMP,TEMP_L
-	ST Z+,TEMP
-;__NUM16_TO_STR__SKIP_CHAR:
-	MOV TEMP,TEMP_L
-	MOV TEMP_H,XH
-	MOV TEMP_L,XL
-	MCALL MUL16X8
-	POP TEMP_EL
-	POP TEMP_EH
-	SUB TEMP_EL,TEMP_L
-	SBC TEMP_EH,TEMP_H
-	MOV TEMP_H,XH
-	MOV TEMP_L,XL
-	LDI TEMP,10
-	MCALL DIV16X8
-	MOV XH,TEMP_H
-	MOV XL,TEMP_L
-	MOV TEMP_H,TEMP_EH
-	MOV TEMP_L,TEMP_EL
+	LDI LOOP_CNTR,0x04
+_NUM16_TO_STR__LOOP:
+	LDI TEMP,0x0a
+	MCALL DIV16x8
+	SUBI TEMP,(0x100-0x30)
+	PUSH TEMP
 	DEC LOOP_CNTR
-	BRNE __NUM16_TO_STR__LOOP
+	BRNE _NUM16_TO_STR__LOOP
+	SUBI TEMP_L,(0x100-0x30)
+	PUSH TEMP_L
 
-	POP TEMP_EL
-	POP TEMP_EH
+	LDI LOOP_CNTR,0x04
+_NUM16_TO_STR__LOOP2:
+	POP TEMP
+	SBRC TEMP_L,0x07
+	BREQ PC+0x03
+	CPI TEMP,0x30
+	BREQ PC+0x03
+	ST Z+,TEMP
+	ORI FLAGS,(1<<0x07)
+	DEC LOOP_CNTR
+	BRNE _NUM16_TO_STR__LOOP2
+	POP TEMP
+	ST Z+,TEMP
+	
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP
 	POP LOOP_CNTR
-	POP_X
 	RET
 .endif

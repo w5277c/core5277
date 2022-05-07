@@ -1,12 +1,13 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;21.02.2021  w5277c@gmail.com			Начало
-;11.03.2021  w5277c@gmail.com			Относительные переходы, но осталась зависимость от типа МК
-;03.04.2021  w5277c@gmail.com			Багфиксинг
-;04.04.2021  w5277c@gmail.com			Багфиксинг
-;05.04.2021  w5277c@gmail.com			Багфиксинг(не тестировано)
-;12.09.2021  w5277c@gmail.com			Багфиксинг(первый успешный тест)
+;21.02.2021	w5277c@gmail.com			Начало
+;11.03.2021	w5277c@gmail.com			Относительные переходы, но осталась зависимость от типа МК
+;03.04.2021	w5277c@gmail.com			Багфиксинг
+;04.04.2021	w5277c@gmail.com			Багфиксинг
+;05.04.2021	w5277c@gmail.com			Багфиксинг(не тестировано)
+;12.09.2021	w5277c@gmail.com			Багфиксинг(первый успешный тест)
+;07.05.2022	konstantin@5277.ru		Не отрабатывал блок кода после успешной прошивки
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_BOOTLADER
 .error "Bootloader already included!"
@@ -18,7 +19,7 @@
 .endif
 
 .ORG BOOT_512W_ADDR
-	.EQU	BLDR_VERSION									= 0x01	;Версия бутлоадера
+	.EQU	BLDR_VERSION									= 0x02	;Версия бутлоадера
 	;---
 	.SET	EEPROM_BLDR_ERR_CNTR							= 0x15	;1Б Счетчик ошибок, изначально равен 64, при нуле блокируем работу загрузчика
 	.SET	EEPROM_BLDR_ENABLED							= 0x16	;1Б Признак работы бутлоадера(0x52)
@@ -79,7 +80,7 @@ BLDR_START:
 	LDI_X EEPROM_BLDR_ENABLED
 	RCALL _BLDR__EEPROM_READ_BYTE
 	CPI TEMP,0x52
-	BREQ PC+0x03
+	BREQ PC+0x01+_MCALL_SIZE
 	MJMP 0x0000
 
 BLDR_UNCONDITIONAL_START:
@@ -320,8 +321,6 @@ _BLDR_START__NOT_WRITE:
 	BRNE _BLDR_START__NOT_DONE
 		LDS TEMP,RAMSTART+_BLDR_BUS5277_PACKET_DATA+0x00
 		PUSH TEMP
-		LDI TEMP_H,_BLDR_BUS5277_RESP_OK
-		RCALL _BLDR__MAKE_RESP
 
 		LDI_Y _APPLICATION_FLASH_SIZE
 		LDI_Z 0x0000
@@ -334,21 +333,33 @@ _BLDR_START__DONE_LOOP:
 
 		POP TEMP
 		CP TEMP,ACCUM
-		BREQ PC+0x09
-		;CRC не совпался
-		CP ERR_CNTR,C0x00
+		BREQ PC+0x0b
+		CP ERR_CNTR,C0x00												;CRC не совпался
 		BREQ PC+0x00
 		DEC ERR_CNTR
 		MOV TEMP,ERR_CNTR
 		LDI_X EEPROM_BLDR_ERR_CNTR
 		RCALL _BLDR__EEPROM_WRITE_BYTE
-		RJMP _BLDR_RESP__ILLEGAL_DATA_ADDR
+		LDI TEMP_H,_BLDR_BUS5277_RESP_REJECT
+		RCALL _BLDR__MAKE_RESP
+		RJMP _BLDR_START__RX_START
+
+		LDI TEMP_H,_BLDR_BUS5277_RESP_OK							;CRC совпался
+		RCALL _BLDR__MAKE_RESP
 
 		LDI_X EEPROM_BLDR_ENABLED
 		LDI TEMP,0x00
 		RCALL _BLDR__EEPROM_WRITE_BYTE
 
-		MJMP 0x0000
+		CLI
+		WDR
+		LDS TEMP,WDTCR
+		ORI TEMP,(1<<WDCE)|(1<<WDE)
+		STS WDTCR,TEMP
+		LDI TEMP,(0<<WDCE)|(1<<WDE)|(0<<WDIE)|(0<<WDP3)|(1<<WDP2)|(1<<WDP1)|(0<<WDP0)
+		STS WDTCR,TEMP
+		RJMP PC
+
 _BLDR_START__NOT_DONE:
 		RJMP _BLDR_RESP__ILLEGAL_DATA_ADDR
 

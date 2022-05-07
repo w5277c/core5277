@@ -8,12 +8,10 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./math/mul16x8.inc"
-.include	"./math/div16x8.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_LTC2451_FREQ_60Hz				= 0x00			;Частота преобразования - 60Гц
-	.EQU	DRV_LTC2451_FREQ_30Hz				= 0x01			;Частота преобразования - 30Гц
+	.EQU	DRV_LTC2451_FREQ_30Hz				= 0x80			;Частота преобразования - 30Гц
 
 	.EQU	_DRV_LTC2451_I2C_ADDR				= 0x14			;Адрес устройства
 	
@@ -50,15 +48,22 @@ DRV_LTC2451_INIT:
 
 	MCALL C5_RAM_OFFSET
 
+	LDD TEMP,Y+_DRV_LTC2451_FREQ
+	STD Y+_DRV_LTC2451_BUFFER,TEMP
 	LDD TEMP,Y+_DRV_LTC2451_I2C_DRV
 	MOVW ZL,YL
 	MOVW XL,YL
 	ADIW Xl,_DRV_LTC2451_BUFFER
+	
 	LDI TEMP_H,0x01
 	LDI TEMP_L,0x02
 	LDI ACCUM,_DRV_LTC2451_I2C_ADDR
 	MCALL C5_EXEC	
 
+	LDI TEMP_H,0xff
+	LDI TEMP_L,0xff
+	CPI TEMP,DRV_RESULT_OK
+	BRNE PC+0x03
 	LDD TEMP_H,Y+_DRV_LTC2451_BUFFER+0x00
 	LDD TEMP_L,Y+_DRV_LTC2451_BUFFER+0x01
 

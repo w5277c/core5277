@@ -21,7 +21,7 @@ REG_BIT_ISET:
 ;IN: TEMP-адрес регистра, ACCUM-номер бита
 ;flag C-состояние бита(true = HI)
 ;--------------------------------------------------------
-	BRCC PC+0x03
+	BRCC PC+0x01+_MCALL_SIZE
 	MJMP REG_BIT_LO
 	MJMP REG_BIT_HI
 .endif

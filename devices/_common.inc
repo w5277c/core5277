@@ -41,6 +41,7 @@
 .endif
 	.SET	REALTIME									= 0x00
 	.SET	TIMERS									= 0x00
+	.SET	TIMERS16									= 0x00
 .ifdef AVRA
 .else
 	.SET	AVRA										= 0x00
@@ -48,7 +49,6 @@
 	.SET	MUL_SUPPORT								= 0x01
 
 .ifdef CORE_FREQ
-	.SET	_IV_STEP									= 0x01;			;Шаг между адресами переходов на обработчики прерываний
 	.EQU	TIMERS_SPEED_50US						= (3125*CORE_FREQ*2)/1000	;2-20МГц(реком. 4,8,12,16,20)
 	.EQU	TIMERS_SPEED_25US						= (3125*CORE_FREQ)/1000		;2-20МГц(реком. 8,16)
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
@@ -150,6 +150,33 @@
 	.DEF	ZL											= r30
 	.DEF	ZH											= r31
 
+	;---Часто-используемые-константы-для-частот-программного-таймера---
+;TODO делить на 2?
+.ifdef TIMERS_SPEED
+.if TIMERS_SPEED == TIMERS_SPEED_50US
+	.EQU	TIMER_FREQ_20KHz						= 1
+	.EQU	TIMER_FREQ_10KHz						= 2
+	.EQU	TIMER_FREQ_5KHz						= 4
+	.EQU	TIMER_FREQ_4KHz						= 5
+	.EQU	TIMER_FREQ_2KHz						= 10
+	.EQU	TIMER_FREQ_1KHz						= 20
+	.EQU	TIMER_FREQ_500Hz						= 40
+	.EQU	TIMER_FREQ_250Hz						= 80
+	.EQU	TIMER_FREQ_100Hz						= 200
+.else
+	.EQU	TIMER_FREQ_40KHz						= 1
+	.EQU	TIMER_FREQ_20KHz						= 2
+	.EQU	TIMER_FREQ_10KHz						= 4
+	.EQU	TIMER_FREQ_5KHz						= 8
+	.EQU	TIMER_FREQ_4KHz						= 10
+	.EQU	TIMER_FREQ_2KHz						= 20
+	.EQU	TIMER_FREQ_1KHz						= 40
+	.EQU	TIMER_FREQ_500Hz						= 80
+	.EQU	TIMER_FREQ_250Hz						= 160
+	.EQU	TIMER_FREQ_200Hz						= 200
+.endif
+.endif
+.ifdef CORE_FREQ
 	;---Часто-используемые-константы-для-частот-таймера-С---
 	.EQU	TIMER_C_FREQ_76800Hz					= (CORE_FREQ*125000/(76800*2))-1
 	.EQU	TIMER_C_FREQ_57600Hz					= (CORE_FREQ*125000/(57600*2))-1
@@ -168,7 +195,7 @@
 	.EQU	TIMER_C_FREQ_4800Hz					= (CORE_FREQ*125000/(4800*2))-1
 .ENDIF
 	;---
-
+.endif
 	.MACRO _C5_MACRO__PUSH_RDS
 		PUSH r16
 		PUSH r17

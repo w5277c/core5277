@@ -5,7 +5,9 @@
 ;03.03.2021	w5277c@gmail.com			PUSH/POP LOOP_CNTR
 ;16.09.2021	w5277c@gmail.com			Z->Y
 ;-----------------------------------------------------------------------------------------------------------------------
-
+;TODO избавится от флага T
+;TODO Оптимизировать
+;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_OUT_TIME32
 .else
 .set DEF_C5_OUT_TIME32 = 1
@@ -14,7 +16,7 @@
 .include	"./math/mul16x8.inc"
 .include	"./math/mul32x16.inc"
 .include	"./core/io/out_num16.inc"
-.include	"./core/io/out_numx32.inc"
+.include	"./core/io/out_num32.inc"
 
 ;--------------------------------------------------------
 C5_OUT_TIME32:
@@ -77,7 +79,7 @@ C5_OUT_TIME32__LOOP_S:
 	POP TEMP
 	BRTS PC+0x04
 	CPI TEMP,0x00
-	BREQ PC+0x05
+	BREQ PC+0x03+_MCALL_SIZE
 	SET
 	SUBI TEMP,(0x100-0x30)
 	MCALL C5_OUT_CHAR
@@ -89,7 +91,7 @@ C5_OUT_TIME32__LOOP_MS:
 	POP TEMP
 	BRTS PC+0x04
 	CPI TEMP,0x00
-	BREQ PC+0x05
+	BREQ PC+0x03+_MCALL_SIZE
 	SET
 	SUBI TEMP,(0x100-0x30)
 	MCALL C5_OUT_CHAR
@@ -101,14 +103,14 @@ C5_OUT_TIME32__LOOP_US:
 	POP TEMP
 	BRTS PC+0x04
 	CPI TEMP,0x00
-	BREQ PC+0x05
+	BREQ PC+0x03+_MCALL_SIZE
 	SET
 	SUBI TEMP,(0x100-0x30)
 	MCALL C5_OUT_CHAR
 	DEC LOOP_CNTR
 	BRNE C5_OUT_TIME32__LOOP_US
 
-	BRTS PC+0x04
+	BRTS PC+0x02+_MCALL_SIZE
 	LDI TEMP,'0'
 	MCALL C5_OUT_CHAR
 
