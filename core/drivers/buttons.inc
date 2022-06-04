@@ -7,11 +7,16 @@
 ;23.04.2021	w5277c@gmail.com			Багфиксинг и успешный первый тест
 ;04.07.2021	w5277c@gmail.com			Z->Y, оптимизация
 ;25.10.2021	w5277c@gmail.com			Добавлена поддержка кнопки с фиксацией(не тестировано)
+;04.06.2022	konstantin@5277.ru		Добавлена поддержка сенсора и светодиода(не тестировано)
 ;-----------------------------------------------------------------------------------------------------------------------
+;Режим сенсора вероятно будет работать только на высоких частотах МК, желательно не менее 16MHz
+
+;-----------------------------------------------------------------------------------------------------------------------
+
 .ifdef DEF__C5_DRV_BUTTONS
 .else
 .set DEF__C5_DRV_BUTTONS = 1
-.message "Included driver Buttons v0.4"
+.message "Included driver Buttons v0.5"
 
 ;TODO Фиксируется 5-ое длинное нажатие (вероятно с потерей первого значения) из 4 допустимых
 
@@ -23,13 +28,15 @@
 .include	"./core/wait.inc"
 .include	"./core/timer_set.inc"
 .include	"./core/timer_start.inc"
+.include	"./core/timer_stop.inc"
 .include	"./core/timer_set_y.inc"
 .include	"./io/port_mode_in.inc"
 .include	"./io/port_set_hi.inc"
+.include	"./io/port_set_lo.inc"
 .include	"./io/port_get.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_BUTTONS_STRUCT_SIZE					= 0x04	;Размер структуры данных для каждой кнопки
+	.EQU	_DRV_BUTTONS_STRUCT_SIZE					= 0x05	;Размер структуры данных для каждой кнопки
 	.EQU	_DRV_BUTTONS_QUEUE_MAX_SIZE				= 0x05	;Количество кнопок очереди для событий
 	;---
 	.EQU	_DRV_BUTTONS_TIMER_ID						= 0x00	;1B - ИД таймера
@@ -40,10 +47,11 @@
 	.EQU	_DRV_BUTTONS_DATA								= _DRV_BUTTONS_QUEUE+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2);x4B - Данные кнопок
 
 	;---Структура данных по кнопкам---
-	.EQU	_DRV_BUTTONS_PORT								= 0x00	;Порт кнопки
-	.EQU	_DRV_BUTTONS_CNTR_N_FLAGS					= 0x01	;Счетчик высоких состояний и флаги(старший ниббл)
-	.EQU	_DRV_BUTTONS_TIME								= 0x02	;Время отсчета
-	.EQU	_DRV_BUTTONS_RESULT							= 0x03	;Результат |rqqqssss|, r - повтор, q-кол-во нажатий(1-4), s-состояния(история 0-короткое/1-длинное)
+	.EQU	_DRV_BUTTON_PORT								= 0x00	;Порт кнопки
+	.EQU	_DRV_BUTTON_FLAGS								= 0x01	;Флаги
+	.EQU	_DRV_BUTTON_CNTR								= 0x02	;Счетчик высоких состояний порта
+	.EQU	_DRV_BUTTON_TIME								= 0x03	;Время отсчета
+	.EQU	_DRV_BUTTON_RESULT							= 0x04	;Результат |rqqqssss|, r - повтор, q-кол-во нажатий(1-4), s-состояния(история 0-короткое/1-длинное)
 	;---Тайминги---
 	.EQU	_DRV_BUTTONS_TIMER_PERIOD					= 0x02	;Период таймера (x*0.002) (анализ 32мс)
 	.EQU	_DRV_BUTTONS_MAX_CNTR						= 0x04	;Количество необходимых итераций перед анализом
@@ -52,18 +60,26 @@
 	.EQU	_DRV_BUTTONS_HOLD_TIME						= 600/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 1000
 	.EQU	_DRV_BUTTONS_TIMEOUT							= 400/(2*_DRV_BUTTONS_TIMER_PERIOD*_DRV_BUTTONS_MAX_CNTR);было 800
 	;---Флаги---
+	.EQU	_DRV_BUTTONS_FL_LED_MODE					= 0x00	;Режим паралельно подключенного светодиода
+	.EQU	_DRV_BUTTONS_FL_LED_ON						= 0x01	;Светодиод включен
+	.EQU	_DRV_BUTTONS_FL_SENSOR						= 0x02	;Режим сенсора или кнопки с/без фиксации
 	.EQU	_DRV_BUTTONS_FL_FIX							= 0x03	;Кнопка с фиксацией-1, без фиксации-0
-	.EQU	_DRV_BUTTONS_FL_INIT							= 0x04	;Ожидание начала цикла опроса
-	.EQU	_DRV_BUTTONS_FL_FIRST_SCAN					= 0x05	;Первый опрос(нет предыдущего занчения)
-	.EQU	_DRV_BUTTONS_FL_HOLD							= 0x06	;Удерживание
-	.EQU	_DRV_BUTTONS_FL_STATE						= 0x07	;Текущее состояние порта
+	.EQU	_DRV_BUTTONS_FL_VCCBASE						= 0x04	;Общий плюс
+	.EQU	_DRV_BUTTONS_FL_STATELESS					= 0x05	;Мгновенная реакция в одно нажатие
+	;---Состояния---
+	.EQU	_DRV_BUTTONS_ST_INIT							= 0x00	;Ожидание начала цикла опроса
+	.EQU	_DRV_BUTTONS_ST_FIRST_SCAN					= 0x01	;Первый опрос(нет предыдущего занчения)
+	.EQU	_DRV_BUTTONS_ST_STATE						= 0x02	;Текущее состояние порта
 	;---OPERATIONS---
 	.EQU	DRV_BUTTONS_OP_ADD							= 0x00	;Добавляем кнопку без фиксации
 	.EQU	DRV_BUTTONS_OP_ADD_FIX						= 0x01	;Добавляем кнопку с фиксацией
-	.EQU	DRV_BUTTONS_OP_GET							= 0x02	;Считываем нажатие
-	.EQU	DRV_BUTTONS_OP_WAIT							= 0x03	;Ожидаем нажатие
-	.EQU	DRV_BUTTONS_OP_CLEAR							= 0x04	;Очищаем очередь нажатий
-
+	.EQU	DRV_BUTTONS_OP_ADD_SENSOR					= 0x02	;Добавляем сенсор
+	.EQU	DRV_BUTTONS_OP_ADD_CUSTOM					= 0x03	;Добавляем кнопку с заданными флагами
+	.EQU	DRV_BUTTONS_OP_GET							= 0x04	;Считываем нажатие
+	.EQU	DRV_BUTTONS_OP_WAIT							= 0x05	;Ожидаем нажатие
+	.EQU	DRV_BUTTONS_OP_CLEAR							= 0x06	;Очищаем очередь нажатий
+	.EQU	DRV_BUTTONS_OP_LED_ON						= 0x07	;Включаем светодид кнопки
+	.EQU	DRV_BUTTONS_OP_LED_OFF						= 0x08	;Вылючаем светодид кнопки
 
 	.EQU	_DRV_BUTTONS_RAM_SIZE						= 0x04+(_DRV_BUTTONS_QUEUE_MAX_SIZE*2)
 ;--------------------------------------------------------
@@ -115,6 +131,13 @@ DRV_BUTTONS_INIT:
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_BUTTONS_OP_ADD
 	RJMP _DRV_BUTTONS_PROC_END
+	CPI FLAGS,DRV_BUTTONS_OP_ADD_SENSOR
+	BRNE PC+0x01+_MCALL_SIZE
+	MCALL _DRV_BUTTONS_OP_ADD
+	CPI FLAGS,DRV_BUTTONS_OP_ADD_CUST
+	BRNE PC+0x01+_MCALL_SIZE
+	MCALL _DRV_BUTTONS_OP_ADD
+
 	CPI FLAGS,DRV_BUTTONS_OP_GET
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_BUTTONS_OP_GET
@@ -126,6 +149,12 @@ DRV_BUTTONS_INIT:
 	CPI FLAGS,DRV_BUTTONS_OP_CLEAR
 	BRNE PC+0x01+_MCALL_SIZE
 	MCALL _DRV_BUTTONS_OP_CLEAR
+	CPI FLAGS,DRV_BUTTONS_OP_LED_ON
+	BRNE PC+0x01+_MCALL_SIZE
+	MCALL _DRV_BUTTONS_OP_LED
+	CPI FLAGS,DRV_BUTTONS_OP_LED_OFF
+	BRNE PC+0x01+_MCALL_SIZE
+	MCALL _DRV_BUTTONS_OP_LED
 
 _DRV_BUTTONS_PROC_END:
 	POP TEMP
@@ -137,7 +166,10 @@ _DRV_BUTTONS_OP_ADD:
 ;--------------------------------------------------------
 ;Добавляем кнопку
 ;IN: ACCUM-порт кнопки(7-бит-включать подтяжку)
-;FLAGS-тип кнопки(0x00-без фиксации, 0x01-с фиксацией)
+;FLAGS-тип кнопки(DRV_BUTTONS_OP_ADD/FIX/SENSOR/CUST)
+;TEMP_H-флаги(для режима ADD_CUST),
+;TEMP_L-порт нагрузки(1МОм) для сенсора или порт
+;конденсатора для остальных режимов
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH_X
@@ -159,7 +191,7 @@ _DRV_BUTTONS_OP_ADD:
 	;Сбрасываем флаг подтяжки
 	MOV TEMP,ACCUM
 	ANDI ACCUM,0x7f
-	STD Z+_DRV_BUTTONS_PORT,ACCUM
+	STD Z+_DRV_BUTTON_PORT,ACCUM
 	;Порт на вход
 	MCALL PORT_MODE_IN
 	SBRS TEMP,0x07
@@ -167,15 +199,27 @@ _DRV_BUTTONS_OP_ADD:
 	;Включаем подтяжку, если необходимо
 	MCALL PORT_SET_HI
 
+	MOV ACCUM,TEMP_L
+	MCALL PORT_OUT
+	MCALL PORT_SET_LO
+
 	;Записываем данные кнопки
+	ANDI TEMP_H,0x0f
 	LDI TEMP,(1<<_DRV_BUTTONS_FL_INIT)
+	CPI FLAGS,DRV_BUTTONS_OP_ADD_CUST
+	BRNE PC+0x02
+	OR TEMP,TEMP_H
 	CPI FLAGS,DRV_BUTTONS_OP_ADD_FIX
 	BRNE PC+0x02
 	ORI TEMP,(1<<_DRV_BUTTONS_FL_FIX)
+	CPI FLAGS,DRV_BUTTONS_OP_ADD_SENSOR
+	BRNE PC+0x02
+	ORI TEMP,(1<<_DRV_BUTTONS_FL_SENSOR)
 
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
-	STD Z+_DRV_BUTTONS_TIME,C0x00
-	STD Z+_DRV_BUTTONS_RESULT,C0x00
+	STD Z+_DRV_BUTTON_CNTR,C0x00
+	STD Z+_DRV_BUTTON_FLAGS,TEMP
+	STD Z+_DRV_BUTTON_TIME,C0x00
+	STD Z+_DRV_BUTTON_RESULT,C0x00
 
 	POP_Z
 	POP_X
@@ -245,6 +289,50 @@ _DRV_BUTTONS_PULL_QUEUE__END:
 	RET
 
 ;--------------------------------------------------------
+_DRV_BUTTONS_OP_LED:
+;--------------------------------------------------------
+;Управляем светодиодом
+;IN: ACCUM-порт кнопки
+;FLAGS-тип команды(DRV_BUTTONS_OP_LED_ON/OFF)
+;--------------------------------------------------------
+	PUSH LOOP_CNTR
+	PUSH TEMP_L
+
+	LDD LOOP_CNTR,Y+_DRV_BUTTONS_BUTTONS_QNT
+	CPI LOOP_CNTR,0x00
+	BRNE PC+0x02
+	RJMP _DRV_BUTTONS_OP_LED__END
+
+	LDD TEMP,Y+_DRV_BUTTONS_TIMER_ID
+
+	;Ищем нужный порт кнопки и задаем флаг _DRV_BUTTONS_FL_LED_ON
+_DRV_BUTTONS_OP_LED__LOOP:
+	LDD TEMP_L,Y+_DRV_BUTTON_PORT
+	CP TEMP_L,ACCUM
+	BRNE _DRV_BUTTONS_OP_LED__NEXT
+
+	MCALL C5_TIMER_STOP
+	LDD TEMP_L,Y+_DRV_BUTTON_FLAGS
+	CPI FLAGS,DRV_BUTTONS_OP_LED_ON
+	BRNE PC+0x02
+	ORI TEMP_L,(1<<_DRV_BUTTONS_FL_LED_ON)
+	CPI FLAGS,DRV_BUTTONS_OP_LED_OFF
+	BRNE PC+0x02
+	ANDI TEMP_L,~(1<<_DRV_BUTTONS_FL_LED_ON)
+	STD Y+_DRV_BUTTON_FLAGS,TEMP_L
+	MCALL C5_TIMER_START
+	RJMP _DRV_BUTTONS_OP_LED__END
+_DRV_BUTTONS_OP_LED__NEXT:
+	ADIW YL,_DRV_BUTTONS_STRUCT_SIZE
+	DEC LOOP_CNTR
+	BRNE _DRV_BUTTONS_OP_LED__LOOP
+_DRV_BUTTONS_OP_LED__END:
+
+	POP TEMP_L
+	POP LOOP_CNTR
+	RET
+
+;--------------------------------------------------------
 _DRV_BUTTONS_OP_CLEAR:
 ;--------------------------------------------------------
 ;Очищаем очередь нажатий
@@ -262,6 +350,8 @@ DRV_BUTTONS_TIMER_EVENT:
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH LOOP_CNTR
+	PUSH TEMP_H
+	PUSH TEMP_L
 
 	LDD LOOP_CNTR,Y+_DRV_BUTTONS_BUTTONS_QNT
 	CPI LOOP_CNTR,0x00
@@ -280,18 +370,72 @@ DRV_BUTTONS_TIMER_EVENT:
 
 	;Читаем состояние портов для каждой кнопки
 DRV_BUTTONS_TIMER_EVENT__READ_LOOP:
-	LDD ACCUM,Y+_DRV_BUTTONS_PORT
+	LDD ACCUM,Y+_DRV_BUTTON_PORT
+	LDD TEMP_H,Y+_DRV_BUTTON_FLAGS
+.MESSAGE "TODO Реализация сенсора. Хм, светодиод может выступать как нагрузочный резистор?"
+	;Включаем подтяжку в режиме всетодиода(даже если порт не нуждается в подтяжке)
+	SBR TEMP_H,_DRV_BUTTONS_FL_LED_MODE
+	RJMP PC+0x01+_MCALL_SIZE
+	MCALL PORT_SET_HI
+
+	SBR TEMP_H,_DRV_BUTTONS_FL_SENSOR
+	RJMP DRV_BUTTONS_TIMER_EVENT__GET_BUTTON_STATE
+
+	PUSH LOOP_CNTR
+	PUSH TEMP_H
+	LDI LOOP_CNTR,0x04
+
+	MCALL PORT_OFFSETS
+
+	MOV ZH,C0x00
+	MOV ZL,TEMP_H
+	PUSH FLAGS
+	LDS FLAGS,SREG
+	CLI
+	LD TEMP_L,Z
+	EOR TEMP_L,ACCUM	;Переключаем подтяжку
+	ST Z,TEMP_L
+	MOV ZL,TEMP
+
+DRV_BUTTONS_TIMER_EVENT__SENSOR_LOOP:
+	LD TEMP,Z
+	AND TEMP,ACCUM
+	EOR TEMP,TEMP_L
+	BREQ DRV_BUTTONS_TIMER_EVENT__SENSOR_DONE
+	DEC LOOP_CNTR
+	BRNE DRV_BUTTONS_TIMER_EVENT__SENSOR_LOOP
+DRV_BUTTONS_TIMER_EVENT__SENSOR_DONE:
+
+	MOV ZL,TEMP_H
+	LD TEMP_L,Z
+	AND TEMP_L,ACCUM	;Выключаем подтяжку
+	ST Z,TEMP_L
+	STS SREG,FLAGS
+	POP FLAGS
+
+	ADD LOOP_CNTR,C0xff	;С включен, значит кнопка не нажата
+	POP LOOP_CNTR
+	POP TEMP_H
+	RJMP DRV_BUTTONS_TIMER_EVENT__GET_BUTTON_STATE+_MCALL_SIZE
+
+DRV_BUTTONS_TIMER_EVENT__GET_BUTTON_STATE:
+	LDI TEMP_L,0x00
 	MCALL PORT_GET
-	BRCS DRV_BUTTONS_TIMER_EVENT__LO_STATE
+	ROL TEMP_L
+	CBR TEMP_H,_DRV_BUTTONS_FL_VCCBASE
+	SUBI TEMP_L,0x01
+	BRNE DRV_BUTTONS_TIMER_EVENT__LO_STATE
 	;Инкрементирую счетчик
-	LDD TEMP,Y+_DRV_BUTTONS_CNTR_N_FLAGS
-	MOV ACCUM,TEMP
-	ANDI TEMP,0xf8
-	ANDI ACCUM,0x07
-	INC ACCUM
-	OR TEMP,ACCUM
-	STD Y+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
+	LDD TEMP,Y+_DRV_BUTTONS_CNTR
+	INC TEMP
+	STD Y+_DRV_BUTTONS_CNTR,TEMP
 DRV_BUTTONS_TIMER_EVENT__LO_STATE:
+	;Выключаем подтяжку если режим светодиода и он выключен
+	SBR TEMP_H,_DRV_BUTTONS_FL_LED_MODE
+	RJMP PC+0x03+_MCALL_SIZE
+	CBR TEMP_H,_DRV_BUTTONS_FL_LED_ON
+	RJMP PC+0x01+_MCALL_SIZE
+	MCALL PORT_SET_LO
 
 	ADIW YL,_DRV_BUTTONS_STRUCT_SIZE
 	DEC LOOP_CNTR
@@ -308,8 +452,6 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 	SEI
 
 	PUSH_X
-	PUSH TEMP_H
-	PUSH TEMP_L
 	PUSH FLAGS
 
 	;Сбрасываю счетчик, т.к. отсчет завершен
@@ -322,32 +464,33 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE:
 
 DRV_BUTTONS_TIMER_EVENT__ANALYZE_LOOP:
 	;Считываю счетчик и флаги
-	LDD TEMP_H,Z+_DRV_BUTTONS_CNTR_N_FLAGS
+	LDD TEMP_H,Z+_DRV_BUTTON_FLAGS
+	LDD TEMP_L,Z+_DRV_BUTTON_CNTR
 	;Считываем предыдущее состояние порта в FLAGS
 	CLR FLAGS
 	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	ORI FLAGS,(1<<_DRV_BUTTONS_FL_STATE)
-	MOV TEMP_L,TEMP_H
 	;Сбрасываем счетчик и состояние в 0
-	ANDI TEMP_H,low(~((1<<_DRV_BUTTONS_FL_STATE)|0x07))
-	ANDI TEMP_L,0x07
+	;ANDI TEMP_H,low(~((1<<_DRV_BUTTONS_FL_STATE)|0x07))
+	ANDI TEMP_H,low(~(1<<_DRV_BUTTONS_FL_STATE))
 	LDI TEMP,_DRV_BUTTONS_MAX_CNTR/2
 	CP TEMP,TEMP_L
 	BRCC PC+0x02
 	;Устанавливаем состояние в 1
 	ORI TEMP_H,(1<<_DRV_BUTTONS_FL_STATE)
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+	STD Z+_DRV_BUTTON_FLAGS,TEMP_H
+	STD Z+_DRV_BUTTON_CNTR,TEMP_L
 
 ;TODO Нужно учитывать, что кнопка может быть нажата до запуса МК, не обрабатываем пока не отпустят
 
 	;Проверяем на только что добавленную кнопку
 	SBRS TEMP_H,_DRV_BUTTONS_FL_INIT
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT
-	STD Z+_DRV_BUTTONS_TIME,C0x00
-	STD Z+_DRV_BUTTONS_RESULT,C0x00
+	STD Z+_DRV_BUTTON_TIME,C0x00
+	STD Z+_DRV_BUTTON_RESULT,C0x00
 	ANDI TEMP_H,(1<<_DRV_BUTTONS_FL_FIX)
 	ORI TEMP_H,(1<<_DRV_BUTTONS_FL_FIRST_SCAN)
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+	STD Z+_DRV_BUTTON_FLAGS,TEMP_H
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT:
@@ -358,14 +501,14 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_INIT:
 	SBRS TEMP_H,_DRV_BUTTONS_FL_FIX
 	RJMP PC+0x04
 	ANDI TEMP_H,(1<<_DRV_BUTTONS_FL_FIX)|(1<<_DRV_BUTTONS_FL_STATE)
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+	STD Z+_DRV_BUTTON_FLAGS,TEMP_H
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN
 	;Если кнопка нажата, то остаемся в режиме первого сканирования
 	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	;Иначе, конпка не нажата, сбрасываем флаг первого сканирования
 	ANDI TEMP_H,(1<<_DRV_BUTTONS_FL_FIX)
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP_H
+	STD Z+_DRV_BUTTON_FLAGS,TEMP_H
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN:
@@ -386,15 +529,15 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_FOR_WO_FIX:
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED
 
 	;Увеличиваем время нахождения в одном и том-же состоянии
-	LDD TEMP_L,Z+_DRV_BUTTONS_TIME
+	LDD TEMP_L,Z+_DRV_BUTTON_TIME
 	CPI TEMP_L,0xff
 	BREQ PC+0x03
 	INC TEMP_L
-	STD Z+_DRV_BUTTONS_TIME,TEMP_L
+	STD Z+_DRV_BUTTON_TIME,TEMP_L
 
 	;Проверка на таймауты
 	;Считываем результат
-	LDD ACCUM,Z+_DRV_BUTTONS_RESULT
+	LDD ACCUM,Z+_DRV_BUTTON_RESULT
 	;Переходим, если кнопка нажата
 	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED
@@ -409,9 +552,8 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_FOR_WO_FIX:
 	BRCC PC+0x02
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	MCALL _DRV_BUTTONS__QUEUE_ADD
-	LDI TEMP,0x00
-	STD Z+_DRV_BUTTONS_RESULT,TEMP
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
+	STD Z+_DRV_BUTTON_RESULT,C0x00
+	STD Z+_DRV_BUTTON_FLAGS,C0x00
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_BUTTON_PRESSED:
@@ -440,21 +582,21 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_LONG_PRESS_REPEATE:
 	MCALL _DRV_BUTTONS__QUEUE_ADD
 	;Сбраываем, оставляя бит состояния порта включенным
 	LDI TEMP,(1<<_DRV_BUTTONS_FL_STATE)
-	STD Z+_DRV_BUTTONS_CNTR_N_FLAGS,TEMP
+	STD Z+_DRV_BUTTON_FLAGS,TEMP
 	;Не сбрасываем результат, для следующего события длинного нажатия(если кнопку так и не отпустили)
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
 	;Считываю и сбрасываю счетчик нахождения в одном состоянии
-	LDD TEMP_L,Z+_DRV_BUTTONS_TIME
+	LDD TEMP_L,Z+_DRV_BUTTON_TIME
 	CLR TEMP
-	STD Z+_DRV_BUTTONS_TIME,TEMP
+	STD Z+_DRV_BUTTON_TIME,TEMP
 	;Если кнопку нажали, то просто выходим
 	SBRC TEMP_H,_DRV_BUTTONS_FL_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 	;Проверяем количество нажатых кнопок
-	LDD TEMP_H,Z+_DRV_BUTTONS_RESULT
+	LDD TEMP_H,Z+_DRV_BUTTON_RESULT
 	MOV TEMP,TEMP_H
 	SWAP TEMP
 	ANDI TEMP,0x0f
@@ -471,7 +613,7 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
 	ANDI TEMP_H,0b00001111
 	SWAP TEMP
 	OR TEMP_H,TEMP
-	STD Z+_DRV_BUTTONS_RESULT,TEMP_H
+	STD Z+_DRV_BUTTON_RESULT,TEMP_H
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT:
 	ADIW ZL,_DRV_BUTTONS_STRUCT_SIZE
@@ -484,12 +626,12 @@ DRV_BUTTONS_TIMER_EVENT__ANALYZE_END:
 	MCALL C5_TIMER_START
 
 	POP FLAGS
-	POP TEMP_L
-	POP TEMP_H
 	POP_X
 	POP TEMP
 	STS SREG,TEMP
 DRV_BUTTONS_TIMER_EVENT__END:
+	POP TEMP_L
+	POP TEMP_H
 	POP LOOP_CNTR
 	POP ACCUM
 	POP TEMP
@@ -529,13 +671,13 @@ _DRV_BUTTONS__QUEUE_ADD:
 	INC TEMP
 	STD Y+_DRV_BUTTONS_QUEUE_SIZE,TEMP
 	;Записываю кнопку в очередь
-	LDD TEMP,Z+_DRV_BUTTONS_PORT
+	LDD TEMP,Z+_DRV_BUTTON_PORT
 	ST X+,TEMP															;Порт кнопки
 	ST X,ACCUM															;Результат
 	STS SREG,TEMP_L
 	;Очищаю данные кнопки
 	CLR TEMP
-	STD Z+_DRV_BUTTONS_TIME,TEMP
+	STD Z+_DRV_BUTTON_TIME,TEMP
 _DRV_BUTTONS__QUEUE_ADD_END:
 	POP_X
 	POP TEMP_L
