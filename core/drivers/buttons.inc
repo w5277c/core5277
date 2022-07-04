@@ -441,7 +441,7 @@ DRV_BUTTONS_TIMER_EVENT__LO_STATE:
 	SBRC TEMP_H,_DRV_BUTTON_FL_LED_ON
 	SEC
 	MCALL PORT_SET
-	
+
 	ADIW YL,_DRV_BUTTONS_STRUCT_SIZE
 	DEC LOOP_CNTR
 	BRNE DRV_BUTTONS_TIMER_EVENT__READ_LOOP
@@ -603,7 +603,8 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_LONG_PRESS_REPEATE:
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 
 _DRV_BUTTONS_TIMER_EVENT__ANALYZE_STATE_CHANGED:
-	;r в RESULT включен? Значит было длительное нажатие(сбрасываем состояние), пользователь просто отпустил кнопку(т.е. не последующее короткое нажатие)
+	;r в RESULT включен? Значит было длительное нажатие(сбрасываем состояние),
+	;пользователь просто отпустил кнопку(т.е. не последующее короткое нажатие)
 	SBRS FLAGS,0x07
 	RJMP PC+0x03
 	STD Z+_DRV_BUTTON_CNTR_N_STATES,C0x00
