@@ -7,6 +7,7 @@
 ;26.06.2021	w5277c@gmail.com			Все заново
 ;01.07.2021	w5277c@gmail.com			Первые успешные тесты
 ;04.07.2021	w5277c@gmail.com			Z->Y
+;04.09.2022	konstantin@5277.ru		Переход на процедуры программных таймеров
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер инфракрасного приемника и передачтика, использует INT и TIMER C (стандарт NEC возможно адаптирую для SIRC)
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -15,12 +16,15 @@
 .ifdef DEF__C5_DRV_IR
 .else
 .set DEF__C5_DRV_IR = 1
-.message "Included driver IR v0.2"
+.message "Included driver IR v0.3"
 
 	.include	"./core/ram/ram_offset.inc"
 	.include	"./core/ram/ram_realloc.inc"
 	.include	"./core/eint_enable.inc"
 	.include	"./core/eint_disable.inc"
+	.include	"./core/timer_set.inc"
+	.include	"./core/timer_start.inc"
+	.include	"./core/timer_stop.inc"
 	.include	"./io/port_offsets.inc"
 	.include	"./io/reg_bit_hi.inc"
 	.include	"./io/reg_bit_lo.inc"
@@ -89,12 +93,6 @@ DRV_IR_INIT:
 	LDI ACCUM,_DRV_IR_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
-	;Настройка таймера C
-	LDI_X _DRV_IR_TIMER_C_EVENT
-	MCALL C5_TIMER_C_SET_VECTOR
-	MOV TEMP,FLAGS
-	MCALL C5_TIMER_C_SET_PERIOD
-
 	;C5_IR_INTn
 	STD Y+_DRV_IR_INT_ID,TEMP_EH
 	;RX
@@ -135,6 +133,13 @@ DRV_IR_INIT:
 	MCALL REG_BIT_LO
 	STD Y+_DRV_IR_LED_PA,TEMP_H
 	STD Y+_DRV_IR_LED_PN,ACCUM
+
+	;Настройка таймера C
+	LDI TEMP_H,high(_DRV_IR_TIMER_C_EVENT)
+	LDI TEMP_L,low(_DRV_IR_TIMER_C_EVENT)
+	MOV ACCUM,FLAGS
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_SET
 
 	;Устанавливаю состояние READY
 	LDI ACCUM,DRV_IR_ST_READY
@@ -195,7 +200,8 @@ DRV_IR_INIT:
 	LDI_X _DRV_IR_PREN
 	STD Y+_DRV_IR_PULSE_CNTR+0x00,XH
 	STD Y+_DRV_IR_PULSE_CNTR+0x01,XL
-	MCALL C5_TIMER_C_START
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_START
 	;Жду окончания передачи
 _DRV_IR_PROC__SENDING_WAIT:
 	LDD TEMP,Y+_DRV_IR_STATE
@@ -250,7 +256,8 @@ _DRV_IR_PROC__RECEIVING_WAIT:
 		CP TEMP_L,ACCUM
 		BRCS _DRV_IR_PROC__RECEIVING_WAIT
 		;Достигли таймаута
-		MCALL C5_TIMER_C_STOP
+		LDI TEMP,TID_TIMER_C
+		MCALL C5_TIMER_STOP
 		LDD TEMP_H,Y+_DRV_IR_INT_ID
 		MCALL C5_EINT_DISABLE
 		LDI TEMP,DRV_IR_ST_FAIL
@@ -353,8 +360,9 @@ _DRV_IR_TIMER_C_EVENT__SCNPRDI:
 	LDD TEMP,Y+_DRV_IR_BYTE_POS
 	LDD ACCUM,Y+_DRV_IR_TX_LEN
 	CP ACCUM,TEMP
-	BRCC PC+0x01+_MCALL_SIZE+0x03
-	MCALL C5_TIMER_C_STOP
+	BRCC PC+0x02+_MCALL_SIZE+0x03
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_STOP
 	LDI TEMP,_DRV_IR_ST_TXDONE
 	STD Y+_DRV_IR_STATE,TEMP
 	RJMP _DRV_IR_TIMER_C_EVENT__DONE
@@ -381,7 +389,8 @@ _DRV_IR_TIMER_C_EVENT__SCNDTEN:
 	CPI ACCUM,_DRV_IR_ST_PR
 	BRNE _DRV_IR_TIMER_C_EVENT__NO_RXPR
 	;Достигли таймаута
-	MCALL C5_TIMER_C_STOP
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_STOP
 	LDI TEMP,_DRV_IR_ST_DTW
 	STD Y+_DRV_IR_STATE,TEMP
 	STD Y+_DRV_IR_BYTE_POS,C0x00
@@ -393,7 +402,8 @@ _DRV_IR_TIMER_C_EVENT__NO_RXPR:
 	CPI ACCUM,_DRV_IR_ST_DT
 	BRNE _DRV_IR_TIMER_C_EVENT__NO_RX_DT
 	;Достигли таймаута
-	MCALL C5_TIMER_C_STOP
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_STOP
 	LDI TEMP,DRV_IR_ST_READY
 	STD Y+_DRV_IR_STATE,TEMP
 	MCALL __DRV_IR_EINT_LED_OFF
@@ -419,7 +429,8 @@ _DRV_IR_EINT_EVENT:
 	LDI_X _DRV_IR_PRMAX
 	STD Y+_DRV_IR_PULSE_CNTR+0x00,XH
 	STD Y+_DRV_IR_PULSE_CNTR+0x01,XL
-	MCALL C5_TIMER_C_START
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_START
 	LDI TEMP,_DRV_IR_ST_PR
 	STD Y+_DRV_IR_STATE,TEMP
 	RJMP _DRV_IR_EINT_EVENT__END
@@ -489,7 +500,8 @@ _DRV_IR_EINT_EVENT__NO_PR:
 	CP TEMP,ACCUM
 	BRNE _DRV_IR_EINT_EVENT__DT_SKIP_ACCUM_SAVE
 	;Достигли переполнения
-	MCALL C5_TIMER_C_STOP
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_STOP
 	LDD TEMP_H,Y+_DRV_IR_INT_ID
 	MCALL C5_EINT_DISABLE
 	LDI TEMP,DRV_IR_ST_OVERFLOW
@@ -497,7 +509,8 @@ _DRV_IR_EINT_EVENT__NO_PR:
 	RJMP _DRV_IR_EINT_EVENT__END
 _DRV_IR_EINT_EVENT__RST:
 	;Достигли переполнения
-	MCALL C5_TIMER_C_STOP
+	LDI TEMP,TID_TIMER_C
+	MCALL C5_TIMER_STOP
 	LDI TEMP,_DRV_IR_ST_DTW
 	STD Y+_DRV_IR_STATE,TEMP
 	STD Y+_DRV_IR_BYTE_POS,C0x00
