@@ -31,13 +31,14 @@
 
 	;---OPERATIONS---
 	.EQU	DRV_ESP8266_OP_INIT								= 0x00;Инициализация работы
-	.EQU	DRV_ESP8266_OP_RAW								= 0x01;Свободный формат данных
-	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x02;Установить параметры Wi-Fi
-	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x03;Поднять TCP сервер
-	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x04;Установить TCP подключение
-	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x05;Принять данные
-	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x06;Передать данные
-	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x07;Положить TCP соединение
+	.EQU	DRV_ESP8266_OP_SET_UART							= 0x01;Инициализация UART
+	.EQU	DRV_ESP8266_OP_RAW								= 0x02;Свободный формат данных
+	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x03;Установить параметры Wi-Fi
+	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x04;Поднять TCP сервер
+	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x05;Установить TCP подключение
+	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x06;Принять данные
+	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x07;Передать данные
+	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x08;Положить TCP соединение
 
 	;---AT-CONSTANTS---
 _DRV_ESP8266_AT_ECHO_OFF:					.db "ATE0",0x0d,0x0a,0x00,0x00
@@ -88,6 +89,12 @@ DRV_ESP8266_INIT:
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_ESP8266__OP_RAW
 	RJMP _DRV_ESP8266_PROC_END
+.ifdef _DRV_ESP8266__OP_SET_UART
+	CPI ACCUM,DRV_ESP8266_OP_SET_UART
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_ESP8266__OP_SET_UART
+	RJMP _DRV_ESP8266_PROC_END
+.endif
 .ifdef _DRV_ESP8266__OP_SET_WIFI
 	CPI ACCUM,DRV_ESP8266_OP_SET_WIFI
 	BRNE PC+0x01+_MCALL_SIZE+0x01
