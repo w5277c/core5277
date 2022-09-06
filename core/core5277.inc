@@ -182,7 +182,7 @@
 .ENDIF
 	.EQU	_C5_TIMERS16							= _C5_TIMERS+TIMERS*_C5_TIMER_STRUCT_SIZE
 																			;xB-таблица 16бит таймеров
-	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS16+TIMERS16*_C5_TIMER16_STRUCT_SIZE	
+	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS16+TIMERS16*_C5_TIMER16_STRUCT_SIZE
 																			;xB-таблица прерываний (_C5_IR_QNT*3 для каждого прерывания, исключая RESET)
 	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3
 																			;xB-заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
@@ -1338,6 +1338,7 @@ _C5_SUSPEND__BODY:
 	OR ACCUM,TEMP
 	STD Z+_C5_PROC_STATE,ACCUM
 
+	CLI
 	;Выгружаю и запоминаю адрес процедуры, которая нас вызвала
 	POP _RESULT_H
 	POP _RESULT_L
@@ -1349,12 +1350,10 @@ _C5_SUSPEND__BODY:
 	;Восстанавливаем стек ядра
 	;Значение регистров не существенно, диспетчер нужные регистры уже сохранил в стек
 	;После прерывания вернемся в диспетчер(после вызова TASK_RESUME)
-	CLI
 	LDS TEMP,_C5_CORE_STACK+0x00
 	STS SPH,TEMP
 	LDS TEMP,_C5_CORE_STACK+0x01
 	STS SPL,TEMP
-	SEI
 
 	;Проверяем на выход стека в зону выделяемой памяти
 	;TODO нет проверки на защитный порог(_C5_RAM_BORDER_SIZE)
@@ -1392,6 +1391,7 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	;Восстанавливаем адрес процедуры, которая нас вызвала
 	PUSH _RESULT_L
 	PUSH _RESULT_H
+	SEI
 	RET
 
 ;--------------------------------------------------------
