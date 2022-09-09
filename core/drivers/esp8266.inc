@@ -27,18 +27,26 @@
 	.EQU	_DRV_ESP8266_TIME_START							= 0x01;4Б-Переменная INT
 	.EQU	_DRV_ESP8266_TIME_DELTA							= 0x05;4Б-Переменная INT
 	.EQU	_DRV_ESP8266_BUFFER								= 0x09;192Б-буфер для приема
-	.EQU	_DRV_ESP8266_RAM_SIZE							= 0xc9
+	.EQU	_DRV_ESP8266_RAM_SIZE							= _DRV_ESP8266_BUFFER+_DRV_ESP8266_BUFFER_SIZE
 
 	;---OPERATIONS---
 	.EQU	DRV_ESP8266_OP_INIT								= 0x00;Инициализация работы
-	.EQU	DRV_ESP8266_OP_SET_UART							= 0x01;Инициализация UART
+	.EQU	DRV_ESP8266_OP_GET_BUFFER						= 0x01;Возвращает адрес и размер буфера
 	.EQU	DRV_ESP8266_OP_RAW								= 0x02;Свободный формат данных
-	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x03;Установить параметры Wi-Fi
-	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x04;Поднять TCP сервер
-	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x05;Установить TCP подключение
-	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x06;Принять данные
-	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x07;Передать данные
-	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x08;Положить TCP соединение
+	.EQU	DRV_ESP8266_OP_SET_UART							= 0x03;Инициализация UART
+	.EQU	DRV_ESP8266_OP_SET_AP							= 0x04;Инициализация точки доступа(режим точки доступа)
+	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x05;Установить параметры Wi-Fi(режим клиента)
+	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x06;Поднять TCP сервер
+	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x07;Установить TCP подключение
+	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x08;Принять данные
+	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x09;Передать данные
+	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x0a;Положить TCP соединение
+
+	;---CW-MODES---
+	.EQU	DRV_ESP8266_CWMODE_CLIENT						= 0x01;Клиент
+	.EQU	DRV_ESP8266_CWMODE_AP							= 0x02;Точка доступа
+	.EQU	DRV_ESP8266_CWMODE_BOTH							= 0x03;Оба режима
+
 
 	;---AT-CONSTANTS---
 _DRV_ESP8266_AT_ECHO_OFF:					.db "ATE0",0x0d,0x0a,0x00,0x00
@@ -76,7 +84,7 @@ DRV_ESP8266_INIT:
 ;--------------------------------------------------------
 ;IN: ACCUM-тип операции
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_Y
 	PUSH TEMP
 
 	MCALL C5_RAM_OFFSET
@@ -85,10 +93,20 @@ DRV_ESP8266_INIT:
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_ESP8266__OP_INIT
 	RJMP _DRV_ESP8266_PROC_END
+	CPI ACCUM,DRV_ESP8266_OP_GET_BUFFER
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_ESP8266__OP_GET_BUFFER
+	RJMP _DRV_ESP8266_PROC_END
 	CPI ACCUM,DRV_ESP8266_OP_RAW
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_ESP8266__OP_RAW
 	RJMP _DRV_ESP8266_PROC_END
+.ifdef _DRV_ESP8266__OP_SET_AP
+	CPI ACCUM,DRV_ESP8266_OP_SET_AP
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_ESP8266__OP_SET_AP
+	RJMP _DRV_ESP8266_PROC_END
+.endif
 .ifdef _DRV_ESP8266__OP_SET_UART
 	CPI ACCUM,DRV_ESP8266_OP_SET_UART
 	BRNE PC+0x01+_MCALL_SIZE+0x01
@@ -128,7 +146,18 @@ DRV_ESP8266_INIT:
 _DRV_ESP8266_PROC_END:
 
 	POP TEMP
-	POP_Z
+	POP_Y
+	RET
+
+;--------------------------------------------------------
+_DRV_ESP8266__OP_GET_BUFFER:
+;--------------------------------------------------------
+;Возвращаем адрес буфера и его размер
+;OUT: X-адрес, TEMP_H-размер буфера
+;--------------------------------------------------------
+	MOVW XL,YL
+	ADIW XL,_DRV_ESP8266_BUFFER
+	LDI TEMP_H,_DRV_ESP8266_BUFFER_SIZE
 	RET
 
 ;--------------------------------------------------------

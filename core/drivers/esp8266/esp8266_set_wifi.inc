@@ -8,6 +8,7 @@
 .else
 .set DEF_DRIVER_ESP8266_SET_WIFI = 1
 
+.include	"./str/str_to_ram.inc"
 .include	"./prim/common.inc"
 .include	"./prim/prim_mov.inc"
 .include	"./prim/prim_cpi.inc"
