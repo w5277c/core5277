@@ -1,53 +1,39 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;05.09.2022	konstantin@5277.ru			Код вынесен из esp8266.inc
+;10.09.2021	konstatin@5277.ru			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
 
-.ifdef DEF_DRIVER_ESP8266_SET_UART
+.ifdef DEF_DRIVER_ESP8266_SET_POWER
 .else
-.set DEF_DRIVER_ESP8266_SET_UART = 1
+.set DEF_DRIVER_ESP8266_SET_POWER = 1
 
 .include	"./str/str_to_ram.inc"
-.include	"./conv/num32_to_str.inc"
+.include	"./conv/num_to_str.inc"
 
-	.EQU	DRV_ESP8266_BAUDRATE_4800			= 0x01
-	.EQU	DRV_ESP8266_BAUDRATE_9600			= 0x02
-	.EQU	DRV_ESP8266_BAUDRATE_19200			= 0x04
-
-_DRV_ESP8266_AT_SET_UART1:					.db "AT+UART_CUR=",0x00,0x00
-_DRV_ESP8266_AT_SET_UART2:					.db ",8,1,0,0",0x0d,0x0a,0x00,0x00
+_DRV_ESP8266_AT_SET_POWER1:					.db "AT+RFPOWER=",0x00;+POWER_VALUE+
+_DRV_ESP8266_AT_SET_POWER2:					.db 0x0d,0x0a,0x00,0x00
 
 ;--------------------------------------------------------
-_DRV_ESP8266__OP_SET_UART:
+_DRV_ESP8266__OP_SET_POWER:
 ;--------------------------------------------------------
-;Задаем BAUDRATE для UART
+;Задаем параметры для активации точки доступа
 ;IN; Y-адрес выделенной памяти
-;TEMP_L-скорость передачи данных
+;TEMP_L-TX power(0-82)
 ;OUT:TEMP_H-RESULT
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Z
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP_L
-	PUSH TEMP
 
 	MOVW XL,YL
 	ADIW XL,_DRV_ESP8266_BUFFER
-	LDI_Z _DRV_ESP8266_AT_SET_UART1|0x8000
+	LDI_Z _DRV_ESP8266_AT_SET_POWER1|0x8000
 	MCALL STR_TO_RAM
-	MOV TEMP,TEMP_L
-	LDI TEMP_H,high(4800)
-	LDI TEMP_L,low(4800)
-	MCALL MUL16X8
-	CLR TEMP_EH
 	MOVW ZL,XL
-	MCALL NUM32_TO_STR
+	MCALL NUM_TO_STR
 	MOVW XL,ZL
-	LDI_Z _DRV_ESP8266_AT_SET_UART2|0x8000
+	LDI_Z _DRV_ESP8266_AT_SET_POWER2|0x8000
 	MCALL STR_TO_RAM
-
 	MOVW ZL,YL
 	ADIW ZL,_DRV_ESP8266_BUFFER
 	SBIW XL,_DRV_ESP8266_BUFFER
@@ -55,11 +41,7 @@ _DRV_ESP8266__OP_SET_UART:
 	MOV TEMP_H,XL
 	MCALL _DRV_ESP8266__OP_RAW
 	MCALL _DRV_ESP8266_CHECK_RESP_OK
-	
-	POP TEMP
-	POP TEMP_L
-	POP TEMP_EL
-	POP TEMP_EH
+
 	POP_Z
 	POP_X
 	RET

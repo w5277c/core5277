@@ -21,6 +21,8 @@ STR_TO_RAM:
 ;OUT: X-адрес для следующего символа строки
 ;--------------------------------------------------------
 	PUSH_Z
+	PUSH TEMP
+
 	;Умножаем на 2 адрес рабоыт с ROM
 	SBRS ZH,0x07
 	RJMP PC+0x04
@@ -43,6 +45,7 @@ _STR_TO_RAM__BYTES_LOOP:
 	RJMP _STR_TO_RAM__BYTES_LOOP
 
 _STR_TO_RAM__END:
+	POP TEMP
 	POP_Z
 	RET
 .endif

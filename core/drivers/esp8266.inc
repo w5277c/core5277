@@ -33,14 +33,16 @@
 	.EQU	DRV_ESP8266_OP_INIT								= 0x00;Инициализация работы
 	.EQU	DRV_ESP8266_OP_GET_BUFFER						= 0x01;Возвращает адрес и размер буфера
 	.EQU	DRV_ESP8266_OP_RAW								= 0x02;Свободный формат данных
-	.EQU	DRV_ESP8266_OP_SET_UART							= 0x03;Инициализация UART
-	.EQU	DRV_ESP8266_OP_SET_AP							= 0x04;Инициализация точки доступа(режим точки доступа)
-	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x05;Установить параметры Wi-Fi(режим клиента)
-	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x06;Поднять TCP сервер
-	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x07;Установить TCP подключение
-	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x08;Принять данные
-	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x09;Передать данные
-	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x0a;Положить TCP соединение
+	.EQU	DRV_ESP8266_OP_SET_POWER						= 0x03;Установка максимального уровня сигнала передатчика
+	.EQU	DRV_ESP8266_OP_SET_UART							= 0x04;Инициализация UART
+	.EQU	DRV_ESP8266_OP_SET_AP							= 0x05;Установка IP адреса для режима точки доступа
+	.EQU	DRV_ESP8266_OP_SET_AP_IP						= 0x06;Инициализация точки доступа(режим точки доступа)
+	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x07;Установить параметры Wi-Fi(режим клиента)
+	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x08;Поднять TCP сервер
+	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x09;Установить TCP подключение
+	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x0a;Принять данные
+	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x0b;Передать данные
+	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x0c;Положить TCP соединение
 
 	;---CW-MODES---
 	.EQU	DRV_ESP8266_CWMODE_CLIENT						= 0x01;Клиент
@@ -101,10 +103,22 @@ DRV_ESP8266_INIT:
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_ESP8266__OP_RAW
 	RJMP _DRV_ESP8266_PROC_END
+.ifdef _DRV_ESP8266__OP_SET_POWER
+	CPI ACCUM,DRV_ESP8266_OP_SET_POWER
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_ESP8266__OP_SET_POWER
+	RJMP _DRV_ESP8266_PROC_END
+.endif
 .ifdef _DRV_ESP8266__OP_SET_AP
 	CPI ACCUM,DRV_ESP8266_OP_SET_AP
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_ESP8266__OP_SET_AP
+	RJMP _DRV_ESP8266_PROC_END
+.endif
+.ifdef _DRV_ESP8266__OP_SET_AP_IP
+	CPI ACCUM,DRV_ESP8266_OP_SET_AP_IP
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_ESP8266__OP_SET_AP_IP
 	RJMP _DRV_ESP8266_PROC_END
 .endif
 .ifdef _DRV_ESP8266__OP_SET_UART
