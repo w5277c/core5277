@@ -10,7 +10,7 @@
 
 .include	"./str/str_to_ram.inc"
 
-_DRV_ESP8266_AT_SET_AP_IP1:					.db "AT+CIPAP_CUR=",0x22,0x00;+IP+
+_DRV_ESP8266_AT_SET_AP_IP1:					.db "AT+CIPAP_CUR=",0x22,0x00,0x00;+IP+
 _DRV_ESP8266_AT_SET_AP_IP2:					.db 0x22,0x0d,0x0a,0x00
 
 ;--------------------------------------------------------
