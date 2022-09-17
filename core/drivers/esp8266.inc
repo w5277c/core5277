@@ -37,12 +37,13 @@
 	.EQU	DRV_ESP8266_OP_SET_UART							= 0x04;Инициализация UART
 	.EQU	DRV_ESP8266_OP_SET_AP							= 0x05;Установка IP адреса для режима точки доступа
 	.EQU	DRV_ESP8266_OP_SET_AP_IP						= 0x06;Инициализация точки доступа(режим точки доступа)
-	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x07;Установить параметры Wi-Fi(режим клиента)
-	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x08;Поднять TCP сервер
-	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x09;Установить TCP подключение
-	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x0a;Принять данные
-	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x0b;Передать данные
-	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x0c;Положить TCP соединение
+	.EQU	DRV_ESP8266_OP_SET_RECV_MODE						= 0x07;Установка режима приема
+	.EQU	DRV_ESP8266_OP_SET_WIFI							= 0x08;Установить параметры Wi-Fi(режим клиента)
+	.EQU	DRV_ESP8266_OP_TCP_SERVER						= 0x09;Поднять TCP сервер
+	.EQU	DRV_ESP8266_OP_TCP_CLIENT						= 0x0a;Установить TCP подключение
+	.EQU	DRV_ESP8266_OP_RECEIVE_DATA					= 0x0b;Принять данные
+	.EQU	DRV_ESP8266_OP_SEND_DATA						= 0x0c;Передать данные
+	.EQU	DRV_ESP8266_OP_TCP_CLOSE						= 0x0d;Положить TCP соединение
 
 	;---CW-MODES---
 	.EQU	DRV_ESP8266_CWMODE_CLIENT						= 0x01;Клиент
@@ -106,6 +107,12 @@ DRV_ESP8266_INIT:
 	CPI ACCUM,DRV_ESP8266_OP_SET_POWER
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_ESP8266__OP_SET_POWER
+	RJMP _DRV_ESP8266_PROC_END
+.endif
+.ifdef _DRV_ESP8266__OP_SET_RECV_MODE
+	CPI ACCUM,DRV_ESP8266_OP_SET_RECV_MODE
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_ESP8266__OP_SET_RECV_MODE
 	RJMP _DRV_ESP8266_PROC_END
 .endif
 .ifdef _DRV_ESP8266__OP_SET_AP
