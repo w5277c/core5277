@@ -153,7 +153,7 @@
 	;---Часто-используемые-константы-для-частот-программного-таймера---
 ;TODO делить на 2?
 .ifdef TIMERS_SPEED
-.if TIMERS_SPEED == TIMERS_SPEED_50US
+.if TIMERS_SPEED == TIMERS_SPEED_50US							;Необходимо учитывать старший бит(0.002c или 0.000 050с)
 	.EQU	TIMER_FREQ_20KHz						= 1
 	.EQU	TIMER_FREQ_10KHz						= 2
 	.EQU	TIMER_FREQ_5KHz						= 4
@@ -162,7 +162,7 @@
 	.EQU	TIMER_FREQ_1KHz						= 20
 	.EQU	TIMER_FREQ_500Hz						= 40
 	.EQU	TIMER_FREQ_250Hz						= 80
-	.EQU	TIMER_FREQ_100Hz						= 200
+	.EQU	TIMER_FREQ_100Hz						= 128+5
 .else
 	.EQU	TIMER_FREQ_40KHz						= 1
 	.EQU	TIMER_FREQ_20KHz						= 2
@@ -172,8 +172,8 @@
 	.EQU	TIMER_FREQ_2KHz						= 20
 	.EQU	TIMER_FREQ_1KHz						= 40
 	.EQU	TIMER_FREQ_500Hz						= 80
-	.EQU	TIMER_FREQ_250Hz						= 160
-	.EQU	TIMER_FREQ_200Hz						= 200
+	.EQU	TIMER_FREQ_250Hz						= 128+2
+	.EQU	TIMER_FREQ_100Hz						= 128+5
 .endif
 .endif
 .ifdef CORE_FREQ
