@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;16.04.2021	w5277c@gmail.com			Начало
 ;05.07.2021	w5277c@gmail.com			Z->Y
+;20.11.2022	konstantin@5277.ru		Мелкий багфиксинг(забыт adc zh,c0x00)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_TEXT_INPUT
 .else
@@ -50,6 +51,7 @@ C5_TEXT_INPUT__KEY_CHECKING_NOT_BACKSPACE:
 	BREQ C5_TEXT_INPUT__MAIN_LOOP
 	PUSH_Z
 	ADD ZL,LOOP_CNTR
+	ADC ZH,C0x00
 	PUSH TEMP
 	LDI TEMP,0x00
 	ADC ZL,TEMP
