@@ -55,12 +55,16 @@
 	.EQU	DRV_FS_TYPE_RM_FILE					= 0x05			;удаленный файл
 ;	.EQU	DRV_FS_TYPE_RESERVED					= 0x06			;зарезервировано
 ;	.EQU	DRV_FS_TYPE_RESERVED					= 0x07			;зарезервировано
-	;---H-NIBBLE------------------------------------------;опции элемента - старший ниббл
+	;---H-NIBBLE------------------------------------------;опции элемента - старший ниббл(биты)
 	;---DIR/FILE/RM-DIR/RM-FILE---
-	.EQU	DRV_FS_OPT_HIDDEN						= 0x40			;скрытый
+	.EQU	DRV_FS_OPT_HIDDEN						= 0x04			;скрытый
+	.EQU	DRV_FS_OPT_RO							= 0x05			;только для чтения
+	.EQU	DRV_FS_OPT_SYSTEM						= 0x06			;системный
 	;---LOOP-FILE---
-	.EQU	DRV_FS_OPT_HIDDEN						= 0x40			;скрытый
-	.EQU	DRV_FS_OPT_LOOP						= 0x50			;выполнен цикл в циклическом файле
+	.EQU	DRV_FS_OPT_HIDDEN						= 0x04			;скрытый
+	.EQU	DRV_FS_OPT_RO							= 0x05			;только для чтения
+	.EQU	DRV_FS_OPT_SYSTEM						= 0x06			;системный
+	.EQU	DRV_FS_OPT_LOOP						= 0x07			;выполнен цикл в циклическом файле
 
 	;---FS-BLOCK-HEADER------------------------------------;Структура хвоста блока
 	.EQU	_DRV_FS_BHEADER_BNUM					= 0x00			;4B - номер следующего блока
@@ -73,6 +77,8 @@
 	.EQU	DRV_FS_NAME_SIZE						= 0x10			;Размер имени
 	.EQU	_DRV_FS_BLOCK_HEADER_LEN			= 0x20			;Размер служебного заголовка
 
+
+	.EQU	DRV_FS_OPEN_WRITE						= 0x00			;Открытие файла для записи
 
 
 ;--------------------------------------------------------
