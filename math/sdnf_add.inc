@@ -21,8 +21,8 @@ SDNF_ADD:																;Signed Digital aNd Fractional
 ;--------------------------------------------------------
 ;Сумма знаковых целых с дробной частью (X + Z)
 ;IN: X, Z
-;OUT: X, flag C-переполнение
-;-START--------------------------------------------------
+;OUT: X, flag C-переполнение, XL=0xff-ошибка
+;--------------------------------------------------------
 	PUSH_Z
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -33,7 +33,7 @@ SDNF_ADD:																;Signed Digital aNd Fractional
 	BREQ _SDNF_ADD__ERROR
 	CPI ZL,0xff
 	BREQ _SDNF_ADD__ERROR
-	;Выношу знаки в отдельные регистры
+	;Выносим знаки в отдельные регистры
 	MOV TEMP_H,XL
 	ANDI TEMP_H,0x80
 	MOV TEMP_L,ZL
