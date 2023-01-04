@@ -15,27 +15,21 @@ _DRV_SD_OP_GET_OCR:
 ;Получить OCR
 ;IN: X-адрес на буффер
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буфер
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
-	PUSH_X
+	PUSH_Y
 
-	MOV YH,XH
-	MOV YL,XL
+	MOVW YL,XL
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD58
 	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
 	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
@@ -43,7 +37,7 @@ _DRV_SD_OP_GET_OCR:
 	SBI PORTB,SS & 0x0f
 _DRV_SD_OP_GET_OCR__END:
 
-	POP_X
+	POP_Y
 	POP TEMP_L
 	POP TEMP
 	RET

@@ -52,18 +52,14 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.EQU	DRV_SD_OP_WRITE_DUMMY_BLOCK					= 0x08;Фиктивная запись блока
 	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x09;Очистка блоков
 	.EQU	DRV_SD_OP_GET_STATUS								= 0x0a;Чтение статуса карты
-	.EQU	DRV_SD_OP_GET_OP_TIME							= 0x0b;Получить время выполнения процедуры
-	.EQU	DRV_SD_OP_GEN_CMD									= 0x0c;Чтение/запись данных контроллера?
+	.EQU	DRV_SD_OP_GEN_CMD									= 0x0b;Чтение/запись данных контроллера?
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	DRV_SD_VARS_SIZE									= 0x0e;Размер данных под переменные
-	.EQU	DRV_SD_BUFFER_SIZE								= 0x40;Размер внутреннего блока для коммуникации (и записи/чтения если поддерживается partial)
+	.EQU	DRV_SD_VARS_SIZE									= 0x0a;Размер данных под переменные
 	;---OFFSETS---
 	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
 	.EQU	_DRV_SD_VAR_BLOCK_SIZE							= 0x02;2Б размер блока для чтения/записи
-	.EQU	_DRV_SD_VAR_TIME									= 0x04;4Б uptime
-	.EQU	_DRV_SD_WRITE_CMD_BUFFER						= 0x08;6Б
-	.EQU	_DRV_SD_BUFFER										= 0x0e;DRV_SD_BUFFER_SIZE
+	.EQU	_DRV_SD_WRITE_CMD_BUFFER						= 0x04;6Б
 
 	.EQU	_DRV_SD_CMD0										= 0x00;Reset
 	.EQU	_DRV_SD_CMD8										= 0x08;Send interface condition
@@ -94,9 +90,7 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 DRV_SD_INIT:
 ;--------------------------------------------------------
 ;Инициализация драйвера
-;IN: Y-адрес на буффер в 512 байт, 0x0000 - не использо-
-;вать буфер (возможно, если карта поддерживает partial
-;для чтения и записи)
+;IN: X-адрес на буффер в 512 байт
 ;--------------------------------------------------------
 	;Инициализируем порт CLCK
 	CBI PORTB,SCK & 0x0f
@@ -112,25 +106,18 @@ DRV_SD_INIT:
 	SBI DDRB,SS & 0x0f
 
 	;Выделяем память
-	LDI TEMP,DRV_SD_BUFFER_SIZE
 	LDI ACCUM,DRV_SD_VARS_SIZE
-	CPI YH,0x00
-	BRNE PC+0x04
-	CPI YL,0x00
-	BRNE PC+0x02
-	ADD ACCUM,TEMP
 	MCALL C5_RAM_REALLOC
 
-	STD Z+_DRV_SD_EXT_BUFFER_ADDR+0x00,YH
-	STD Z+_DRV_SD_EXT_BUFFER_ADDR+0x01,YL
+	STD Y+_DRV_SD_EXT_BUFFER_ADDR+0x00,XH
+	STD Y+_DRV_SD_EXT_BUFFER_ADDR+0x01,XL
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
 ;IN: FLAGS - тип операции
 ;OUT: ACCUM - R1 ответ или
-;TEMP_H/L-R2 ответ или
-;TEMP_EH/EL/H/L-time32
+;TEMP_H/L-R2 ответ
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Z
@@ -138,16 +125,8 @@ DRV_SD_INIT:
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 
-	LDD XH,Z+_DRV_SD_EXT_BUFFER_ADDR+0x00
-	LDD XL,Z+_DRV_SD_EXT_BUFFER_ADDR+0x01
-	CPI XH,0x00
-	BRNE _DRV_SD_MAIN__CONTINUE
-	CPI XL,0x00
-	BRNE _DRV_SD_MAIN__CONTINUE
-	MOV XH,ZH
-	MOV XL,ZL
-	ADIW XL,_DRV_SD_BUFFER
-_DRV_SD_MAIN__CONTINUE:
+	LDD XH,Y+_DRV_SD_EXT_BUFFER_ADDR+0x00
+	LDD XL,Y+_DRV_SD_EXT_BUFFER_ADDR+0x01
 
 	CPI FLAGS,DRV_SD_OP_RESET
 	BRNE PC+0x01+_MCALL_SIZE+0x01
@@ -215,16 +194,7 @@ _DRV_SD_MAIN__CONTINUE:
 	MCALL _DRV_SD_OP_GEN_CMD
 	RJMP _DRV_SD__END
 .endif
-	CPI FLAGS,DRV_SD_OP_GET_OP_TIME
-	BRNE PC+0x06
-	LDD TEMP_EH,Z+_DRV_SD_VAR_TIME+0x00
-	LDD TEMP_EL,Z+_DRV_SD_VAR_TIME+0x01
-	LDD TEMP_H,Z+_DRV_SD_VAR_TIME+0x02
-	LDD TEMP_L,Z+_DRV_SD_VAR_TIME+0x03
-	RJMP _DRV_SD__END
 	;...
-
-
 	LDI ACCUM,0xff
 _DRV_SD__END:
 
@@ -237,21 +207,16 @@ _DRV_SD__END:
 _DRV_SD_OP_INIT:
 ;--------------------------------------------------------
 ;Инициализация карты
-;IN: Z-адрес на переменные, X-адрес на буфер
-;OUT: ACCUM-R1 ответ(0x80-сбой инициализации), FLAGS-вер-
-;сия, TEMP_H/L-размер блока для чтения,
-;TEMP_EH/EL-размер блока для записи,
-;FLAGS-поддержка partial (0-бит чтение, 1-бит запись),
-;ошибка (7 бит)
+;IN: Y-адрес на переменные, X-адрес на буфер
+;OUT: ACCUM-R1 ответ(0x80-сбой инициализации),
+;FLAGS-версия
 ;--------------------------------------------------------
 	PUSH TRY_CNTR
 	PUSH TEMP
 	PUSH LOOP_CNTR
-	PUSH_Z
 	PUSH_Y
 
 	CLR FLAGS
-
 
 	CBI PORTB,SCK & 0x0f
 	SBI DDRB,MOSI & 0x0f
@@ -276,14 +241,11 @@ _DRV_SD_OP_INIT__LOOP:
 	RJMP _DRV_SD_OP_INIT__END
 	CBI PORTB,SS & 0x0f
 
-
 	LDI TEMP,_DRV_SD_CMD8
 	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
+	ST X+,C0x00
+	ST X+,C0x00
 	LDI TEMP,0x01
 	ST X+,TEMP
 	LDI TEMP,0x52
@@ -303,8 +265,6 @@ _DRV_SD_OP_INIT__LOOP:
 	RJMP _DRV_SD_OP_INIT__END
 
 	LDI TRY_CNTR,0x32
-	LDI TEMP,_DRV_SD_VAR_TIME
-	MCALL C5_TIME32_MARK
 _DRV_SD_OP_INIT__WAIT:
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_ACMD41
@@ -312,12 +272,9 @@ _DRV_SD_OP_INIT__WAIT:
 	ST X+,TEMP
 	LDI TEMP,0x40
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
 	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_ACMD
@@ -332,17 +289,19 @@ _DRV_SD_OP_INIT__WAIT:
 	BREQ PC+0x02
 	RJMP _DRV_SD_OP_INIT__END
 _DRV_SD_OP_INIT__ACMD41_ERR:
+	PUSH TEMP_H
+	PUSH TEMP_L
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x00
 	LDI TEMP,0x32
 	MCALL C5_WAIT_2MS
+	POP TEMP_L
+	POP TEMP_H
 	DEC TRY_CNTR
 	BRNE _DRV_SD_OP_INIT__WAIT
 	LDI ACCUM,0x80
 	RJMP _DRV_SD_OP_INIT__END
 _DRV_SD_OP_INIT_SD_READY:
-	LDI TEMP,_DRV_SD_VAR_TIME
-	MCALL C5_TIME32_DELTA
 	CPI FLAGS,DRV_SD_FLAG_VER1
 	BREQ _DRV_SD_OP_INIT__END
 
@@ -350,14 +309,10 @@ _DRV_SD_OP_INIT_SD_READY:
 	LDI TEMP,_DRV_SD_CMD58
 	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
 	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
@@ -373,7 +328,6 @@ _DRV_SD_OP_INIT__END:
 	SBI PORTB,SS & 0x0f
 
 	POP_Y
-	POP_Z
 	POP LOOP_CNTR
 	POP TEMP
 	POP TRY_CNTR
@@ -434,15 +388,14 @@ _DRV_SD__SEND_CMD:
 	ST X,TEMP
 
 	PUSH_X
-	PUSH_Y
-	LDI_Y CRC7_730
+	PUSH_Z
+	LDI_Z CRC7_730
 	MOV LOOP_CNTR,TEMP_L
 	LDI ACCUM,0x00
 	MCALL CRC8_BLOCK
-	POP_Y
+	POP_Z
 	ADD XL,TEMP_L
-	CLR LOOP_CNTR
-	ADC XH,LOOP_CNTR
+	ADC XH,C0x00
 	ORI ACCUM,0x01
 	ST X,ACCUM
 	INC TEMP_L
@@ -450,15 +403,14 @@ _DRV_SD__SEND_CMD:
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
-		PUSH_Y
+		PUSH_Z
 		LDI TEMP,'>'
 		MCALL C5_OUT_CHAR
 		MOV TEMP,TEMP_L
-		MOV YH,XH
-		MOV YL,XL
+		MOVW ZL,XL
 		MCALL C5_OUT_BYTES
 		MCALL C5_OUT_CR
-		POP_Y
+		POP_Z
 	.endif
 .endif
 	CBI PORTB,MOSI & 0x0f
