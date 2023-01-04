@@ -27,7 +27,7 @@
 	.SET	BUFFER_SIZE										= 0x200	;Размер общего (буфер драйвера SD карты)
 	.SET	LOGGING_PORT									= SDA		;STDOUT
 	.SET	C5_IN_PORT										= SCL	;STDIN
-
+	.SET	LOGGING_LEVEL									= LOGGING_LVL_PNC
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;---
@@ -38,7 +38,8 @@
 	.include "./core/drivers/sd/sd_log_ocr.inc"
 	.include "./core/drivers/sd/sd_get_csd.inc"
 	.include "./core/drivers/sd/sd_log_csd.inc"
-
+	.include "./core/drivers/sd/sd_get_cid.inc"
+	.include "./core/drivers/sd/sd_log_cid.inc"
 	.INCLUDE "./core/drivers/sd_spi.inc"
 	;---
 	;Блок задач
@@ -107,7 +108,15 @@ TASK__INFINITE_LOOP:
 	CPI ACCUM,0x00
 	BRNE TASK__DONE
 	LDI_X C5_BUFFER
-	MCALL DRV_SD_LOG_OCR
+	MCALL DRV_SD_LOG_CSD
+
+	LDI TEMP,PID_SD_DRV
+	LDI FLAGS,DRV_SD_OP_GET_CID
+	MCALL C5_EXEC
+	CPI ACCUM,0x00
+	BRNE TASK__DONE
+	LDI_X C5_BUFFER
+	MCALL DRV_SD_LOG_CID
 
 TASK__DONE:
 	RET

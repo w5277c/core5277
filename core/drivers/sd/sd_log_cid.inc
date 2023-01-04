@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;27.01.2021	w5277c@gmail.com			Начало
 ;05.07.2021	w5277c@gmail.com			Z->Y
+;04.01.2023	konstantin@5277.ru			Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_SD_LOG_CID
 .else
@@ -16,7 +17,7 @@
 .include	"./core/io/out_str.inc"
 .include	"./core/io/out_strn.inc"
 .include	"./core/io/out_bytes.inc"
-.include	"./core/io/out_num8.inc"
+.include	"./core/io/out_num.inc"
 .include	"./core/io/out_num16.inc"
 
 _DRV_SD_LOG_STR_CID:
@@ -93,7 +94,7 @@ DRV_SD_LOG_CID:
 	OR TEMP_H,TEMP
 	ANDI TEMP_L,0x0f
 	MOV TEMP,TEMP_L
-	MCALL C5_OUT_NUMx8
+	MCALL C5_OUT_NUM
 	LDI TEMP,'.'
 	MCALL C5_OUT_CHAR
 	MOV TEMP,TEMP_H

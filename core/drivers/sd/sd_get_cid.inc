@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;18.01.2021  w5277c@gmail.com			Начало
+;04.01.2023	konstantin@5277.ru			Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DRIVER_SD_GET_CID
 .else
@@ -15,27 +16,21 @@ _DRV_SD_OP_GET_CID:
 ;Получить CID
 ;IN: X-адрес на выделенную память
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буфер
 ;--------------------------------------------------------
 	PUSH TEMP
 	PUSH TEMP_L
-	PUSH_X
+	PUSH_Y
 
-	MOV YH,XH
-	MOV YL,XL
+	MOVW YL,XL
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD10
 	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
 	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
@@ -48,7 +43,7 @@ _DRV_SD_OP_GET_CID:
 _DRV_SD_OP_GET_CID__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_X
+	POP_Y
 	POP TEMP_L
 	POP TEMP
 	RET
