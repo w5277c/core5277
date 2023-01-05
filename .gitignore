@@ -23,6 +23,8 @@ examples/other/cv_logger/Debug/
 
 examples/5277_io_gayeway/wh1602/Debug/
 
+examples/5277_io_gayeway/SDcard/Debug/
+
 *.bak
 
 examples/5277_io_gayeway/cv_logger/Debug/

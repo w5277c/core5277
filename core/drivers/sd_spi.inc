@@ -7,6 +7,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO C5_RAM_OFFSET Z->Y
 ;TODO Возвращать TEMP как DRV_RESULT...
+;TODO _DRV_SD_OP_INIT заменить бесконечный цикл ожидания SD карты на несколько попыток
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF__C5_DRV_SD_SPI
@@ -49,11 +50,9 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	.EQU	DRV_SD_OP_GET_OCR									= 0x82;Получить OCR
 	.EQU	DRV_SD_OP_GET_CSD									= 0x83;Получить CSD
 	.EQU	DRV_SD_OP_GET_CID									= 0x84;Получить CID
-	.EQU	DRV_SD_OP_READ_DUMMY_BLOCK						= 0x85;Фиктивное чтение блока
-	.EQU	DRV_SD_OP_WRITE_DUMMY_BLOCK					= 0x86;Фиктивная запись блока
-	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x87;Очистка блоков
-	.EQU	DRV_SD_OP_GET_STATUS								= 0x88;Чтение статуса карты
-	.EQU	DRV_SD_OP_GEN_CMD									= 0x89;Чтение/запись данных контроллера?
+	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x85;Очистка блоков
+	.EQU	DRV_SD_OP_GET_STATUS								= 0x86;Чтение статуса карты
+	.EQU	DRV_SD_OP_GEN_CMD									= 0x87;Чтение/запись данных контроллера?
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_SD_VARS_SIZE									= 0x0a;Размер данных под переменные
@@ -117,9 +116,8 @@ DRV_SD_INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
-;IN: FLAGS - тип операции
-;OUT: ACCUM - R1 ответ или
-;TEMP_H/L-R2 ответ
+;IN: FLAGS-тип операции
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Z
@@ -179,22 +177,10 @@ DRV_SD_INIT:
 	MCALL _DRV_SD_OP_READ_BLOCK
 	RJMP _DRV_SD__END
 .endif
-.ifdef DEF_DRIVER_SD_READ_DUMMY_BLOCK
-	CPI FLAGS,DRV_SD_OP_READ_DUMMY_BLOCK
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_SD_OP_READ_DUMMY_BLOCK
-	RJMP _DRV_SD__END
-.endif
 .ifdef DEF_DRIVER_SD_WRITE_BLOCK
 	CPI FLAGS,DRV_SD_OP_WRITE_BLOCK
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_SD_OP_WRITE_BLOCK
-	RJMP _DRV_SD__END
-.endif
-.ifdef DEF_DRIVER_SD_WRITE_DUMMY_BLOCK
-	CPI FLAGS,DRV_SD_OP_WRITE_DUMMY_BLOCK
-	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_SD_OP_WRITE_DUMMY_BLOCK
 	RJMP _DRV_SD__END
 .endif
 .ifdef DEF_DRIVER_SD_ERASE_BLOCKS
@@ -210,7 +196,7 @@ DRV_SD_INIT:
 	RJMP _DRV_SD__END
 .endif
 	;...
-	LDI ACCUM,0xff
+	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_SD__END:
 
 	POP_Z
@@ -223,11 +209,11 @@ _DRV_SD_OP_INIT:
 ;--------------------------------------------------------
 ;Инициализация карты
 ;IN: Y-адрес на переменные, X-адрес на буфер
-;OUT: ACCUM-R1 ответ(0x80-сбой инициализации),
+;OUT: TEMP-DRV_RESULT_...,
 ;FLAGS-версия
 ;--------------------------------------------------------
 	PUSH TRY_CNTR
-	PUSH TEMP
+	PUSH ACCUM
 	PUSH LOOP_CNTR
 	PUSH_Y
 
@@ -251,9 +237,9 @@ _DRV_SD_OP_INIT__LOOP:
 	CBI PORTB,SS & 0x0f
 
 	MCALL _DRV_SD_OP_RESET
-	CPI ACCUM,0x01
+	CPI TEMP,DRV_RESULT_OK
 	BREQ PC+0x02
-	RJMP _DRV_SD_OP_INIT__END
+	RJMP _DRV_SD_OP_INIT__ERROR
 	CBI PORTB,SS & 0x0f
 
 	LDI TEMP,_DRV_SD_CMD8
@@ -277,7 +263,7 @@ _DRV_SD_OP_INIT__LOOP:
 	ANDI ACCUM,0xfe
 	CPI ACCUM,0x00
 	BREQ PC+0x02
-	RJMP _DRV_SD_OP_INIT__END
+	RJMP _DRV_SD_OP_INIT__ERROR
 
 	LDI TRY_CNTR,0x32
 _DRV_SD_OP_INIT__WAIT:
@@ -302,7 +288,7 @@ _DRV_SD_OP_INIT__WAIT:
 	BREQ _DRV_SD_OP_INIT_SD_READY
 	CPI ACCUM,0x01
 	BREQ PC+0x02
-	RJMP _DRV_SD_OP_INIT__END
+	RJMP _DRV_SD_OP_INIT__ERROR
 _DRV_SD_OP_INIT__ACMD41_ERR:
 	PUSH TEMP_H
 	PUSH TEMP_L
@@ -314,11 +300,11 @@ _DRV_SD_OP_INIT__ACMD41_ERR:
 	POP TEMP_H
 	DEC TRY_CNTR
 	BRNE _DRV_SD_OP_INIT__WAIT
-	LDI ACCUM,0x80
+	LDI TEMP,DRV_RESULT_TIMEOUT
 	RJMP _DRV_SD_OP_INIT__END
 _DRV_SD_OP_INIT_SD_READY:
 	CPI FLAGS,DRV_SD_FLAG_VER1
-	BREQ _DRV_SD_OP_INIT__END
+	BREQ _DRV_SD_OP_INIT__OK
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD58
@@ -338,13 +324,17 @@ _DRV_SD_OP_INIT_SD_READY:
 	LDI FLAGS,DRV_SD_FLAG_VER2SC
 	SBRS TEMP,0x01
 	LDI FLAGS,DRV_SD_FLAG_VER2HC
-	LDI ACCUM,0x00
+_DRV_SD_OP_INIT__OK:
+	LDI TEMP,DRV_RESULT_OK
+	RJMP _DRV_SD_OP_INIT__END
+_DRV_SD_OP_INIT__ERROR:
+	LDI TEMP,DRV_RESULT_ERROR
 _DRV_SD_OP_INIT__END:
 	SBI PORTB,SS & 0x0f
 
 	POP_Y
 	POP LOOP_CNTR
-	POP TEMP
+	POP ACCUM
 	POP TRY_CNTR
 	RET
 
@@ -353,14 +343,14 @@ _DRV_SD_OP_INIT__END:
 _DRV_SD_OP_GET_SIZE:
 ;--------------------------------------------------------
 ;Считываем размер диска
-;IN: Y-адрес на переменные
+;IN: X-адрес на буфер,Y-адрес на переменные
 ;OUT: TEMP-DRV_RESULT_...,TEMP_EH/EL/H/L-размер в блоках
 ;--------------------------------------------------------
 	PUSH_Y
 
 	MCALL _DRV_SD_OP_GET_CSD
-	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_GET_SIZE__ERROR
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_SD_OP_GET_SIZE__END
 
 	MOVW Y,X
 	LDD TEMP,Y+0x00
@@ -402,11 +392,8 @@ _DRV_SD_OP_GET_SIZE__V1:
 	ROL TEMP_H
 _DRV_SD_OP_GET_SIZE__OK:
 	LDI TEMP,DRV_RESULT_OK
-	RJMP _DRV_SD_OP_GET_SIZE__END
-_DRV_SD_OP_GET_SIZE__ERROR:
-	LDI TEMP,DRV_RESULT_ERROR
 _DRV_SD_OP_GET_SIZE__END:
-	
+
 	POP_Y
 	RET
 .endif
@@ -527,15 +514,15 @@ _DRV_SD_BYTE_SEND__LOOP:
 	SBRC TEMP,0x07
 	SBI PORTB,MOSI & 0x0f
 	LSL TEMP
-	MCALL _DRV_SD_WAIT
+	;MCALL _DRV_SD_WAIT
 	SBI PORTB,SCK & 0x0f
-	MCALL _DRV_SD_WAIT
+	;MCALL _DRV_SD_WAIT
 	CBI PORTB,SCK & 0x0f
 	DEC LOOP_CNTR
 	BRNE _DRV_SD_BYTE_SEND__LOOP
 
 	CBI PORTB,SCK & 0x0f
-	MCALL _DRV_SD_WAIT
+	;MCALL _DRV_SD_WAIT
 
 	;Низкий уровень приводил к боям в логике некотороых SD после записи блока
 	SBI PORTB,MOSI & 0x0f
@@ -558,9 +545,9 @@ _DRV_SD_BYTE_RECV__LOOP:
 	SBIC PINB,MISO & 0x0f
 	ORI TEMP,0x01
 	SBI PORTB,SCK & 0x0f
-	MCALL _DRV_SD_WAIT
+	;MCALL _DRV_SD_WAIT
 	CBI PORTB,SCK & 0x0f
-	MCALL _DRV_SD_WAIT
+	;MCALL _DRV_SD_WAIT
 	DEC LOOP_CNTR
 	BRNE _DRV_SD_BYTE_RECV__LOOP
 
@@ -588,12 +575,5 @@ _DRV_SD_BYTES_RECV__LOOP:
 	POP_X
 	POP LOOP_CNTR
 	POP TEMP
-	RET
-
-;--------------------------------------------------------
-_DRV_SD_WAIT:
-;--------------------------------------------------------
-;Выдерживаем паузу
-;--------------------------------------------------------
 	RET
 .endif

@@ -26,8 +26,8 @@ _DRV_SD_LOG_STR_CRC:
 _DRV_SD_SET_BLOCK:
 ;--------------------------------------------------------
 ;Передача блока данных
-;IN: X-адрес на выделенную память
-;TEMP_H,L-максимальная длина данных
+;IN: X-адрес на буффер
+;TEMP_H,L-длина данных
 ;--------------------------------------------------------
 	PUSH ACCUM
 	PUSH TEMP
@@ -37,6 +37,8 @@ _DRV_SD_SET_BLOCK:
 	PUSH TEMP_EL
 	PUSH_X
 
+	LDI TEMP_EH,0x00
+	LDI TEMP_EL,0x00
 	LDI_Y CRC16_XMODEM
 	MCALL CRC16_BLOCK
 

@@ -7,8 +7,6 @@
 .else
 .set DEF_DRIVER_SD_GET_BLOCK = 1
 
-.include	"./core/time32_mark.inc"
-.include	"./core/time32_delta.inc"
 .include	"./conv/crc16_xmodem.inc"
 .include	"./conv/crc16_block.inc"
 .ifdef LOGGING_PORT
@@ -24,16 +22,13 @@
 _DRV_SD_GET_BLOCK:
 ;--------------------------------------------------------
 ;Прием блока данных
-;IN: X-адрес на выделенную память,Y-адрес на переменные
-;TEMP_H,L-максимальная длина данных
-;OUT: TEMP_H,L-длина полученных данных
-;ACCUM-0x00 успешное выполнение
+;IN: X-адрес на буффер, TEMP_H,L-длина данных
+;OUT: TEMP=DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH TRY_CNTR
-	PUSH TEMP
+	PUSH ACCUM
 	PUSH TEMP_EH
 	PUSH TEMP_EL
-	PUSH_Y
 	PUSH_Z
 	PUSH_X
 
@@ -47,7 +42,7 @@ _DRV_SD_GET_BLOCK__BEGIN_LOOP:
 _DRV_SD_GET_BLOCK__NO_ERROR:
 	DEC TRY_CNTR
 	BRNE _DRV_SD_GET_BLOCK__BEGIN_LOOP
-	RJMP _DRV_SD_GET_BLOCK__FAIL
+	RJMP _DRV_SD_GET_BLOCK__ABSENT
 
 _DRV_SD_GET_BLOCK__DATA:
 	MCALL _DRV_SD_BYTE_RECV
@@ -66,9 +61,9 @@ _DRV_SD_GET_BLOCK__DATA:
 	LDI_Z CRC16_XMODEM
 	MCALL CRC16_BLOCK
 	CP ACCUM,TEMP_EH
-	BRNE _DRV_SD_GET_BLOCK__FAIL
+	BRNE _DRV_SD_GET_BLOCK__INVALID_DATA
 	CP TEMP,TEMP_EL
-	BRNE _DRV_SD_GET_BLOCK__FAIL
+	BRNE _DRV_SD_GET_BLOCK__INVALID_DATA
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
@@ -85,20 +80,20 @@ _DRV_SD_GET_BLOCK__DATA:
 		POP_Z
 	.endif
 .endif
-	LDI ACCUM,0x00
+	LDI TEMP,DRV_RESULT_OK
 	RJMP _DRV_SD_GET_BLOCK__END
-_DRV_SD_GET_BLOCK__FAIL:
-	LDI ACCUM,0xff
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+_DRV_SD_GET_BLOCK__INVALID_DATA:
+	LDI TEMP,DRV_RESULT_INVALID_DATA
+	RJMP _DRV_SD_GET_BLOCK__END
+_DRV_SD_GET_BLOCK__ABSENT:
+	LDI TEMP,DRV_RESULT_ABSENT
 _DRV_SD_GET_BLOCK__END:
 
 	POP_X
 	POP_Z
-	POP_Y
 	POP TEMP_EL
 	POP TEMP_EH
-	POP TEMP
+	POP ACCUM
 	POP TRY_CNTR
 	RET
 .endif

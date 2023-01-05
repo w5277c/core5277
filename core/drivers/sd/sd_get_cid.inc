@@ -14,14 +14,12 @@
 _DRV_SD_OP_GET_CID:
 ;--------------------------------------------------------
 ;Получить CID
-;IN: X-адрес на выделенную память
-;OUT: ACCUM-R1 ответ
+;IN: X-адрес на буффер
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH TEMP
+	PUSH ACCUM
+	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_Y
-
-	MOVW YL,XL
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD10
@@ -36,15 +34,18 @@ _DRV_SD_OP_GET_CID:
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_GET_CID__END
+	BRNE _DRV_SD_OP_GET_CID__ERROR
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x10
 	MCALL _DRV_SD_GET_BLOCK
+	RJMP _DRV_SD_OP_GET_CID__END
+_DRV_SD_OP_GET_CID__ERROR:
+	LDI TEMP,DRV_RESULT_ERROR
 _DRV_SD_OP_GET_CID__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_Y
 	POP TEMP_L
-	POP TEMP
+	POP TEMP_H
+	POP ACCUM
 	RET
 .endif

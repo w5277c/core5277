@@ -10,7 +10,7 @@
 ;--------------------------------------------------------
 DRV_SD_CSD_BLOCK_INFO:
 ;Возвращаем данные по блоку
-;IN: X-адрес на блок данных
+;IN: X-адрес на буфер
 ;OUT: TEMP_H/L - размер блока для чтения,
 ;TEMP_EH/EL - размер блока для записи,
 ;FLAGS-поддержка partial (5-бит чтение, 6-бит запись),
@@ -19,8 +19,7 @@ DRV_SD_CSD_BLOCK_INFO:
 	PUSH TEMP
 	PUSH_Z
 
-	MOV ZH,XH
-	MOV ZL,XL
+	MOVW ZL,XL
 
 	CLR FLAGS
 

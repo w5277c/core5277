@@ -14,14 +14,12 @@
 _DRV_SD_OP_READ_BLOCK:
 ;--------------------------------------------------------
 ;Читаем блок данных
-;IN: Y-адрес на переменные, X-адрес на буфер
-;TEMP_EH/EL/H/L-номер блока
-;OUT: ACCUM-R1 ответ
+;IN: X-адрес на буфер,TEMP_EH/EL/H/L-номер блока
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH TEMP
+	PUSH ACCUM
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_X
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD17
@@ -36,19 +34,19 @@ _DRV_SD_OP_READ_BLOCK:
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_READ_BLOCK__FAIL
+	BRNE _DRV_SD_OP_READ_BLOCK__ERROR
 
 	LDI TEMP_H,high(0x200)
 	LDI TEMP_L,low(0x200)
 	MCALL _DRV_SD_GET_BLOCK
 	RJMP _DRV_SD_OP_READ_BLOCK__END
-_DRV_SD_OP_READ_BLOCK__FAIL:
+_DRV_SD_OP_READ_BLOCK__ERROR:
+	LDI TEMP,DRV_RESULT_ERROR
 _DRV_SD_OP_READ_BLOCK__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_X
 	POP TEMP_L
 	POP TEMP_H
-	POP TEMP
+	POP ACCUM
 	RET
 .endif
