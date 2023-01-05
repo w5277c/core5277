@@ -16,11 +16,11 @@ _DRV_SD_OP_GET_CSD:
 ;Получить CSD
 ;IN: X-адрес на выделенную память
 ;OUT: ACCUM-R1 ответ
-;Y-адрес на буфер
 ;--------------------------------------------------------
 	PUSH TEMP
+	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_X
+	PUSH_Y
 
 	MOV YH,XH
 	MOV YL,XL
@@ -29,14 +29,10 @@ _DRV_SD_OP_GET_CSD:
 	LDI TEMP,_DRV_SD_CMD9
 	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
 	POP_X
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
@@ -49,8 +45,9 @@ _DRV_SD_OP_GET_CSD:
 _DRV_SD_OP_GET_CSD__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_X
+	POP_Y
 	POP TEMP_L
+	POP TEMP_H
 	POP TEMP
 	RET
 .endif
