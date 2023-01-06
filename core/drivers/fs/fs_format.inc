@@ -9,6 +9,7 @@
 
 .include	"./core/drivers/fs/_fs_name_check.inc"
 .include	"./mem/ram_fill16.inc"
+.include	"./str/str_len.inc"
 .include	"./str/strn_copy.inc"
 .include	"./core/drivers/sd/sd_write_block.inc"
 

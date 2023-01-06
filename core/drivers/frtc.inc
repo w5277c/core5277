@@ -35,23 +35,23 @@ DRV_FRTC_INIT:
 	LDI TEMP,0x00
 	MOVW XL,YL
 	MCALL RAM_FILL
-	
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
-;IN: ACCUM-тип операции
-;OUT: TEMP-результат DRV_RESULT_...
+;IN: FLAGS-тип операции
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_Y
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 
-	CPI ACCUM,DRV_RTC_SET_TIMESTAMP
+	CPI FLAGS,DRV_RTC_SET_TIMESTAMP
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_FRTC_SET_TIMESTAMP
 	RJMP _DRV_FRTC__END
-	CPI ACCUM,DRV_RTC_GET_TIMESTAMP
+	CPI FLAGS,DRV_RTC_GET_TIMESTAMP
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_FRTC_GET_TIMESTAMP
 	RJMP _DRV_FRTC__END
@@ -68,7 +68,7 @@ _DRV_FRTC_SET_TIMESTAMP:
 ;--------------------------------------------------------
 ;Устанвливаем TIMESTAMP с учетом UPTIME
 ;IN: TEMP_EH/EL/H/L-временная метка в сек.
-;OUT: TEMP-результат DRV_RTC_RESULT_...
+;OUT: TEMP-DRV_RTC_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH ACCUM
@@ -76,7 +76,7 @@ _DRV_FRTC_SET_TIMESTAMP:
 	PUSH TEMP_EL
 	PUSH TEMP_H
 	PUSH TEMP_L
-	
+
 	MCALL C5_DISPATCHER_LOCK
 	MCALL C5_UPTIME_COPY
 	LDI_X 500
@@ -112,11 +112,11 @@ _DRV_FRTC_GET_TIMESTAMP:
 ;--------------------------------------------------------
 ;Возвращаем текущий TIMESTAMP
 ;OUT TEMP_EH/EL/H/L-временная метка в сек.,
-;TEMP-результат DRV_RESULT_...
+;TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH ACCUM
-	
+
 	MCALL C5_DISPATCHER_LOCK
 	MCALL C5_UPTIME_COPY
 	LDI_X 500
