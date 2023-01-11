@@ -1,38 +1,34 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;29.04.2021	w5277c@gmail.com			Начало
-;01.10.2021	w5277c@gmail.com			Y->X
+;12.01.2023	konstantin@5277.ru		Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_STR_LEN
+.ifdef DEF_STR_ROM_COPY
 .else
-.set DEF_STR_LEN = 1
+.set DEF_STR_ROM_COPY = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included STR_LEN"
+.message "included STR_ROM_COPY"
 .endif
 
 ;--------------------------------------------------------
-STR_LEN:
+STR_ROM_COPY:
 ;--------------------------------------------------------
-;Вычисление размера строки
-;IN: X-SRC адрес
-;OUT: TEMP-размер без учета 0x00 (0xff-переполнение)
+;Копирование строки из ROM
+;IN: Z-SRC адрес, X-DST адрес
 ;--------------------------------------------------------
+	PUSH_Z
 	PUSH_X
-	PUSH ACCUM
+	PUSH TEMP
 
-	CLR TEMP
-STR_LEN__LOOP:
-	LD ACCUM,X+
-	CPI ACCUM,0x00
-	BREQ STR_LEN__END
-	INC TEMP
-	CPI TEMP,0xff
-	BRNE STR_LEN__LOOP
+STR_ROM_COPY__LOOP:
+	LPM TEMP,Z+
+	ST X+,TEMP
+	CPI TEMP,0x00
+	BRNE STR_ROM_COPY__LOOP
 
-STR_LEN__END:
-	POP ACCUM
+	POP TEMP
 	POP_X
+	POP_Z
 	RET
 .endif

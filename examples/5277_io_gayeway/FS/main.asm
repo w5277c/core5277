@@ -28,7 +28,7 @@
 	.SET	BUFFER_SIZE										= 0x200	;Размер общего (буфер драйвера SD карты)
 	.SET	LOGGING_PORT									= SDA		;STDOUT
 	.SET	C5_IN_PORT										= SCL	;STDIN
-	.SET	LOGGING_LEVEL									= LOGGING_LVL_INF
+	.SET	LOGGING_LEVEL									= LOGGING_LVL_PNC
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;---
@@ -49,7 +49,7 @@
 	.INCLUDE "./io/port_mode_out.inc"
 	.INCLUDE "./io/port_set_hi.inc"
 	.INCLUDE "./io/port_set_lo.inc"
-	.INCLUDE "./mem/rom_read_bytes.inc"
+	.INCLUDE "./str/str_rom_copy.inc"
 
 	;---
 
@@ -108,12 +108,12 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
-	LDI_Z TASK__DISK_LABEL
-	MCALL ROM_READ_BYTES
+	LDI_Z TASK__DISK_LABEL*2
+	MOVW XL,YL
+	MCALL STR_ROM_COPY
 
 	LDI TEMP,PID_FS_DRV
 	LDI FLAGS,DRV_FS_OP_FORMAT
-	MOVW XL,YL
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
 	BRNE TASK__DONE
