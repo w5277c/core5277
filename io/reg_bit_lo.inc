@@ -20,7 +20,7 @@ REG_BIT_LO:
 ;IN: TEMP-адрес,ACCUM-число бита
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH_THL
+	PUSH_T16
 	PUSH ACCUM
 
 	COM ACCUM
@@ -34,7 +34,7 @@ REG_BIT_LO:
 	STS SREG,TEMP_H
 
 	POP ACCUM
-	POP_THL
+	POP_T16
 	POP_Z
 	RET
 .endif

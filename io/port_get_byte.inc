@@ -24,7 +24,7 @@ PORT_GET_BYTE:
 ;OUT: ACCUM - значение
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH_THL
+	PUSH_T16
 	PUSH TEMP
 
 	MCALL PORT_OFFSETS
@@ -33,7 +33,7 @@ PORT_GET_BYTE:
 	LD ACCUM,Z
 
 	POP TEMP
-	POP_THL
+	POP_T16
 	POP_Z
 	RET
 .endif

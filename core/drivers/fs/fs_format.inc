@@ -11,7 +11,6 @@
 .include	"./mem/ram_fill16.inc"
 .include	"./str/str_len.inc"
 .include	"./str/strn_copy.inc"
-.include	"./core/drivers/sd/sd_write_block.inc"
 
 ;--------------------------------------------------------
 _DRV_FS_OP_FORMAT:
@@ -56,11 +55,9 @@ _DRV_FS_OP_FORMAT:
 	LDI FLAGS,DRV_RTC_GET_TIMESTAMP
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
-	BREQ PC+0x05
-	LDI TEMP_EH,0x00
-	LDI TEMP_EL,0x00
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+	BREQ _DRV_FS_OP_FORMAT__L1
+	LDI_T32 0x00000000
+_DRV_FS_OP_FORMAT__L1:
 	STD Z+DRV_FS_ITEM_CTIME+0x00,TEMP_EH
 	STD Z+DRV_FS_ITEM_CTIME+0x01,TEMP_EL
 	STD Z+DRV_FS_ITEM_CTIME+0x02,TEMP_H
@@ -75,13 +72,10 @@ _DRV_FS_OP_FORMAT:
 	ADIW XL,DRV_FS_ITEM_NAME
 	MCALL STRN_COPY
 
-	;Вызываем драйвер SD для записи блока
-	LDD TEMP,Y+_DRV_FS_SD_DRV_ID
-	LDI FLAGS,DRV_SD_OP_WRITE_BLOCK
-	LDI TEMP_EH,0x00
-	LDI TEMP_EL,0x00
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+	;Вызываем драйвер диска для записи блока
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_READ
+	LDI_T32 0x00000000
 	MCALL C5_EXEC
 
 _DRV_FS_OP_FORMAT__END:

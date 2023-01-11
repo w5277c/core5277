@@ -19,7 +19,7 @@ REG_BIT_INV:
 ;OUT: flag C-состояние бита(true = HI)
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH_THL
+	PUSH_T16
 
 	MOV ZH,C0x00
 	MOV ZL,TEMP
@@ -33,7 +33,7 @@ REG_BIT_INV:
 
 	ADD TEMP_L,C0xff
 
-	POP_THL
+	POP_T16
 	POP_Z
 	RET
 .endif

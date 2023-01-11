@@ -41,6 +41,8 @@
 
 	.INCLUDE "./core/drivers/frtc.inc"
 	.INCLUDE "./core/drivers/fs/fs_format.inc"
+
+	.INCLUDE "./core/drivers/fs/fs_md.inc"
 	.INCLUDE "./core/drivers/fs_c5.inc"
 	;---
 	;Блок задач
@@ -101,6 +103,11 @@ MAIN:
 ;--------------------------------------------------------;Задача
 TASK__DISK_LABEL:
 	.db "test",0x00
+TASK__DIR1_LABEL:
+	.db "hello",0x00
+TASK__DIR2_LABEL:
+	.db "world!!!",0x00
+
 ;--------------------------------------------------------
 TASK__INIT:
 	LDI ACCUM,0x05
@@ -111,9 +118,27 @@ TASK__INFINITE_LOOP:
 	LDI_Z TASK__DISK_LABEL*2
 	MOVW XL,YL
 	MCALL STR_ROM_COPY
-
 	LDI TEMP,PID_FS_DRV
 	LDI FLAGS,DRV_FS_OP_FORMAT
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BRNE TASK__DONE
+
+
+	LDI_Z TASK__DIR1_LABEL*2
+	MCALL STR_ROM_COPY
+	LDI TEMP,PID_FS_DRV
+	LDI FLAGS,DRV_FS_OP_MD
+	LDI_T16 0x0000
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BRNE TASK__DONE
+
+
+	LDI_Z TASK__DIR2_LABEL*2
+	MCALL STR_ROM_COPY
+	LDI TEMP,PID_FS_DRV
+	LDI FLAGS,DRV_FS_OP_MD
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
 	BRNE TASK__DONE

@@ -120,7 +120,7 @@ DRV_SD_INIT:
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
-	PUSH_Z
+	PUSH_Y
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
@@ -199,7 +199,7 @@ DRV_SD_INIT:
 	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_SD__END:
 
-	POP_Z
+	POP_Y
 	POP_X
 	RET
 

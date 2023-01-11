@@ -12,7 +12,7 @@
 .include	"./mem/ram_fill.inc"
 
 	;---OFFSETS---
-	.EQU	_DRV_FS_SD_DRV_ID											= 0x00;1B ИД драйвера SD карты
+	.EQU	_DRV_FS_DISK_DRV_ID										= 0x00;1B ИД драйвера диска
 	.EQU	_DRV_FS_RTC_DRV_ID										= 0x01;1B ИД драйвера RTC
 	.EQU	_DRV_FS_BUFFER_ADDR										= 0x02;2B адрес на буфер 512 байт
 	.EQU	_DRV_FS_CUR_DIR											= 0x04;2B ID текущей директории
@@ -34,16 +34,16 @@
 ;	.EQU	DRV_FS_CMD_DISK_BVERIFY				= 0x05			;Проверить данные в блоке
 
 	;---FS-ITEM-STRUCTURE---------------------------------;Структура элемента каталога FS (32 байт)
-	.EQU	DRV_FS_ITEM_PARENT_ID				= 0x02			;2B - ид каталога, в котором лежит данный элемент
-	.EQU	DRV_FS_ITEM_BSTART					= 0x04			;4B - номер первого блока
-	.EQU	DRV_FS_ITEM_BLEN						= 0x08			;3B - длина данных в блоках
-	.EQU	DRV_FS_ITEM_LEN						= 0x0c			;2B - длина данных в последнем блоке для FILE
+	.EQU	DRV_FS_ITEM_PARENT_ID				= 0x00			;2B - ид каталога, в котором лежит данный элемент
+	.EQU	DRV_FS_ITEM_BSTART					= 0x02			;4B - номер первого блока
+	.EQU	DRV_FS_ITEM_BLEN						= 0x06			;3B - длина данных в блоках
+	.EQU	DRV_FS_ITEM_LEN						= 0x09			;2B - длина данных в последнем блоке для FILE
 																			;или номер последнего занятого элемента для ROOT
 																			;или номер текущего блока для LOOPFILE
-	.EQU	DRV_FS_ITEM_CTIME						= 0x0e			;4B - время создания
-	.EQU	DRV_FS_ITEM_ETIME						= 0x12			;4B - время изменения
-	.EQU	DRV_FS_ITEM_OPT						= 0x16			;1B - опции элемента (тип и прочее)
-	.EQU	DRV_FS_ITEM_NAME						= 0x18			;12B - имя/комментарий
+	.EQU	DRV_FS_ITEM_CTIME						= 0x0b			;4B - время создания
+	.EQU	DRV_FS_ITEM_ETIME						= 0x0f			;4B - время изменения
+	.EQU	DRV_FS_ITEM_OPT						= 0x13			;1B - опции элемента (тип и прочее)
+	.EQU	DRV_FS_ITEM_NAME						= 0x14			;12B - имя/комментарий
 
 	;---FS-ITEM-OPTIONS-H-NIBBLE--------------------------;Опции элемента
 	;---L-NIBBLE------------------------------------------;Тип элемента - младший ниббл
@@ -96,7 +96,7 @@ DRV_FS_INIT:
 	MCALL RAM_FILL
 
 	POP_X
-	STD Y+_DRV_FS_SD_DRV_ID,TEMP_H
+	STD Y+_DRV_FS_DISK_DRV_ID,TEMP_H
 	STD Y+_DRV_FS_RTC_DRV_ID,TEMP_L
 	STD Y+_DRV_FS_BUFFER_ADDR+0x00,XH
 	STD Y+_DRV_FS_BUFFER_ADDR+0x01,XL
@@ -171,11 +171,11 @@ _DRV_FS_ITEM_READ:
 
 	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x01
 	ADD XL,TEMP
-	LDD TEMP_L,Y+_DRV_FS_BUFFER_ADDR+0x00
+	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x00
 	ADC XH,TEMP
 
-	LDD ZH,Y+_DRV_FS_ITEM_BUFFER+0x00
-	LDD ZL,Y+_DRV_FS_ITEM_BUFFER+0x01
+	MOVW ZL,YL
+	ADIW ZL,_DRV_FS_ITEM_BUFFER
 	LDI LOOP_CNTR,DRV_FS_ITEM_SIZE
 	MCALL RAM_COPY
 	LDI TEMP,DRV_RESULT_OK
@@ -216,10 +216,10 @@ _DRV_FS_ITEM_WRITE:
 	MOVW ZL,XL
 	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x01
 	ADD ZL,TEMP
-	LDD TEMP_L,Y+_DRV_FS_BUFFER_ADDR+0x00
+	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x00
 	ADC ZH,TEMP
-	LDD XH,Y+_DRV_FS_ITEM_BUFFER+0x00
-	LDD XL,Y+_DRV_FS_ITEM_BUFFER+0x01
+	MOVW XL,YL
+	ADIW XL,_DRV_FS_ITEM_BUFFER
 	LDI LOOP_CNTR,DRV_FS_ITEM_SIZE
 	MCALL RAM_COPY
 	;Записываем блок
@@ -243,33 +243,21 @@ _DRV_FS_LAST_ITEM_ID_UPDATE:
 ;IN: Y-адрес на переменные, TEMP_H/L-ITEM_ID
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH TEMP_EH
-	PUSH TEMP_EL
-	PUSH TEMP_H
-	PUSH TEMP_L
+	PUSH_T32
 
-	PUSH TEMP_H
-	PUSH TEMP_L
-	LDI TEMP_EH,0x00
-	LDI TEMP_EL,0x00
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+	PUSH_T16
+	LDI_T32 0x00000000
 	MCALL _DRV_FS_BLOCK_READ
-	POP TEMP_L
-	POP TEMP_H
+	POP_T16
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_FS_LAST_ITEM_ID_UPDATE__END
 	STD Y+_DRV_FS_ITEM_BUFFER+DRV_FS_ITEM_LEN+0x00,TEMP_H
 	STD Y+_DRV_FS_ITEM_BUFFER+DRV_FS_ITEM_LEN+0x01,TEMP_L
-	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+	LDI_T16 0x0000
 	MCALL _DRV_FS_BLOCK_WRITE
 
 _DRV_FS_LAST_ITEM_ID_UPDATE__END:
-	POP TEMP_L
-	POP TEMP_H
-	POP TEMP_EL
-	POP TEMP_EH
+	POP_T32
 	RET
 
 
@@ -339,7 +327,7 @@ _DRV_FS_BLOCK_READ:
 ;--------------------------------------------------------
 	PUSH FLAGS
 
-	LDD TEMP,Y+_DRV_FS_SD_DRV_ID
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
 	LDI FLAGS,DRV_DISK_OP_READ
 	MCALL C5_EXEC
 
@@ -354,7 +342,7 @@ _DRV_FS_BLOCK_WRITE:
 ;--------------------------------------------------------
 	PUSH FLAGS
 
-	LDD TEMP,Y+_DRV_FS_SD_DRV_ID
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
 	LDI FLAGS,DRV_DISK_OP_WRITE
 	MCALL C5_EXEC
 

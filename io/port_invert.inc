@@ -24,7 +24,7 @@ PORT_INVERT:
 ;IN: ACCUM адрес регистра PORTx
 ;--------------------------------------------------------;
 	PUSH_Z
-	PUSH_THL
+	PUSH_T16
 	PUSH TEMP
 	PUSH ACCUM
 
@@ -41,7 +41,7 @@ PORT_INVERT:
 
 	POP ACCUM
 	POP TEMP
-	POP_THL
+	POP_T16
 	POP_Z
 	RET
 .endif
