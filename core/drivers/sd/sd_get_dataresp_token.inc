@@ -15,7 +15,7 @@
 _DRV_SD_LOG_STR_DATA_RESPONSE_TOKEN:
 		.db	"Response:",0x00
 _DRV_SD_LOG_STR_DATA_RESPONSE_TOKENS:
-		.db	"Accepted",0x00,"CRC error",0x00,"Write error",0x00
+		.db	"Accepted",0x00,"CRC error",0x00,"Write error",0x00,"Timeout",0x00
 	.endif
 .endif
 
@@ -59,6 +59,9 @@ _DRV_SD_GET_DATARESP_TOKEN2__DONE:
 		PUSH_Z
 		LDI_Z _DRV_SD_LOG_STR_DATA_RESPONSE_TOKEN|0x8000
 		MCALL C5_OUT_STR
+		LDI TEMP,0x03
+		CPI ACCUM,0xff
+		BREQ PC+0x05
 		MOV TEMP,ACCUM
 		LSR TEMP
 		LSR TEMP

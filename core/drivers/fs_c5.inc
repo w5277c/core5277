@@ -4,46 +4,69 @@
 ;26.12.2020	w5277c@gmail.com			Начало
 ;23.10.2022	konstantin@5277.ru			В процессе
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO
+;Обновить процедуры format и обновление root элемента, проверить новый функционал
+;
+;
+;Добавить процедуру позиционирования в файле(относительно и абсолютно),
+;записи и чтения блока данных(не более 255 байт), добавления данных.
+;Также удаления файла и директории и переименование. Управление флагами. И т.д.
+;Идентификация файлов выполняется по их ид.
+;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF_C5_FS_COMMON
 .else
 .set DEF_C5_FS_COMMON = 1
 
+.include "./core/drivers/_fs.inc"
 .include	"./mem/ram_fill.inc"
+.include	"./mem/ram_copy.inc"
+.include "./core/uptime_delta.inc"
+.include "./core/uptime_copy.inc"
+.include "./mem/ram_cp.inc"
+
+.ifdef LOGGING_PORT
+	.if LOGGING_LEVEL >= LOGGING_LVL_INF
+		.include	"./core/io/out_strn.inc"
+		.include	"./core/io/out_str_el.inc"
+		.include	"./core/io/out_num16_hex.inc"
+		.include	"./core/io/out_num32.inc"
+_DRV_FS_LOG_STR_INIT:
+		.db	"Init C5 filesystem, disk:",0x00,", size:",0x00,"blks, used:",0x00,"blks (blk=",0x00,")",0x0d,0x0a,0x00;
+	.endif
+.endif
+
 
 	;---OFFSETS---
 	.EQU	_DRV_FS_DISK_DRV_ID										= 0x00;1B ИД драйвера диска
 	.EQU	_DRV_FS_RTC_DRV_ID										= 0x01;1B ИД драйвера RTC
 	.EQU	_DRV_FS_BUFFER_ADDR										= 0x02;2B адрес на буфер 512 байт
-	.EQU	_DRV_FS_CUR_DIR											= 0x04;2B ID текущей директории
-	.EQU	_DRV_FS_CUR_FILE											= 0x06;2B ID текущего файла
-	.EQU	_DRV_FS_TEMP_ITEM											= 0x08;2B ID текущего файла (исп. для внутренних циклов и прочего)
-	.EQU	_DRV_FS_ITEM_BUFFER										= 0x0a;32B размер буфера для работы с ITEM
+	.EQU	_DRV_FS_DISK_SIZE											= 0x04;4B количество блоков
+	.EQU	_DRV_FS_DISK_OTIME										= 0x08;5B uptime последней операции
+	.EQU	_DRV_FS_DISK_ID											= 0x0d;8B первые 8 байт идентификатора диска
+	.EQU	_DRV_FS_ITEM_BUFFER										= 0x15;32B размер буфера для работы с ITEM
 	;---
-	.EQU	_DRV_FS_VARS_SIZE											= 0x2a;
+	.EQU	_DRV_FS_RAM_SIZE											= 0x35;53B
 
-	;---OPERATIONS---
-	.EQU	DRV_FS_OP_FORMAT						= 0x01			;Создать FS
-	.EQU	DRV_FS_OP_ITEM_INFO					= 0x02			;Считать блок с информацией об элементе
-	.EQU	DRV_FS_OP_MD							= 0x02			;Создать директорию
-	.EQU	DRV_FS_OP_CD							= 0x03			;Сменить директорию
-;	.EQU	DRV_FS_CMD_DISK_PGET					= 0x01			;Считать параметр
-;	.EQU	DRV_FS_CMD_DISK_PSET					= 0x02			;Записать параметр
-;	.EQU	DRV_FS_CMD_DISK_BREAD				= 0x03			;Считать данные с блока
-;	.EQU	DRV_FS_CMD_DISK_BWRITE				= 0x04			;Записать данные в блок
-;	.EQU	DRV_FS_CMD_DISK_BVERIFY				= 0x05			;Проверить данные в блоке
 
+	;---FS-ROOT-STRUCTURE---------------------------------;Струкура элемента ROOT
+	.EQU	DRV_FS_ROOT_MAGIC						= 0x00			;2B - 5277
+	.EQU	DRV_FS_ROOT_VERSION					= 0x02			;1B - версия x/10
+	.EQU	DRV_FS_ROOT_CURRENT_BLK				= 0x03			;4B - текущий свободный блок(за ним свободное пространство)
+	.EQU	DRV_FS_ROOT_USED_BLKS				= 0x07			;4B - количество занятых блоков
+	.EQU	DRV_FS_ROOT_CTIME						= 0x0b			;4B - время форматирования
+	.EQU	DRV_FS_ROOT_ETIME						= 0x0f			;4B - время изменения блока ROOT
+	.EQU	DRV_FS_ROOT_OPT						= 0x13			;1B - опции элемента (тип и прочее)
+	.EQU	DRV_FS_ROOT_NAME						= 0x14			;12B - имя
 	;---FS-ITEM-STRUCTURE---------------------------------;Структура элемента каталога FS (32 байт)
 	.EQU	DRV_FS_ITEM_PARENT_ID				= 0x00			;2B - ид каталога, в котором лежит данный элемент
 	.EQU	DRV_FS_ITEM_BSTART					= 0x02			;4B - номер первого блока
-	.EQU	DRV_FS_ITEM_BLEN						= 0x06			;3B - длина данных в блоках
-	.EQU	DRV_FS_ITEM_LEN						= 0x09			;2B - длина данных в последнем блоке для FILE
-																			;или номер последнего занятого элемента для ROOT
-																			;или номер текущего блока для LOOPFILE
+	.EQU	DRV_FS_ITEM_BLEN						= 0x06			;3B - длина данных в блоках(занято на диске для ROOT)
+	.EQU	DRV_FS_ITEM_LEN						= 0x09			;2B - длина данных в последнем блоке для FILE или номер текущего блока для LOOPFILE
 	.EQU	DRV_FS_ITEM_CTIME						= 0x0b			;4B - время создания
 	.EQU	DRV_FS_ITEM_ETIME						= 0x0f			;4B - время изменения
 	.EQU	DRV_FS_ITEM_OPT						= 0x13			;1B - опции элемента (тип и прочее)
-	.EQU	DRV_FS_ITEM_NAME						= 0x14			;12B - имя/комментарий
+	.EQU	DRV_FS_ITEM_NAME						= 0x14			;12B - имя
 
 	;---FS-ITEM-OPTIONS-H-NIBBLE--------------------------;Опции элемента
 	;---L-NIBBLE------------------------------------------;Тип элемента - младший ниббл
@@ -86,7 +109,7 @@ DRV_FS_INIT:
 ;TEMP_H-ид драйвера диска, TEMP_L-ид драйвера RTC
 ;--------------------------------------------------------
 	;Выделяем память
-	LDI ACCUM,_DRV_FS_VARS_SIZE
+	LDI ACCUM,_DRV_FS_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
 	PUSH_X
@@ -101,6 +124,13 @@ DRV_FS_INIT:
 	STD Y+_DRV_FS_BUFFER_ADDR+0x00,XH
 	STD Y+_DRV_FS_BUFFER_ADDR+0x01,XL
 
+	LDI TEMP,0xff
+	STD Y+_DRV_FS_DISK_OTIME+0x00,TEMP
+	STD Y+_DRV_FS_DISK_OTIME+0x01,TEMP
+	STD Y+_DRV_FS_DISK_OTIME+0x02,TEMP
+	STD Y+_DRV_FS_DISK_OTIME+0x03,TEMP
+	STD Y+_DRV_FS_DISK_OTIME+0x04,TEMP
+
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
@@ -111,6 +141,8 @@ DRV_FS_INIT:
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
+
+	MCALL _DRV_FS_CHECK_DISK
 
 .ifdef DEF_DRIVER_FS_FORMAT
 	CPI FLAGS,DRV_FS_OP_FORMAT
@@ -130,7 +162,7 @@ DRV_FS_INIT:
 	MCALL _DRV_FS_OP_CD
 	RJMP _DRV_FS__END
 .endif
-	CPI FLAGS,DRV_FS_OP_ITEM_INFO
+	CPI FLAGS,DRV_FS_OP_INFO
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_FS_ITEM_READ
 	RJMP _DRV_FS__END
@@ -251,8 +283,12 @@ _DRV_FS_LAST_ITEM_ID_UPDATE:
 	POP_T16
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_FS_LAST_ITEM_ID_UPDATE__END
-	STD Y+_DRV_FS_ITEM_BUFFER+DRV_FS_ITEM_LEN+0x00,TEMP_H
-	STD Y+_DRV_FS_ITEM_BUFFER+DRV_FS_ITEM_LEN+0x01,TEMP_L
+	PUSH_Z
+	LDD ZH,Y+_DRV_FS_BUFFER_ADDR+0x00
+	LDD ZL,Y+_DRV_FS_BUFFER_ADDR+0x01
+	STD Z+0x00+DRV_FS_ITEM_LEN+0x00,TEMP_H
+	STD Z+0x00+DRV_FS_ITEM_LEN+0x01,TEMP_L
+	POP_Z
 	LDI_T16 0x0000
 	MCALL _DRV_FS_BLOCK_WRITE
 
@@ -349,4 +385,122 @@ _DRV_FS_BLOCK_WRITE:
 	POP FLAGS
 	RET
 
+
+;--------------------------------------------------------
+_DRV_FS_DISK_INIT:
+;--------------------------------------------------------
+;IN: Y-адрес на переменные, X-адрес буфера
+;OUT: TEMP-DEV_RESULT_...
+;--------------------------------------------------------
+	PUSH_Z
+
+	LDI ACCUM,0x00
+
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_INIT
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BREQ PC+0x02
+	RJMP _DRV_FS_DISK_INIT__END
+
+	LDI_X C5_BUFFER
+	LDI TEMP,0x00
+	LDI LOOP_CNTR,0x08
+	MCALL RAM_FILL
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_GET_ID
+	LDI_X C5_BUFFER
+	LDI LOOP_CNTR,0x08
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_DISK_INIT__END
+	MOVW ZL,YL
+	ADIW ZL,_DRV_FS_DISK_ID
+	MCALL RAM_CP
+	BREQ PC_+0x02
+	LDI ACCUM,0x01
+	MOVW ZL,YL
+	ADIW ZL,_DRV_FS_DISK_ID
+	MCALL RAM_COPY
+
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_GET_SIZE
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_DISK_INIT__END
+	STD Y+_DRV_FS_DISK_SIZE+0x00,TEMP_EH
+	STD Y+_DRV_FS_DISK_SIZE+0x01,TEMP_EL
+	STD Y+_DRV_FS_DISK_SIZE+0x02,TEMP_H
+	STD Y+_DRV_FS_DISK_SIZE+0x03,TEMP_L
+
+	ADIW YL,_DRV_FS_DISK_TIME
+	MCALL C5_UPTIME_COPY
+;.db	"Init C5 filesystem, disk:",0x00,", size:",0x00,"blks, used:",0x00,"blks (blk=",0x00,")",0x0d,0x0a,0x00;
+.ifdef LOGGING_PORT
+	.if LOGGING_LEVEL >= LOGGING_LVL_INF
+		LDI_Z _DRV_FS_LOG_STR_INIT|0x8000
+		LDI TEMP,0x00
+		MCALL C5_OUT_STR
+		MOVW ZL,YL
+		ADIW ZL,_DRV_FS_DISK_UID
+		LDI TEMP,0x08
+		MCALL C5_OUT_STRN
+		LDI_Z _DRV_FS_LOG_STR_INIT|0x8000
+		LDI TEMP,0x01
+		MCALL C5_OUT_STR
+		LDD TEMP_EH,Y+_DRV_FS_DISK_SIZE+0x00
+		LDD TEMP_EL,Y+_DRV_FS_DISK_SIZE+0x01
+		LDD TEMP_H,Y+_DRV_FS_DISK_SIZE+0x02
+		LDD TEMP_L,Y+_DRV_FS_DISK_SIZE+0x03
+		MCALL C5_OUT_NUM32
+		LDI TEMP,0x02
+		MCALL C5_OUT_STR
+		LDD TEMP_EH,Y+_DRV_FS_DISK_USED+0x00
+		LDD TEMP_EL,Y+_DRV_FS_DISK_USED+0x01
+		LDD TEMP_H,Y+_DRV_FS_DISK_USED+0x02
+		LDD TEMP_L,Y+_DRV_FS_DISK_USED+0x03
+		MCALL C5_OUT_NUM32
+		LDI TEMP,0x03
+		MCALL C5_OUT_STR
+		LDI TEMP_H,high(DRV_DISK_BLOCK_SIZE)
+		LDI TEMP_L,low(DRV_DISK_BLOCK_SIZE)
+		MCALL C5_OUT_NUM16_HEX
+		LDI TEMP,0x04
+		MCALL C5_OUT_STR
+	.endif
+.endif
+
+	CPI ACCUM,0x01
+	BRNE PC+0x02
+	LDI TEMP,DRV_RESULT_GONE
+_DRV_FS_DISK_INIT__END:
+
+	POP_Z
+	RET
+
+;--------------------------------------------------------
+_DRV_FS_CHECK_DISK:
+;--------------------------------------------------------
+;IN: Y-адрес на переменные, X-адрес буфера
+;OUT: TEMP-DEV_RESULT_...
+;--------------------------------------------------------
+	PUSH_Y
+	PUSH_T32
+
+	ADIW YL,_DRV_FS_DISK_TIME
+	MCALL C5_UPTIME_DELTA
+	OR TEMP_EH,TEMP_EL
+	OR TEMP_EH,TEMP_H
+	OR TEMP_EH,TEMP_L
+	BRNE _DRV_FS_CHECK_OTIME__EXPIRED
+	CPI TEMP,250														;0.5ms
+	LDI TEMP,DRV_RESULT_OK
+	BRCS _DRV_FS_CHECK_OTIME__END
+_DRV_FS_CHECK_OTIME__EXPIRED:
+	MCALL _DRV_FS_DISK_INIT
+_DRV_FS_CHECK_OTIME__END:
+
+	POP_T32
+	POP_Y
+	RET
 .endif

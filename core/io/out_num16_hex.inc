@@ -1,46 +1,34 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;10.02.2021  w5277c@gmail.com			Начало
+;12.01.2023	konstantin@5277.ru		Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_DRIVER_SD_RESET
+.ifdef DEF_C5_OUT_NUM16_HEX
 .else
-.set DEF_DRIVER_SD_RESET = 1
+.set DEF_C5_OUT_NUM16_HEX = 1
+.ifdef LOGGING_PORT
 
-.include	"./core/drivers/sd/sd_get_r1.inc"
+.include	"./core/io/out_char.inc"
+.include	"./core/io/out_byte.inc"
 
 ;--------------------------------------------------------
-_DRV_SD_OP_RESET:
+C5_OUT_NUM16_HEX:
 ;--------------------------------------------------------
-;Reset
-;IN: X-адрес на буфер
-;OUT: TEMP-DRV_RESULT_...
+;Логирование HEX числа(2 байта)
+;IN: TEMP_H/L-слово
 ;--------------------------------------------------------
-	PUSH ACCUM
-	PUSH TEMP_L
+	PUSH TEMP
 
-	CBI PORTB,SS & 0x0f
+	LDI TEMP,'0'
+	MCALL C5_OUT_CHAR
+	LDI TEMP,'x'
+	MCALL C5_OUT_CHAR
+	MOV TEMP,TEMP_H
+	MCALL C5_OUT_BYTE
+	MOV TEMP,TEMP_L
+	MCALL C5_OUT_BYTE
 
-	LDI TEMP,_DRV_SD_CMD0
-	ST X+,TEMP
-	ST X+,C0x00
-	ST X+,C0x00
-	ST X+,C0x00
-	ST X+,C0x00
-	SBIW XL,0x05
-	LDI TEMP_L,0x05
-	MCALL _DRV_SD__SEND_CMD
-	MCALL _DRV_SD_GET_R1
-	CPI ACCUM,0x01
-	BRNE _DRV_SD_OP_RESET__ERROR
-	LDI TEMP,DRV_RESULT_OK
-	RJMP _DRV_SD_OP_RESET__END
-_DRV_SD_OP_RESET__ERROR:
-	LDI TEMP,DRV_RESULT_ERROR
-_DRV_SD_OP_RESET__END:
-	SBI PORTB,SS & 0x0f
-
-	POP TEMP_L
-	POP ACCUM
+	POP TEMP
 	RET
+.endif
 .endif

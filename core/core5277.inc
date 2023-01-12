@@ -134,6 +134,7 @@
 	.EQU	DRV_RESULT_INVALID_RESOURCE		= 0x86			;Не коректный ресурс(например PID драйвера)
 	.EQU	DRV_RESULT_INVALID_NAME				= 0x87			;Не корректное имя ресурса(например файла)
 	.EQU	DRV_RESULT_WRONG_BLOCK				= 0x88			;Ошибочный(не существующий) блок(например SD карты)
+	.EQU	DRV_RESULT_GONE						= 0x89			;Объекта больше не сущетсвует
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_C5_DRIVER_HEADER_SIZE				= 0x06			;Размер заголовка драйвера

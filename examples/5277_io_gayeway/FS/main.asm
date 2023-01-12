@@ -28,7 +28,7 @@
 	.SET	BUFFER_SIZE										= 0x200	;Размер общего (буфер драйвера SD карты)
 	.SET	LOGGING_PORT									= SDA		;STDOUT
 	.SET	C5_IN_PORT										= SCL	;STDIN
-	.SET	LOGGING_LEVEL									= LOGGING_LVL_PNC
+	.SET	LOGGING_LEVEL									= LOGGING_LVL_INF
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
 	;---
@@ -36,6 +36,7 @@
 	.INCLUDE "./core/drivers/spi_ms.inc"
 
 	.INCLUDE "./core/drivers/sd/sd_read_block.inc"
+	.INCLUDE "./core/drivers/sd/sd_erase_blocks.inc"
 	.INCLUDE "./core/drivers/sd/sd_write_block.inc"
 	.INCLUDE "./core/drivers/sd_spi.inc"
 
@@ -52,6 +53,7 @@
 	.INCLUDE "./io/port_set_hi.inc"
 	.INCLUDE "./io/port_set_lo.inc"
 	.INCLUDE "./str/str_rom_copy.inc"
+	.INCLUDE "./core/io/out_ramdump.inc"
 
 	;---
 
@@ -115,6 +117,13 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
+	LDI TEMP,PID_DISK_DRV
+	LDI FLAGS,DRV_SD_OP_INIT
+	LDI_X C5_BUFFER
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BRNE TASK__DONE
+
 	LDI_Z TASK__DISK_LABEL*2
 	MOVW XL,YL
 	MCALL STR_ROM_COPY
@@ -139,9 +148,15 @@ TASK__INFINITE_LOOP:
 	MCALL STR_ROM_COPY
 	LDI TEMP,PID_FS_DRV
 	LDI FLAGS,DRV_FS_OP_MD
+	;TEMP_H/L взят из предыдущей операции
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
 	BRNE TASK__DONE
+
+	LDI_Z C5_BUFFER
+	LDI TEMP_H,high(0x200)
+	LDI TEMP_L,low(0x200)
+	MCALL C5_OUT_RAMDUMP
 
 TASK__DONE:
 	RET

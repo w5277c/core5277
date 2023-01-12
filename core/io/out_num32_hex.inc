@@ -8,6 +8,7 @@
 .set DEF_C5_OUT_NUM32_HEX = 1
 .ifdef LOGGING_PORT
 
+.include	"./core/io/out_char.inc"
 .include	"./core/io/out_byte.inc"
 
 ;--------------------------------------------------------

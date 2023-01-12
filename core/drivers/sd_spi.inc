@@ -45,14 +45,14 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	;---OPERATIONS---
 	.EQU	DRV_SD_OP_INIT										= DRV_DISK_OP_INIT	;Инициализация
 	.EQU	DRV_SD_OP_READ_BLOCK								= DRV_DISK_OP_READ	;Считать блок
-	.EQU	DRV_SD_OP_WRITE_BLOCK							= DRV_DISK_OP_WRITE	;Записать блок
-	.EQU	DRV_SD_OP_RESET									= 0x81;Перевод SD в изначальное состояние
-	.EQU	DRV_SD_OP_GET_OCR									= 0x82;Получить OCR
-	.EQU	DRV_SD_OP_GET_CSD									= 0x83;Получить CSD
-	.EQU	DRV_SD_OP_GET_CID									= 0x84;Получить CID
-	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x85;Очистка блоков
-	.EQU	DRV_SD_OP_GET_STATUS								= 0x86;Чтение статуса карты
-	.EQU	DRV_SD_OP_GEN_CMD									= 0x87;Чтение/запись данных контроллера?
+	.EQU	DRV_SD_OP_WRITE_BLOCK							= 0x81;Записать блок
+	.EQU	DRV_SD_OP_RESET									= 0x82;Перевод SD в изначальное состояние
+	.EQU	DRV_SD_OP_GET_OCR									= 0x83;Получить OCR
+	.EQU	DRV_SD_OP_GET_CSD									= 0x84;Получить CSD
+	.EQU	DRV_SD_OP_GET_CID									= 0x85;Получить CID
+	.EQU	DRV_SD_OP_ERASE_BLOCKS							= 0x86;Очистка блоков
+	.EQU	DRV_SD_OP_GET_STATUS								= 0x87;Чтение статуса карты
+	.EQU	DRV_SD_OP_GEN_CMD									= 0x88;Чтение/запись данных контроллера?
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	DRV_SD_VARS_SIZE									= 0x0a;Размер данных под переменные
@@ -60,7 +60,7 @@ _DRV_SD_LOG_STR_SD_CARD_VERSIONS:
 	;---OFFSETS---
 	.EQU	_DRV_SD_EXT_BUFFER_ADDR							= 0x00;2Б адрес внешнего буффера размером в 512Б
 	.EQU	_DRV_SD_VAR_BLOCK_SIZE							= 0x02;2Б размер блока для чтения/записи
-	.EQU	_DRV_SD_WRITE_CMD_BUFFER						= 0x04;6Б
+	.EQU	_DRV_SD_CMD_BUFFER								= 0x04;6Б
 
 	.EQU	_DRV_SD_CMD0										= 0x00;Reset
 	.EQU	_DRV_SD_CMD8										= 0x08;Send interface condition
@@ -139,6 +139,20 @@ DRV_SD_INIT:
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_SD_OP_GET_SIZE
 	RJMP _DRV_SD__END
+.endif
+.ifdef DEF_DRIVER_SD_WRITE_BLOCK
+ .ifdef DEF_DRIVER_SD_ERASE_BLOCKS
+	CPI FLAGS,DRV_DISK_OP_WRITE
+	BRNE PC+0x0a+(_MCALL_SIZE*2)
+	PUSH_Z
+	LDI_Z 0x0001
+	MCALL _DRV_SD_OP_ERASE_BLOCKS
+	POP_Z
+	CPI TEMP,DRV_RESULT_OK
+	BRNE PC+0x01+_MCALL_SIZE
+	MCALL _DRV_SD_OP_WRITE_BLOCK
+	RJMP _DRV_SD__END
+ .endif
 .endif
 
 	CPI FLAGS,DRV_SD_OP_RESET
@@ -243,7 +257,6 @@ _DRV_SD_OP_INIT__LOOP:
 	CBI PORTB,SS & 0x0f
 
 	LDI TEMP,_DRV_SD_CMD8
-	PUSH_X
 	ST X+,TEMP
 	ST X+,C0x00
 	ST X+,C0x00
@@ -251,7 +264,7 @@ _DRV_SD_OP_INIT__LOOP:
 	ST X+,TEMP
 	LDI TEMP,0x52
 	ST X+,TEMP
-	POP_X
+	SBIW XL,0x05
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R3R7
@@ -269,14 +282,13 @@ _DRV_SD_OP_INIT__LOOP:
 _DRV_SD_OP_INIT__WAIT:
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_ACMD41
-	PUSH_X
 	ST X+,TEMP
 	LDI TEMP,0x40
 	ST X+,TEMP
 	ST X+,C0x00
 	ST X+,C0x00
 	ST X+,C0x00
-	POP_X
+	SBIW XL,0x05
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_ACMD
 	CPI ACCUM,0x00
@@ -308,13 +320,12 @@ _DRV_SD_OP_INIT_SD_READY:
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD58
-	PUSH_X
 	ST X+,TEMP
 	ST X+,C0x00
 	ST X+,C0x00
 	ST X+,C0x00
 	ST X+,C0x00
-	POP_X
+	SBIW XL,0x05
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R3R7
@@ -411,17 +422,12 @@ _DRV_SD__SEND_ACMD:
 
 	ADIW XL,0x10
 	LDI TEMP,_DRV_SD_CMD55
-	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	POP_X
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
+	SBIW XL,0x05
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
 	MCALL _DRV_SD_GET_R1
