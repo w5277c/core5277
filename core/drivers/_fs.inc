@@ -29,3 +29,4 @@
 ;	.EQU	DRV_FS_CMD_DISK_BREAD				= 0x03			;Считать данные с блока
 ;	.EQU	DRV_FS_CMD_DISK_BWRITE				= 0x04			;Записать данные в блок
 ;	.EQU	DRV_FS_CMD_DISK_BVERIFY				= 0x05			;Проверить данные в блоке
+.endif

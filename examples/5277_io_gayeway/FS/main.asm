@@ -35,6 +35,8 @@
 	;Блок драйверов
 	.INCLUDE "./core/drivers/spi_ms.inc"
 
+	.INCLUDE "./core/drivers/sd/sd_get_csd.inc"				;Для получения DISK SIZE
+	.INCLUDE "./core/drivers/sd/sd_get_cid.inc"				;Для получения DISK ID
 	.INCLUDE "./core/drivers/sd/sd_read_block.inc"
 	.INCLUDE "./core/drivers/sd/sd_erase_blocks.inc"
 	.INCLUDE "./core/drivers/sd/sd_write_block.inc"
@@ -104,11 +106,11 @@ MAIN:
 
 ;--------------------------------------------------------;Задача
 TASK__DISK_LABEL:
-	.db "test",0x00
+	.db "test",0x00,0x00
 TASK__DIR1_LABEL:
 	.db "hello",0x00
 TASK__DIR2_LABEL:
-	.db "world!!!",0x00
+	.db "world!!!",0x00,0x00
 
 ;--------------------------------------------------------
 TASK__INIT:
@@ -117,13 +119,6 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
-	LDI TEMP,PID_DISK_DRV
-	LDI FLAGS,DRV_SD_OP_INIT
-	LDI_X C5_BUFFER
-	MCALL C5_EXEC
-	CPI TEMP,DRV_RESULT_OK
-	BRNE TASK__DONE
-
 	LDI_Z TASK__DISK_LABEL*2
 	MOVW XL,YL
 	MCALL STR_ROM_COPY

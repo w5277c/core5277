@@ -27,6 +27,7 @@
 .include	"./core/wait_2ms.inc"
 .include	"./conv/crc7_730.inc"
 .include	"./conv/crc8_block.inc"
+.include "./mem/ram_copy.inc"
 
 .ifdef LOGGING_PORT
 	.if LOGGING_LEVEL >= LOGGING_LVL_PNC
@@ -129,10 +130,10 @@ DRV_SD_INIT:
 	LDD XL,Y+_DRV_SD_EXT_BUFFER_ADDR+0x01
 
 .ifdef DEF_DRIVER_SD_GET_CID
-;	CPI FLAGS,DRV_DISK_OP_GET_ID
-;	BRNE PC+0x01+_MCALL_SIZE+0x01
-;	MCALL _DRV_SD_OP_GET_ID
-;	RJMP _DRV_SD__END
+	CPI FLAGS,DRV_DISK_OP_GET_ID
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_SD_OP_GET_ID
+	RJMP _DRV_SD__END
 .endif
 .ifdef DEF_DRIVER_SD_GET_CSD
 	CPI FLAGS,DRV_DISK_OP_GET_SIZE
@@ -406,6 +407,36 @@ _DRV_SD_OP_GET_SIZE__OK:
 _DRV_SD_OP_GET_SIZE__END:
 
 	POP_Y
+	RET
+.endif
+
+.ifdef DEF_DRIVER_SD_GET_CID
+;--------------------------------------------------------
+_DRV_SD_OP_GET_ID:
+;--------------------------------------------------------
+;Считываем ID диска
+;IN: X-адрес на буфер,Y-адрес на переменные
+;OUT: TEMP-DRV_RESULT_...
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Z
+	PUSH LOOP_CNTR
+
+	MCALL _DRV_SD_OP_GET_CID
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_SD_OP_GET_ID__END
+
+	MOVW ZL,XL
+	ADIW XL,0x03
+	LDI LOOP_CNTR,0x05
+	MCALL RAM_COPY
+	STD Z+0x05,C0x00
+	LDI TEMP,DRV_RESULT_OK
+_DRV_SD_OP_GET_ID__END:
+
+	POP LOOP_CNTR
+	POP_Z
+	POP_X
 	RET
 .endif
 
