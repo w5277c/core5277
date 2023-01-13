@@ -135,14 +135,10 @@ DRV_FS_INIT:
 ;IN: FLAGS-тип операции
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH_X
 	PUSH_Y
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
-
-	LDD XH,Y+_DRV_FS_BUFFER_ADDR+0x00
-	LDD XL,Y+_DRV_FS_BUFFER_ADDR+0x01
 
 	LDD TEMP,Y+_DRV_FS_DISK_SIZE+0x00
 	CPI TEMP,0xff
@@ -200,7 +196,6 @@ DRV_FS_INIT:
 _DRV_FS__END:
 
 	POP_Y
-	POP_X
 	RET
 
 ;--------------------------------------------------------
@@ -353,7 +348,7 @@ _DRV_FS_READ_NEXT_BLOCK__END:
 ;--------------------------------------------------------
 _DRV_FS_BLOCK_READ:
 ;--------------------------------------------------------
-;IN: TEMP_EH/EL/H/L-номер блока,X-адрес буфера
+;IN: TEMP_EH/EL/H/L-номер блока
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH FLAGS
@@ -368,7 +363,7 @@ _DRV_FS_BLOCK_READ:
 ;--------------------------------------------------------
 _DRV_FS_BLOCK_WRITE:
 ;--------------------------------------------------------
-;IN: TEMP_EH/EL/H/L-номер блока,X-адрес буфера
+;IN: TEMP_EH/EL/H/L-номер блока
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH FLAGS
@@ -384,7 +379,7 @@ _DRV_FS_BLOCK_WRITE:
 ;--------------------------------------------------------
 _DRV_FS_DISK_INIT:
 ;--------------------------------------------------------
-;IN: Y-адрес на переменные, X-адрес буфера
+;IN: Y-адрес на переменные
 ;OUT: TEMP-DEV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
@@ -394,7 +389,9 @@ _DRV_FS_DISK_INIT:
 	PUSH LOOP_CNTR
 
 	LDI ACCUM,0x00
-	
+	LDD XH,Y+_DRV_FS_BUFFER_ADDR+0x00
+	LDD XL,Y+_DRV_FS_BUFFER_ADDR+0x01
+
 	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
 	LDI FLAGS,DRV_DISK_OP_INIT
 	MCALL C5_EXEC
@@ -410,6 +407,7 @@ _DRV_FS_DISK_INIT:
 	RJMP _DRV_FS_DISK_INIT__END
 	MOVW ZL,YL
 	ADIW ZL,_DRV_FS_DISK_ID
+	LDI LOOP_CNTR,0x08
 	MCALL RAM_COPY
 
 	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
