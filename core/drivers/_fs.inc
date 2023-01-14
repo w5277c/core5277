@@ -23,6 +23,7 @@
 	.EQU	DRV_FS_OP_READ							= 0x31			;Считать данные с файла
 	.EQU	DRV_FS_OP_WRITE						= 0x32			;Записать данные в файл
 	.EQU	DRV_FS_OP_APPEND						= 0x33			;Добавить данные в файл
+	.EQU	DRV_FS_OP_FLUSH						= 0x34			;Сбросить данные на диск
 
 ;	.EQU	DRV_FS_CMD_DISK_PGET					= 0x01			;Считать параметр
 ;	.EQU	DRV_FS_CMD_DISK_PSET					= 0x02			;Записать параметр

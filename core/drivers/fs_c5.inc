@@ -5,13 +5,11 @@
 ;23.10.2022	konstantin@5277.ru			В процессе
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO
-;Обновить процедуры format и обновление root элемента, проверить новый функционал
-;
-;
 ;Добавить процедуру позиционирования в файле(относительно и абсолютно),
 ;записи и чтения блока данных(не более 255 байт), добавления данных.
-;Также удаления файла и директории и переименование. Управление флагами. И т.д.
+;Также переименование. Управление флагами. И т.д.
 ;Идентификация файлов выполняется по их ид.
+;Добавить буферизацию записи на базе выделенного буфера и переменных _DRV_FS_CUR_BLCK_TYPE и _DRV_FS_CUR_BLCK_NUM
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF_C5_FS_COMMON
@@ -45,8 +43,11 @@ _DRV_FS_LOG_STR_INIT:
 	.EQU	_DRV_FS_DISK_TIME											= 0x0a;5B uptime последней операции
 	.EQU	_DRV_FS_DISK_ID											= 0x0f;8B первые 8 байт идентификатора диска
 	.EQU	_DRV_FS_ITEM_BUFFER										= 0x17;32B размер буфера для работы с ITEM
+	.EQU	_DRV_FS_CUR_BLCK_TYPE									= 0x37;1B тип блока(0-другое, 1-чтение,
+																					;2-буферизированнная запись, 3-синхронизированная запись)
+	.EQU	_DRV_FS_CUR_BLCK_NUM										= 0x38;4B номер считанного, готового к записи блока
 	;---
-	.EQU	_DRV_FS_RAM_SIZE											= 0x37;55B
+	.EQU	_DRV_FS_RAM_SIZE											= 0x3c;60B
 
 
 	;---FS-ROOT-STRUCTURE---------------------------------;Струкура элемента ROOT
@@ -358,7 +359,7 @@ _DRV_FS_ITEM_OFFSETS:
 _DRV_FS_READ_NEXT_BLOCK:
 ;--------------------------------------------------------
 ;Считывает следующий блок
-;IN: TEMP_EH/EL/H/L-номер блока
+;IN: Y-адрес на переменные,TEMP_EH/EL/H/L-номер блока
 ;OUT: TEMP_EH/EL/H/L-номер блока, TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
@@ -383,31 +384,56 @@ _DRV_FS_READ_NEXT_BLOCK__END:
 ;--------------------------------------------------------
 _DRV_FS_BLOCK_READ:
 ;--------------------------------------------------------
-;IN: TEMP_EH/EL/H/L-номер блока
+;IN: Y-адрес на переменные,TEMP_EH/EL/H/L-номер блока
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH FLAGS
+	LDD TEMP,Y+_DRV_FS_CUR_BLCK_TYPE
+	CPI TEMP,0x01
+	BRNE _DRV_FS_BLOCK_READ__CONTINUE
+	LDD TEMP,Y+_DRV_FS_CUR_BLCK_NUM+0x00
+	CP TEMP,TEMP_H
+	BRNE _DRV_FS_BLOCK_READ__CONTINUE
+	LDD TEMP,Y+_DRV_FS_CUR_BLCK_NUM+0x01
+	CP TEMP,TEMP_L
+	BRNE _DRV_FS_BLOCK_READ__CONTINUE
+	LDI TEMP,DRV_RESULT_OK
+	RJMP _DRV_FS_BLOCK_READ__END
 
+_DRV_FS_BLOCK_READ__CONTINUE:
+	PUSH FLAGS
 	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
 	LDI FLAGS,DRV_DISK_OP_READ
 	MCALL C5_EXEC
-
 	POP FLAGS
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_BLOCK_READ__END
+	LDI TEMP,0x01
+	STD Y+_DRV_FS_CUR_BLCK_TYPE,TEMP
+	STD Y+_DRV_FS_CUR_BLCK_NUM+0x00,TEMP_H
+	STD Y+_DRV_FS_CUR_BLCK_NUM+0x01,TEMP_L
+	LDI TEMP,DRV_RESULT_OK
+
+_DRV_FS_BLOCK_READ__END:
 	RET
 
 ;--------------------------------------------------------
 _DRV_FS_BLOCK_WRITE:
 ;--------------------------------------------------------
-;IN: TEMP_EH/EL/H/L-номер блока
+;IN: Y-адрес на переменные,TEMP_EH/EL/H/L-номер блока
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH FLAGS
-
 	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
 	LDI FLAGS,DRV_DISK_OP_WRITE
 	MCALL C5_EXEC
-
+	CPI TEMP,DRV_RESULT_OK
 	POP FLAGS
+	BRNE _DRV_FS_BLOCK_WRITE__END
+	LDI TEMP,0x03
+	STD Y+_DRV_FS_CUR_BLCK_TYPE,TEMP
+	LDI TEMP,DRV_RESULT_OK
+_DRV_FS_BLOCK_WRITE__END:
+	POP_T16
 	RET
 
 
@@ -426,6 +452,8 @@ _DRV_FS_DISK_INIT:
 	LDI ACCUM,0x00
 	LDD XH,Y+_DRV_FS_BUFFER_ADDR+0x00
 	LDD XL,Y+_DRV_FS_BUFFER_ADDR+0x01
+
+	STD Y+_DRV_FS_CUR_BLCK_TYPE,C0x00
 
 	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
 	LDI FLAGS,DRV_DISK_OP_INIT
