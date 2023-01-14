@@ -3,6 +3,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;28.04.2021	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
+;TODO: Добавить IN параметр количества блоков для таблицы элементов, сейчас 64K блоков(2МБ)
+;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DRIVER_FS_FORMAT
 .else
 .set DEF_DRIVER_FS_FORMAT = 1
@@ -49,14 +51,15 @@ _DRV_FS_OP_FORMAT:
 	STD Z+DRV_FS_ROOT_MAGIC+0x01,TEMP
 	LDI TEMP,0x01
 	STD Z+DRV_FS_ROOT_VERSION,TEMP
+	LDI TEMP,0x10
 	STD Z+DRV_FS_ROOT_CURRENT_BLK+0x00,C0x00
 	STD Z+DRV_FS_ROOT_CURRENT_BLK+0x01,C0x00
-	STD Z+DRV_FS_ROOT_CURRENT_BLK+0x02,C0x00
-	STD Z+DRV_FS_ROOT_CURRENT_BLK+0x03,TEMP
+	STD Z+DRV_FS_ROOT_CURRENT_BLK+0x02,TEMP
+	STD Z+DRV_FS_ROOT_CURRENT_BLK+0x03,C0x00
 	STD Z+DRV_FS_ROOT_USED_BLKS+0x00,C0x00
 	STD Z+DRV_FS_ROOT_USED_BLKS+0x01,C0x00
-	STD Z+DRV_FS_ROOT_USED_BLKS+0x02,C0x00
-	STD Z+DRV_FS_ROOT_USED_BLKS+0x03,TEMP
+	STD Z+DRV_FS_ROOT_USED_BLKS+0x02,TEMP
+	STD Z+DRV_FS_ROOT_USED_BLKS+0x03,C0x00
 
 	LDD TEMP,Y+_DRV_FS_RTC_DRV_ID
 	LDI FLAGS,DRV_RTC_GET_TIMESTAMP
