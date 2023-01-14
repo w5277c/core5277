@@ -53,7 +53,8 @@ _DRV_FS_LOG_STR_INIT:
 	.EQU	DRV_FS_ROOT_VERSION					= 0x02			;1B - версия x/10
 	.EQU	DRV_FS_ROOT_CURRENT_BLK				= 0x03			;4B - текущий свободный блок(за ним свободное пространство)
 	.EQU	DRV_FS_ROOT_USED_BLKS				= 0x07			;4B - количество занятых блоков
-	.EQU	DRV_FS_ROOT_CTIME						= 0x0b			;4B - время форматирования ;TODO осовбодить под макс. кол-во блоков для ROOT
+	.EQU	DRV_FS_ROOT_ROOT_BLKS				= 0x0b			;2B - макс. кол-во блоков для ROOT
+	.EQU	DRV_FS_ROOT_LAST_ITEM				= 0x0d			;2B - номер последнего элемента
 	.EQU	DRV_FS_ROOT_ETIME						= 0x0f			;4B - время изменения блока ROOT
 	.EQU	DRV_FS_ROOT_OPT						= 0x13			;1B - опции элемента (тип и прочее)
 	.EQU	DRV_FS_ROOT_NAME						= 0x14			;12B - имя
