@@ -136,6 +136,7 @@
 	.EQU	DRV_RESULT_WRONG_BLOCK				= 0x88			;Ошибочный(не существующий) блок(например SD карты)
 	.EQU	DRV_RESULT_GONE						= 0x89			;Объекта больше не сущетсвует
 	.EQU	DRV_RESULT_READ_ONLY					= 0x8a			;Разрешено только чтение
+	.EQU	DRV_RESULT_UNFORMATTED				= 0x8b			;Диск не форматирован
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_C5_DRIVER_HEADER_SIZE				= 0x06			;Размер заголовка драйвера
