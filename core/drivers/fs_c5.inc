@@ -41,19 +41,20 @@ _DRV_FS_LOG_STR_INIT:
 	.EQU	_DRV_FS_RTC_DRV_ID										= 0x01;1B ИД драйвера RTC
 	.EQU	_DRV_FS_BUFFER_ADDR										= 0x02;2B адрес на буфер 512 байт
 	.EQU	_DRV_FS_DISK_SIZE											= 0x04;4B количество блоков
-	.EQU	_DRV_FS_DISK_TIME											= 0x08;5B uptime последней операции
-	.EQU	_DRV_FS_DISK_ID											= 0x0d;8B первые 8 байт идентификатора диска
-	.EQU	_DRV_FS_ITEM_BUFFER										= 0x15;32B размер буфера для работы с ITEM
+	.EQU	_DRV_FS_ITEMS												= 0x08;2B макс. кол-во элементов(копия DRV_FS_ROOT_ITEMS)
+	.EQU	_DRV_FS_DISK_TIME											= 0x0a;5B uptime последней операции
+	.EQU	_DRV_FS_DISK_ID											= 0x0f;8B первые 8 байт идентификатора диска
+	.EQU	_DRV_FS_ITEM_BUFFER										= 0x17;32B размер буфера для работы с ITEM
 	;---
-	.EQU	_DRV_FS_RAM_SIZE											= 0x35;53B
+	.EQU	_DRV_FS_RAM_SIZE											= 0x37;55B
 
 
 	;---FS-ROOT-STRUCTURE---------------------------------;Струкура элемента ROOT
 	.EQU	DRV_FS_ROOT_MAGIC						= 0x00			;2B - 5277
 	.EQU	DRV_FS_ROOT_VERSION					= 0x02			;1B - версия x/10
-	.EQU	DRV_FS_ROOT_CURRENT_BLK				= 0x03			;4B - текущий свободный блок(за ним свободное пространство)
-	.EQU	DRV_FS_ROOT_USED_BLKS				= 0x07			;4B - количество занятых блоков
-	.EQU	DRV_FS_ROOT_ROOT_BLKS				= 0x0b			;2B - макс. кол-во блоков для ROOT
+	.EQU	DRV_FS_ROOT_ITEMS						= 0x03			;2B - макс. кол-во элементов
+	.EQU	DRV_FS_ROOT_CURRENT_BLK				= 0x05			;4B - текущий свободный блок(за ним свободное пространство)
+	.EQU	DRV_FS_ROOT_USED_BLKS				= 0x09			;4B - количество занятых блоков
 	.EQU	DRV_FS_ROOT_LAST_ITEM				= 0x0d			;2B - номер последнего элемента
 	.EQU	DRV_FS_ROOT_ETIME						= 0x0f			;4B - время изменения блока ROOT
 	.EQU	DRV_FS_ROOT_OPT						= 0x13			;1B - опции элемента (тип и прочее)
@@ -169,15 +170,25 @@ DRV_FS_MAIN__DISK_INIT_SKIP:
 .ifdef DEF_DRIVER_FS_FORMAT
 	CPI FLAGS,DRV_FS_OP_FORMAT
 	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_FS_OP_FORMAT
+	MCALL _DRV_FS_FORMAT
 	RJMP _DRV_FS__END
 .endif
 .ifdef DEF_DRIVER_FS_MD
 	CPI FLAGS,DRV_FS_OP_MD
 	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_FS_OP_MD
+	MCALL _DRV_FS_MD
 	RJMP _DRV_FS__END
 .endif
+.ifdef DEF_DRIVER_FS_DELETE
+	CPI FLAGS,DRV_FS_DELETE
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_FS_MD
+	RJMP _DRV_FS__END
+.endif
+
+
+
+
 .ifdef DEF_DRIVER_FS_CD
 	CPI FLAGS,DRV_FS_OP_CD
 	BRNE PC+0x01+_MCALL_SIZE+0x01
@@ -214,6 +225,17 @@ _DRV_FS_ITEM_READ:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH LOOP_CNTR
+
+	;TODO проверить(проверка на коррекное значение)
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x00
+	CP TEMP,TEMP_H
+	BRCS PC+0x05
+	BRNE PC+0x06
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x01
+	CP TEMP,TEMP_L
+	BRCC PC+0x03
+	LDI TEMP,DRV_RESULT_ERROR
+	RJMP _DRV_FS_ITEM_READ__END
 
 	CLR TEMP_EH
 	CLR TEMP_EL
@@ -258,6 +280,17 @@ _DRV_FS_ITEM_WRITE:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH LOOP_CNTR
+
+	;TODO проверить(проверка на коррекное значение)
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x00
+	CP TEMP,TEMP_H
+	BRCS PC+0x05
+	BRNE PC+0x06
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x01
+	CP TEMP,TEMP_L
+	BRCC PC+0x03
+	LDI TEMP,DRV_RESULT_ERROR
+	RJMP _DRV_FS_ITEM_READ__END
 
 	CLR TEMP_EH
 	CLR TEMP_EL
@@ -440,7 +473,12 @@ _DRV_FS_DISK_INIT:
 	CPI ZL,0x01
 	BREQ PC+0x02
 	LDI ACCUM,0x01
-	SBIW XL,0x03
+	;Максимальное кол-во элементов в ROOT
+	LD ZL,X+
+	STD Y+_DRV_FS_ITEMS+0x00,ZL
+	LD ZL,X+
+	STD Y+_DRV_FS_ITEMS+0x01,ZL
+	SBIW XL,0x05
 
 	ADIW YL,_DRV_FS_DISK_TIME
 	MCALL C5_UPTIME_COPY

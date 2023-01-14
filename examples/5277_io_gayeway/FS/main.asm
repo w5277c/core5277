@@ -44,8 +44,8 @@
 
 	.INCLUDE "./core/drivers/frtc.inc"
 	.INCLUDE "./core/drivers/fs/fs_format.inc"
-
 	.INCLUDE "./core/drivers/fs/fs_md.inc"
+	.INCLUDE "./core/drivers/fs/fs_delete.inc"
 	.INCLUDE "./core/drivers/fs_c5.inc"
 	;---
 	;Блок задач
@@ -148,6 +148,14 @@ TASK__INFINITE_LOOP:
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
 	BRNE TASK__DONE
+
+	LDI TEMP,PID_FS_DRV
+	LDI FLAGS,DRV_FS_OP_DELETE
+	LDI_T16 0x0001
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BRNE TASK__DONE
+
 
 	LDI_Z C5_BUFFER
 	LDI TEMP_H,high(0x200)
