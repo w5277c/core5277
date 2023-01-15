@@ -3,9 +3,9 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;14.01.2023	konstantin@5277.ru			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF__DRV_FS_DELETE
+.ifdef DEF_DRIVER_FS_DELETE
 .else
-.set DEF__DRV_FS_DELETE = 1
+.set DEF_DRIVER_FS_DELETE = 1
 
 ;--------------------------------------------------------
 _DRV_FS_DELETE:
@@ -16,6 +16,7 @@ _DRV_FS_DELETE:
 ;--------------------------------------------------------
 	PUSH TEMP_EH
 	PUSH TEMP_EL
+	PUSH_X
 
 	CPI TEMP_H,0x00
 	BRNE PC+0x05
@@ -46,9 +47,18 @@ _DRV_FS_DELETE:
 	ORI FLAGS,DRV_FS_TYPE_RM_FILE
 	CPI TEMP_EL,DRV_FS_TYPE_DIR
 	BRNE _DRV_FS_DELETE__DIRCHECK_SKIP
+	ANDI FLAGS,0x0f
 	ORI FLAGS,DRV_FS_TYPE_RM_DIR
 	MOV TEMP_EH,TEMP_H
 	MOV TEMP_EL,TEMP_L
+
+	LDI_T16 0x0000
+	MCALL _DRV_FS_ITEM_READ
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_DELETE__END
+	LDD XH,Y+_DRV_FS_ITEM_BUFFER+DRV_FS_ROOT_LAST_ITEM+0x00
+	LDD XL,Y+_DRV_FS_ITEM_BUFFER+DRV_FS_ROOT_LAST_ITEM+0x01
+
 	LDI_T16 0x0001
 _DRV_FS_DELETE__LOOP:
 	MCALL _DRV_FS_ITEM_READ
@@ -63,11 +73,9 @@ _DRV_FS_DELETE__LOOP:
 	LDI TEMP,DRV_RESULT_NOT_EMPTY
 	RJMP _DRV_FS_DELETE__END
 _DRV_FS_DELETE__NEXT_ITEM:
-	LDD TEMP,Y+_DRV_FS_ITEMS+0x00
-	CP TEMP,TEMP_H
-	BRNE PC+0x04
-	LDD TEMP,Y+_DRV_FS_ITEMS+0x01
-	CP TEMP,TEMP_L
+	CP XH,TEMP_H
+	BRNE PC+0x03
+	CP XL,TEMP_L
 	BREQ PC+0x05
 	LDI TEMP,0x01
 	ADD TEMP_L,TEMP
@@ -82,6 +90,7 @@ _DRV_FS_DELETE__DIRCHECK_SKIP:
 
 _DRV_FS_DELETE__END:
 
+	POP_X
 	POP TEMP_EL
 	POP TEMP_EH
 	RET
