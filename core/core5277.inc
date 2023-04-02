@@ -205,15 +205,21 @@
 	.EQU	_C5_STACK_END							= RAMEND-_C5_STACK_SIZE	;xB-стек ядра, далее буфер, стек задач и выделяемая память
 														;TODO проверить что стек не перетирает первый байт буфера
 .IF AVRA == 0x01
-	.MESSAGE "######## BUFFER OFFSET:",C5_BUFFER
+	.MESSAGE "######## RAMSTART:",RAMSTART
+	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
+	.MESSAGE "######## DRIVERS HEADERS SIZE:",C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE
+	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
+	.MESSAGE "######## TASKS HEADERS SIZE:",C5_TASKS_QNT*_C5_TASK_HEADER_SIZE
+	.MESSAGE "######## QUEUE OFFSET:",_C5_RESOURCE_QUEUE
+	.MESSAGE "######## QUEUE SZIE:",_C5_RES_QUEUE_SIZE
 	.IF BUFFER_SIZE > 0x00
+		.MESSAGE "######## BUFFER OFFSET:",C5_BUFFER
 		.MESSAGE "######## BUFFER SIZE:",BUFFER_SIZE
 	.ENDIF
-	.MESSAGE "######## AVAILABLE RAM:",((_C5_STACK_END-_C5_FREE_RAM)-_C5_RAM_BORDER_SIZE)
-	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
-	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
 	.MESSAGE "######## STACK END OFFSET:",_C5_STACK_END
+	.MESSAGE "######## AVAILABLE RAM:",((_C5_STACK_END-_C5_FREE_RAM)-_C5_RAM_BORDER_SIZE)
+	.MESSAGE "######## STACK USAGE:>",C5_TASKS_QNT*19
 	.MESSAGE "######## CORE FREQ:",CORE_FREQ
 	.IF TIMERS_SPEED == TIMERS_SPEED_50US
 		.MESSAGE "######## TIMERS NORMAL SPEED (",TIMERS_SPEED,")"
@@ -285,6 +291,10 @@
 	.db   "reset]",0x0d,0x0a,0x00,0x00
 
 	.INCLUDE "./core/io/out_init.inc"
+.if LOGGING_STACKUSAGE == 1
+	.INCLUDE "./core/io/out_char.inc"
+	.INCLUDE "./core/io/out_word.inc"
+.endif
 	.INCLUDE	"./core/io/out_romstr.inc"
 	.INCLUDE	"./core/io/out_tasksdump.inc"
 	.INCLUDE "./core/io/out_corefault.inc"
@@ -1365,6 +1375,16 @@ _C5_SUSPEND__BODY:
 	LDS TEMP,_C5_CORE_STACK+0x01
 	STS SPL,TEMP
 
+	;Логируем вершину стека
+.ifdef LOGGING_PORT
+	.if LOGGING_STACKUSAGE == 1
+		LDI TEMP,'S'
+		MCALL C5_OUT_CHAR
+		MCALL C5_OUT_WORD
+		LDI TEMP,'!'
+		MCALL C5_OUT_CHAR
+	.endif
+.endif
 	;Проверяем на выход стека в зону выделяемой памяти
 	;TODO нет проверки на защитный порог(_C5_RAM_BORDER_SIZE)
 	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x00

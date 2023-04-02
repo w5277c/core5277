@@ -28,6 +28,8 @@
 	.EQU	LOGGING_LVL_DBG						= 0x04
 	.EQU	LOGGING_LVL_PNC						= 0x05
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_INF
+	.SET	LOGGING_RAMUSAGE						= 0				;Логирует выделение памяти процедурой ram_realloc
+	.SET	LOGGING_STACKUSAGE					= 0				;Логирует верхушку стека в процедуре C5_SUSPEND
 
 	.SET	BUFFER_SIZE								= 0x0000
 

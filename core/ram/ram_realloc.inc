@@ -17,6 +17,14 @@
 .include	"./core/ram/_ram_find_free_block.inc"
 .include	"./core/ram/_ram_resize.inc"
 
+.ifdef LOGGING_PORT
+	.include	"./core/io/out_char.inc"
+	.include	"./core/io/out_byte.inc"
+	.if LOGGING_RAMUSAGE == 1
+		.include	"./core/io/out_word.inc"
+	.endif
+.endif
+
 ;--------------------------------------------------------
 C5_RAM_REALLOC:
 ;--------------------------------------------------------
@@ -61,6 +69,21 @@ _C5_RAM_REALLOC__EP2:
 	;Обновляем адрес вершины выделяемой памяти в ядре
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
+.ifdef LOGGING_PORT
+	.if LOGGING_RAMUSAGE == 1
+		PUSH TEMP
+		LDI TEMP,'M'
+		MCALL C5_OUT_CHAR
+		PUSH_T16
+		MOV TEMP_H,XH
+		MOV TEMP_L,XL
+		MCALL C5_OUT_WORD
+		POP_T16
+		LDI TEMP,'!'
+		MCALL C5_OUT_CHAR
+		POP TEMP
+	.endif
+.endif
 	RJMP _C5_RAM_REALLOC__SUCCESS
 
 _C5_RAM_REALLOC__ALLOCATED:
