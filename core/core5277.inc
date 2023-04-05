@@ -31,6 +31,7 @@
 ;09.10.2021	w5277c@gmail.com			v0.4.1	Оптимизация, убраны NOP из макросов MCALL и MJMP
 ;31.01.2022	w5277c@gmail.com			v0.4.2	Исправлена ошибка проверки таймаута в диспетчере
 ;04.09.2022	konstantin@5277.ru		v0.4.3	Убраны из ядра процедуры таймера C
+;06.04.2023	konstantin@5277.ru		v0.4.4	Более надежный механизм проверки недостатка RAM
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -150,6 +151,7 @@
 	.EQU	_C5_TIMER_PERIOD						= 0x28			;40, т.е. 0.000050*40=0.002=2мс
 .ENDIF
 	.EQU	_C5_TASK_STACK_DEF_SIZE				= 0x13			;Размер стека задачи при создании (16 регистров+SREG+точка возврата)
+	.EQU	_C5_SAFETY_THRESHOLD_VALUE			= 0x5af1			;Два байта порога безопасности
 	.EQU	_C5_TASKS_ACTIVE_TIME				= 0x01			;Время работы задачи 1*2=2мс
 	.EQU	_C5_IRV_TABLE_SIZE					= 0x4b			;Размер таблицы прерываний
 	.EQU	_C5_RES_QUEUE_SIZE					= _C5_TASKS_MAX_QNT*0x02	;Размер очереди к ресурсам
@@ -158,6 +160,7 @@
 	.EQU	_C5_FAULT_HUGE_STACK					= 0x01			;Стек перешел границу выделяемой памяти
 	.EQU	_C5_FAULT_HUGE_TASK_STACK			= 0x02			;Размер стека задачи более 255 байт
 	.EQU	_C5_FAULT_HUGE_TASK_STACK2			= 0x03			;Размер стека задачи более 255 байт
+	.EQU	_C5_FAULT_INSUFFICIENT_RAM			= 0x04			;Недостаточно RAM(стек затер данные динамической памяти)
 	;---CORE-RESOURCES---											;Идентфикаторы ресурсов, 0-127 отданы пользователю, старшие-ядру(0xff-конец очереди)
 	.EQU	C5_RES_TIMER_B							= 0xFE			;Таймер B
 	.EQU	C5_RES_ADC								= 0xFD			;ADC
@@ -567,6 +570,21 @@ _C5_TIMER_A_IR__LF_NEXT:
 	POP ACCUM
 .ENDIF
 
+	CP _C5_DISPATCHER_LOCK_CNTR,C0x00
+	BRNE _C5_TIMER_A_IR_SAFETY_CHECK_SKIP
+	LDS ZH,_C5_TOP_OF_FREE_RAM+0x00
+	LDS ZL,_C5_TOP_OF_FREE_RAM+0x01
+	LD TEMP,Z+
+	LD ZL,Z
+	MOV ZH,TEMP
+	LDI TEMP,_C5_FAULT_INSUFFICIENT_RAM
+	CPI ZH,high(_C5_SAFETY_THRESHOLD_VALUE)
+	BREQ PC+0x03
+	MJMP C5_OUT_COREFAULT
+	CPI ZL,low(_C5_SAFETY_THRESHOLD_VALUE)
+	BREQ PC+0x03
+	MJMP C5_OUT_COREFAULT
+_C5_TIMER_A_IR_SAFETY_CHECK_SKIP:
 	POP_Z
 
 .IF TS_MODE == TS_MODE_TIME
@@ -775,6 +793,11 @@ C5_REINIT:
 	LDI_X _C5_FREE_RAM
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
+	;устанавливаю маркеры безопасного порога
+	LDI TEMP,high(_C5_SAFETY_THRESHOLD_VALUE)
+	STS _C5_FREE_RAM+0x00,TEMP
+	LDI TEMP,low(_C5_SAFETY_THRESHOLD_VALUE)
+	STS _C5_FREE_RAM+0x01,TEMP
 	;Чистка флагов
 	STS _C5_FLAGS+0x00,C0x00
 	STS _C5_FLAGS+0x01,C0x00
@@ -821,6 +844,7 @@ C5_REINIT:
 	CLR _C5_DISPATCHER_LOCK_CNTR
 	;Инициализируем таймер (0.000050s - 800 тактов)
 	_C5_TIMERA_INIT
+
 	RET
 
 ;--------------------------------------------------------
@@ -1397,7 +1421,6 @@ _C5_SUSPEND__BODY:
 _C5_SUSPEND__HUGE_STACK:
 	LDI TEMP,_C5_FAULT_HUGE_STACK
 	MJMP C5_OUT_COREFAULT											;Стеки значения не имеют, ядро упало
-	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x01
 _C5_SUSPEND__CORRECT_STACK_SIZE:
 
 	;Получаем начало стека задачи

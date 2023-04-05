@@ -66,10 +66,15 @@ C5_RAM_EXTEND:
 	CP ACCUM,XL
 	POP ACCUM
 	BRCC _C5_RAM_EXTEND__SUCCESS
-	POP ACCUM
-	;Обновляем адрес вершины выделяемой памяти в ядре
+	;Обновляем адрес вершины выделяемой памяти в ядре и записываем маркеры безопасности
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
+	LDI ACCUM,high(_C5_SAFETY_THRESHOLD_VALUE)
+	ST X,ACCUM
+	ADIW XL,0x01
+	LDI ACCUM,low(_C5_SAFETY_THRESHOLD_VALUE)
+	ST X,ACCUM
+	POP ACCUM
 	RJMP _C5_RAM_EXTEND__SUCCESS
 
 _C5_RAM_EXTEND__ALLOCATED:

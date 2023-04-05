@@ -7,6 +7,7 @@
 ;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
+;06.04.2023	konstantin@5277.ru		Экономия RAM в 48Б
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -35,7 +36,7 @@
 	.SET	DEVICE_FAMILY							= ATMEGA16
 	.MESSAGE "######## DEVICE ATmega16"
 	.EQU	_MCALL_SIZE								= 0x02			;Размер MCALL
-	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
+	.EQU	_C5_DRIVERS_MAX_QNT					= 0x08			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT

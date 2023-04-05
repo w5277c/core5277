@@ -8,6 +8,7 @@
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;09.10.2021	w5277c@gmail.com			Убран NOP из MCALL
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
+;06.04.2023	konstantin@5277.ru		Экономия RAM в 48Б
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -37,7 +38,7 @@
 	.SET	DEVICE_FAMILY							= ATMEGA48
 	.MESSAGE "######## DEVICE ATmega88"
 	.EQU	_MCALL_SIZE								= 0x01			;Размер MCALL
-	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
+	.EQU	_C5_DRIVERS_MAX_QNT					= 0x08			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT

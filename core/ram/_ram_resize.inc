@@ -76,13 +76,17 @@ _C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP:
 _C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP__HAVE_BLOCK:
 
 _C5_RAM_RESIZE__HEADER_UPDATE_ON_TOP2:
-	;Обновляем вершину безусловно, так как мы на вершине
+	;Обновляем вершину безусловно, так как мы на вершине и записываем маркеры безопасности
 	MOVW XL,YL
 	ADD XL,ACCUM
 	ADC XH,C0x00
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
-
+	LDI TEMP,high(_C5_SAFETY_THRESHOLD_VALUE)
+	ST X,TEMP
+	ADIW XL,0x01
+	LDI TEMP,low(_C5_SAFETY_THRESHOLD_VALUE)
+	ST X,TEMP
 _C5_RAM_RESIZE__SUCCESS:
 	SEZ
 	RJMP _C5_RAM_RESIZE__END
