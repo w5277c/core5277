@@ -5,6 +5,7 @@
 ;01.08.2020	w5277c@gmail.com			Разбиение на файлы
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;03.07.2021	w5277c@gmail.com			Z->Y
+;10.04.2023	konstantin@5277.ru		Багфиксинг
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_RAM_REALLOC
 .else
@@ -63,6 +64,7 @@ _C5_RAM_REALLOC__EP2:
 	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x00
 	CP ACCUM,XH
 	BRCS PC+0x05
+	BRNE _C5_RAM_REALLOC__SUCCESS
 	LDS ACCUM,_C5_TOP_OF_FREE_RAM+0x01
 	CP ACCUM,XL
 	BRCC _C5_RAM_REALLOC__SUCCESS
