@@ -50,7 +50,7 @@
 	.EQU	_C5_IR_QNT								= 0x1a			;Количество перырваний(без RESET)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x08			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
+	.SET	_C5_STACK_SIZE							= 0x60			;Стек ядра
 	.EQU	RAMSTART									= 0x0100
 	.EQU	RAMEND									= 0x08ff
 	.SET	INPUT_BUFFER_SIZE						= 0x80			;Размер буфера ввода (не менее 2)

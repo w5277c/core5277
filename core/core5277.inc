@@ -33,6 +33,7 @@
 ;04.09.2022	konstantin@5277.ru		v0.4.3	Убраны из ядра процедуры таймера C
 ;06.04.2023	konstantin@5277.ru		v0.4.4	Более надежный механизм проверки недостатка RAM
 ;10.04.2023	konstantin@5277.ru		v0.4.5	Багфиксинг RAM realloc.
+;15.04.2023	konstantin@5277.ru		v0.4.6	Багфиксинг EINT_ENABLE, драйвер AM2301.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -298,7 +299,7 @@
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	OUTSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.4.5 [",0x00,0x00
+	.db   0x0d,0x0a,"Powered by core5277 v0.4.6 [",0x00,0x00
 	OUTSTR_MCUSR_NO:
 	.db   "NO ",0x00
 	OUTSTR_MCUSR_WD:
@@ -456,7 +457,9 @@ _C5_TIMER_A_IR__16_LOOP:
 	LDD TEMP,Y+_C5_TIMER16_RAM_ADDR+0x00
 	LDD YL,Y+_C5_TIMER16_RAM_ADDR+0x01
 	MOV YH,TEMP
+	SEI
 	ICALL
+	CLI
 	POP_Y
 	LDD TEMP,Y+_C5_TIMER16_DEFAULT+0x01
 	STD Y+_C5_TIMER16_CNTR+0x01,TEMP
@@ -498,7 +501,9 @@ _C5_TIMER_A_IR__HF_LOOP:
 	LDD TEMP,Y+_C5_TIMER_RAM_ADDR+0x00
 	LDD YL,Y+_C5_TIMER_RAM_ADDR+0x01
 	MOV YH,TEMP
+	SEI
 	ICALL
+	CLI
 	POP_Y
 	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
@@ -573,7 +578,9 @@ _C5_TIMER_A_IR__LF_LOOP:
 	LDD TEMP,Y+_C5_TIMER_RAM_ADDR+0x00
 	LDD YL,Y+_C5_TIMER_RAM_ADDR+0x01
 	MOV YH,TEMP
+	SEI
 	ICALL
+	CLI
 	POP_Y
 	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
@@ -606,6 +613,7 @@ _C5_TIMER_A_IR__LF_NEXT:
 _C5_TIMER_A_IR_SAFETY_CHECK_SKIP:
 	POP_Z
 
+	SEI
 .IF TS_MODE == TS_MODE_TIME
 	MCALL _C5_DISPATCHER_EVENT
 .ENDIF
