@@ -24,6 +24,7 @@
 ;															принимает решение для разрешения прерываний. Иначе возникают трудно
 ;															разрешимые коллизии.
 ;29.06.2021	w5277c@gmail.com			v0.3.8	Множественные, мелкие изменения в основном TIMER_C, введен OPT_MODE
+;29.06.2021	w5277c@gmail.com			v0.3.8	Множественные, мелкие изменения в основном TIMER_C, введен OPT_MODE
 ;22.08.2021	w5277c@gmail.com			Атомарная операция записи адреса вершины стека.
 ;05.09.2021	w5277c@gmail.com			INPUT_PORT->C5_IN_PORT
 ;16.09.2021	w5277c@gmail.com			v0.3.9	Множественные, незначительные изменения.
@@ -279,7 +280,6 @@
 	.DEF	_PID										= r15				;ИД корневого процесса(обычно задачи)
 
 
-	.INCLUDE	"./mem/ram_copy.inc"
 	.INCLUDE	"./mem/ram_fill16.inc"
 .if TS_MODE != TS_MODE_NO
 	.INCLUDE "./mem/ram_copy_desc.inc"
@@ -318,7 +318,6 @@
 	.INCLUDE "./core/io/out_char.inc"
 	.INCLUDE "./core/io/out_word.inc"
 .endif
-	.INCLUDE	"./core/io/out_romstr.inc"
 	.INCLUDE	"./core/io/out_tasksdump.inc"
 	.INCLUDE "./core/io/out_corefault.inc"
 .ELSE
@@ -341,17 +340,9 @@ C5_DISPATCHER_UNLOCK:
 
 .IF TIMERS > 0x00 || TIMER_C_ENABLE == 1
 	.MESSAGE "######## TIMERS ENABLED"
-	.INCLUDE "./core/timer_set.inc"
-	.INCLUDE "./core/timer_start.inc"
-	.INCLUDE "./core/timer_start_at.inc"
-	.INCLUDE "./core/timer_stop.inc"
 .ENDIF
 .IF TIMERS16 > 0x00
 	.MESSAGE "######## TIMERS16 ENABLED"
-	.INCLUDE "./core/timer16_set.inc"
-	.INCLUDE "./core/timer16_start.inc"
-	.INCLUDE "./core/timer16_start_at.inc"
-	.INCLUDE "./core/timer16_stop.inc"
 .ENDIF
 .IF TIMERS == 0x00 && TIMERS16 == 0 && TIMER_C_ENABLE ==0
 	.MESSAGE "######## TIMERS DISABLED"

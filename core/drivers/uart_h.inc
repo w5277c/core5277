@@ -24,9 +24,8 @@
 .include	"./io/port_mode_out.inc"
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_set_hi.inc"
-.include	"./core/wait.inc"
 .include	"./core/timer_set.inc"
-.include	"./core/timer_start.inc"
+.include	"./core/timer_start_at.inc"
 .include	"./core/timer_stop.inc"
 
 ;---CONSTANTS--------------------------------------------

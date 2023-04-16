@@ -18,8 +18,8 @@
 .include	"./io/port_mode_out.inc"
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_get.inc"
-.include	"./core/res_lock.inc"
-.include	"./core/res_unlock.inc"
+;.include	"./core/res_lock.inc"
+;.include	"./core/res_unlock.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_1WIRE_PORT						= 0x00			;1b - Порт шины
