@@ -284,7 +284,6 @@
 	.INCLUDE "./mem/ram_copy_desc.inc"
 	.INCLUDE "./mem/ram_copy16_desc.inc"
 .endif
-	.INCLUDE "./conv/bitnum_to_num.inc"
 .IFDEF C5_IN_PORT
 	.INCLUDE "./core/ui/input.inc"
 .ENDIF
