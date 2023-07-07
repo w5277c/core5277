@@ -19,7 +19,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---MAIN-CONSTANTS---
-	.EQU	IR_BUFFER_SIZE									= 0x20	;Максимальный размер буфера IR
+	.EQU	IR_BUFFER_SIZE									= 0x08	;Максимальный размер буфера IR
 	.EQU	TS_MODE											= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
 	.EQU	BUS_LED_PORT									= PD5		;Порт индикации активности шины
 	.SET	ACT_LED_PORT									= PB2		;Порт индикации активности
@@ -67,7 +67,10 @@
 	.include	"./io/port_set_hi.inc"
 	.include "./core/ram/ram_realloc.inc"
 	.include	"./core/io/out_cr.inc"
+	.include	"./core/io/out_byte.inc"
+	.include	"./core/io/out_char.inc"
 	.include	"./core/io/out_bytes.inc"
+	.include "./core/wait_2ms.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;Идентификаторы драйверов(0-7|0-15)
@@ -87,9 +90,6 @@ MAIN:
 	LDI ACCUM,ACT_LED_PORT
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
-	LDI ACCUM,CH3_RES_PORT
-	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_HI
 
 	;Инициализация ядра
 	MCALL C5_INIT
@@ -99,7 +99,7 @@ MAIN:
 	LDI_Z DRV_IR_INIT
 	LDI TEMP_H,CH3_PORT
 	LDI TEMP_L,0xff
-	LDI TEMP_EH,C5_IR_INT1
+	LDI TEMP_EH,C5_IR_INT0
 	LDI TEMP_EL,ACT_LED_PORT
 	LDI FLAGS,TIMER_C_FREQ_38KHz
 	MCALL C5_CREATE
@@ -112,6 +112,8 @@ MAIN:
 	MJMP C5_START
 
 ;--------------------------------------------------------;Задача
+_TASK_MSG_REPEATE:
+	.db "REPEATE",0x00
 
 TASK__INIT:
 	LDI ACCUM,IR_BUFFER_SIZE
@@ -125,12 +127,24 @@ TASK:
 	LDI TEMP_EH,0x00
 	LDI TEMP_EL,IR_BUFFER_SIZE
 	LDI TEMP_H,0x00
-	LDI TEMP_L,0x00
+	LDI TEMP_L,20/2
 	MCALL C5_EXEC
 	CPI TEMP_H,DRV_RESULT_OK
 	BRNE TASK
 
+	CPI TEMP_L,0x00
+	BRNE _TASK_DATA
+	LDI_Z _TASK_MSG_REPEATE|0x8000
+	MCALL C5_OUT_STR
+	MCALL C5_OUT_CR
+	RJMP TASK
+
+_TASK_DATA:
 	MOVW ZL,YL
+	MOV TEMP,TEMP_L
+	MCALL C5_OUT_BYTE
+	LDI TEMP,':'
+	MCALL C5_OUT_CHAR
 	MOV TEMP,TEMP_L
 	MCALL C5_OUT_BYTES
 	MCALL C5_OUT_CR

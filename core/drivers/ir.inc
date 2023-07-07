@@ -8,6 +8,8 @@
 ;01.07.2021	w5277c@gmail.com			Первые успешные тесты
 ;04.07.2021	w5277c@gmail.com			Z->Y
 ;04.09.2022	konstantin@5277.ru		Переход на процедуры программных таймеров
+;07.07.2023	konstantin@5277.ru		Дополнительная проверка на дребезг контактов(прием)
+;07.07.2023	konstantin@5277.ru		Изменен _DRV_IR_PRLEFT, для приема пакетов с укороченной преамбулой
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер инфракрасного приемника и передачтика, использует INT и TIMER C (стандарт NEC возможно адаптирую для SIRC)
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -16,7 +18,7 @@
 .ifdef DEF__C5_DRV_IR
 .else
 .set DEF__C5_DRV_IR = 1
-.message "Included driver IR v0.3"
+.message "Included driver IR v0.4"
 
 	.include	"./core/ram/ram_offset.inc"
 	.include	"./core/ram/ram_realloc.inc"
@@ -29,28 +31,30 @@
 	.include	"./io/reg_bit_hi.inc"
 	.include	"./io/reg_bit_lo.inc"
 	.include	"./io/reg_bit_inv.inc"
+	.include	"./io/reg_bit_get.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---
 	.EQU	_DRV_IR_RX_PA									= 0x00	;1B - Адрес порта для приема
-	.EQU	_DRV_IR_RX_PN									= 0x01	;1B - Число для пина порта приема
-	.EQU	_DRV_IR_TX_PA									= 0x02	;1B - Адрес порта для передачи
-	.EQU	_DRV_IR_TX_PN									= 0x03	;1B - Число для пина порта передачи
-	.EQU	_DRV_IR_LED_PA									= 0x04	;1B - Адрес порта для индикации
-	.EQU	_DRV_IR_LED_PN									= 0x05	;1B - Число для пина порта индикации
-	.EQU	_DRV_IR_INT_ID									= 0x06	;1B - ИД прерывания C5_IR_INTn
-	.EQU	_DRV_IR_STATE									= 0x07	;1B - Состояние драйвера
-	.EQU	_DRV_IR_ACCUM									= 0x08	;1B - Аккумулятор
-	.EQU	_DRV_IR_PULSE_CNTR							= 0x09	;2B - Счетчик пульсаций
-	.EQU	_DRV_IR_TIMEOUT								= 0x0b	;2B - Таймаут ожидания данных
-	.EQU	_DRV_IR_SRC_ADDR								= 0x0d	;2B - Адрес блока данных для передачи
-	.EQU	_DRV_IR_DST_ADDR								= 0x0f	;2B - Адрес блока данных для приема
-	.EQU	_DRV_IR_BIT_POS								= 0x11	;1B - Позиция текущего бита
-	.EQU	_DRV_IR_BYTE_POS								= 0x12	;1B - Позиция текущего байта
-	.EQU	_DRV_IR_TX_LEN									= 0x13	;1B - Количество бит для передачи
-	.EQU	_DRV_IR_RX_LEN									= 0x14	;1B - Максимальное количество бит для приема
+	.EQU	_DRV_IR_RX_IA									= 0x01	;1B - PIN адрес для приема данных
+	.EQU	_DRV_IR_RX_PN									= 0x02	;1B - Число для пина порта приема
+	.EQU	_DRV_IR_TX_PA									= 0x03	;1B - Адрес порта для передачи
+	.EQU	_DRV_IR_TX_PN									= 0x04	;1B - Число для пина порта передачи
+	.EQU	_DRV_IR_LED_PA									= 0x05	;1B - Адрес порта для индикации
+	.EQU	_DRV_IR_LED_PN									= 0x06	;1B - Число для пина порта индикации
+	.EQU	_DRV_IR_INT_ID									= 0x07	;1B - ИД прерывания C5_IR_INTn
+	.EQU	_DRV_IR_STATE									= 0x08	;1B - Состояние драйвера
+	.EQU	_DRV_IR_ACCUM									= 0x09	;1B - Аккумулятор
+	.EQU	_DRV_IR_PULSE_CNTR							= 0x0a	;2B - Счетчик пульсаций
+	.EQU	_DRV_IR_TIMEOUT								= 0x0c	;2B - Таймаут ожидания данных
+	.EQU	_DRV_IR_SRC_ADDR								= 0x0e	;2B - Адрес блока данных для передачи
+	.EQU	_DRV_IR_DST_ADDR								= 0x10	;2B - Адрес блока данных для приема
+	.EQU	_DRV_IR_BIT_POS								= 0x12	;1B - Позиция текущего бита
+	.EQU	_DRV_IR_BYTE_POS								= 0x13	;1B - Позиция текущего байта
+	.EQU	_DRV_IR_TX_LEN									= 0x14	;1B - Количество бит для передачи
+	.EQU	_DRV_IR_RX_LEN									= 0x15	;1B - Максимальное количество бит для приема
 	;---
-	.EQU	_DRV_IR_RAM_SIZE								= 0x15	;Необходимо выделить
+	.EQU	_DRV_IR_RAM_SIZE								= 0x16	;Необходимо выделить
 	;---
 
 	;---TIMINGS---
@@ -60,7 +64,7 @@
 	.EQU	_DRV_IR_DTEN									= _DRV_IR_PLEN*0x01		;0.000572, данные, первая часть
 	.EQU	_DRV_IR_DTDI0									= _DRV_IR_PLEN*0x01		;0.000572, данные, вторая часть, 0
 	.EQU	_DRV_IR_DTDI1									= _DRV_IR_PLEN*0x03		;0.001716, данные, вторая часть, 0
-	.EQU	_DRV_IR_PRLEFT									= _DRV_IR_PLEN*(0x04+0x04)	;0.004576, остаток от таймаута преамбулы, не может быть больше
+	.EQU	_DRV_IR_PRLEFT									= _DRV_IR_PLEN*(0x10+0x04)	;0.004576, остаток от таймаута преамбулы, не может быть больше
 	.EQU	_DRV_IR_PRMAX									= _DRV_IR_PLEN*(0x18+0x04)	;0.016016, максимальная длина преамбулы
 	.EQU	_DRV_IR_DTLEFT									= _DRV_IR_PLEN*(0x04)		;0.001716, остаток от бита, не может быть больше
 	.EQU	_DRV_IR_DTMAX									= _DRV_IR_PLEN*(0x04+0x01)	;0.002860, максимальная длина бита
@@ -102,6 +106,7 @@ DRV_IR_INIT:
 	BREQ PC+0x07+(3*_MCALL_SIZE)
 	PUSH TEMP_L
 	MCALL PORT_OFFSETS
+	STD Y+_DRV_IR_RX_IA,TEMP
 	MOV TEMP,TEMP_L
 	MCALL REG_BIT_LO													;MODE IN
 	MOV TEMP,TEMP_H
@@ -421,6 +426,13 @@ _DRV_IR_EINT_EVENT:
 	PUSH ACCUM
 
 	MCALL C5_RAM_OFFSET
+
+	;Дополнительная проверка на дребезг контакта
+	LDD TEMP,Y+_DRV_IR_RX_IA
+	LDD ACCUM,Y+_DRV_IR_RX_PN
+	MCALL REG_BIT_GET
+	BRCC PC+0x02
+	RJMP _DRV_IR_EINT_EVENT__END
 
 	LDD TEMP,Y+_DRV_IR_STATE
 	CPI TEMP,_DRV_IR_ST_DTW
