@@ -10,6 +10,7 @@
 .else
 .set DEF_C5__RAM_RESIZE = 1
 
+.include	"./mem/ram_copy.inc"
 .include	"./core/ram/_ram_find_used_block_mt.inc"
 .include	"./core/ram/_ram_find_used_block_lt.inc"
 .include	"./core/ram/_ram_find_free_block.inc"
