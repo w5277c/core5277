@@ -10,7 +10,7 @@
 	.SET	AVRA												= 0	;0-1
 	.SET	REPORT_INCLUDES								= 0
 	;---подключаем библиотеку устройства---
-	.INCLUDE "./devices/atmega328.inc"
+	.INCLUDE "./devices/atmega168.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---MAIN-CONSTANTS---
@@ -35,7 +35,6 @@
 	;---
 	;Блок драйверов
 	.INCLUDE "./core/drivers/i2c_h.inc"
-	.INCLUDE "./core/drivers/i2c_ms.inc"
 	.INCLUDE "./core/drivers/hd44780.inc"
 	;---
 	;Блок задач
@@ -55,14 +54,6 @@ MAIN:
 	LDI XL,DRV_I2C_FREQ_100KHZ
 	LDI ACCUM,ACT_LED_PORT
 	MCALL C5_CREATE
-
-;	LDI PID,PID_I2C_DRV
-;	LDI_Z DRV_I2C_MS_INIT
-;	LDI TEMP_H,SDA
-;	LDI TEMP_L,SCL
-;	LDI TEMP_EH,TID_TIMER_C
-;	LDI TEMP_EL,TIMER_C_FREQ_10KHz
-;	MCALL C5_CREATE
 
 	LDI PID,PID_LCD_DRV
 	LDI_Z DRV_HD44780_INIT
@@ -115,7 +106,7 @@ TASK_LOOP:
 	LDI TEMP_L,0
 	LDI TEMP,500/2
 	MCALL C5_WAIT_2MS
-	
+
 	LDI TEMP,PID_LCD_DRV
 	LDI TEMP_H,15
 	LDI TEMP_L,0

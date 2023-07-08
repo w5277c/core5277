@@ -294,22 +294,27 @@
 .ENDIF
 ;TODO unexpected INTEGER, expecting STRING in AtmelStudio
 ; 	.MESSAGE 28800*CORE_FREQ
+C5_NAME:
+	.db	"core5277 v0.4.6",0x00
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
-	OUTSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.4.6 [",0x00,0x00
+	OUTSTR_CORE1:
+	.db	0x0d,0x0a,"Powered by ",0x00
+	OUTSTR_CORE2:
+	.db	" [",0x00
+
 	OUTSTR_MCUSR_NO:
-	.db   "NO ",0x00
+	.db	"NO ",0x00
 	OUTSTR_MCUSR_WD:
-	.db   "WD ",0x00
+	.db	"WD ",0x00
 	OUTSTR_MCUSR_BO:
-	.db   "BO ",0x00
+	.db	"BO ",0x00
 	OUTSTR_MCUSR_EX:
-	.db   "EX ",0x00
+	.db	"EX ",0x00
 	OUTSTR_MCUSR_PO:
-	.db   "PO ",0x00
+	.db	"PO ",0x00
 	OUTSTR_MCUSR_RESET:
-	.db   "reset]",0x0d,0x0a,0x00,0x00
+	.db	"reset]",0x0d,0x0a,0x00,0x00
 
 	.INCLUDE "./core/io/out_init.inc"
 .if LOGGING_STACKUSAGE == 1
@@ -730,8 +735,13 @@ C5_INIT:
 .ifdef LOGGING_PORT
 	MCALL C5_OUT_INIT
 
-	LDI_Z OUTSTR_CORE|0x8000
+	LDI_Z OUTSTR_CORE1|0x8000
 	MCALL C5_OUT_STR
+	LDI_Z C5_NAME|0x8000
+	MCALL C5_OUT_STR
+	LDI_Z OUTSTR_CORE2|0x8000
+	MCALL C5_OUT_STR
+
 	SBRS FLAGS,WDRF
 	RJMP PC+0x03+_MCALL_SIZE
 	LDI_Z OUTSTR_MCUSR_WD|0x8000
