@@ -4,14 +4,17 @@
 ;10.10.2020	w5277c@gmail.com			Начало, черновой вариант
 ;12.10.2020	w5277c@gmail.com			Первый успешный тест для I2C
 ;22.02.2022	w5277c@gmail.com			Частично успешный тест для 4bit шины(необходима большая пауза, почему?)
+;08.07.2023	konstantin@5277.ru		Переключение портов приведено в соответсвии даташиту(ранее было как у PCF8574)
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер символьных LCD экранов на базе HD44780 с поддержкой PCF8574(I2C интерфейс)
 ;-----------------------------------------------------------------------------------------------------------------------
-
+;TODO: С большими паузами(в сотни микросекунд) рабает китайский вариант PCF8574(I2C интерфейс), возмоно низкая частота
+;самого LCD. Необходимо вынести в инициализационный параметр время задержки.
+;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_HD44780
 .else
 .set DEF__C5_DRV_HD44780 = 1
-.message "Included driver HD44780 v0.1"
+.message "Included driver HD44780 v0.2"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -362,14 +365,14 @@ _DRV_HD44780__SEND_CMDBYTE:
 	RJMP _DRV_HD44780__SEND_CMDBYTE_4BIT
 _DRV_HD44780__SEND_CMDBYTE_8BIT:
 	RCALL _DRV_HD44780__E_HI
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__WAIT_125US
 	PUSH TEMP
 	MOV TEMP,ACCUM
 	LDD ACCUM,Y+_DRV_HD44780_PORT
 	MCALL PORT_SET_BYTE
 	POP TEMP
 	RCALL _DRV_HD44780__E_LO
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__WAIT_125US
 	RJMP _DRV_HD44780__SEND_CMDBYTE_FINISH
 _DRV_HD44780__SEND_CMDBYTE_4BIT:
 
@@ -395,14 +398,14 @@ _DRV_HD44780__SEND_DATABYTE:
 	RJMP _DRV_HD44780__SEND_DATABYTE_4BIT
 _DRV_HD44780__SEND_DATABYTE_8BIT:
 	RCALL _DRV_HD44780__E_HI
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__WAIT_125US
 	PUSH TEMP
 	MOV TEMP,ACCUM
 	LDD ACCUM,Y+_DRV_HD44780_PORT
 	MCALL PORT_SET_BYTE
 	POP TEMP
 	RCALL _DRV_HD44780__E_LO
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__WAIT_125US
 	RJMP _DRV_HD44780__SEND_DATABYTE_FINISH
 _DRV_HD44780__SEND_DATABYTE_4BIT:
 
@@ -434,6 +437,10 @@ _DRV_HD44780__SEND_NIBBLE:
 	SBRC FLAGS,DRV_HD44780_FL_I2C
 	RJMP _DRV_HD44780__SEND_NIBBLE_I2C
 _DRV_HD44780__SEND_NIBBLE_4BIT:
+	RCALL _DRV_HD44780__WAIT_125US
+	RCALL _DRV_HD44780__E_HI
+	RCALL _DRV_HD44780__WAIT_125US
+
 	SWAP ACCUM
 	PUSH_Z
 	PUSH ACCUM
@@ -450,10 +457,9 @@ _DRV_HD44780__SEND_NIBBLE_4BIT:
 	ST Z,TEMP
 	STS SREG,TEMP_EL
 	POP_Z
-	RCALL _DRV_HD44780__E_HI
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__WAIT_125US
 	RCALL _DRV_HD44780__E_LO
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__WAIT_125US
 	RJMP _DRV_HD44780__SEND_NIBBLE_END
 _DRV_HD44780__SEND_NIBBLE_I2C:
 	LDD TEMP,Y+_DRV_HD44780_I2C_BUFFER
@@ -487,7 +493,7 @@ _DRV_HD44780__I2C_EXEC:
 	LDI TEMP_H,0x01
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
-	RCALL _DRV_HD44780__WAIT_20US
+	RCALL _DRV_HD44780__WAIT_125US
 	RET
 
 ;--------------------------------------------------------
@@ -565,17 +571,15 @@ _DRV_HD44780__E_LO:
 	RET
 
 ;--------------------------------------------------------
-_DRV_HD44780__WAIT_20US:
+_DRV_HD44780__WAIT_125US:
 ;--------------------------------------------------------
 ;Выдерживаем паузу, для готовности устройства
 ;--------------------------------------------------------
-;TODO Работает только с большой паузой, в 250us вместо максимум 40us. Почему?
 	PUSH TEMP
-	LDI TEMP,250;80
-	MCALL _C5_WAIT_500NS
 	LDI TEMP,250
- 	MCALL _C5_WAIT_500NS
-
+	MCALL _C5_WAIT_500NS
 	POP TEMP
 	RET
 .endif
+
+

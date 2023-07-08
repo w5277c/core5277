@@ -5,10 +5,6 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Необходим проект https://github.com/w5277c/core5277
 
-;BUILD: avra -I core5277 "eraser2.asm"
-;FLASH: avrdude -p m328 -c avrispmkII -U flash:w:main.hex
-;FLASH: avrdude -p m16 -c avrispmkII -U flash:w:main.hex
-
 	.EQU	CORE_FREQ										= 16
 	.EQU	TIMER_C_ENABLE									= 1	;0-1
 	.SET	AVRA												= 0	;0-1
@@ -40,7 +36,7 @@
 	.EQU	EXTB_PORT										= PC0		;Порт расширения, нижний
 
 ;---CORE-SETTINGS----------------------------------------
-	.SET	BUFFER_SIZE										= 0x0000;Размер общего буфера (буфер для SD)
+	.SET	BUFFER_SIZE										= 0x0000;Размер общего буфера
 	.SET	C5_DRIVERS_QNT									= 1
 	.SET	C5_TASKS_QNT									= 1
 	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US	;25/50us
@@ -78,7 +74,6 @@
 	;Идентификаторы задач(0-3|0-15)
 	.EQU	PID_TASK									= 0
 	;Идентификаторы таймеров
-	.EQU	TID_IR									= 0
 	;---
 
 ;--------------------------------------------------------;Выполняемый код при старте контроллера
