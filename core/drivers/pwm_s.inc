@@ -10,6 +10,9 @@
 .set DEF__C5_DRV_PWM_S = 1
 .message "Included driver software PWM v0.1"
 
+.include	"./mem/ram_fill.inc"
+.include	"./core/timer_set.inc"
+.include	"./core/timer_start.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./io/port_offsets.inc"

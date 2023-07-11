@@ -301,7 +301,7 @@ C5_NAME:
 	OUTSTR_CORE1:
 	.db	0x0d,0x0a,"Powered by ",0x00
 	OUTSTR_CORE2:
-	.db	" [",0x00
+	.db	" [",0x00,0x00
 
 	OUTSTR_MCUSR_NO:
 	.db	"NO ",0x00
