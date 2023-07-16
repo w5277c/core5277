@@ -10,6 +10,9 @@
 .set DEF__C5_DRV_PWM_S = 1
 .message "Included driver software PWM v0.1"
 
+.include	"./mem/ram_fill.inc"
+.include	"./core/timer_set.inc"
+.include	"./core/timer_start.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./io/port_offsets.inc"
@@ -132,16 +135,20 @@ _DRV_PWM_S_OP_POWER_SET:
 ;IN: TEMP_H-мощность канала, TEMP_L-номер канала(0-...)
 ;--------------------------------------------------------
 	PUSH TEMP_L
+	PUSH_Z
 
 	MOV TEMP,TEMP_L
 	LSL TEMP_L
 	ADD TEMP_L,TEMP
 	SUBI TEMP_L,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
-	ADD YL,TEMP_L
-	ADC YH,C0x00
+	MOVW ZL,YL
+	ADD ZL,TEMP_L
+	ADC ZH,C0x00
 
-	STD Y+_DRV_PWM_S_ITEM_THRLD,TEMP_H
+	STD Z+_DRV_PWM_S_ITEM_THRLD,TEMP_H
+	STD Y+_DRV_PWM_S_RAM_CNTR,C0x00
 
+	POP_Z
 	POP TEMP_L
 	RET
 

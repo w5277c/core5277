@@ -18,7 +18,7 @@
 STRN_COPY:
 ;--------------------------------------------------------
 ;Копирование строки
-;IN: Z-SRC адрес, X-DST адрес, LOOP_CNTR-длина
+;IN: Z-SRC адрес, X-DST адрес, LOOP_CNTR-макс. длина
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH_X
@@ -28,6 +28,8 @@ STRN_COPY:
 STRN_COPY__LOOP:
 	LD TEMP,Z+
 	ST X+,TEMP
+	CPI TEMP,0x00
+	BREQ STRN_COPY__END
 	DEC LOOP_CNTR
 	BRNE STRN_COPY__LOOP
 

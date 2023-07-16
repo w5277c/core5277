@@ -3,6 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;25.01.2021	w5277c@gmail.com			Начало (не тестировано)
 ;18.10.2021	w5277c@gmail.com			Оптимизация
+;04.01.2023	konstantin@5277.ru			Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_OUT_NUM16
 .else
@@ -27,26 +28,23 @@ C5_OUT_NUM16:
 _C5_OUT_NUM16__LOOP:
 	LDI TEMP,0x0a
 	MCALL DIV16x8
-	SUBI TEMP,(0x100-0x30)
 	PUSH TEMP
 	DEC LOOP_CNTR
 	BRNE _C5_OUT_NUM16__LOOP
-	SUBI TEMP_L,(0x100-0x30)
 	PUSH TEMP_L
 
-	LDI LOOP_CNTR,0x04
+	LDI TEMP_L,0x00
+	LDI LOOP_CNTR,0x05
 _C5_OUT_NUM16__LOOP2:
 	POP TEMP
-	SBRC TEMP_L,0x07
+	CPI LOOP_CNTR,0x01
 	BREQ PC+0x03
-	CPI TEMP,0x30
-	BREQ PC+0x01+_MCALL_SIZE+0x01
+	OR TEMP_L,TEMP
+	BREQ PC+0x02+_MCALL_SIZE
+	SUBI TEMP,(0x100-0x30)
 	MCALL C5_OUT_CHAR
-	ORI FLAGS,(1<<0x07)
 	DEC LOOP_CNTR
 	BRNE _C5_OUT_NUM16__LOOP2
-	POP TEMP
-	MCALL C5_OUT_CHAR
 
 	POP LOOP_CNTR
 	POP TEMP

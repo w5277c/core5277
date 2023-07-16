@@ -10,11 +10,12 @@
 ;14.06.2021	w5277c@gmail.com			Корректная передача MAGIC PID
 ;04.07.2021	w5277c@gmail.com			Z->Y, необходимо тестирование
 ;18.08.2021	w5277c@gmail.com			Вынесена проверка на значение порта 0xff в процедуры порта
+;26.02.2023	konstantin@5277.ru			Исправлена критическая ошибка
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_UART_H
 .else
 .set DEF__C5_DRV_UART_H = 1
-.message "Included driver hardware UART v0.6"
+.message "Included driver hardware UART v0.7"
 
 .include "./core/drivers/_uart.inc"
 .include	"./core/ram/ram_offset.inc"
@@ -23,9 +24,8 @@
 .include	"./io/port_mode_out.inc"
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_set_hi.inc"
-.include	"./core/wait.inc"
 .include	"./core/timer_set.inc"
-.include	"./core/timer_start.inc"
+.include	"./core/timer_start_at.inc"
 .include	"./core/timer_stop.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -419,7 +419,7 @@ _DRV_UART_H_RX_EVENT__NO_BREAK:
 	LDD ZH,Y+_DRV_UART_H_DST_ADDR+0x00
 	LDD ZL,Y+_DRV_UART_H_DST_ADDR+0x01
 	ADD ZL,ACCUM
-	ADC YH,C0x00
+	ADC ZH,C0x00
 	ST Z,FLAGS
 	;Инкрементирую и записываю позицию в буфере
 	INC ACCUM

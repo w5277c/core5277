@@ -5,6 +5,7 @@
 ;12.02.2021	w5277c@gmail.com			Исправлены явные косяки
 ;26.02.2021	w5277c@gmail.com			EIMSK,EIFR!
 ;20.06.2021	w5277c@gmail.com			Устранено ложное срабатывание при вклчючении
+;15.04.2023	konstantin@5277.ru		Обнулялись правые биты EICRA
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_EINT_ENABLE
 .else
@@ -53,7 +54,7 @@ C5_EINT_ENABLE:
 	BREQ _C5_EINT_ENABLE__LSL_SKIP
 
 	MOV LOOP_CNTR,TEMP_H
-	LDI TEMP_H,0xfc
+	LDI TEMP_H,0x03
 _C5_EINT_ENABLE__LOOP:
 	LSL TEMP_H
 	LSL TEMP_H
@@ -61,6 +62,7 @@ _C5_EINT_ENABLE__LOOP:
 	LSL TEMP_L
 	DEC LOOP_CNTR
 	BRNE _C5_EINT_ENABLE__LOOP
+	COM TEMP_H
 
 _C5_EINT_ENABLE__LSL_SKIP:
 	AND TEMP,TEMP_H

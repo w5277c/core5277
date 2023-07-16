@@ -10,14 +10,11 @@
 .else
 .set DEF_C5_DISPATCHER = 1
 
-.include "./core/io/out_corefault.inc"
-
 ;--------------------------------------------------------
 _C5_DISPATCHER_EVENT:
 ;--------------------------------------------------------
 ;Очередная итерация диспетчера
 ;--------------------------------------------------------
-	SEI
 	PUSH ZH
 	PUSH ZL
 	PUSH LOOP_CNTR
@@ -119,8 +116,7 @@ _C5_DISPATCHER_EVENT__SUSPEND_TASKS_LOOP:
 	POP TEMP_H
 	BRCS _C5_DISPATCHER_EVENT__SUSPEND_NEXT_TASK
 
-	MOV TEMP,_C5_DISPATCHER_LOCK_CNTR
-	CPI TEMP,0x00
+	CP _C5_DISPATCHER_LOCK_CNTR,C0x00
 	BREQ _C5_DISPATCHER_EVENT__UNLOCKED
 	LDI TEMP,(1<<_CFL_DISPATCHER_ORDER)
 	OR _C5_COREFLAGS,TEMP

@@ -11,20 +11,20 @@
 ;FLASH: avrdude -p m16 -c avrispmkII -U flash:w:main.hex
 
 	.SET	CORE_FREQ								= 16	;Max: 8-ATMega16, 10-ATMega382
-	.INCLUDE "./devices/atmega328.inc"
+	.INCLUDE "./devices/atmega168.inc"
 	.SET	REPORT_INCLUDES						= 0x01
 
 	;Важные, но не обязательные параметры ядра
-	.SET	AVRA										= 1	;0-1
-	.SET	REALTIME									= 0	;0-1
+	.SET	AVRA										= 0	;0-1
+	.SET	TS_MODE									= TS_MODE_EVENT
 	.SET	C5_DRIVERS_QNT							= 0
 	.SET	C5_TASKS_QNT							= 1
 	.SET	TIMERS									= 0	;0-4
 	.SET	TIMERS_SPEED							= TIMERS_SPEED_50US
-	.SET	BUFFER_SIZE								= 0x0000;Размер общего буфера (буфер для SD)
-	.SET	LOGGING_PORT							= PC5	;PA0-PC7
+	.SET	BUFFER_SIZE								= 0x0000	;Размер общего буфера
+	.SET	LOGGING_PORT							= SCK	;PA0-PC7
 	.SET	LOGGING_LEVEL							= LOGGING_LVL_DBG
-	.SET	C5_IN_PORT								= PC4
+	.SET	C5_IN_PORT								= PD3
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -68,7 +68,7 @@ TASK__INIT:
 	MCALL C5_READY
 ;--------------------------------------------------------
 TASK:
-	LDI_Y TASK__MENU|0x8000
+	LDI_Z TASK__MENU|0x8000
 	LDI ACCUM,0x02
 	MCALL C5_MENU
 
@@ -86,9 +86,8 @@ _TASK__N1:
 	CPI ACCUM,0x02
 	BRNE _TASK__N2
 
-	MOV YH,ZH
-	MOV YL,ZL
-	LDI ACCUM,0x32
+	MOVW ZL,YL
+	LDI ACCUM,0x7f
 	MCALL C5_TEXT_INPUT
 	RJMP TASK
 

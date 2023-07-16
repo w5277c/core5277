@@ -9,13 +9,12 @@
 ;26.08.2021	w5277c@gmail.com			Вывод приведен к общему виду с драйвером AM2301 и DHT11
 ;20.12.2021	w5277c@gmail.com			Приведение результата к виду DRV_RESULT_...
 ;24.02.2022	w5277c@gmail.com			Исправлена ошибка при отрицательной температуре
-;-----------------------------------------------------------------------------------------------------------------------
-;TODO: Не пройден тест, ERROR
+;17.09.2022	konstantin@5277.ru		Корректное вычисление
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_DS18B20
 .else
 .set DEF__C5_DRV_DS18B20 = 1
-.message "Included driver DS18B20 v0.8"
+.message "Included driver DS18B20 v0.9"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -110,8 +109,17 @@ DRV_DS18B20_INIT:
 
 	LDD TEMP_H,Y+_DRV_DS18B20_BUFFER_TH
 	LDD TEMP_L,Y+_DRV_DS18B20_BUFFER_TL
-	;TODO использовать WORD_TO_SDNF
-	;Пребразовываем в SDNF
+
+	MOV ACCUM,TEMP_H
+	SBRS TEMP_H,0x07
+	RJMP _DRV_DS18B20__POSITIVE
+	COM TEMP_H
+	COM TEMP_L
+	LDI TEMP,0x01
+	ADD TEMP_L,TEMP
+	ADC TEMP_H,C0x00
+_DRV_DS18B20__POSITIVE:
+
 	MOV TEMP,TEMP_L													;Преобразуем в человеческий вид целую часть
 	ANDI TEMP,0xf0
 	SWAP TEMP
@@ -129,12 +137,8 @@ DRV_DS18B20_INIT:
 	MCALL DIV16x8														;В TEMP_L - дробная часть в человеческом формате 0-99
 
 	POP TEMP_H
-	SBRS TEMP_H,0x07													;Переносим знак в новый формат
-	RJMP PC+0x05
-	LDI TEMP,0xff														;TODO не сответсвует для -55(1111 1100 1001 0000) дробная часть = 0?
-	SUB TEMP,TEMP_H
-	MOV TEMP_H,TEMP
-	ORI TEMP_L,0x80
+	ANDI ACCUM,0x80
+	OR TEMP_L,ACCUM
 	LDI TEMP,DRV_RESULT_OK
 	RJMP _DRV_DS18B20_PROC__END
 

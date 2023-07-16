@@ -14,26 +14,22 @@
 _DRV_SD_OP_GEN_CMD:
 ;--------------------------------------------------------
 ;Чтение/запись данных контроллера
-;IN: X-адрес на буфер,Z-адрес на переменные
+;IN: X-адрес на буфер,Y-адрес на переменные
 ;ACCUM-тип операции(0x00-запись,0x01-чтение)
-;OUT: ACCUM-R1 ответ
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH TEMP
+	PUSH ACCUM
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH_X
-	PUSH_Y
 
 	CBI PORTB,SS & 0x0f
 	LDI TEMP,_DRV_SD_CMD56
-	PUSH_X
 	ST X+,TEMP
-	LDI TEMP,0x00
-	ST X+,TEMP
-	ST X+,TEMP
-	ST X+,TEMP
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
 	ST x+,ACCUM
-	POP_X
+	SBIW XL,0x05
 	LDI TEMP_L,0x05
 
 	MCALL _DRV_SD__SEND_CMD
@@ -41,26 +37,27 @@ _DRV_SD_OP_GEN_CMD:
 	MOV TEMP,ACCUM
 	MCALL _DRV_SD_GET_R1
 	CPI ACCUM,0x00
-	BRNE _DRV_SD_OP_GEN_CMD__FAIL
+	BRNE _DRV_SD_OP_GEN_CMD__ERROR
 
 	SBRS TEMP,0x00
 	RJMP _DRV_SD_OP_GEN_CMD__WRITE
 
-	LDI TEMP_H,high(512)
-	LDI TEMP_L,low(512)
+	LDI TEMP_H,high(0x200)
+	LDI TEMP_L,low(0x200)
 	MCALL _DRV_SD_GET_BLOCK
+	LDI TEMP,DRV_RESULT_OK
 	RJMP _DRV_SD_OP_GEN_CMD__END
 
 _DRV_SD_OP_GEN_CMD__WRITE:
-	LDI ACCUM,0xff
-_DRV_SD_OP_GEN_CMD__FAIL:
+	LDI TEMP,DRV_RESULT_UNSUPPORTED
+	RJMP _DRV_SD_OP_GEN_CMD__END
+_DRV_SD_OP_GEN_CMD__ERROR:
+	LDI TEMP,DRV_RESULT_ERROR
 _DRV_SD_OP_GEN_CMD__END:
 	SBI PORTB,SS & 0x0f
 
-	POP_Y
-	POP_X
 	POP TEMP_L
 	POP TEMP_H
-	POP TEMP
+	POP ACCUM
 	RET
 .endif

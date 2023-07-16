@@ -2,51 +2,76 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;26.12.2020	w5277c@gmail.com			Начало
+;23.10.2022	konstantin@5277.ru			В процессе
 ;-----------------------------------------------------------------------------------------------------------------------
-;TODO C5_RAM_OFFSET Z->Y
+;TODO
+;Добавить процедуру позиционирования в файле(относительно и абсолютно),
+;записи и чтения блока данных(не более 255 байт), добавления данных.
+;Также переименование. Управление флагами. И т.д.
+;Идентификация файлов выполняется по их ид.
+;Добавить буферизацию записи на базе выделенного буфера и переменных _DRV_FS_CUR_BLCK_TYPE и _DRV_FS_CUR_BLCK_NUM
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF_C5_FS_COMMON
 .else
 .set DEF_C5_FS_COMMON = 1
 
+.include "./core/drivers/_fs.inc"
 .include	"./mem/ram_fill.inc"
+.include	"./mem/ram_copy.inc"
+.include "./core/uptime_delta.inc"
+.include "./core/uptime_copy.inc"
+.include "./mem/ram_cp.inc"
+
+.ifdef LOGGING_PORT
+	.if LOGGING_LEVEL >= LOGGING_LVL_INF
+		.include	"./core/io/out_strn.inc"
+		.include	"./core/io/out_str_el.inc"
+		.include	"./core/io/out_num16.inc"
+		.include	"./core/io/out_num32.inc"
+_DRV_FS_LOG_STR_INIT:
+		.db	"C5FS, disk[",0x00,"] ",0x00, "not formatted ",0x00," of ",0x00," blks(",0x00,"b)",0x0d,0x0a,0x00;
+	.endif
+.endif
 
 	;---OFFSETS---
-	.EQU	_DRV_FS_SD_DRV_ID											= 0x00;1B ИД драйвера SD карты
+	.EQU	_DRV_FS_DISK_DRV_ID										= 0x00;1B ИД драйвера диска
 	.EQU	_DRV_FS_RTC_DRV_ID										= 0x01;1B ИД драйвера RTC
 	.EQU	_DRV_FS_BUFFER_ADDR										= 0x02;2B адрес на буфер 512 байт
-	.EQU	_DRV_FS_CUR_DIR											= 0x04;2B ID текущей директории
-	.EQU	_DRV_FS_CUR_FILE											= 0x06;2B ID текущего файла
-	.EQU	_DRV_FS_TEMP_ITEM											= 0x08;2B ID текущего файла (исп. для внутренних циклов и прочего)
-	.EQU	_DRV_FS_ITEM_BUFFER										= 0x0a;32B размер буфера для работы с ITEM
+	.EQU	_DRV_FS_DISK_SIZE											= 0x04;4B количество блоков
+	.EQU	_DRV_FS_ITEMS												= 0x08;2B макс. кол-во элементов(копия DRV_FS_ROOT_ITEMS)
+	.EQU	_DRV_FS_DISK_TIME											= 0x0a;5B uptime последней операции
+	.EQU	_DRV_FS_DISK_ID											= 0x0f;8B первые 8 байт идентификатора диска
+	.EQU	_DRV_FS_ITEM_BUFFER										= 0x17;32B размер буфера для работы с ITEM
+	.EQU	_DRV_FS_CUR_BLCK_TYPE									= 0x37;1B тип блока(0-другое, 1-чтение,
+																					;2-буферизированнная запись, 3-синхронизированная запись)
+	.EQU	_DRV_FS_CUR_BLCK_NUM										= 0x38;4B номер считанного, готового к записи блока
 	;---
-	.EQU	_DRV_FS_VARS_SIZE											= 0x2a;
+	.EQU	_DRV_FS_RAM_SIZE											= 0x3c;60B
 
-	;---OPERATIONS---
-	.EQU	DRV_FS_OP_FORMAT						= 0x01			;Создать FS
-	.EQU	DRV_FS_OP_ITEM_INFO					= 0x02			;Считать блок с информацией об элементе
-	.EQU	DRV_FS_OP_MD							= 0x02			;Создать
-;	.EQU	DRV_FS_CMD_DISK_PGET					= 0x01			;Считать параметр
-;	.EQU	DRV_FS_CMD_DISK_PSET					= 0x02			;Записать параметр
-;	.EQU	DRV_FS_CMD_DISK_BREAD				= 0x03			;Считать данные с блока
-;	.EQU	DRV_FS_CMD_DISK_BWRITE				= 0x04			;Записать данные в блок
-;	.EQU	DRV_FS_CMD_DISK_BVERIFY				= 0x05			;Проверить данные в блоке
 
-	;---FS-ITEM-STRUCTURE------------------------------------;Структура элемента каталога FS (32 байт)
-	.EQU	DRV_FS_ITEM_PARENT_ID				= 0x02			;2B - ид каталога, в котором лежит данный элемент
-	.EQU	DRV_FS_ITEM_BSTART					= 0x04			;4B - номер первого блока
-	.EQU	DRV_FS_ITEM_BLEN						= 0x08			;3B - длина данных в блоках
-	.EQU	DRV_FS_ITEM_LEN						= 0x0c			;2B - длина данных в последнем блоке для FILE
-																			;или номер последнего занятого элемента для ROOT
-																			;или номер текущего блока для LOOPFILE
-	.EQU	DRV_FS_ITEM_CTIME						= 0x0e			;4B - время создания
-	.EQU	DRV_FS_ITEM_ETIME						= 0x12			;4B - время изменения
-	.EQU	DRV_FS_ITEM_OPT						= 0x16			;1B - опции элемента (тип и прочее)
-	.EQU	DRV_FS_ITEM_NAME						= 0x18			;12B - имя/комментарий
+	;---FS-ROOT-STRUCTURE---------------------------------;Струкура элемента ROOT
+	.EQU	DRV_FS_ROOT_MAGIC						= 0x00			;2B - 5277
+	.EQU	DRV_FS_ROOT_VERSION					= 0x02			;1B - версия x/10
+	.EQU	DRV_FS_ROOT_ITEMS						= 0x03			;2B - макс. кол-во элементов
+	.EQU	DRV_FS_ROOT_CURRENT_BLK				= 0x05			;4B - текущий свободный блок(за ним свободное пространство)
+	.EQU	DRV_FS_ROOT_USED_BLKS				= 0x09			;4B - количество занятых блоков
+	.EQU	DRV_FS_ROOT_LAST_ITEM				= 0x0d			;2B - номер последнего элемента
+	.EQU	DRV_FS_ROOT_ETIME						= 0x0f			;4B - время изменения блока ROOT
+	.EQU	DRV_FS_ROOT_OPT						= 0x13			;1B - опции элемента (тип и прочее)
+	.EQU	DRV_FS_ROOT_NAME						= 0x14			;12B - имя
+	;---FS-ITEM-STRUCTURE---------------------------------;Структура элемента каталога FS (32 байт)
+	.EQU	DRV_FS_ITEM_PARENT_ID				= 0x00			;2B - ид каталога, в котором лежит данный элемент
+	.EQU	DRV_FS_ITEM_BSTART					= 0x02			;4B - номер первого блока
+	.EQU	DRV_FS_ITEM_BLEN						= 0x06			;3B - длина данных в блоках(занято на диске для ROOT)
+	.EQU	DRV_FS_ITEM_LEN						= 0x09			;2B - длина данных в последнем блоке для FILE или номер текущего блока для LOOPFILE
+	.EQU	DRV_FS_ITEM_CTIME						= 0x0b			;4B - время создания
+	.EQU	DRV_FS_ITEM_ETIME						= 0x0f			;4B - время изменения
+	.EQU	DRV_FS_ITEM_OPT						= 0x13			;1B - опции элемента (тип и прочее)
+	.EQU	DRV_FS_ITEM_NAME						= 0x14			;12B - имя
 
 	;---FS-ITEM-OPTIONS-H-NIBBLE--------------------------;Опции элемента
-	;---H-NIBBLE------------------------------------------;Тип элемента - старший ниббл
+	;---L-NIBBLE------------------------------------------;Тип элемента - младший ниббл
 	.EQU	DRV_FS_TYPE_FREE						= 0x00			;свободный элемент
 	.EQU	DRV_FS_TYPE_DIR						= 0x01			;каталог
 	.EQU	DRV_FS_TYPE_FILE						= 0x02			;файл
@@ -55,26 +80,18 @@
 	.EQU	DRV_FS_TYPE_RM_FILE					= 0x05			;удаленный файл
 ;	.EQU	DRV_FS_TYPE_RESERVED					= 0x06			;зарезервировано
 ;	.EQU	DRV_FS_TYPE_RESERVED					= 0x07			;зарезервировано
-	;---L-NIBBLE------------------------------------------;опции элемента - младший ниббл
+	;---H-NIBBLE------------------------------------------;опции элемента - старший ниббл(биты)
 	;---DIR/FILE/RM-DIR/RM-FILE---
 	.EQU	DRV_FS_OPT_HIDDEN						= 0x04			;скрытый
+	.EQU	DRV_FS_OPT_RO							= 0x05			;только для чтения
+	.EQU	DRV_FS_OPT_SYSTEM						= 0x06			;системный
 	;---LOOP-FILE---
-	.EQU	DRV_FS_OPT_HIDDEN						= 0x04			;скрытый
-	.EQU	DRV_FS_OPT_LOOP						= 0x05			;выполнен цикл в циклическом файле
+	.EQU	DRV_FS_OPT_LOOP						= 0x07			;выполнен цикл в циклическом файле
 
 	;---FS-BLOCK-HEADER------------------------------------;Структура хвоста блока
 	.EQU	_DRV_FS_BHEADER_BNUM					= 0x00			;4B - номер следующего блока
 	.EQU	_DRV_FS_BHEADER_OFFSET				= 0x04			;2B - смещение внутри блока для записи по кругу (0xffff - не текущий)
 	.EQU	_DRV_FS_BHEADER_CHECKSUM			= 0x06			;2B - контрольная сумма
-
-
-;---FS-RESULT-CODE---------------------------------------;Код результата
-	.EQU	DRV_FS_RESULT_OK						= 0x00			;
-	.EQU	DRV_FS_RESULT_OP_FAILED				= 0x81			;
-	.EQU	DRV_FS_RESULT_INVALID_NAME			= 0x82			;
-	.EQU	DRV_FS_RESULT_INVALID_ITEM			= 0x83			;
-	.EQU	DRV_FS_RESULT_WRONG_BLOCK			= 0x84			;
-	.EQU	DRV_FS_RESULT_UNSUPPORTED			= 0xFF			;
 
 
 	.EQU	DRV_FS_BLOCK_SIZE						= 0x0200			;Размер блока - 512B
@@ -83,69 +100,124 @@
 	.EQU	_DRV_FS_BLOCK_HEADER_LEN			= 0x20			;Размер служебного заголовка
 
 
+	.EQU	DRV_FS_OPEN_WRITE						= 0x00			;Открытие файла для записи
+
 
 ;--------------------------------------------------------
 DRV_FS_INIT:
 ;--------------------------------------------------------
 ;Инициализация драйвера
-;IN: Y-адрес на буффер в 512 байт, TEMP_H-ид SD драйвера,
-;TEMP_L-ид драйвера RTC
+;IN: X-адрес на буффер в 512 байт,
+;TEMP_H-ид драйвера диска, TEMP_L-ид драйвера RTC
 ;--------------------------------------------------------
-	PUSH ACCUM
 	;Выделяем память
-	LDI ACCUM,_DRV_FS_VARS_SIZE
+	LDI ACCUM,_DRV_FS_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
-	MOV XH,ZH
-	MOV XL,ZL
+	PUSH_X
+	MOVW XL,YL
 	LDI TEMP,0x00
 	MOV LOOP_CNTR,ACCUM
 	MCALL RAM_FILL
 
-	POP ACCUM
-	STD Z+_DRV_FS_SD_DRV_ID+0x00,ACCUM
-	STD Z+_DRV_FS_BUFFER_ADDR+0x00,YH
-	STD Z+_DRV_FS_BUFFER_ADDR+0x01,YL
+	POP_X
+	STD Y+_DRV_FS_DISK_DRV_ID,TEMP_H
+	STD Y+_DRV_FS_RTC_DRV_ID,TEMP_L
+	STD Y+_DRV_FS_BUFFER_ADDR+0x00,XH
+	STD Y+_DRV_FS_BUFFER_ADDR+0x01,XL
+
+	LDI TEMP,0xff
+	STD Y+_DRV_FS_DISK_SIZE+0x00,TEMP
+	STD Y+_DRV_FS_DISK_SIZE+0x01,TEMP
+	STD Y+_DRV_FS_DISK_SIZE+0x02,TEMP
+	STD Y+_DRV_FS_DISK_SIZE+0x03,TEMP
 
 	MCALL C5_READY
 ;--------------------------------------------------------
 ;Основной код, коммуникация
-;IN: ACCUM-тип операции
-;OUT: FLAGS-результат DRV_FS_RESULT_...
+;IN: FLAGS-тип операции
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_Y
 
 	;Получаем адрес выделенной памяти
 	MCALL C5_RAM_OFFSET
 
+	LDD TEMP,Y+_DRV_FS_DISK_SIZE+0x00
+	CPI TEMP,0xff
+	BRNE DRV_FS_MAIN__DISK_INIT_SKIP
+	LDD TEMP,Y+_DRV_FS_DISK_SIZE+0x01
+	CPI TEMP,0xff
+	BRNE DRV_FS_MAIN__DISK_INIT_SKIP
+	LDD TEMP,Y+_DRV_FS_DISK_SIZE+0x02
+	CPI TEMP,0xff
+	BRNE DRV_FS_MAIN__DISK_INIT_SKIP
+	LDD TEMP,Y+_DRV_FS_DISK_SIZE+0x03
+	CPI TEMP,0xff
+	BRNE DRV_FS_MAIN__DISK_INIT_SKIP
+	MCALL _DRV_FS_DISK_INIT
+	CPI TEMP,DRV_RESULT_OK
+	BREQ PC+0x05
+	CPI TEMP,DRV_RESULT_UNFORMATTED
+	BRNE _DRV_FS__END
+	CPI FLAGS,DRV_FS_OP_FORMAT
+	BRNE _DRV_FS__END
+
+DRV_FS_MAIN__DISK_INIT_SKIP:
+	MCALL _DRV_FS_CHECK_DISK
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS__END
+
 .ifdef DEF_DRIVER_FS_FORMAT
-	CPI ACCUM,DRV_FS_OP_FORMAT
+	CPI FLAGS,DRV_FS_OP_FORMAT
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_FS_FORMAT
 	RJMP _DRV_FS__END
 .endif
-	CPI ACCUM,DRV_FS_OP_ITEM_INFO
+.ifdef DEF_DRIVER_FS_MD
+	CPI FLAGS,DRV_FS_OP_MD
 	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_FS_ITEM_INFO
+	MCALL _DRV_FS_MD
 	RJMP _DRV_FS__END
-	CPI ACCUM,DRV_FS_OP_BLOCK_READ
+.endif
+.ifdef DEF_DRIVER_FS_DELETE
+	CPI FLAGS,DRV_FS_OP_DELETE
 	BRNE PC+0x01+_MCALL_SIZE+0x01
-	MCALL _DRV_FS_BLOCK_READ
+	MCALL _DRV_FS_DELETE
 	RJMP _DRV_FS__END
+.endif
+
+
+
+
+.ifdef DEF_DRIVER_FS_CD
+	CPI FLAGS,DRV_FS_OP_CD
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_FS_OP_CD
+	RJMP _DRV_FS__END
+.endif
+	CPI FLAGS,DRV_FS_OP_INFO
+	BRNE PC+0x01+_MCALL_SIZE+0x01
+	MCALL _DRV_FS_ITEM_READ
+	RJMP _DRV_FS__END
+;	CPI FLAGS,DRV_FS_OP_BLOCK_READ
+;	BRNE PC+0x01+_MCALL_SIZE+0x01
+;	MCALL _DRV_FS_BLOCK_READ
+;	RJMP _DRV_FS__END
 	;...
 
-	LDI FLAGS,DRV_FS_RESULT_UNSUPPORTED
+	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_FS__END:
 
-	POP_Z
+	POP_Y
 	RET
 
 ;--------------------------------------------------------
-_DRV_FS_ITEM_INFO:
+_DRV_FS_ITEM_READ:
 ;--------------------------------------------------------
 ;Считывает блок с элементом и возвращаем его смещение
-;IN: Z-адрес на переменные, TEMP_H/L-ITEM_ID
-;OUT: FLAGS-код результата
+;IN: Y-адрес на переменные, TEMP_H/L-ITEM_ID
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Z
@@ -153,32 +225,40 @@ _DRV_FS_ITEM_INFO:
 	PUSH TEMP_EL
 	PUSH TEMP_H
 	PUSH TEMP_L
-	PUSH TEMP
 	PUSH LOOP_CNTR
+
+	;TODO проверить(проверка на коррекное значение)
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x00
+	CP TEMP,TEMP_H
+	BRCS PC+0x05
+	BRNE PC+0x06
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x01
+	CP TEMP,TEMP_L
+	BRCC PC+0x03
+	LDI TEMP,DRV_RESULT_ERROR
+	RJMP _DRV_FS_ITEM_READ__END
 
 	CLR TEMP_EH
 	CLR TEMP_EL
 	MCALL _DRV_FS_ITEM_OFFSETS
 	;Считываю блок
-	MCALL _C5_FS_BLOCK_READ
-	CPI FLAGS,C5_FS_RESULT_OK
-	BRNE C5_FS_ITEM_INFO__END
+	MCALL _DRV_FS_BLOCK_READ
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_ITEM_READ__END
 
-	LDD TEMP,Z+_DRV_FS_BUFFER_ADDR+0x01
+	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x01
 	ADD XL,TEMP
-	LDD TEMP_L,Y+_DRV_FS_BUFFER_ADDR+0x00
+	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x00
 	ADC XH,TEMP
 
-	LDD TEMP,Z+_DRV_FS_ITEM_BUFFER+0x00
-	LDD ZL,Z+_DRV_FS_ITEM_BUFFER+0x01
-	MOV ZH,TEMP
+	MOVW ZL,YL
+	ADIW ZL,_DRV_FS_ITEM_BUFFER
 	LDI LOOP_CNTR,DRV_FS_ITEM_SIZE
 	MCALL RAM_COPY
-	LDI FLAGS,C5_FS_RESULT_OK
+	LDI TEMP,DRV_RESULT_OK
 
-C5_FS_ITEM_INFO__END:
+_DRV_FS_ITEM_READ__END:
 	POP LOOP_CNTR
-	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
 	POP TEMP_EL
@@ -187,6 +267,61 @@ C5_FS_ITEM_INFO__END:
 	POP_X
 	RET
 
+;--------------------------------------------------------
+_DRV_FS_ITEM_WRITE:
+;--------------------------------------------------------
+;Записывает блок элемента
+;IN: Y-адрес на переменные, TEMP_H/L-ITEM_ID
+;OUT: TEMP-DRV_RESULT_...
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Z
+	PUSH TEMP_EH
+	PUSH TEMP_EL
+	PUSH TEMP_H
+	PUSH TEMP_L
+	PUSH LOOP_CNTR
+
+	;TODO проверить(проверка на коррекное значение)
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x00
+	CP TEMP,TEMP_H
+	BRCS PC+0x05
+	BRNE PC+0x06
+	LDD TEMP,Y+_DRV_FS_ITEMS+0x01
+	CP TEMP,TEMP_L
+	BRCC PC+0x03
+	LDI TEMP,DRV_RESULT_ERROR
+	RJMP _DRV_FS_ITEM_READ__END
+
+	CLR TEMP_EH
+	CLR TEMP_EL
+	MCALL _DRV_FS_ITEM_OFFSETS
+	;Считываем блок
+	MCALL _DRV_FS_BLOCK_READ
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_ITEM_WRITE__END
+	;Копируем данные элемента в блок.
+	MOVW ZL,XL
+	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x01
+	ADD ZL,TEMP
+	LDD TEMP,Y+_DRV_FS_BUFFER_ADDR+0x00
+	ADC ZH,TEMP
+	MOVW XL,YL
+	ADIW XL,_DRV_FS_ITEM_BUFFER
+	LDI LOOP_CNTR,DRV_FS_ITEM_SIZE
+	MCALL RAM_COPY
+	;Записываем блок
+	MCALL _DRV_FS_BLOCK_WRITE
+
+_DRV_FS_ITEM_WRITE__END:
+	POP LOOP_CNTR
+	POP TEMP_L
+	POP TEMP_H
+	POP TEMP_EL
+	POP TEMP_EH
+	POP_Z
+	POP_X
+	RET
 
 ;--------------------------------------------------------
 _DRV_FS_ITEM_OFFSETS:
@@ -221,40 +356,270 @@ _DRV_FS_ITEM_OFFSETS:
 	RET
 
 ;--------------------------------------------------------
-_C5_FS_READ_NEXT_BLOCK:
+_DRV_FS_READ_NEXT_BLOCK:
 ;--------------------------------------------------------
 ;Считывает следующий блок
-;IN: TEMP_EH/EL/H/L-номер блока
-;OUT: TEMP_EH/EL/H/L-номер блока,
-;FLAGS-код результата
+;IN: Y-адрес на переменные,TEMP_EH/EL/H/L-номер блока
+;OUT: TEMP_EH/EL/H/L-номер блока, TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	MCALL _C5_FS_BLOCK_READ
+	PUSH_X
+	LDS XH,_DRV_FS_BUFFER_ADDR+0x00
+	LDS XL,_DRV_FS_BUFFER_ADDR+0x01
 
-	LDD TEMP_EH,Y+_C5_FS_BHEADER_BNUM+0x00
-	LDD TEMP_EL,Y+_C5_FS_BHEADER_BNUM+0x01
-	LDD TEMP_H,Y+_C5_FS_BHEADER_BNUM+0x02
-	LDD TEMP_L,Y+_C5_FS_BHEADER_BNUM+0x03
+	MCALL _DRV_FS_BLOCK_READ
+
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_READ_NEXT_BLOCK__END
+	PUSH_Y
+	MOVW YL,XL
+	LDD TEMP_EH,Y+_DRV_FS_BHEADER_BNUM+0x00
+	LDD TEMP_EL,Y+_DRV_FS_BHEADER_BNUM+0x01
+	LDD TEMP_H,Y+_DRV_FS_BHEADER_BNUM+0x02
+	LDD TEMP_L,Y+_DRV_FS_BHEADER_BNUM+0x03
+	POP_Y
+_DRV_FS_READ_NEXT_BLOCK__END:
+	POP_X
 	RET
 
 ;--------------------------------------------------------
-_C5_FS_BLOCK_READ:
+_DRV_FS_BLOCK_READ:
 ;--------------------------------------------------------
-;IN: TEMP_EH/EL/H/L-номер блока
-;OUT: FLAGS-код результата
+;IN: Y-адрес на переменные,TEMP_EH/EL/H/L-номер блока
+;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH TEMP
-	PUSH ACCUM
+	LDD TEMP,Y+_DRV_FS_CUR_BLCK_TYPE
+	CPI TEMP,0x01
+	BRNE _DRV_FS_BLOCK_READ__CONTINUE
+	LDD TEMP,Y+_DRV_FS_CUR_BLCK_NUM+0x00
+	CP TEMP,TEMP_H
+	BRNE _DRV_FS_BLOCK_READ__CONTINUE
+	LDD TEMP,Y+_DRV_FS_CUR_BLCK_NUM+0x01
+	CP TEMP,TEMP_L
+	BRNE _DRV_FS_BLOCK_READ__CONTINUE
+	LDI TEMP,DRV_RESULT_OK
+	RJMP _DRV_FS_BLOCK_READ__END
 
-	LDD TEMP,Z+_C5_FS_DRV_ID
-	LDI FLAGS,DRV_SD_OP_READ_BLOCK
+_DRV_FS_BLOCK_READ__CONTINUE:
+	PUSH FLAGS
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_READ
 	MCALL C5_EXEC
-	LDI FLAGS,DRV_FS_RESULT_OP_FAILED
-	CPI ACCUM,0x00
-	BRNE PC+0x02
-	LDI FLAGS,DRV_FS_RESULT_OK
+	POP FLAGS
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_BLOCK_READ__END
+	LDI TEMP,0x01
+	STD Y+_DRV_FS_CUR_BLCK_TYPE,TEMP
+	STD Y+_DRV_FS_CUR_BLCK_NUM+0x00,TEMP_H
+	STD Y+_DRV_FS_CUR_BLCK_NUM+0x01,TEMP_L
+	LDI TEMP,DRV_RESULT_OK
 
-	POP ACCUM
-	POP TEMP
+_DRV_FS_BLOCK_READ__END:
 	RET
 
+;--------------------------------------------------------
+_DRV_FS_BLOCK_WRITE:
+;--------------------------------------------------------
+;IN: Y-адрес на переменные,TEMP_EH/EL/H/L-номер блока
+;OUT: TEMP-DRV_RESULT_...
+;--------------------------------------------------------
+	PUSH FLAGS
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_WRITE
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	POP FLAGS
+	BRNE _DRV_FS_BLOCK_WRITE__END
+	LDI TEMP,0x03
+	STD Y+_DRV_FS_CUR_BLCK_TYPE,TEMP
+	LDI TEMP,DRV_RESULT_OK
+_DRV_FS_BLOCK_WRITE__END:
+	RET
+
+
+;--------------------------------------------------------
+_DRV_FS_DISK_INIT:
+;--------------------------------------------------------
+;IN: Y-адрес на переменные
+;OUT: TEMP-DEV_RESULT_...
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_Z
+	PUSH FLAGS
+	PUSH ACCUM
+	PUSH LOOP_CNTR
+	PUSH_T32
+
+	LDI ACCUM,0x00
+	LDD XH,Y+_DRV_FS_BUFFER_ADDR+0x00
+	LDD XL,Y+_DRV_FS_BUFFER_ADDR+0x01
+
+	STD Y+_DRV_FS_CUR_BLCK_TYPE,C0x00
+
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_INIT
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BREQ PC+0x02
+	RJMP _DRV_FS_DISK_INIT__END
+
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_GET_ID
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BREQ PC+0x02
+	RJMP _DRV_FS_DISK_INIT__END
+	MOVW ZL,YL
+	ADIW ZL,_DRV_FS_DISK_ID
+	LDI LOOP_CNTR,0x08
+	MCALL RAM_COPY
+
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_GET_SIZE
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BREQ PC+0x02
+	RJMP _DRV_FS_DISK_INIT__END
+	STD Y+_DRV_FS_DISK_SIZE+0x00,TEMP_EH
+	STD Y+_DRV_FS_DISK_SIZE+0x01,TEMP_EL
+	STD Y+_DRV_FS_DISK_SIZE+0x02,TEMP_H
+	STD Y+_DRV_FS_DISK_SIZE+0x03,TEMP_L
+
+	LDI_T32 0x00000000
+	MCALL _DRV_FS_BLOCK_READ
+	CPI TEMP,DRV_RESULT_OK
+	BREQ PC+0x02
+	RJMP _DRV_FS_DISK_INIT__END
+	LD ZL,X+
+	CPI ZL,0x52
+	BREQ PC+0x02
+	LDI ACCUM,0x01
+	LD ZL,X+
+	CPI ZL,0x77
+	BREQ PC+0x02
+	LDI ACCUM,0x01
+	LD ZL,X+
+	CPI ZL,0x01
+	BREQ PC+0x02
+	LDI ACCUM,0x01
+	;Максимальное кол-во элементов в ROOT
+	LD ZL,X+
+	STD Y+_DRV_FS_ITEMS+0x00,ZL
+	LD ZL,X+
+	STD Y+_DRV_FS_ITEMS+0x01,ZL
+	SBIW XL,0x05
+
+	ADIW YL,_DRV_FS_DISK_TIME
+	MCALL C5_UPTIME_COPY
+	SBIW YL,_DRV_FS_DISK_TIME
+
+.ifdef LOGGING_PORT
+	.if LOGGING_LEVEL >= LOGGING_LVL_INF
+		LDI_Z _DRV_FS_LOG_STR_INIT|0x8000
+		LDI TEMP,0x00
+		MCALL C5_OUT_STR_EL
+		MOVW ZL,YL
+		ADIW ZL,_DRV_FS_DISK_ID
+		MCALL C5_OUT_STR
+		LDI_Z _DRV_FS_LOG_STR_INIT|0x8000
+		LDI TEMP,0x01
+		MCALL C5_OUT_STR_EL
+
+		CPI ACCUM,0x01
+		BREQ _DRV_FS_DISK_INIT__LOG_UNFORMATTED
+		MOVW ZL,XL
+		ADIW ZL,DRV_FS_ROOT_NAME
+		LDI TEMP,0x0c
+		MCALL C5_OUT_STRN
+		LDI TEMP,' '
+		MCALL C5_OUT_CHAR
+		MOVW ZL,XL
+		LDD TEMP_EH,Z+DRV_FS_ROOT_USED_BLKS+0x00
+		LDD TEMP_EL,Z+DRV_FS_ROOT_USED_BLKS+0x01
+		LDD TEMP_H,Z+DRV_FS_ROOT_USED_BLKS+0x02
+		LDD TEMP_L,Z+DRV_FS_ROOT_USED_BLKS+0x03
+		MCALL C5_OUT_NUM32
+		LDI_Z _DRV_FS_LOG_STR_INIT|0x8000
+		LDI TEMP,0x03
+		MCALL C5_OUT_STR_EL
+		RJMP _DRV_FS_DISK_INIT__LOG_LAST_PART
+_DRV_FS_DISK_INIT__LOG_UNFORMATTED:
+		LDI_Z _DRV_FS_LOG_STR_INIT|0x8000
+		LDI TEMP,0x02
+		MCALL C5_OUT_STR_EL
+_DRV_FS_DISK_INIT__LOG_LAST_PART:
+		LDD TEMP_EH,Y+_DRV_FS_DISK_SIZE+0x00
+		LDD TEMP_EL,Y+_DRV_FS_DISK_SIZE+0x01
+		LDD TEMP_H,Y+_DRV_FS_DISK_SIZE+0x02
+		LDD TEMP_L,Y+_DRV_FS_DISK_SIZE+0x03
+		MCALL C5_OUT_NUM32
+		LDI TEMP,0x04
+		MCALL C5_OUT_STR_EL
+		LDI TEMP_H,high(DRV_DISK_BLOCK_SIZE)
+		LDI TEMP_L,low(DRV_DISK_BLOCK_SIZE)
+		MCALL C5_OUT_NUM16
+		LDI TEMP,0x05
+		MCALL C5_OUT_STR_EL
+	.endif
+.endif
+
+	LDI TEMP,DRV_RESULT_OK
+	CPI ACCUM,0x01
+	BRNE PC+0x02
+	LDI TEMP,DRV_RESULT_UNFORMATTED
+_DRV_FS_DISK_INIT__END:
+
+	POP_T32
+	POP LOOP_CNTR
+	POP ACCUM
+	POP FLAGS
+	POP_Z
+	POP_X
+	RET
+
+;--------------------------------------------------------
+_DRV_FS_CHECK_DISK:
+;--------------------------------------------------------
+;IN: Y-адрес на переменные, X-адрес буфера
+;OUT: TEMP-DEV_RESULT_...
+;--------------------------------------------------------
+	PUSH_X
+	PUSH_T32
+	PUSH FLAGS
+
+	PUSH_Y
+	ADIW YL,_DRV_FS_DISK_TIME
+	MCALL C5_UPTIME_DELTA
+	POP_Y
+	OR TEMP_EH,TEMP_EL
+	OR TEMP_EH,TEMP_H
+	OR TEMP_EH,TEMP_L
+	BRNE _DRV_FS_CHECK_OTIME__EXPIRED
+	CPI TEMP,250														;0.5ms
+	LDI TEMP,DRV_RESULT_OK
+	BRCS _DRV_FS_CHECK_OTIME__END
+_DRV_FS_CHECK_OTIME__EXPIRED:
+	LDD XH,Y+_DRV_FS_BUFFER_ADDR+0x00
+	LDD XL,Y+_DRV_FS_BUFFER_ADDR+0x01
+	LDD TEMP,Y+_DRV_FS_DISK_DRV_ID
+	LDI FLAGS,DRV_DISK_OP_GET_ID
+	MCALL C5_EXEC
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_CHECK_OTIME__END
+	PUSH LOOP_CNTR
+	MOVW ZL,YL
+	ADIW ZL,_DRV_FS_DISK_ID
+	LDI LOOP_CNTR,0x08
+	MCALL RAM_CP
+	POP LOOP_CNTR
+	BREQ _DRV_FS_CHECK_OTIME__END
+	MCALL _DRV_FS_DISK_INIT
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_FS_CHECK_OTIME__END
+	LDI TEMP,DRV_RESULT_GONE
+_DRV_FS_CHECK_OTIME__END:
+
+	POP FLAGS
+	POP_T32
+	POP_X
+	RET
 .endif

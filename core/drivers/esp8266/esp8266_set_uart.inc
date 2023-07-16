@@ -8,6 +8,7 @@
 .else
 .set DEF_DRIVER_ESP8266_SET_UART = 1
 
+.include	"./str/str_to_ram.inc"
 .include	"./conv/num32_to_str.inc"
 
 	.EQU	DRV_ESP8266_BAUDRATE_4800			= 0x01
@@ -22,7 +23,7 @@ _DRV_ESP8266__OP_SET_UART:
 ;--------------------------------------------------------
 ;«адаем BAUDRATE дл€ UART
 ;IN; Y-адрес выделенной пам€ти
-;TEMP_EL-скорость передачи данных
+;TEMP_L-скорость передачи данных
 ;OUT:TEMP_H-RESULT
 ;--------------------------------------------------------
 	PUSH_X
@@ -36,7 +37,7 @@ _DRV_ESP8266__OP_SET_UART:
 	ADIW XL,_DRV_ESP8266_BUFFER
 	LDI_Z _DRV_ESP8266_AT_SET_UART1|0x8000
 	MCALL STR_TO_RAM
-	MOV TEMP,TEMP_EL
+	MOV TEMP,TEMP_L
 	LDI TEMP_H,high(4800)
 	LDI TEMP_L,low(4800)
 	MCALL MUL16X8

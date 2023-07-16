@@ -31,6 +31,9 @@
 ;09.10.2021	w5277c@gmail.com			v0.4.1	Оптимизация, убраны NOP из макросов MCALL и MJMP
 ;31.01.2022	w5277c@gmail.com			v0.4.2	Исправлена ошибка проверки таймаута в диспетчере
 ;04.09.2022	konstantin@5277.ru		v0.4.3	Убраны из ядра процедуры таймера C
+;06.04.2023	konstantin@5277.ru		v0.4.4	Более надежный механизм проверки недостатка RAM
+;10.04.2023	konstantin@5277.ru		v0.4.5	Багфиксинг RAM realloc.
+;15.04.2023	konstantin@5277.ru		v0.4.6	Багфиксинг EINT_ENABLE, драйвер AM2301.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -64,6 +67,8 @@
 ;использовать. Вынести функционал различных таймеров из драйверов в процедуры типа TIMER_START и прочее. Если
 ;это вообще реально(тамеры различного типа поддерживают разные диапазны)
 ;TODO Считать идентификатор PID_RTC_DRV общеизвестным
+;TODO Написать инструкцию по работе с таймерами, уделить внимание TIMERS_SPEED_25US/50US!
+;TODO Отказаться от TIMERS_SPEED_25US/50US в пользу таймера C и 16бит таймеров
 ;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef TS_MODE
@@ -122,6 +127,24 @@
 	.EQU	_C5_TASK_TIMESTAMP					= 0x07			;1B-мекта времени переключения на задачу
 	.EQU	_C5_TASK_EXECTIME						= 0x08			;3B-время запуска задачи(~9 часов максимум, тик в 2мс)
 
+;---DRIVER-OPERATION-------------------------------------;Идентификаторы операций с драйвером
+	.EQU	DRV_OP_START							= 0x40			;Запуск
+	.EQU	DRV_OP_SYNC_START						= DRV_OP_START	;Синхронный запуск(ожидаем завершения)
+	.EQU	DRV_OP_ASYNC_START					= 0x41			;Асинхронный запуск(продолжаем выполнение основного кода после запуска)
+	.EQU	DRV_OP_STOP								= 0x42			;Остановка операции
+	.EQU	DRV_OP_SET_PORT						= 0x43			;Установить порт
+	.EQU	DRV_OP_GET_PORT						= 0x44			;Получить порт
+	.EQU	DRV_OP_SET								= 0x45			;Установить значение
+	.EQU	DRV_OP_GET								= 0x46			;Получить значение(дождаться наличия)
+	.EQU	DRV_OP_ASYNC_GET						= 0x47			;Получить значение не дожидаясь(может вернуть null)
+	.EQU	DRV_OP_ADD								= 0x48			;Добавить элемент в список
+	.EQU	DRV_OP_CLEAR							= 0x49			;Очистить список элементов
+	.EQU	DRV_OP_RESET							= 0x4a			;Сбросить состояние
+	.EQU	DRV_OP_ON								= 0x4b			;Включить
+	.EQU	DRV_OP_OFF								= 0x4c			;Выключить
+	.EQU	DRV_OP_INIT								= 0x4d			;Инициализировать
+	.EQU	DRV_OP_READ								= 0x4e			;Считать блок
+	.EQU	DRV_OP_WRITE							= 0x4f			;Записать блок
 ;---DRIVER-RESULT----------------------------------------;Идентификаторы результата работы драйвера
 	.EQU	DRV_RESULT_OK							= 0x80			;Ок
 	.EQU	DRV_RESULT_ABSENT						= 0x81			;Датчик отсутствует
@@ -130,6 +153,14 @@
 	.EQU	DRV_RESULT_INVALID_DATA				= 0x84			;Не корректные данные(например, не сошлось CRC)
 	.EQU	DRV_RESULT_UNSUPPORTED				= 0x85			;Не поддерживается
 	.EQU	DRV_RESULT_INVALID_RESOURCE		= 0x86			;Не коректный ресурс(например PID драйвера)
+	.EQU	DRV_RESULT_INVALID_NAME				= 0x87			;Не корректное имя ресурса(например файла)
+	.EQU	DRV_RESULT_WRONG_BLOCK				= 0x88			;Ошибочный(не существующий) блок(например SD карты)
+	.EQU	DRV_RESULT_GONE						= 0x89			;Объекта больше не сущетсвует
+	.EQU	DRV_RESULT_READ_ONLY					= 0x8a			;Разрешено только чтение
+	.EQU	DRV_RESULT_UNFORMATTED				= 0x8b			;Диск не форматирован
+	.EQU	DRV_RESULT_MAX_REACHED				= 0x8c			;Достигнут максимум
+	.EQU	DRV_RESULT_NOT_EMPTY					= 0x8d			;не пуст
+
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_C5_DRIVER_HEADER_SIZE				= 0x06			;Размер заголовка драйвера
@@ -140,6 +171,7 @@
 	.EQU	_C5_TIMER_PERIOD						= 0x28			;40, т.е. 0.000050*40=0.002=2мс
 .ENDIF
 	.EQU	_C5_TASK_STACK_DEF_SIZE				= 0x13			;Размер стека задачи при создании (16 регистров+SREG+точка возврата)
+	.EQU	_C5_SAFETY_THRESHOLD_VALUE			= 0x5af1			;Два байта порога безопасности
 	.EQU	_C5_TASKS_ACTIVE_TIME				= 0x01			;Время работы задачи 1*2=2мс
 	.EQU	_C5_IRV_TABLE_SIZE					= 0x4b			;Размер таблицы прерываний
 	.EQU	_C5_RES_QUEUE_SIZE					= _C5_TASKS_MAX_QNT*0x02	;Размер очереди к ресурсам
@@ -148,6 +180,7 @@
 	.EQU	_C5_FAULT_HUGE_STACK					= 0x01			;Стек перешел границу выделяемой памяти
 	.EQU	_C5_FAULT_HUGE_TASK_STACK			= 0x02			;Размер стека задачи более 255 байт
 	.EQU	_C5_FAULT_HUGE_TASK_STACK2			= 0x03			;Размер стека задачи более 255 байт
+	.EQU	_C5_FAULT_INSUFFICIENT_RAM			= 0x04			;Недостаточно RAM(стек затер данные динамической памяти)
 	;---CORE-RESOURCES---											;Идентфикаторы ресурсов, 0-127 отданы пользователю, старшие-ядру(0xff-конец очереди)
 	.EQU	C5_RES_TIMER_B							= 0xFE			;Таймер B
 	.EQU	C5_RES_ADC								= 0xFD			;ADC
@@ -182,7 +215,7 @@
 .ENDIF
 	.EQU	_C5_TIMERS16							= _C5_TIMERS+TIMERS*_C5_TIMER_STRUCT_SIZE
 																			;xB-таблица 16бит таймеров
-	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS16+TIMERS16*_C5_TIMER16_STRUCT_SIZE	
+	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS16+TIMERS16*_C5_TIMER16_STRUCT_SIZE
 																			;xB-таблица прерываний (_C5_IR_QNT*3 для каждого прерывания, исключая RESET)
 	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3
 																			;xB-заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
@@ -195,15 +228,21 @@
 	.EQU	_C5_STACK_END							= RAMEND-_C5_STACK_SIZE	;xB-стек ядра, далее буфер, стек задач и выделяемая память
 														;TODO проверить что стек не перетирает первый байт буфера
 .IF AVRA == 0x01
-	.MESSAGE "######## BUFFER OFFSET:",C5_BUFFER
+	.MESSAGE "######## RAMSTART:",RAMSTART
+	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
+	.MESSAGE "######## DRIVERS HEADERS SIZE:",C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE
+	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
+	.MESSAGE "######## TASKS HEADERS SIZE:",C5_TASKS_QNT*_C5_TASK_HEADER_SIZE
+	.MESSAGE "######## QUEUE OFFSET:",_C5_RESOURCE_QUEUE
+	.MESSAGE "######## QUEUE SZIE:",_C5_RES_QUEUE_SIZE
 	.IF BUFFER_SIZE > 0x00
+		.MESSAGE "######## BUFFER OFFSET:",C5_BUFFER
 		.MESSAGE "######## BUFFER SIZE:",BUFFER_SIZE
 	.ENDIF
-	.MESSAGE "######## AVAILABLE RAM:",((_C5_STACK_END-_C5_FREE_RAM)-_C5_RAM_BORDER_SIZE)
-	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
-	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
 	.MESSAGE "######## FREE RAM OFFSET:",_C5_FREE_RAM
 	.MESSAGE "######## STACK END OFFSET:",_C5_STACK_END
+	.MESSAGE "######## AVAILABLE RAM:",((_C5_STACK_END-_C5_FREE_RAM)-_C5_RAM_BORDER_SIZE)
+	.MESSAGE "######## STACK USAGE:>",C5_TASKS_QNT*19
 	.MESSAGE "######## CORE FREQ:",CORE_FREQ
 	.IF TIMERS_SPEED == TIMERS_SPEED_50US
 		.MESSAGE "######## TIMERS NORMAL SPEED (",TIMERS_SPEED,")"
@@ -240,13 +279,11 @@
 	.DEF	_PID										= r15				;ИД корневого процесса(обычно задачи)
 
 
-	.INCLUDE	"./mem/ram_copy.inc"
 	.INCLUDE	"./mem/ram_fill16.inc"
 .if TS_MODE != TS_MODE_NO
 	.INCLUDE "./mem/ram_copy_desc.inc"
 	.INCLUDE "./mem/ram_copy16_desc.inc"
 .endif
-	.INCLUDE "./conv/bitnum_to_num.inc"
 .IFDEF C5_IN_PORT
 	.INCLUDE "./core/ui/input.inc"
 .ENDIF
@@ -257,25 +294,33 @@
 .ENDIF
 ;TODO unexpected INTEGER, expecting STRING in AtmelStudio
 ; 	.MESSAGE 28800*CORE_FREQ
+C5_NAME:
+	.db	"core5277 v0.4.6",0x00
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
-	OUTSTR_CORE:
-	.db   0x0d,0x0a,"Powered by core5277 v0.4.2 [",0x00,0x00
+	OUTSTR_CORE1:
+	.db	0x0d,0x0a,"Powered by ",0x00
+	OUTSTR_CORE2:
+	.db	" [",0x00,0x00
+
 	OUTSTR_MCUSR_NO:
-	.db   "NO ",0x00
+	.db	"NO ",0x00
 	OUTSTR_MCUSR_WD:
-	.db   "WD ",0x00
+	.db	"WD ",0x00
 	OUTSTR_MCUSR_BO:
-	.db   "BO ",0x00
+	.db	"BO ",0x00
 	OUTSTR_MCUSR_EX:
-	.db   "EX ",0x00
+	.db	"EX ",0x00
 	OUTSTR_MCUSR_PO:
-	.db   "PO ",0x00
+	.db	"PO ",0x00
 	OUTSTR_MCUSR_RESET:
-	.db   "reset]",0x0d,0x0a,0x00,0x00
+	.db	"reset]",0x0d,0x0a,0x00,0x00
 
 	.INCLUDE "./core/io/out_init.inc"
-	.INCLUDE	"./core/io/out_romstr.inc"
+.if LOGGING_STACKUSAGE == 1
+	.INCLUDE "./core/io/out_char.inc"
+	.INCLUDE "./core/io/out_word.inc"
+.endif
 	.INCLUDE	"./core/io/out_tasksdump.inc"
 	.INCLUDE "./core/io/out_corefault.inc"
 .ELSE
@@ -298,17 +343,9 @@ C5_DISPATCHER_UNLOCK:
 
 .IF TIMERS > 0x00 || TIMER_C_ENABLE == 1
 	.MESSAGE "######## TIMERS ENABLED"
-	.INCLUDE "./core/timer_set.inc"
-	.INCLUDE "./core/timer_start.inc"
-	.INCLUDE "./core/timer_start_at.inc"
-	.INCLUDE "./core/timer_stop.inc"
 .ENDIF
 .IF TIMERS16 > 0x00
 	.MESSAGE "######## TIMERS16 ENABLED"
-	.INCLUDE "./core/timer16_set.inc"
-	.INCLUDE "./core/timer16_start.inc"
-	.INCLUDE "./core/timer16_start_at.inc"
-	.INCLUDE "./core/timer16_stop.inc"
 .ENDIF
 .IF TIMERS == 0x00 && TIMERS16 == 0 && TIMER_C_ENABLE ==0
 	.MESSAGE "######## TIMERS DISABLED"
@@ -414,7 +451,9 @@ _C5_TIMER_A_IR__16_LOOP:
 	LDD TEMP,Y+_C5_TIMER16_RAM_ADDR+0x00
 	LDD YL,Y+_C5_TIMER16_RAM_ADDR+0x01
 	MOV YH,TEMP
+	SEI
 	ICALL
+	CLI
 	POP_Y
 	LDD TEMP,Y+_C5_TIMER16_DEFAULT+0x01
 	STD Y+_C5_TIMER16_CNTR+0x01,TEMP
@@ -456,7 +495,9 @@ _C5_TIMER_A_IR__HF_LOOP:
 	LDD TEMP,Y+_C5_TIMER_RAM_ADDR+0x00
 	LDD YL,Y+_C5_TIMER_RAM_ADDR+0x01
 	MOV YH,TEMP
+	SEI
 	ICALL
+	CLI
 	POP_Y
 	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
@@ -531,7 +572,9 @@ _C5_TIMER_A_IR__LF_LOOP:
 	LDD TEMP,Y+_C5_TIMER_RAM_ADDR+0x00
 	LDD YL,Y+_C5_TIMER_RAM_ADDR+0x01
 	MOV YH,TEMP
+	SEI
 	ICALL
+	CLI
 	POP_Y
 	LDD TEMP,Y+_C5_TIMER_DEFAULT
 	ANDI TEMP,0x7f
@@ -547,8 +590,24 @@ _C5_TIMER_A_IR__LF_NEXT:
 	POP ACCUM
 .ENDIF
 
+	CP _C5_DISPATCHER_LOCK_CNTR,C0x00
+	BRNE _C5_TIMER_A_IR_SAFETY_CHECK_SKIP
+	LDS ZH,_C5_TOP_OF_FREE_RAM+0x00
+	LDS ZL,_C5_TOP_OF_FREE_RAM+0x01
+	LD TEMP,Z+
+	LD ZL,Z
+	MOV ZH,TEMP
+	LDI TEMP,_C5_FAULT_INSUFFICIENT_RAM
+	CPI ZH,high(_C5_SAFETY_THRESHOLD_VALUE)
+	BREQ PC+0x01+_MCALL_SIZE
+	MJMP C5_OUT_COREFAULT
+	CPI ZL,low(_C5_SAFETY_THRESHOLD_VALUE)
+	BREQ PC+0x01+_MCALL_SIZE
+	MJMP C5_OUT_COREFAULT
+_C5_TIMER_A_IR_SAFETY_CHECK_SKIP:
 	POP_Z
 
+	SEI
 .IF TS_MODE == TS_MODE_TIME
 	MCALL _C5_DISPATCHER_EVENT
 .ENDIF
@@ -676,8 +735,13 @@ C5_INIT:
 .ifdef LOGGING_PORT
 	MCALL C5_OUT_INIT
 
-	LDI_Z OUTSTR_CORE|0x8000
+	LDI_Z OUTSTR_CORE1|0x8000
 	MCALL C5_OUT_STR
+	LDI_Z C5_NAME|0x8000
+	MCALL C5_OUT_STR
+	LDI_Z OUTSTR_CORE2|0x8000
+	MCALL C5_OUT_STR
+
 	SBRS FLAGS,WDRF
 	RJMP PC+0x03+_MCALL_SIZE
 	LDI_Z OUTSTR_MCUSR_WD|0x8000
@@ -755,6 +819,11 @@ C5_REINIT:
 	LDI_X _C5_FREE_RAM
 	STS _C5_TOP_OF_FREE_RAM+0x00,XH
 	STS _C5_TOP_OF_FREE_RAM+0x01,XL
+	;устанавливаю маркеры безопасного порога
+	LDI TEMP,high(_C5_SAFETY_THRESHOLD_VALUE)
+	STS _C5_FREE_RAM+0x00,TEMP
+	LDI TEMP,low(_C5_SAFETY_THRESHOLD_VALUE)
+	STS _C5_FREE_RAM+0x01,TEMP
 	;Чистка флагов
 	STS _C5_FLAGS+0x00,C0x00
 	STS _C5_FLAGS+0x01,C0x00
@@ -801,6 +870,7 @@ C5_REINIT:
 	CLR _C5_DISPATCHER_LOCK_CNTR
 	;Инициализируем таймер (0.000050s - 800 тактов)
 	_C5_TIMERA_INIT
+
 	RET
 
 ;--------------------------------------------------------
@@ -1338,6 +1408,7 @@ _C5_SUSPEND__BODY:
 	OR ACCUM,TEMP
 	STD Z+_C5_PROC_STATE,ACCUM
 
+	CLI
 	;Выгружаю и запоминаю адрес процедуры, которая нас вызвала
 	POP _RESULT_H
 	POP _RESULT_L
@@ -1349,13 +1420,21 @@ _C5_SUSPEND__BODY:
 	;Восстанавливаем стек ядра
 	;Значение регистров не существенно, диспетчер нужные регистры уже сохранил в стек
 	;После прерывания вернемся в диспетчер(после вызова TASK_RESUME)
-	CLI
 	LDS TEMP,_C5_CORE_STACK+0x00
 	STS SPH,TEMP
 	LDS TEMP,_C5_CORE_STACK+0x01
 	STS SPL,TEMP
-	SEI
 
+	;Логируем вершину стека
+.ifdef LOGGING_PORT
+	.if LOGGING_STACKUSAGE == 1
+		LDI TEMP,'S'
+		MCALL C5_OUT_CHAR
+		MCALL C5_OUT_WORD
+		LDI TEMP,'!'
+		MCALL C5_OUT_CHAR
+	.endif
+.endif
 	;Проверяем на выход стека в зону выделяемой памяти
 	;TODO нет проверки на защитный порог(_C5_RAM_BORDER_SIZE)
 	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x00
@@ -1368,7 +1447,6 @@ _C5_SUSPEND__BODY:
 _C5_SUSPEND__HUGE_STACK:
 	LDI TEMP,_C5_FAULT_HUGE_STACK
 	MJMP C5_OUT_COREFAULT											;Стеки значения не имеют, ядро упало
-	LDS TEMP,_C5_TOP_OF_FREE_RAM+0x01
 _C5_SUSPEND__CORRECT_STACK_SIZE:
 
 	;Получаем начало стека задачи
@@ -1392,6 +1470,7 @@ _C5_SUSPEND__CORRECT_STACK_SIZE:
 	;Восстанавливаем адрес процедуры, которая нас вызвала
 	PUSH _RESULT_L
 	PUSH _RESULT_H
+	SEI
 	RET
 
 ;--------------------------------------------------------

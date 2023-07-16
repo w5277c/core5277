@@ -1,44 +1,39 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;10.02.2021  w5277c@gmail.com			Начало
+;11.08.2022	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_DRIVER_SD_SET_DUMMY_BLOCK
+.ifdef DEF_POP_ALL
 .else
-.set DEF_DRIVER_SD_SET_DUMMY_BLOCK = 1
+.set DEF_POP_ALL = 1
 
-;--------------------------------------------------------
-_DRV_SD_SET_DUMMY_BLOCK:
-;--------------------------------------------------------
-;Передача блока данных
-;IN: ACCUM-основной байт записи
-;--------------------------------------------------------
-	PUSH TEMP
-	PUSH_Y
-
-	LDI YH,high(512-3)
-	LDI YL,low(512-3)
-
-	LDI TEMP,0xfe
-	MCALL _DRV_SD_BYTE_SEND
-
-	LDI TEMP,0x52
-	MCALL _DRV_SD_BYTE_SEND
-	MCALL _DRV_SD_BYTE_SEND
-	MCALL _DRV_SD_BYTE_SEND
-
-	MOV TEMP,ACCUM
-_DRV_SD_SET_DUMMY_BLOCK__DATA:
-	MCALL _DRV_SD_BYTE_SEND
-	SBIW YL,0x01
-	BRNE _DRV_SD_SET_DUMMY_BLOCK__DATA
-	;Пишем CRC
-	LDI TEMP,0x50
-	MCALL _DRV_SD_BYTE_SEND
-	LDI TEMP,0x88
-	MCALL _DRV_SD_BYTE_SEND
-
-	POP_Y
-	POP TEMP
-	RET
+.if REPORT_INCLUDES == 0x01
+.message "included POP_ALL"
 .endif
+
+;--------------------------------------------------------
+POP_ALL:
+;--------------------------------------------------------
+;Извлекаемиз стека все старшие 16 регистров
+;--------------------------------------------------------
+	POP _RESULT_L
+	POP _RESULT_H
+	POP r31
+	POP r30
+	POP r29
+	POP r28
+	POP r27
+	POP r26
+	POP r25
+	POP r24
+	POP r23
+	POP r22
+	POP r21
+	POP r20
+	POP r19
+	POP r18
+	POP r17
+	POP r16
+	PUSH _RESULT_H
+	PUSH _RESULT_L
+	RET

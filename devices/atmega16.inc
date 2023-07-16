@@ -7,6 +7,7 @@
 ;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
+;06.04.2023	konstantin@5277.ru		Экономия RAM в 48Б
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -35,14 +36,14 @@
 	.SET	DEVICE_FAMILY							= ATMEGA16
 	.MESSAGE "######## DEVICE ATmega16"
 	.EQU	_MCALL_SIZE								= 0x02			;Размер MCALL
-	.EQU	_C5_DRIVERS_MAX_QNT					= 0x10			;Максимальное количество драйверов
+	.EQU	_C5_DRIVERS_MAX_QNT					= 0x08			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x08			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x15			;Количество перырваний(без RESET)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x00			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x04			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
+	.SET	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x045f
 	.SET	INPUT_BUFFER_SIZE						= 0x40			;Размер буфера ввода (не менее 2)

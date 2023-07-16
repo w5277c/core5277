@@ -20,7 +20,7 @@ PORT_SET_BYTE:
 ;IN: ACCUM-порт,TEMP-значение
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH_THL
+	PUSH_T16
 
 	PUSH TEMP
 	MCALL PORT_OFFSETS
@@ -29,7 +29,7 @@ PORT_SET_BYTE:
 	MOV ZL,TEMP_H
 	ST Z,TEMP
 
-	POP_THL
+	POP_T16
 	POP_Z
 	RET
 .endif

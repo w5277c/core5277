@@ -5,6 +5,7 @@
 ;01.08.2020	w5277c@gmail.com			Разбиение на файлы
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;03.07.2021	w5277c@gmail.com			Оптимизация
+;10.04.2023	konstantin@5277.ru		Багфиксинг
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_RAM_FIND_FREE_BLOCK
 .else
@@ -49,6 +50,8 @@ _C5_RAM_FIND_FREE_BLOCK__LOOP:
 	BRCS _C5_RAM_FIND_FREE_BLOCK__LOOP
 _C5_RAM_FIND_FREE_BLOCK__GOT_BLOCK:
 	MOVW YL,XL
+	ADD YL,LOOP_CNTR
+	ADC YH,C0x00
 	MCALL _C5_RAM_CHECK_STACK
 	RJMP _C5_RAM_FIND_FREE_BLOCK__END
 _C5_RAM_FIND_FREE_BLOCK__ON_TOP:

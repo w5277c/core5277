@@ -8,6 +8,7 @@
 ;29.05.2021	w5277c@gmail.com			Исправлен .DEVICE, ввод параметра MUL_SUPPORT
 ;09.10.2021	w5277c@gmail.com			Убран NOP из MCALL
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
+;06.04.2023	konstantin@5277.ru		Экономия RAM в 46Б
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -47,14 +48,14 @@
 	.SET	DEVICE_FAMILY							= ATTINY25
 	.MESSAGE "######## DEVICE ATtiny45"
 	.EQU	_MCALL_SIZE								= 0x01			;Размер MCALL
-	.EQU	_C5_DRIVERS_MAX_QNT					= 0x08			;Максимальное количество драйверов
-	.EQU	_C5_TASKS_MAX_QNT						= 0x04			;Максимальное количество задач
+	.EQU	_C5_DRIVERS_MAX_QNT					= 0x04			;Максимальное количество драйверов
+	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
 	.SET	C5_DRIVERS_QNT							= _C5_DRIVERS_MAX_QNT
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x0f			;Количество перырваний(без RESET)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x02			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
-	.EQU	_C5_STACK_SIZE							= 0x40			;Стек ядра
+	.SET	_C5_STACK_SIZE							= 0x40			;Стек ядра
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x025f
 	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)

@@ -26,7 +26,7 @@ C5_TIMER_START:
 ;--------------------------------------------------------
 .if TIMER_C_ENABLE == 0x01
 	CPI TEMP,TID_TIMER_C
-	BREQ _C5_TIMER_START__TIMER_C
+	BREQ C5_TIMER_C_START
 .endif
 .if TIMERS>0x00
 	PUSH_Z
@@ -36,7 +36,7 @@ C5_TIMER_START:
 .endif
 	RET
 .if TIMER_C_ENABLE == 0x01
-_C5_TIMER_START__TIMER_C:
+C5_TIMER_C_START:
 	PUSH TEMP
 	_C5_TIMERC_START
 	POP TEMP

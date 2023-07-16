@@ -13,7 +13,7 @@
 _DRV_SD_OP_GET_STATUS:
 ;--------------------------------------------------------
 ;Получить состояние карты
-;IN: X-адрес на выделенную память
+;IN: X-адрес на буфер
 ;OUT: TEMP_H/L-R2 ответ
 ;--------------------------------------------------------
 	PUSH ACCUM
@@ -24,15 +24,17 @@ _DRV_SD_OP_GET_STATUS:
 _DRV_SD_OP_GET_STATUS__LOOP:
 	LDI TEMP,_DRV_SD_CMD13
 	PUSH_X
+	MOVW XL,YL
+	ADIW XL, _DRV_SD_CMD_BUFFER
 	ST X+,TEMP
-	CLR TEMP
-	ST X+,TEMP
-	ST X+,TEMP
-	ST X+,TEMP
-	ST x+,TEMP
-	POP_X
+	ST X+,C0x00
+	ST X+,C0x00
+	ST X+,C0x00
+	ST x+,C0x00
+	SBIW XL,0x05
 	LDI TEMP_L,0x05
 	MCALL _DRV_SD__SEND_CMD
+	POP_X
 	MCALL _DRV_SD_GET_R2
 	SBRS TEMP_H,0x07
 	RJMP _DRV_SD_OP_GET_STATUS__DONE
