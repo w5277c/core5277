@@ -145,6 +145,7 @@
 	.EQU	DRV_OP_INIT								= 0x4d			;Инициализировать
 	.EQU	DRV_OP_READ								= 0x4e			;Считать блок
 	.EQU	DRV_OP_WRITE							= 0x4f			;Записать блок
+	.EQU	DRV_OP_BEEP								= 0x50			;Подать сигнал
 ;---DRIVER-RESULT----------------------------------------;Идентификаторы результата работы драйвера
 	.EQU	DRV_RESULT_OK							= 0x80			;Ок
 	.EQU	DRV_RESULT_ABSENT						= 0x81			;Датчик отсутствует
