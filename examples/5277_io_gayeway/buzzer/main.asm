@@ -10,7 +10,7 @@
 	.SET	AVRA												= 0	;0-1
 	.SET	REPORT_INCLUDES								= 1	;0-1
 	;---подключаем библиотеку устройства---
-	.INCLUDE "./devices/atmega328.inc"
+	.INCLUDE "./devices/atmega168.inc"
 	.SET	_C5_STACK_SIZE									= 0x80	;Стек ядра
 
 	;---CONSTANTS--------------------------------------------
@@ -86,7 +86,7 @@ MAIN:
 	LDI TEMP_EH,TID_ASYNC
 	LDI TEMP_EL,0xff													;0xff/TID_MOD
 	LDI TEMP_H,0x05													;100ms
-	LDI TEMP_L,CH2_PORT												;BUZZER PORT
+	LDI TEMP_L,EXT2_PORT												;BUZZER PORT
 	MCALL C5_CREATE
 
 	;Инициализация задачи
@@ -107,7 +107,7 @@ TASK__INIT:
 ;--------------------------------------------------------
 TASK__INFINITE_LOOP:
 	LDI TEMP,PID_BUZZER_DRV
-	LDI FLAGS,DRV_OP_ASYNC_START
+	LDI FLAGS,DRV_OP_SYNC_START
 	LDI TEMP_H,0b10101000											;pi-pi-pi pi-pi
 	LDI TEMP_L,0b00010100
 	LDI LOOP_CNTR,0x0e
