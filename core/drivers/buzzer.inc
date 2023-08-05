@@ -3,7 +3,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;11.04.2023	konstantin@5277.ru			Начало
 ;01.08.2023	konstantin@5277.ru			Черновой вариант
-;06.08.2023	konstantin@5277.ru			Оттестирован DRV_OP_ASYNC_START и DRV_OP_SYNC_START без модуляции
+;06.08.2023	konstantin@5277.ru			Оттестирован DRV_OP_ASYNC_START, DRV_OP_SYNC_START, DRV_OP_BEEP, DRV_OP_SYNC_STOP
+;													без модуляции
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер BUZZER(активный и пассивный)
 ;DRV_OP_ON-включить,
@@ -165,16 +166,16 @@ _DRV_BUZZER_OP_BEEP:
 ;Издаем звуковой сигнал(ожидаем завершения)
 ;--------------------------------------------------------
 	PUSH_T32
-	PUSH TEMP
+	PUSH FLAGS
 
-	LDI TEMP,0x01
+	LDI FLAGS,0x01
 	MCALL _DRV_BUZZER_OP_SET
 	MCALL _DRV_BUZZER__WAIT
-	LDI TEMP,0x00
+	LDI FLAGS,0x00
 	MCALL _DRV_BUZZER_OP_SET
 	MCALL _DRV_BUZZER__WAIT
 
-	POP TEMP
+	POP FLAGS
 	POP_T32
 	RET
 
