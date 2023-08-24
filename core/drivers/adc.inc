@@ -13,6 +13,9 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
+.include	"./core/timer_start_at.inc"
+.include	"./core/timer_stop.inc"
+.include	"./core/timer_set.inc"
 ;.include	"./core/res_lock.inc"
 ;.include	"./core/res_unlock.inc"
 .include	"./math/div32x16.inc"
