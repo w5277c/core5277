@@ -148,6 +148,10 @@
 	.EQU	DRV_OP_WRITE							= 0x4f			;Записать блок
 	.EQU	DRV_OP_BEEP								= 0x50			;Подать сигнал
 	.EQU	DRV_OP_LOOP								= 0x51			;Выполнять в бесконечном цикле
+	.EQU	DRV_OP_STATUS							= 0x52			;Получить состояние
+	.EQU	DRV_OP_FLUSH							= 0x53			;Сбросить буффер
+	.EQU	DRV_OP_EVENT							= 0x54			;Обработать событие
+
 ;---DRIVER-RESULT----------------------------------------;Идентификаторы результата работы драйвера
 	.EQU	DRV_RESULT_OK							= 0x80			;Ок
 	.EQU	DRV_RESULT_ABSENT						= 0x81			;Датчик отсутствует
@@ -163,6 +167,7 @@
 	.EQU	DRV_RESULT_UNFORMATTED				= 0x8b			;Диск не форматирован
 	.EQU	DRV_RESULT_MAX_REACHED				= 0x8c			;Достигнут максимум
 	.EQU	DRV_RESULT_NOT_EMPTY					= 0x8d			;не пуст
+	.EQU	DRV_RESULT_WARNING					= 0x8e			;Предупреждение/не критическая ошибка
 
 
 ;---CONSTANTS--------------------------------------------
