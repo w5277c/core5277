@@ -23,6 +23,7 @@
 .include	"./math/mul8x8.inc"
 .include	"./mem/eeprom_read_byte.inc"
 .include	"./mem/eeprom_write_byte.inc"
+.include	"./mem/eeprom_fill.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---DATA---
@@ -250,7 +251,7 @@ _DRV_ERING_OP_FLUSH:
 	LDD LOOP_CNTR,Y+_DRV_ERING_RING_SIZE
 	LDD ACCUM,Y+_DRV_ERING_ELEMENT_POS
 _DRV_ERING_OP_FLUSH__LOOP:
-	MCALL _DRV_ERING_WRITE_VALUE
+	MCALL _DRV_ERING_WRITE_VALUE									;TODO нужна проверка на изменение данных
 	INC ACCUM
 	CP ACCUM,FLAGS
 	BRNE PC+0x02
@@ -361,6 +362,8 @@ _DRV_ERING_WRITE_VALUE:
 
 	LDD LOOP_CNTR,Y+_DRV_ERING_ELEMENT_SIZE
 	MCALL _DRV_ERING_OFFSET
+	LDI TEMP,0xff
+	MCALL EEPROM_FILL													;TODO Гарантирует целостность данных, но сокращает жизнь EEPROM в 2 раза
 	PUSH_Y
 	ADIW YL,_DRV_ERING_VALUE
 _DRV_ERING_WRITE_VALUE__WLOOP:
