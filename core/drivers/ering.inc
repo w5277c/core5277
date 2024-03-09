@@ -132,7 +132,7 @@ _DRV_ERING_OP_GET__LOOP:
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_ERING_OP_GET__NEXT
 	LDI FLAGS,DRV_RESULT_OK
-	LDD TEMP,Y+_DRV_ERING_TMP_VALUE+0x00
+	LDD TEMP,Y+_DRV_ERING_TMP_VALUE+0x00	//Полученное значение
 	CP TEMP_EH,TEMP
 	BRCS _DRV_ERING_OP_GET__VALUE_UPDATE
 	BRNE _DRV_ERING_OP_GET__NEXT
@@ -246,8 +246,8 @@ _DRV_ERING_OP_FLUSH:
 	MCALL C5_UPTIME_COPY
 	SBIW YL,_DRV_ERING_UPTIME
 
-	LDD FLAGS,Y+_DRV_ERING_ELEMENT_SIZE
-	LDD LOOP_CNTR,Y+_DRV_ERING_ELEMENT_SIZE
+	LDD FLAGS,Y+_DRV_ERING_RING_SIZE
+	LDD LOOP_CNTR,Y+_DRV_ERING_RING_SIZE
 	LDD ACCUM,Y+_DRV_ERING_ELEMENT_POS
 _DRV_ERING_OP_FLUSH__LOOP:
 	MCALL _DRV_ERING_WRITE_VALUE
@@ -283,6 +283,7 @@ _DRV_ERING_OFFSET:
 
 	MOV TEMP_L,ACCUM
 	LDD TEMP,Y+_DRV_ERING_ELEMENT_SIZE
+	LSL TEMP																;Каждое значение состоит из двух блоков: не инвертированный и инвертированный
 	MCALL MUL8X8
 	LDD TEMP,Y+_DRV_ERING_EEPROM_ADDR+0x01
 	ADD TEMP_L,TEMP
@@ -295,7 +296,7 @@ _DRV_ERING_OFFSET:
 ;--------------------------------------------------------
 _DRV_ERING_READ_VALUE:
 ;--------------------------------------------------------
-;Записываем значение в _DRV_ERING_VALUE_BUFFER
+;Записываем значение в _DRV_ERING_TMP_VALUE
 ;IN: ACCUM-позиция
 ;OUT: TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
@@ -326,7 +327,7 @@ _DRV_ERING_READ_VALUE__LOOP:
 	ADC TEMP_H,C0x00
 	COM TEMP
 	CP TEMP,ACCUM
-	BRNE PC+0x03
+	BREQ PC+0x03
 	LDI TEMP,DRV_RESULT_ERROR
 	RJMP _DRV_ERING_READ_VALUE__END
 	ST Z+,ACCUM
@@ -350,6 +351,7 @@ _DRV_ERING_WRITE_VALUE:
 ;IN: ACCUM-позиция, TEMP_EH/EL/H/L-значение
 ;OUT: TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
+	PUSH_Y
 	PUSH_T16
 	PUSH FLAGS
 	PUSH ACCUM
@@ -403,5 +405,6 @@ _DRV_ERING_WRITE_VALUE__END:
 	POP ACCUM
 	POP FLAGS
 	POP_T16
+	POP_Y
 	RET
 .endif
