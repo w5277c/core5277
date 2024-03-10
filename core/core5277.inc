@@ -168,6 +168,8 @@
 	.EQU	DRV_RESULT_MAX_REACHED				= 0x8c			;Достигнут максимум
 	.EQU	DRV_RESULT_NOT_EMPTY					= 0x8d			;не пуст
 	.EQU	DRV_RESULT_WARNING					= 0x8e			;Предупреждение/не критическая ошибка
+	.EQU	DRV_RESULT_SENSELESS					= 0x8f			;Бессмыссленно, никаких полезных действий выполнено не было
+	.EQU	DRV_RESULT_TRY_LATER					= 0x90			;Не выполнено, попробуйте позже
 
 
 ;---CONSTANTS--------------------------------------------

@@ -8,6 +8,14 @@
 ;Использует кольцевой буфер для EEPROM.
 ;Каждая запись состоит из значения и инвертированного значения
 ;-----------------------------------------------------------------------------------------------------------------------
+;Значение не записывается, если оказалось меньше предыдущего или равно.
+;При старте необходимо вызвать DRV_OP_GET иначе не сможем проверить на меньше или равно.
+;Период отсчитывается от времени записи значения.
+;Вручную вызванный DRV_OP_FLUSH записывает в EEPROM безусловно.
+;Запись в EEPROM ведется с младшего байта - для учета сброса МК во время записи. Иначе сброс при записи
+;0x01FF->0x0200 мог привести к значению 0x02FF. А так мы получаем 0x0100 и вероятно выберем другое, близкое, ранее
+;записанное значение.
+;-----------------------------------------------------------------------------------------------------------------------
 ;Поддерживаемые операции DRV_OP_GET, DRV_OP_SET, DRV_OP_STATUS, DRV_OP_EVENT, DRV_OP_FLUSH
 
 
@@ -25,15 +33,19 @@
 .include	"./mem/eeprom_write_byte.inc"
 
 ;---CONSTANTS--------------------------------------------
+	.EQU	_DRV_ERING_ST_READY								= 0x00;
+	.EQU	_DRV_ERING_ST_NEW_DATA							= 0x01;
+
 	;---DATA---
-	.EQU	_DRV_ERING_ELEMENT_SIZE							= 0x00;1B - размер элемента(от 1 до 4 байт)
-	.EQU	_DRV_ERING_RING_SIZE								= 0x01;1B - количество элементов в кольце
-	.EQU	_DRV_ERING_EEPROM_ADDR							= 0x02;2B - адрес блока EEPROM
-	.EQU	_DRV_ERING_ELEMENT_POS							= 0x04;1B - текущий элемент
-	.EQU	_DRV_ERING_PERIOD									= 0x05;2B - период(в минутах) записи в EEPROM нового значения(0-выполнять запись сразу)
-	.EQU	_DRV_ERING_UPTIME									= 0x07;5B - UPTIME последней записи в EEPROM
-	.EQU	_DRV_ERING_VALUE									= 0x0c;4B - значение счетчика для записи в EEPROM
-	.EQU	_DRV_ERING_TMP_VALUE								= 0x10;4B - временное хранение значения счетчика
+	.EQU	_DRV_ERING_STATE									= 0x00;1B - состояние
+	.EQU	_DRV_ERING_ELEMENT_SIZE							= 0x01;1B - размер элемента(от 1 до 4 байт)
+	.EQU	_DRV_ERING_RING_SIZE								= 0x02;1B - количество элементов в кольце
+	.EQU	_DRV_ERING_EEPROM_ADDR							= 0x03;2B - адрес блока EEPROM
+	.EQU	_DRV_ERING_ELEMENT_POS							= 0x05;1B - текущий элемент
+	.EQU	_DRV_ERING_PERIOD									= 0x06;2B - период(в минутах) записи в EEPROM нового значения(0-выполнять запись сразу)
+	.EQU	_DRV_ERING_UPTIME									= 0x08;5B - UPTIME последней записи в EEPROM
+	.EQU	_DRV_ERING_VALUE									= 0x0d;4B - значение счетчика для записи в EEPROM
+	.EQU	_DRV_ERING_TMP_VALUE								= 0x11;4B - временное хранение значения счетчика
 	.EQU	_DRV_ERING_RAM_SIZE								= _DRV_ERING_TMP_VALUE+0x04
 ;--------------------------------------------------------
 DRV_ERING_INIT:
@@ -45,6 +57,9 @@ DRV_ERING_INIT:
 ;--------------------------------------------------------
 	LDI ACCUM,_DRV_ERING_RAM_SIZE
 	MCALL C5_RAM_REALLOC
+
+	LDI ACCUM,_DRV_ERING_ST_READY
+	STD Y+_DRV_ERING_STATE,ACCUM
 
 	STD Y+_DRV_ERING_ELEMENT_SIZE,TEMP_EH
 	STD Y+_DRV_ERING_RING_SIZE,TEMP_EL
@@ -132,7 +147,7 @@ _DRV_ERING_OP_GET__LOOP:
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_ERING_OP_GET__NEXT
 	LDI FLAGS,DRV_RESULT_OK
-	LDD TEMP,Y+_DRV_ERING_TMP_VALUE+0x00	//Полученное значение
+	LDD TEMP,Y+_DRV_ERING_TMP_VALUE+0x00						;Полученное значение
 	CP TEMP_EH,TEMP
 	BRCS _DRV_ERING_OP_GET__VALUE_UPDATE
 	BRNE _DRV_ERING_OP_GET__NEXT
@@ -159,6 +174,7 @@ _DRV_ERING_OP_GET__NEXT:
 	DEC LOOP_CNTR
 	BRNE _DRV_ERING_OP_GET__LOOP
 
+	MOV TEMP,FLAGS
 	POP ACCUM
 	POP FLAGS
 	POP LOOP_CNTR
@@ -170,6 +186,7 @@ _DRV_ERING_OP_STATUS:
 ;--------------------------------------------------------
 ;Получаем количество живых элементов
 ;OUT: TEMP_L-количество живых элементов
+;TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH LOOP_CNTR
 	PUSH TEMP
@@ -188,6 +205,8 @@ _DRV_ERING_OP_STATUS__LOOP:
 	DEC LOOP_CNTR
 	BRNE _DRV_ERING_OP_STATUS__LOOP
 
+	LDI TEMP,DRV_RESULT_OK
+
 	POP ACCUM
 	POP TEMP
 	POP LOOP_CNTR
@@ -196,13 +215,54 @@ _DRV_ERING_OP_STATUS__LOOP:
 ;--------------------------------------------------------
 _DRV_ERING_OP_SET:
 ;--------------------------------------------------------
-;Запоминаем значение, для последующей записис в EEPROM
+;Запоминаем значение, для последующей записи в EEPROM
 ;IN: TEMP_EH/EL/H/L-значение,										;Значение заполняется начиная со старшего регистра
-;--------------------------------------------------------;т.е. значение длиной в байт будет храниться в регистре TEMP_EH
+;TEMP-код результата DRV_RESULT_...								;т.е. значение длиной в байт будет храниться в регистре TEMP_EH
+;--------------------------------------------------------
+	PUSH ACCUM
+
+	LDD ACCUM,Y+_DRV_ERING_RING_SIZE+0x00
+	LDD TEMP,Y+_DRV_ERING_VALUE+0x00
+	CP TEMP_EH,TEMP
+	BRNE _DRV_ERING_OP_SET__UPDATE
+	BRCS _DRV_ERING_OP_SET__ERROR
+	CPI ACCUM,0x01
+	BREQ _DRV_ERING_OP_SET__END
+
+	LDD TEMP,Y+_DRV_ERING_VALUE+0x01
+	CP TEMP_EL,TEMP
+	BRNE _DRV_ERING_OP_SET__UPDATE
+	BRCS _DRV_ERING_OP_SET__ERROR
+	CPI ACCUM,0x02
+	BREQ _DRV_ERING_OP_SET__END
+
+	LDD TEMP,Y+_DRV_ERING_VALUE+0x02
+	CP TEMP_H,TEMP
+	BRNE _DRV_ERING_OP_SET__UPDATE
+	BRCS _DRV_ERING_OP_SET__ERROR
+	CPI ACCUM,0x03
+	BREQ _DRV_ERING_OP_SET__END
+
+	LDD TEMP,Y+_DRV_ERING_VALUE+0x03
+	CP TEMP_L,TEMP
+	BREQ _DRV_ERING_OP_SET__END
+	BRCS _DRV_ERING_OP_SET__ERROR
+
+_DRV_ERING_OP_SET__UPDATE:
+	LDI TEMP,DRV_RESULT_OK
 	STD Y+_DRV_ERING_VALUE+0x00,TEMP_EH
 	STD Y+_DRV_ERING_VALUE+0x01,TEMP_EL
 	STD Y+_DRV_ERING_VALUE+0x02,TEMP_H
 	STD Y+_DRV_ERING_VALUE+0x03,TEMP_L
+
+	LDI ACCUM,_DRV_ERING_ST_NEW_DATA
+	STD Y+_DRV_ERING_STATE,ACCUM
+	RJMP _DRV_ERING_OP_SET__END
+_DRV_ERING_OP_SET__ERROR:
+	LDI TEMP,DRV_RESULT_ERROR										;Новое значение оказалось меньше уже записанного
+
+_DRV_ERING_OP_SET__END:
+	POP ACCUM
 	RET
 
 ;--------------------------------------------------------
@@ -219,15 +279,24 @@ _DRV_ERING_OP_EVENT:
 	LDD TEMP,Y+_DRV_ERING_PERIOD+0x00
 	CP TEMP,TEMP_H
 	BRCS _DRV_ERING_OP_EVENT__TIMEOUT
-	BRNE _DRV_ERING_OP_EVENT__END
+	BRNE _DRV_ERING_OP_EVENT__TRY_LATER
 	LDD TEMP,Y+_DRV_ERING_PERIOD+0x01
 	CP TEMP,TEMP_L
 	BRCS _DRV_ERING_OP_EVENT__TIMEOUT
-	BRNE _DRV_ERING_OP_EVENT__END
+	BRNE _DRV_ERING_OP_EVENT__TRY_LATER
 _DRV_ERING_OP_EVENT__TIMEOUT:
+	LDD TEMP_L,Y+_DRV_ERING_STATE
+	CPI TEMP_L,_DRV_ERING_ST_NEW_DATA
+	BRNE _DRV_ERING_OP_EVENT__SENSELESS
 	MCALL _DRV_ERING_OP_FLUSH
-_DRV_ERING_OP_EVENT__END:
+	RJMP _DRV_ERING_OP_EVENT__END
+_DRV_ERING_OP_EVENT__TRY_LATER:
+	LDI TEMP,DRV_RESULT_TRY_LATER
+	RJMP _DRV_ERING_OP_EVENT__END
+_DRV_ERING_OP_EVENT__SENSELESS:
+	LDI TEMP,DRV_RESULT_SENSELESS
 
+_DRV_ERING_OP_EVENT__END:
 	POP_T16
 	RET
 
@@ -237,17 +306,12 @@ _DRV_ERING_OP_FLUSH:
 ;Выполняем запись в EEPROM
 ;OUT: TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH_T32
 	PUSH LOOP_CNTR
 	PUSH ACCUM
 	PUSH FLAGS
 
-	ADIW YL,_DRV_ERING_UPTIME
-	MCALL C5_UPTIME_COPY
-	SBIW YL,_DRV_ERING_UPTIME
-
 	LDD FLAGS,Y+_DRV_ERING_RING_SIZE
-	LDD LOOP_CNTR,Y+_DRV_ERING_RING_SIZE
+	MOV LOOP_CNTR,FLAGS
 	LDD ACCUM,Y+_DRV_ERING_ELEMENT_POS
 _DRV_ERING_OP_FLUSH__LOOP:
 	MCALL _DRV_ERING_WRITE_VALUE
@@ -258,7 +322,12 @@ _DRV_ERING_OP_FLUSH__LOOP:
 	STD Y+_DRV_ERING_ELEMENT_POS,ACCUM
 
 	CPI TEMP,DRV_RESULT_OK
-	BREQ _DRV_ERING_OP_FLUSH__END
+	BRNE _DRV_ERING_OP_FLUSH__LOOP_NEXT
+	LDI ACCUM,_DRV_ERING_ST_NEW_DATA
+	STD Y+_DRV_ERING_STATE,ACCUM
+	ADIW YL,_DRV_ERING_UPTIME
+	MCALL C5_UPTIME_COPY
+	RJMP _DRV_ERING_OP_FLUSH__END
 _DRV_ERING_OP_FLUSH__LOOP_NEXT:
 	DEC LOOP_CNTR
 	BRNE _DRV_ERING_OP_FLUSH__LOOP
@@ -269,7 +338,6 @@ _DRV_ERING_OP_FLUSH__END:
 	POP FLAGS
 	POP ACCUM
 	POP LOOP_CNTR
-	POP_T32
 	RET
 
 ;--------------------------------------------------------
@@ -353,7 +421,7 @@ _DRV_ERING_WRITE_VALUE:
 ;IN: ACCUM-позиция, TEMP_EH/EL/H/L-значение
 ;OUT: TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH_Y
+	PUSH_Z
 	PUSH_T16
 	PUSH FLAGS
 	PUSH ACCUM
@@ -363,12 +431,12 @@ _DRV_ERING_WRITE_VALUE:
 
 	LDD LOOP_CNTR,Y+_DRV_ERING_ELEMENT_SIZE
 	MCALL _DRV_ERING_OFFSET
-	PUSH_Y
-	ADIW YL,_DRV_ERING_VALUE
-	ADD YL,LOOP_CNTR
-	ADC YH,C0x00
+	MOVW ZL,YL
+	ADIW ZL,_DRV_ERING_VALUE
+	ADD ZL,LOOP_CNTR
+	ADC ZH,C0x00
 _DRV_ERING_WRITE_VALUE__WLOOP:
-	LD TEMP,-Y
+	LD TEMP,-Z
 	MCALL EEPROM_WRITE_BYTE
 	ADD TEMP_L,FLAGS
 	ADC TEMP_H,C0x00
@@ -379,14 +447,12 @@ _DRV_ERING_WRITE_VALUE__WLOOP:
 	DEC LOOP_CNTR
 	BRNE _DRV_ERING_WRITE_VALUE__WLOOP
 
-	POP_Y
 	LDD LOOP_CNTR,Y+_DRV_ERING_ELEMENT_SIZE
 	MCALL _DRV_ERING_OFFSET
-	ADIW YL,_DRV_ERING_VALUE
-	ADD YL,LOOP_CNTR
-	ADC YH,C0x00
+	ADD ZL,LOOP_CNTR
+	ADC ZH,C0x00
 _DRV_ERING_WRITE_VALUE__RLOOP:
-	LD ACCUM,-Y
+	LD ACCUM,-Z
 	MCALL EEPROM_READ_BYTE
 	CP TEMP,ACCUM
 	BRNE _DRV_ERING_WRITE_VALUE__ERROR
@@ -411,6 +477,6 @@ _DRV_ERING_WRITE_VALUE__END:
 	POP ACCUM
 	POP FLAGS
 	POP_T16
-	POP_Y
+	POP_Z
 	RET
 .endif
