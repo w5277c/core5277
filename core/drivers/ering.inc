@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;25.02.2024	w5277c@gmail.com			Начало, не тестировано
+;10.03.2024	w5277c@gmail.com			Успешный тест на симуляторе
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Позволяет хранить архивные данные(типа счетчиков) с различным периодом записи
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -168,6 +169,15 @@ _DRV_ERING_OP_GET__VALUE_UPDATE:
 	LDD TEMP_EL,Y+_DRV_ERING_TMP_VALUE+0x01
 	LDD TEMP_H,Y+_DRV_ERING_TMP_VALUE+0x02
 	LDD TEMP_L,Y+_DRV_ERING_TMP_VALUE+0x03
+	MOV TEMP,ACCUM
+	PUSH ACCUM
+	INC ACCUM
+	LDD TEMP,Y+_DRV_ERING_RING_SIZE
+	CP ACCUM,TEMP
+	BRNE PC+0x02
+	LDI ACCUM,0x00
+	STD Y+_DRV_ERING_ELEMENT_POS,ACCUM
+	POP ACCUM
 
 _DRV_ERING_OP_GET__NEXT:
 	INC ACCUM
@@ -221,7 +231,7 @@ _DRV_ERING_OP_SET:
 ;--------------------------------------------------------
 	PUSH ACCUM
 
-	LDD ACCUM,Y+_DRV_ERING_RING_SIZE+0x00
+	LDD ACCUM,Y+_DRV_ERING_ELEMENT_SIZE+0x00
 	LDD TEMP,Y+_DRV_ERING_VALUE+0x00
 	CP TEMP_EH,TEMP
 	BRNE _DRV_ERING_OP_SET__UPDATE

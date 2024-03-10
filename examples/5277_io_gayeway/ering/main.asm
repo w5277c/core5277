@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;09.03.2024	w5277c@gmail.com			Начало, не тестировано
+;10.03.2024	w5277c@gmail.com			Успешный тест на симуляторе
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Необходим проект https://github.com/w5277c/core5277
 
@@ -78,7 +79,23 @@ TASK__INIT:
 	LDI FLAGS,DRV_OP_GET
 	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
-	BRNE _ERROR_READ
+	BRNE _TASK_INIT
+
+	LDI TEMP,0x01
+	ADD TEMP_L,TEMP
+	ADC TEMP_H,C0x00
+	ADC TEMP_EL,C0x00
+	ADC TEMP_EH,C0x00
+	RJMP TASK_LOOP
+
+_TASK_INIT:
+	C5_OUT_ROMSTR TXT_INIT
+	MCALL C5_OUT_CR
+
+	LDI TEMP_EH,0x00
+	LDI TEMP_EL,0x00
+	LDI TEMP_H,0x00
+	LDI TEMP_L,0x00
 
 TASK_LOOP:
 	LDI TEMP,PID_ERING_DRV
@@ -97,6 +114,7 @@ TASK_LOOP:
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _ERROR_EVENT
 
+	PUSH TEMP_L
 	MCALL C5_OUT_UPTIME
 	LDI TEMP,':'
 	MCALL C5_OUT_CHAR
@@ -109,6 +127,7 @@ TASK_LOOP:
 	MOV TEMP,TEMP_L
 	MCALL C5_OUT_BYTE
 	MCALL C5_OUT_CR
+	POP TEMP_L
 
 _TASK_CONTINUE:
 	LDI TEMP,0x01
@@ -121,10 +140,6 @@ _TASK_CONTINUE:
 	MCALL C5_SUSPEND
 	RJMP TASK_LOOP
 
-_ERROR_READ:
-	C5_OUT_ROMSTR TXT_READ
-	MCALL C5_OUT_CR
-	RET
 _ERROR_SET:
 	C5_OUT_ROMSTR TXT_SET
 	MCALL C5_OUT_CR
@@ -135,8 +150,8 @@ _ERROR_EVENT:
 	RET
 
 
-TXT_READ:
-	.db "read error\r\n",0x00
+TXT_INIT:
+	.db "read error, counter reset\r\n",0x00
 TXT_SET:
 	.db "set error\r\n",0x00
 TXT_EVENT:
