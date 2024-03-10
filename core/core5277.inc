@@ -162,11 +162,11 @@
 	.EQU	DRV_RESULT_INVALID_RESOURCE		= 0x86			;Не коректный ресурс(например PID драйвера)
 	.EQU	DRV_RESULT_INVALID_NAME				= 0x87			;Не корректное имя ресурса(например файла)
 	.EQU	DRV_RESULT_WRONG_BLOCK				= 0x88			;Ошибочный(не существующий) блок(например SD карты)
-	.EQU	DRV_RESULT_GONE						= 0x89			;Объекта больше не сущетсвует
+	.EQU	DRV_RESULT_GONE						= 0x89			;Объекта больше не существует
 	.EQU	DRV_RESULT_READ_ONLY					= 0x8a			;Разрешено только чтение
 	.EQU	DRV_RESULT_UNFORMATTED				= 0x8b			;Диск не форматирован
 	.EQU	DRV_RESULT_MAX_REACHED				= 0x8c			;Достигнут максимум
-	.EQU	DRV_RESULT_NOT_EMPTY					= 0x8d			;не пуст
+	.EQU	DRV_RESULT_NOT_EMPTY					= 0x8d			;Не пуст
 	.EQU	DRV_RESULT_WARNING					= 0x8e			;Предупреждение/не критическая ошибка
 	.EQU	DRV_RESULT_SENSELESS					= 0x8f			;Бессмыссленно, никаких полезных действий выполнено не было
 	.EQU	DRV_RESULT_TRY_LATER					= 0x90			;Не выполнено, попробуйте позже
