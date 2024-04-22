@@ -14,6 +14,11 @@
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
+.include "./io/port_mode_in.inc"
+.include "./io/port_set_hi.inc"
+.include "./io/port_get.inc"
+.include "./core/timer_set.inc"
+.include "./core/timer_start.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_COUNTER_TICKS								= 0x09;Необходимое количество чтений порта

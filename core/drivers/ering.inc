@@ -17,7 +17,7 @@
 ;0x01FF->0x0200 мог привести к значению 0x02FF. А так мы получаем 0x0100 и вероятно выберем другое, близкое, ранее
 ;записанное значение.
 ;-----------------------------------------------------------------------------------------------------------------------
-;Поддерживаемые операции DRV_OP_GET, DRV_OP_SET, DRV_OP_STATUS, DRV_OP_EVENT, DRV_OP_FLUSH
+;Поддерживаемые операции DRV_OP_GET, DRV_OP_SET, DRV_OP_STATE, DRV_OP_EVENT, DRV_OP_FLUSH
 
 
 .ifdef DEF__C5_DRV_ERING
@@ -110,11 +110,11 @@ _DRV_ERING__NO_OP_EVENT:
 	MCALL _DRV_ERING_OP_FLUSH
 	RJMP _DRV_ERING__END
 _DRV_ERING__NO_OP_FLUSH:
-	CPI FLAGS,DRV_OP_STATUS
-	BRNE _DRV_ERING__NO_OP_STATUS
-	MCALL _DRV_ERING_OP_STATUS
+	CPI FLAGS,DRV_OP_STATE
+	BRNE _DRV_ERING__NO_OP_STATE
+	MCALL _DRV_ERING_OP_STATE
 	RJMP _DRV_ERING__END
-_DRV_ERING__NO_OP_STATUS:
+_DRV_ERING__NO_OP_STATE:
 
 	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_ERING__END:
@@ -192,7 +192,7 @@ _DRV_ERING_OP_GET__NEXT:
 
 
 ;--------------------------------------------------------
-_DRV_ERING_OP_STATUS:
+_DRV_ERING_OP_STATE:
 ;--------------------------------------------------------
 ;Получаем количество живых элементов
 ;OUT: TEMP_L-количество живых элементов
@@ -206,14 +206,14 @@ _DRV_ERING_OP_STATUS:
 	LDI ACCUM,0x00
 	LDI TEMP_L,0x00
 
-_DRV_ERING_OP_STATUS__LOOP:
+_DRV_ERING_OP_STATE__LOOP:
 	MCALL _DRV_ERING_READ_VALUE
 	CPI TEMP,DRV_RESULT_OK
 	BRNE PC+0x02
 	INC TEMP_L
 	INC ACCUM
 	DEC LOOP_CNTR
-	BRNE _DRV_ERING_OP_STATUS__LOOP
+	BRNE _DRV_ERING_OP_STATE__LOOP
 
 	LDI TEMP,DRV_RESULT_OK
 

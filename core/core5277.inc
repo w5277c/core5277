@@ -148,7 +148,7 @@
 	.EQU	DRV_OP_WRITE							= 0x4f			;Записать блок
 	.EQU	DRV_OP_BEEP								= 0x50			;Подать сигнал
 	.EQU	DRV_OP_LOOP								= 0x51			;Выполнять в бесконечном цикле
-	.EQU	DRV_OP_STATUS							= 0x52			;Получить состояние
+	.EQU	DRV_OP_STATE							= 0x52			;Получить состояние
 	.EQU	DRV_OP_FLUSH							= 0x53			;Сбросить буффер
 	.EQU	DRV_OP_EVENT							= 0x54			;Обработать событие
 
