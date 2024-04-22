@@ -42,3 +42,5 @@ examples/5277_io_gayeway/ering/Debug/
 *.lst
 
 examples/5277_io_gayeway/buzzer/Debug/
+
+examples/other/ir_reader/Debug/
