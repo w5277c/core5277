@@ -21,6 +21,9 @@
 	;---SPECIFY-DEVICE---
 	.DEVICE ATtiny45
 
+	.equ	SRAM_START	= 0x0060
+
+
 	#pragma AVRPART MEMORY PROG_FLASH 4096
 	#pragma AVRPART MEMORY EEPROM 256
 	#pragma AVRPART MEMORY INT_SRAM SIZE 256
@@ -33,7 +36,6 @@
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
 	.MESSAGE "######## DEVICE ATtiny45"
-.ifdef CORE_FREQ
 	.EQU	_MCALL_SIZE								= 0x01			;Размер MCALL
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x03			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
@@ -43,12 +45,10 @@
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x00			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.SET	_C5_STACK_SIZE							= 0x28			;Стек ядра - 40B
-	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
-.endif
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x015f
+	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
 
-.ifdef CORE_FREQ
 	;---IR---
 	.EQU	C5_IR_INT0								= 0x01
 	.EQU	C5_IR_PCINT0							= 0x02
@@ -67,7 +67,6 @@
 	;Отсутствуют
 	.EQU	C5_IR_PCINT1							= 0x00
 	.EQU	C5_IR_PCINT2							= 0x00
-.endif
 
 	;SBI/CBI/SBIS/SBIC port defines
 	.EQU	PORTA										= 0xff
@@ -109,6 +108,10 @@
 	.EQU	SPL										= 0x5d
 	.EQU	MCUCSR									= 0x54
 	.EQU	MCUSR										= MCUCSR
+	.EQU		WDRF									= 0x03
+	.EQU		BORF									= 0x02
+	.EQU		EXTRF									= 0x01
+	.EQU		PORF									= 0x00
 	.EQU	PRR										= 0x40
 	.EQU		PRTIM1								= 0x03
 	.EQU		PRTIM0								= 0x02
@@ -116,6 +119,7 @@
 	.EQU		PRADC									= 0x00
 	;---TIMERS---
 	.EQU	TIMSK										= 0x59
+	.EQU	TIMSK0									= TIMSK
 	.EQU		OCIE1A								= 0x06
 	.EQU		OCIE1B								= 0x05
 	.EQU		OCIE0A								= 0x04
@@ -123,6 +127,7 @@
 	.EQU		TOIE1									= 0x02
 	.EQU		TOIE0									= 0x01
 	.EQU	TIFR										= 0x58
+	.EQU	TIFR0										= TIFR
 	.EQU		OCF1A									= 0x06
 	.EQU		OCF1B									= 0x05
 	.EQU		OCF0A									= 0x04
@@ -211,6 +216,16 @@
 	.EQU		EEPE									= 0x01
 	.EQU		EEWE									= EEPE
 	.EQU		EERE									= 0x00
+	;---WATCHDOG---
+	.EQU	WDTCR										= 0x41
+	.EQU		WDIF									= 0x07
+	.EQU		WDIE									= 0x06
+	.EQU		WDP3									= 0x05
+	.EQU		WDCE									= 0x04
+	.EQU		WDE									= 0x03
+	.EQU		WDP2									= 0x02
+	.EQU		WDP1									= 0x01
+	.EQU		WDP0									= 0x00
 	;---ADC---
 	.EQU	ADMUX										= 0x27
 	.EQU		REFS1									= 0x07
@@ -260,7 +275,6 @@
 	.SET	INT0_PORT								= PB2
 
 .ORG 0x0000
-.ifdef CORE_FREQ
 	RJMP	_INIT															; Reset Handler
 	RCALL	_C5_IR														; External Interrupt0 Handler
 	RCALL	_C5_IR														; Pin Change Interrupt Request 0
@@ -286,7 +300,7 @@ PORTS_TABLE:															;Таблица из адресов IO регистр
 PCINT_TABLE:
 	.db	0x00,PCMSK,0x00,0x00
 INT_TABLE:
-	.db	(1<<INT0)
+	.db	(1<<INT0),0x00
 _INIT:
 	CLI
 	;Инициализация стека
@@ -300,6 +314,12 @@ _INIT:
 	RJMP MAIN
 
 APPLICATION_BLOCK:
+.MACRO MCALL
+	RCALL @0
+.ENDMACRO
+.MACRO MJMP
+	RJMP @0
+.ENDMACRO
 
 .MACRO _C5_TIMERA_INIT
 	LDS TEMP,PRR
@@ -411,12 +431,4 @@ APPLICATION_BLOCK:
 
 .MACRO _C5_TIMER_TCNT
 	LDS @0,TCNT0
-.ENDMACRO
-.endif
-
-.MACRO MCALL
-	RCALL @0
-.ENDMACRO
-.MACRO MJMP
-	RJMP @0
 .ENDMACRO

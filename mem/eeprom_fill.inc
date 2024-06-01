@@ -1,42 +1,38 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019	w5277c@gmail.com			Начало
-;04.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;07.08.2023	konstantin@5277.ru		Замена флага Z на C
+;09.03.2024	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_FLAG_GET
+.ifdef DEF_EEPROM_FILL
 .else
-.set DEF_C5_FLAG_GET = 1
+.set DEF_EEPROM_FILL = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included C5_FLAG_GET"
+.message "included EEPROM_FILL"
 .endif
 
-.include	"./core/_flag_offset.inc"
-.include	"./conv/bitnum_to_num.inc"
+.include	"./mem/eeprom_write_byte.inc"
 
 ;--------------------------------------------------------
-C5_FLAG_GET:
+EEPROM_FILL:
 ;--------------------------------------------------------
-;Получение флага
-;IN:TEMP - номер флага(0-63)
-;OUT: флаг C
+;Заполняем блок в EEPROM
+;IN: TEMP-байт для записи, TEMP_H,TEMP_L-адрес в EEPROM,
+;LOOP_CNTR - длина данных
 ;--------------------------------------------------------
-	PUSH_Z
 	PUSH ACCUM
-	PUSH TEMP
+	PUSH LOOP_CNTR
 
-	MCALL _C5_FLAG_OFFSET
-	ANDI TEMP,0x07
-	MCALL BITNUM_TO_NUM
-	LD ACCUM,Z
-	AND ACCUM,TEMP
-	ADD ACCUM,C0xff
+	LDI ACCUM,0x01
+__EEPROM_FILL__LOOP:
+	MCALL EEPROM_WRITE_BYTE
 
-	POP TEMP
+	ADD TEMP_L,ACCUM
+	ADC TEMP_H,C0x00
+	DEC LOOP_CNTR
+	BRNE __EEPROM_FILL__LOOP
+
+	POP LOOP_CNTR
 	POP ACCUM
-	POP_Z
 	RET
 .endif

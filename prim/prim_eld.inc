@@ -1,42 +1,37 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019	w5277c@gmail.com			Начало
-;04.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;07.08.2023	konstantin@5277.ru		Замена флага Z на C
+;04.02.2024	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_FLAG_GET
+.ifdef DEF_PRIM_ELD
 .else
-.set DEF_C5_FLAG_GET = 1
+.set DEF_PRIM_ELD = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included C5_FLAG_GET"
+.message "included PRIM_ELD"
 .endif
 
-.include	"./core/_flag_offset.inc"
-.include	"./conv/bitnum_to_num.inc"
+.include "./prim/_common16.inc"
+.include "./mem/eeprom_read_bytes.inc"
 
 ;--------------------------------------------------------
-C5_FLAG_GET:
+PRIM_ELD:
 ;--------------------------------------------------------
-;Получение флага
-;IN:TEMP - номер флага(0-63)
-;OUT: флаг C
+;Чтение примитива с EEPROM
+;IN: Y-адрес на память с переменными, XL-смещение на
+;переменную, TEMP_H/L-адрес в EEPROM,
+;ACCUM-тип примитива
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH ACCUM
-	PUSH TEMP
+	PUSH_X
+	PUSH LOOP_CNTR
 
-	MCALL _C5_FLAG_OFFSET
-	ANDI TEMP,0x07
-	MCALL BITNUM_TO_NUM
-	LD ACCUM,Z
-	AND ACCUM,TEMP
-	ADD ACCUM,C0xff
+	CLR XH
+	ADD XL,YL
+	ADC XH,YH
+	ANDI ACCUM,0x0f
+	MOV LOOP_CNTR,ACCUM
+	MCALL EEPROM_READ_BYTES
 
-	POP TEMP
-	POP ACCUM
-	POP_Z
+	POP LOOP_CNTR
+	POP_X
 	RET
-.endif

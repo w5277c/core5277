@@ -34,6 +34,7 @@
 ;06.04.2023	konstantin@5277.ru		v0.4.4	Более надежный механизм проверки недостатка RAM
 ;10.04.2023	konstantin@5277.ru		v0.4.5	Багфиксинг RAM realloc.
 ;15.04.2023	konstantin@5277.ru		v0.4.6	Багфиксинг EINT_ENABLE, драйвер AM2301.
+;07.08.2023	konstantin@5277.ru		Замена флага Z на C в процедурах работы с флагами(C5_FLAG_GET,...)
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Задача имеет свой собственный стек, драйвер нет. Задача вызывает драйвер, диспетчер оперирует задачами.
 ;Стеки задач и выделяемая память динамические, сверху стеки задач, свободное пространство, затем выделяемая память.
@@ -145,6 +146,12 @@
 	.EQU	DRV_OP_INIT								= 0x4d			;Инициализировать
 	.EQU	DRV_OP_READ								= 0x4e			;Считать блок
 	.EQU	DRV_OP_WRITE							= 0x4f			;Записать блок
+	.EQU	DRV_OP_BEEP								= 0x50			;Подать сигнал
+	.EQU	DRV_OP_LOOP								= 0x51			;Выполнять в бесконечном цикле
+	.EQU	DRV_OP_STATE							= 0x52			;Получить состояние
+	.EQU	DRV_OP_FLUSH							= 0x53			;Сбросить буффер
+	.EQU	DRV_OP_EVENT							= 0x54			;Обработать событие
+
 ;---DRIVER-RESULT----------------------------------------;Идентификаторы результата работы драйвера
 	.EQU	DRV_RESULT_OK							= 0x80			;Ок
 	.EQU	DRV_RESULT_ABSENT						= 0x81			;Датчик отсутствует
@@ -155,11 +162,14 @@
 	.EQU	DRV_RESULT_INVALID_RESOURCE		= 0x86			;Не коректный ресурс(например PID драйвера)
 	.EQU	DRV_RESULT_INVALID_NAME				= 0x87			;Не корректное имя ресурса(например файла)
 	.EQU	DRV_RESULT_WRONG_BLOCK				= 0x88			;Ошибочный(не существующий) блок(например SD карты)
-	.EQU	DRV_RESULT_GONE						= 0x89			;Объекта больше не сущетсвует
+	.EQU	DRV_RESULT_GONE						= 0x89			;Объекта больше не существует
 	.EQU	DRV_RESULT_READ_ONLY					= 0x8a			;Разрешено только чтение
 	.EQU	DRV_RESULT_UNFORMATTED				= 0x8b			;Диск не форматирован
 	.EQU	DRV_RESULT_MAX_REACHED				= 0x8c			;Достигнут максимум
-	.EQU	DRV_RESULT_NOT_EMPTY					= 0x8d			;не пуст
+	.EQU	DRV_RESULT_NOT_EMPTY					= 0x8d			;Не пуст
+	.EQU	DRV_RESULT_WARNING					= 0x8e			;Предупреждение/не критическая ошибка
+	.EQU	DRV_RESULT_SENSELESS					= 0x8f			;Бессмыссленно, никаких полезных действий выполнено не было
+	.EQU	DRV_RESULT_TRY_LATER					= 0x90			;Не выполнено, попробуйте позже
 
 
 ;---CONSTANTS--------------------------------------------
@@ -295,7 +305,7 @@
 ;TODO unexpected INTEGER, expecting STRING in AtmelStudio
 ; 	.MESSAGE 28800*CORE_FREQ
 C5_NAME:
-	.db	"core5277 v0.4.6",0x00
+	.db	"core5277 v0.4.7",0x00
 .IFDEF LOGGING_PORT
 	.MESSAGE "######## LOGGING ENABLED"
 	OUTSTR_CORE1:

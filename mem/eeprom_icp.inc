@@ -1,42 +1,48 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019	w5277c@gmail.com			Начало
-;04.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;07.08.2023	konstantin@5277.ru		Замена флага Z на C
+;17.12.2023	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_FLAG_GET
+.ifdef DEF_EEPROM_ICP
 .else
-.set DEF_C5_FLAG_GET = 1
+.set DEF_EEPROM_ICP = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included C5_FLAG_GET"
+.message "included EEPROM_CP"
 .endif
 
-.include	"./core/_flag_offset.inc"
-.include	"./conv/bitnum_to_num.inc"
+.include	"./mem/eeprom_read_byte.inc"
 
 ;--------------------------------------------------------
-C5_FLAG_GET:
+EEPROM_ICP:
 ;--------------------------------------------------------
-;Получение флага
-;IN:TEMP - номер флага(0-63)
-;OUT: флаг C
+;Сравнение блоков RAM и EEPROM с учетом инверсии
+;IN: X-RAD addr, TEMP_H/L-EEPROM addr, LOOP_CNTR-длина
+;OUT: флаг С(X<Z), флаг Z(X=Z)
 ;--------------------------------------------------------
-	PUSH_Z
+	PUSH_X
+	PUSH_T16
 	PUSH ACCUM
 	PUSH TEMP
+	PUSH LOOP_CNTR
 
-	MCALL _C5_FLAG_OFFSET
-	ANDI TEMP,0x07
-	MCALL BITNUM_TO_NUM
-	LD ACCUM,Z
-	AND ACCUM,TEMP
-	ADD ACCUM,C0xff
+_EEPROM_ICP__LOOP:
+	LDS ACCUM,X+
+	COM ACCUM
+	MCALL EEPROM_READ
+	CP ACCUM,TEMP
+	BRNE _EEPROM_ICP__END
+	LDI TEMP,0x01
+	ADD TEMP_L,TEMP
+	ADC TEMP_H,C0x00
+	DEC LOOP_CNTR
+	BRNE _EEPROM_ICP__LOOP
 
+_EEPROM_ICP_END:
+	POP LOOP_CNTR
 	POP TEMP
 	POP ACCUM
-	POP_Z
+	POP_T16
+	POP_X
 	RET
 .endif

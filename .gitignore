@@ -36,3 +36,11 @@ examples/5277_io_gayeway/IR_receiver/Debug/
 examples/5277_wh1602_module/wh1602_test/Debug/
 
 examples/5277_wh1602_module/wh1602_test/main.lst
+
+examples/5277_io_gayeway/ering/Debug/
+
+*.lst
+
+examples/5277_io_gayeway/buzzer/Debug/
+
+examples/other/ir_reader/Debug/

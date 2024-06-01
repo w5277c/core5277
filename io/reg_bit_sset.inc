@@ -1,42 +1,32 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019	w5277c@gmail.com			Начало
-;04.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;07.08.2023	konstantin@5277.ru		Замена флага Z на C
+;01.08.2023	konstantin@5277.ru		Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_FLAG_GET
+.ifdef DEF_REG_BIT_SSET
 .else
-.set DEF_C5_FLAG_GET = 1
+.set DEF_REG_BIT_SSET = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included C5_FLAG_GET"
+.message "included REG_BIT_SSET"
 .endif
 
-.include	"./core/_flag_offset.inc"
-.include	"./conv/bitnum_to_num.inc"
+.include	"./io/reg_bit_hi.inc"
+.include	"./io/reg_bit_lo.inc"
 
 ;--------------------------------------------------------
-C5_FLAG_GET:
+REG_BIT_SSET:
 ;--------------------------------------------------------
-;Получение флага
-;IN:TEMP - номер флага(0-63)
-;OUT: флаг C
+;Установка бита для регистра(с учетом бита инверсии)
+;IN: TEMP-адрес регистра(7бит-инверсия), ACCUM-номер бита
+;flag C-состояние бита(true = HI, при 7бит-false)
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH ACCUM
 	PUSH TEMP
-
-	MCALL _C5_FLAG_OFFSET
-	ANDI TEMP,0x07
-	MCALL BITNUM_TO_NUM
-	LD ACCUM,Z
-	AND ACCUM,TEMP
-	ADD ACCUM,C0xff
-
+	BRCC PC+0x02
+	COM TEMP
+	LSL TEMP
 	POP TEMP
-	POP ACCUM
-	POP_Z
-	RET
+	BRCS PC+0x01+_MCALL_SIZE
+	MJMP REG_BIT_LO
+	MJMP REG_BIT_HI
 .endif

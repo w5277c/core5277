@@ -10,6 +10,7 @@
 ;04.06.2022	konstantin@5277.ru		Добавлена поддержка сенсора и светодиода(не тестировано)
 ;07.06.2022	konstantin@5277.ru		Исправлена ошибка короткого нажатия после длительного удерживания(повтора) и 5-го
 ;												длинного нажатия, реализован новый функционал.
+;08.10.2023	w5277c@gmail.com			Доработан STATELESS, не тестировано.
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер кнопок, понимает кнопку без фиксации, с фиксацией и сенсор.
 ;Поддерживает несколько разных кнопок одновременно.
@@ -325,7 +326,7 @@ _DRV_BUTTONS_OP_LED__LOOP:
 	LDD TEMP,Y+_DRV_BUTTON_FLAGS
 	SBRS TEMP,DRV_BUTTON_FL_LED_MODE
 	RJMP _DRV_BUTTONS_OP_LED__END
-	
+
 	CPI FLAGS,DRV_BUTTONS_OP_LED_ON
 	BRNE PC+0x02
 	ORI TEMP,(1<<DRV_BUTTON_FL_LED_ON)
@@ -525,10 +526,15 @@ _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NOT_FIRST_SCAN:
 	EOR ACCUM,TEMP_H
 	;FIX или STATELESS? - просто добавляем результат в очередь
 	SBRC FLAGS,DRV_BUTTON_FL_FIX
-	RJMP PC+0x03
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_FIX
+
 	SBRS FLAGS,DRV_BUTTON_FL_STATELESS
-.MESSAGE "TODO Похоже для STATELESS нужна доработка, добавление должно быть только при нажатии"
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_FOR_WO_FIX
+	SBRS TEMP_H,_DRV_BUTTON_ST_LAST_STATE
+	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
+	;Если STATELESS и кнопка нажата
+
+_DRV_BUTTONS_TIMER_EVENT__ANALYZE_FIX:
 	SBRS ACCUM,_DRV_BUTTON_ST_LAST_STATE
 	RJMP _DRV_BUTTONS_TIMER_EVENT__ANALYZE_NEXT
 	;Добавяем результат

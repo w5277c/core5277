@@ -1,42 +1,33 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;07.10.2019	w5277c@gmail.com			Начало
-;04.08.2020	w5277c@gmail.com			Разбиение на файлы
-;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
-;07.08.2023	konstantin@5277.ru		Замена флага Z на C
+;04.02.2024	w5277c@gmail.com			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_C5_FLAG_GET
+.ifdef DEF_PRIM16_ISNEG
 .else
-.set DEF_C5_FLAG_GET = 1
+.set DEF_PRIM16_ISNEG = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included C5_FLAG_GET"
+.message "included PRIM16_ISNEG"
 .endif
 
-.include	"./core/_flag_offset.inc"
-.include	"./conv/bitnum_to_num.inc"
-
 ;--------------------------------------------------------
-C5_FLAG_GET:
+PRIM16_ISNEG:
 ;--------------------------------------------------------
-;Получение флага
-;IN:TEMP - номер флага(0-63)
-;OUT: флаг C
+;Отрицательное значение(включен старший бит)?
+;IN: Y-адрес на память с переменными, X-смещение на
+;переменную
+;OUT: Флаг Z(true - отрицательное)
 ;--------------------------------------------------------
-	PUSH_Z
-	PUSH ACCUM
+	PUSH_X
 	PUSH TEMP
 
-	MCALL _C5_FLAG_OFFSET
-	ANDI TEMP,0x07
-	MCALL BITNUM_TO_NUM
-	LD ACCUM,Z
-	AND ACCUM,TEMP
-	ADD ACCUM,C0xff
+	ADD XL,YL
+	ADC XH,YH
+	LD TEMP,X
+	COM TEMP
+	ANDI TEMP,0x80
 
 	POP TEMP
-	POP ACCUM
-	POP_Z
+	POP_X
 	RET
-.endif

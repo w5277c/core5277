@@ -311,7 +311,7 @@ PORTS_TABLE:															;Таблица из адресов IO регистр
 PCINT_TABLE:
 	.db	0x00,PCMSK,0x00,0x00
 INT_TABLE:
-	.db	(1<<INT0)
+	.db	(1<<INT0),0x00
 _INIT:
 	CLI
 	;Инициализация стека
