@@ -8,6 +8,7 @@
 ;25.04.2021	w5277c@gmail.com			Подправлены тайминги, учтен CORE_FREQ
 ;03.07.2021	w5277c@gmail.com			Z->Y
 ;26.08.2021	w5277c@gmail.com			Блокировка перываний в процедуре передачи байта
+;01.06.2024	konstantin@5277.ru		Результат операции в виде DRV_RESULT_...
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_1WIRE
 .else
@@ -49,7 +50,7 @@ DRV_1WIRE_INIT:
 ;TEMP_H-длина данных на запись,
 ;TEMP_L-длина данных для чтения.
 ;X-адрес на блок для приема
-;OUT: TEMP-0x00-успех
+;OUT: TEMP-DRV_RESULT_OK или DRV_RESULT_ABSENT
 ;--------------------------------------------------------
 	PUSH_X
 	PUSH_Y
@@ -58,7 +59,7 @@ DRV_1WIRE_INIT:
 	PUSH TEMP_L
 	PUSH ACCUM
 
-	;Сичтываем информацию о пине
+	;Считываем информацию о пине
 	MCALL C5_RAM_OFFSET
 	LDD ACCUM,Y+_DRV_1WIRE_PORT
 
@@ -78,25 +79,10 @@ DRV_1WIRE_INIT:
 ;	POP ACCUM
 
 	MCALL C5_DISPATCHER_LOCK
-	;Проверка на присутствие
-	MCALL PORT_SET_LO
-	MCALL PORT_MODE_OUT
-	LDI TEMP,low((250-10)/(16/CORE_FREQ))						;500us(480-960) по факту получл 489мс
-	MCALL _C5_WAIT_500NS
-	MCALL _C5_WAIT_500NS
-	MCALL _C5_WAIT_500NS
-	MCALL _C5_WAIT_500NS
-	MCALL PORT_MODE_IN
-	C5_WAIT_500NS 60*2												;60us
-	MCALL PORT_GET														;Читаем состояние порта
-	BRCS _DRV_1WIRE_PROC__ERROR
-	LDI TEMP,low((220-10)/(16/CORE_FREQ))						;440us(420 min)
-	MCALL _C5_WAIT_500NS
-	MCALL _C5_WAIT_500NS
-	MCALL _C5_WAIT_500NS
-	MCALL _C5_WAIT_500NS
-	MCALL PORT_GET														;Читаем состояние порта
-	BRCC _DRV_1WIRE_PROC__ERROR
+	MCALL _DRV_1WIRE_RESET
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_1WIRE_PROC__END
+
 	CPI TEMP_H,0x00
 	BREQ _DRV_1WIRE_PROC__SEND_SKIP
 _DRV_1WIRE_PROC__SEND_LOOP:
@@ -121,10 +107,7 @@ _DRV_1WIRE_PROC__RECV_LOOP:
 	BRNE _DRV_1WIRE_PROC__RECV_LOOP
 _DRV_1WIRE_PROC__RECV_SKIP:
 
-	LDI TEMP,0x00
-	RJMP _DRV_1WIRE_PROC__END
-_DRV_1WIRE_PROC__ERROR:
-	LDI TEMP,0x01
+	LDI TEMP,DRV_RESULT_OK
 _DRV_1WIRE_PROC__END:
 	MCALL C5_DISPATCHER_UNLOCK
 	;Освобождаем ресурс
@@ -137,6 +120,41 @@ _DRV_1WIRE_PROC__END:
 	POP_Z
 	POP_Y
 	POP_X
+	RET
+
+;--------------------------------------------------------
+_DRV_1WIRE_RESET:
+;--------------------------------------------------------
+;Сброс
+;IN: ACCUM-порт
+;OUT: TEMP-DRV_RESULT_OK или DRV_RESULT_ABSENT
+;--------------------------------------------------------
+	;Проверка на присутствие
+	MCALL PORT_SET_LO
+	MCALL PORT_MODE_OUT
+	LDI TEMP,low((250-10)/(16/CORE_FREQ))						;500us(480-960) по факту получл 489мс
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL PORT_MODE_IN
+	C5_WAIT_500NS 60*2												;60us
+	MCALL PORT_GET														;Читаем состояние порта
+	BRCS _DRV_1WIRE_RESET__ABSENT
+	LDI TEMP,low((220-10)/(16/CORE_FREQ))						;440us(420 min)
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL _C5_WAIT_500NS
+	MCALL PORT_GET														;Читаем состояние порта
+	BRCC _DRV_1WIRE_RESET__ABSENT
+
+	LDI TEMP,DRV_RESULT_OK
+	RJMP _DRV_1WIRE_RESET__END
+_DRV_1WIRE_RESET__ABSENT:
+	LDI TEMP,DRV_RESULT_ABSENT
+
+_DRV_1WIRE_RESET__END:
 	RET
 
 ;--------------------------------------------------------
