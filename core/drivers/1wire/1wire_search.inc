@@ -3,7 +3,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;01.06.2024	konstantin@5277.ru			Начало, не тестировано
 ;-----------------------------------------------------------------------------------------------------------------------
-;Поиск устройств на шине 1wire
+;Поиск устройств на шине 1wire.
+;!!!Процедура запрещает прерывания  на время выполнения!!!
+
+	.include "./mem/ram_stk_alloc.inc"
+	.include "./mem/ram_stk_free.inc"
 
 ;--------------------------------------------------------
 DRV_1WIRE_SEARCH_INIT:
@@ -43,14 +47,12 @@ DRV_1WIRE_SEARCH:														;Возвращает ROM устройства и
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_1WIRE_SEARCH__END
 
-
+   CLI
 	LDI TEMP,0xf0														;ROM SEARCH COMMAND
 	MCALL _DRV_1WIRE_SEND_BYTE
 
-
 _DRV_1WIRE_SEARCH__LOOP:
 	LDI FLAGS,0x00
-   CLI																	;(old 14us)
 	MCALL PORT_MODE_OUT
 	MCALL _DRV_1WIRE_DELAY_1US
 	MCALL PORT_MODE_IN
@@ -63,7 +65,6 @@ _DRV_1WIRE_SEARCH__LOOP:
    MCALL _DRV_1WIRE_DELAY_4US
 	MCALL PORT_GET														;Читаем состояние порта
 	ROL FLAGS
-	SEI
 
 	MOV TEMP_H,LOOP_CNTR
 	LSR TEMP_H
@@ -102,9 +103,11 @@ _DRV_1WIRE_SEARCH__LOOP_NEXT:
 	BRNE _DRV_1WIRE_SEARCH__LOOP
 
 _DRV_1WIRE_SEARCH__OK:
+	SEI
+	MCALL C5_DISPATCHER_UNLOCK
 	LDI TEMP,DRV_RESULT_OK
 _DRV_1WIRE_SEARCH__END:
-	MCALL C5_DISPATCHER_UNLOCK
+
 	LDI ACCUM,0x01														;Освобождаю память в стеке
 	MCALL RAM_STK_FREE
 	POP_T16
