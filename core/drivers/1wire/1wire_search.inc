@@ -36,6 +36,9 @@ DRV_1WIRE_SEARCH:														;Возвращает ROM устройства и
 	PUSH_X
 	PUSH_Y
 	PUSH_T16
+	PUSH FLAGS
+	PUSH ACCUM
+	PUSH TEMP_EL
 
 	MOV TEMP,ACCUM
 	LDI ACCUM,0x01														;Выделяю в стеке 1 байт для буфера команды
@@ -45,14 +48,18 @@ DRV_1WIRE_SEARCH:														;Возвращает ROM устройства и
 	MCALL C5_DISPATCHER_LOCK
 	MCALL _DRV_1WIRE_RESET
 	CPI TEMP,DRV_RESULT_OK
-	BRNE _DRV_1WIRE_SEARCH__END
+	BREQ PC+0x02
+	RJMP _DRV_1WIRE_SEARCH__END
 
-   CLI
 	LDI TEMP,0xf0														;ROM SEARCH COMMAND
 	MCALL _DRV_1WIRE_SEND_BYTE
 
+	MOV TEMP_EL,LOOP_CNTR
+	LDI LOOP_CNTR,0x00
+
 _DRV_1WIRE_SEARCH__LOOP:
 	LDI FLAGS,0x00
+	CLI
 	MCALL PORT_MODE_OUT
 	MCALL _DRV_1WIRE_DELAY_1US
 	MCALL PORT_MODE_IN
@@ -64,6 +71,7 @@ _DRV_1WIRE_SEARCH__LOOP:
 	MCALL PORT_MODE_IN
    MCALL _DRV_1WIRE_DELAY_4US
 	MCALL PORT_GET														;Читаем состояние порта
+	SEI
 	ROL FLAGS
 
 	MOV TEMP_H,LOOP_CNTR
@@ -77,6 +85,10 @@ _DRV_1WIRE_SEARCH__LOOP:
 	MCALL BITNUM_TO_NUM												;Получаем число
 	LD TEMP_L,X															;Чтение байта
 	MOV TEMP_H,TEMP_L
+
+	CP LOOP_CNTR,TEMP_EL												;Начальные биты уже опрошены
+	BRCS _DRV_1WIRE_SEARCH__LOOP_NEXT
+
 	AND TEMP_H,TEMP													;Проверка на повторный запуск(если бит сброшен)
 	BRNE _DRV_1WIRE_SEARCH__BIT_HI
 	OR TEMP_L,TEMP														;Выставляем бит в HI и переходим к следующему
@@ -98,18 +110,23 @@ _DRV_1WIRE_SEARCH__BIT_HI:
 	BREQ _DRV_1WIRE_SEARCH__OK
 
 _DRV_1WIRE_SEARCH__LOOP_NEXT:
+	C5_WAIT_500NS 45*2												;45us
+
 	INC LOOP_CNTR
 	CPI LOOP_CNTR,0x40
 	BRNE _DRV_1WIRE_SEARCH__LOOP
 
 _DRV_1WIRE_SEARCH__OK:
-	SEI
 	MCALL C5_DISPATCHER_UNLOCK
 	LDI TEMP,DRV_RESULT_OK
 _DRV_1WIRE_SEARCH__END:
 
 	LDI ACCUM,0x01														;Освобождаю память в стеке
 	MCALL RAM_STK_FREE
+
+	POP TEMP_EL
+	POP ACCUM
+	POP FLAGS
 	POP_T16
 	POP_Y
 	POP_X
