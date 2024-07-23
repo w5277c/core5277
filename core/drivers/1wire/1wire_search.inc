@@ -74,6 +74,7 @@ _DRV_1WIRE_SEARCH__LOOP:
 	SEI
 	ROL FLAGS
 
+	PUSH_X
 	MOV TEMP_H,LOOP_CNTR
 	LSR TEMP_H
 	LSR TEMP_H
@@ -87,12 +88,15 @@ _DRV_1WIRE_SEARCH__LOOP:
 	MOV TEMP_H,TEMP_L
 
 	CP LOOP_CNTR,TEMP_EL												;Начальные биты уже опрошены
-	BRCS _DRV_1WIRE_SEARCH__LOOP_NEXT
+	BRCC PC+0x04
+	POP_X
+	RJMP _DRV_1WIRE_SEARCH__LOOP_NEXT
 
 	AND TEMP_H,TEMP													;Проверка на повторный запуск(если бит сброшен)
 	BRNE _DRV_1WIRE_SEARCH__BIT_HI
 	OR TEMP_L,TEMP														;Выставляем бит в HI и переходим к следующему
 	ST X,TEMP_L															;Запись байта
+	POP_X
 	RJMP _DRV_1WIRE_SEARCH__LOOP_NEXT
 
 _DRV_1WIRE_SEARCH__BIT_HI:
@@ -103,6 +107,7 @@ _DRV_1WIRE_SEARCH__BIT_HI:
 	BRNE PC+0x02
 	OR TEMP_L,TEMP														;Установка бита
 	ST X,TEMP_L															;Запись байта
+	POP_X
 
 	CPI FLAGS,0x01														;Проверка на конфликт
 	BREQ _DRV_1WIRE_SEARCH__OK
@@ -114,12 +119,13 @@ _DRV_1WIRE_SEARCH__LOOP_NEXT:
 
 	INC LOOP_CNTR
 	CPI LOOP_CNTR,0x40
-	BRNE _DRV_1WIRE_SEARCH__LOOP
+	BREQ PC+0x02
+	RJMP _DRV_1WIRE_SEARCH__LOOP
 
 _DRV_1WIRE_SEARCH__OK:
-	MCALL C5_DISPATCHER_UNLOCK
 	LDI TEMP,DRV_RESULT_OK
 _DRV_1WIRE_SEARCH__END:
+	MCALL C5_DISPATCHER_UNLOCK
 
 	LDI ACCUM,0x01														;Освобождаю память в стеке
 	MCALL RAM_STK_FREE
