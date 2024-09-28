@@ -11,6 +11,7 @@
 ;07.06.2022	konstantin@5277.ru		Исправлена ошибка короткого нажатия после длительного удерживания(повтора) и 5-го
 ;												длинного нажатия, реализован новый функционал.
 ;08.10.2023	w5277c@gmail.com			Доработан STATELESS, не тестировано.
+;28.09.2024	konstantin@5277.ru		Исправлена ошибка очереди в OP_GET
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер кнопок, понимает кнопку без фиксации, с фиксацией и сенсор.
 ;Поддерживает несколько разных кнопок одновременно.
@@ -29,7 +30,7 @@
 .ifdef DEF__C5_DRV_BUTTONS
 .else
 .set DEF__C5_DRV_BUTTONS = 1
-.message "Included driver Buttons v0.5"
+.message "Included driver Buttons v0.6"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -277,21 +278,16 @@ _DRV_BUTTONS_OP_GET:
 
 	LDI XH,0x00
 	LDI XL,_DRV_BUTTONS_QUEUE
-	LSL LOOP_CNTR
-	ADD XL,LOOP_CNTR
 	ADD XL,YL
 	ADC XH,YH
 	LD TEMP_H,X+
-	LD TEMP_L,X
+	LD TEMP_L,X+
 	;Если очередь не пуста, то сдвигаем данные очереди
 	CPI LOOP_CNTR,0x00
 	BREQ _DRV_BUTTONS_PULL_QUEUE__END
-	LDI XH,0x00
-	LDI XL,_DRV_BUTTONS_QUEUE+0x02
-	ADD XL,YL
-	ADC XH,YH
 	MOVW ZL,YL
 	ADIW ZL,_DRV_BUTTONS_QUEUE
+	LSL LOOP_CNTR
 	MCALL RAM_COPY
 _DRV_BUTTONS_PULL_QUEUE__END:
 	STS SREG,ACCUM
