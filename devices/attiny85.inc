@@ -9,6 +9,7 @@
 ;09.10.2021	w5277c@gmail.com			Убран NOP из MCALL
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;06.04.2023	konstantin@5277.ru		Экономия RAM в 46Б
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -23,9 +24,15 @@
 	;---SPECIFY-DEVICE---
 	.DEVICE ATtiny85
 
-	.equ	FLASHEND		= 0x0fff	; Note: Word address
+	.SET	VPORTS_ADDR								= 0x0060			;Начальный адрес блока для виртуальных портов(вне зоны регистров)
+.ifdef VPORTS
+.else
+	.SET	VPORTS									= 0x00			;Количество виртуальных портов(3 порта максимум)
+.endif
+
+	.equ	FLASHEND		= 0x0fff	; Note: Word address			;TODO убрать блок, вроде не нужен
 	.equ	IOEND			= 0x003f
-	.equ	SRAM_START	= 0x0060
+	.equ	SRAM_START	= 0x0060+(VPORTS*3)
 	.equ	SRAM_SIZE	= 512
 	.equ	XRAMEND		= 0x0000
 	.equ	E2END			= 0x01ff
@@ -36,13 +43,14 @@
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY EEPROM 512
 	#pragma AVRPART MEMORY INT_SRAM SIZE 512
-	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
+	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60+(VPORTS*3)
 
 	.EQU	FLASH_SIZE								= 0x2000			;8K
 
 	.include "/devices/_common.inc"
 
 	.SET	MUL_SUPPORT								= 0x00
+	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB)
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
@@ -56,7 +64,7 @@
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x02			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.SET	_C5_STACK_SIZE							= 0x40			;Стек ядра
-	.EQU	RAMSTART									= 0x0060
+	.EQU	RAMSTART									= 0x0060+(VPORTS*3)
 	.EQU	RAMEND									= 0x025f
 	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
 

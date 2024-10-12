@@ -5,6 +5,7 @@
 ;01.08.2020	w5277c@gmail.com			Разбиение на файлы
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_OFFSETS
 .else
@@ -27,6 +28,15 @@ PORT_OFFSETS:
 ;TEMP-адрес регистра PINx
 ;ACCUM-пин в виде числа
 ;--------------------------------------------------------
+	CPI ACCUM,0xff
+	BRNE PC+0x02
+	RET
+.if VPORT>0x00
+	CPI ACCUM,(PORTS_QUANTITY<<0x04)-0x01
+	BRCS PC+0x01+_MCALL_SIZE
+	MJMP VPORT_OFFSETS
+.endif
+
 	PUSH_Z
 
 	LDI_Z (PORTS_TABLE*2)

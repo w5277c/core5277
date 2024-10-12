@@ -4,6 +4,7 @@
 ;24.01.2021	w5277c@gmail.com			Начало
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -11,6 +12,12 @@
 
 	;---SPECIFY-DEVICE---
 	.DEVICE AT90can32
+
+	.SET	VPORTS_ADDR								= 0x009e			;Начальный адрес блока для виртуальных портов(зона RESERVED)
+.ifdef VPORTS
+.else
+	.SET	VPORTS									= 0x00			;Количество виртуальных портов,6 портов максимум
+.endif
 
 	#pragma AVRPART MEMORY PROG_FLASH 32768
 	#pragma AVRPART MEMORY INT_SRAM SIZE 2048
@@ -22,6 +29,7 @@
 	.EQU	FLASH_PAGESIZE							= 0x0100			;256 байт - размер страницы FLASH
 	.EQU	EEPROM_SIZE								= 0x0400			;1K
 	.EQU	FLASH_SIZE								= 0x8000			;32K
+	.EQU	PORTS_QUANTITY							= 0x07			;Кол-во реальных портов (PORTA,PORTB,PORTC,...)
 
 	.include "/devices/_common.inc"
 

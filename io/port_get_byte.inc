@@ -5,6 +5,7 @@
 ;01.08.2020	w5277c@gmail.com			Разбиение на файлы
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_GET_BYTE
 .else
@@ -23,6 +24,10 @@ PORT_GET_BYTE:
 ;IN: ACCUM - порт
 ;OUT: ACCUM - значение
 ;--------------------------------------------------------
+	CPI ACCUM,0xff
+	BRNE PC+0x02
+	RET
+
 	PUSH_Z
 	PUSH_T16
 	PUSH TEMP
@@ -30,6 +35,11 @@ PORT_GET_BYTE:
 	MCALL PORT_OFFSETS
 	MOV ZH,C0x00
 	MOV ZL,TEMP
+.if VPORTS>0x00
+	CPI ZL,VPORTS_ADDR
+	BRCS PC+0x01+_MCALL_SIZE
+	MCALL VPORT_GET
+.endif
 	LD ACCUM,Z
 
 	POP TEMP

@@ -7,6 +7,7 @@
 ;21.01.2021	w5277c@gmail.com			Добавлены порты для инструкций SBI,CBI...
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -17,6 +18,12 @@
 
 	;---SPECIFY-DEVICE---
 	.DEVICE ATmega328P
+
+	.SET	VPORTS_ADDR								= 0x008c			;Начальный адрес блока для виртуальных портов(зона RESERVED)
+.ifdef VPORTS
+.else
+	.SET	VPORTS									= 0x00			;Количество виртуальных портов(11 портов максимум)
+.endif
 
 	.equ	FLASHEND	= 0x3fff	; Note: Word address
 	.equ	IOEND	= 0x00ff
@@ -36,6 +43,7 @@
 	.EQU	FLASH_PAGESIZE							= 0x0080			;128 байт - размер страницы FLASH
 	.EQU	EEPROM_SIZE								= 0x0400			;1K
 	.EQU	FLASH_SIZE								= 0x8000			;32K
+	.EQU	PORTS_QUANTITY							= 0x04			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
 
 	.include "/devices/_common.inc"
 

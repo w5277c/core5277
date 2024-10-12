@@ -6,6 +6,7 @@
 ;03.10.2020	w5277c@gmail.com			Атомарность
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;18.08.2021	w5277c@gmail.com			Ничего не делаем, если порт не задан(0xff)
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_MODE_OUT
 .else
@@ -42,6 +43,11 @@ PORT_MODE_OUT:
 	OR TEMP,ACCUM
 	ST Z,TEMP
 	STS SREG,TEMP_L
+.if VPORTS>0x00
+	CPI ZL,VPORTS_ADDR
+	BRCS PC+0x01+_MCALL_SIZE
+	MCALL VPORT_SET
+.endif
 
 	POP ACCUM
 	POP TEMP

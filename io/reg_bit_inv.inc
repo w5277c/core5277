@@ -2,6 +2,7 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;25.06.2021	w5277c@gmail.com			Начало
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_REG_BIT_INV
 .else
@@ -30,6 +31,11 @@ REG_BIT_INV:
 	ST Z,TEMP_L
 	AND TEMP_L,ACCUM
 	STS SREG,TEMP_H
+.if VPORTS>0x00
+	CPI TEMP,VPORTS_ADDR
+	BRCS PC+0x01+_MCALL_SIZE
+	MCALL VPORT_SET
+.endif
 
 	ADD TEMP_L,C0xff
 

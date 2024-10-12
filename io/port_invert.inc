@@ -6,6 +6,7 @@
 ;03.10.2020	w5277c@gmail.com			Оптимизация, атомарность
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_INVERT
 .else
@@ -23,6 +24,10 @@ PORT_INVERT:
 ;Инвертирование состояния порта
 ;IN: ACCUM адрес регистра PORTx
 ;--------------------------------------------------------;
+	CPI ACCUM,0xff
+	BRNE PC+0x02
+	RET
+
 	PUSH_Z
 	PUSH_T16
 	PUSH TEMP
@@ -38,6 +43,11 @@ PORT_INVERT:
 	EOR TEMP,ACCUM
 	ST Z,TEMP
 	STS SREG,TEMP_L
+.if VPORTS>0x00
+	CPI ZL,VPORTS_ADDR
+	BRCS PC+0x01+_MCALL_SIZE
+	MCALL VPORT_SET
+.endif
 
 	POP ACCUM
 	POP TEMP

@@ -5,6 +5,7 @@
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;06.04.2023	konstantin@5277.ru		Экономия RAM в 112Б
+;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -16,6 +17,12 @@
 	;---SPECIFY-DEVICE---
 	.DEVICE ATmega168
 
+	.SET	VPORTS_ADDR								= 0x008c			;Начальный адрес блока для виртуальных портов(зона RESERVED)
+.ifdef VPORTS
+.else
+	.SET	VPORTS									= 0x00			;Количество виртуальных портов(11 портов максимум)
+.endif
+
 	#pragma AVRPART MEMORY PROG_FLASH 16384
 	#pragma AVRPART MEMORY INT_SRAM SIZE 1024
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
@@ -25,6 +32,7 @@
 	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
 	.EQU	EEPROM_SIZE								= 0x200
 	.EQU	FLASH_SIZE								= 0x4000			;16K
+	.EQU	PORTS_QUANTITY							= 0x04			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
 
 	.include "/devices/_common.inc"
 
