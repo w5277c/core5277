@@ -32,6 +32,7 @@
 	.SET	LOGGING_STACKUSAGE					= 0				;Логирует верхушку стека в процедуре C5_SUSPEND
 
 	.SET	BUFFER_SIZE								= 0x0000
+	.SET	VPORTS_INITIALIZED					= 0x00			;Количество инициализированных виртуальных портов
 
 .ifdef REPORT_INCLUDES
 .else
