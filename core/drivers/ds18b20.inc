@@ -10,11 +10,12 @@
 ;20.12.2021	w5277c@gmail.com			Приведение результата к виду DRV_RESULT_...
 ;24.02.2022	w5277c@gmail.com			Исправлена ошибка при отрицательной температуре
 ;17.09.2022	konstantin@5277.ru		Корректное вычисление
+;19.10.2024	konstantin@5277.ru		Результат драйвера 1Wire в виде DRV_RESULT_...
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_DS18B20
 .else
 .set DEF__C5_DRV_DS18B20 = 1
-.message "Included driver DS18B20 v0.9"
+.message "Included driver DS18B20 v0.10"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -75,10 +76,8 @@ DRV_DS18B20_INIT:
 	LDI TEMP_H,0x02
 	LDI TEMP_L,0x00
 	MCALL C5_EXEC
-	CPI TEMP,0x00
-	BREQ PC+0x03
-	LDI TEMP,DRV_RESULT_ABSENT
-	RJMP _DRV_DS18B20_PROC__ERROR
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_DS18B20_PROC__ERROR
 
 	LDI TEMP_H,BYTE3(_DRV_DS18B20_DELAY)
 	LDI TEMP_L,BYTE2(_DRV_DS18B20_DELAY)
@@ -91,10 +90,8 @@ DRV_DS18B20_INIT:
 	LDI TEMP_H,0x02
 	LDI TEMP_L,_DRV_DS18B20_BUFFER_SIZE
 	MCALL C5_EXEC
-	CPI TEMP,0x00
-	BREQ PC+0x03
-	LDI TEMP,DRV_RESULT_ABSENT
-	RJMP _DRV_DS18B20_PROC__ERROR
+	CPI TEMP,DRV_RESULT_OK
+	BRNE _DRV_DS18B20_PROC__ERROR
 
 	LDI LOOP_CNTR,0x08
 	MOVW XL,YL
