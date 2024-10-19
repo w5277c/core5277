@@ -25,15 +25,6 @@
 	.SET	VPORTS									= 0x00			;Количество виртуальных портов(11 портов максимум)
 .endif
 
-	.equ	FLASHEND	= 0x3fff	; Note: Word address
-	.equ	IOEND	= 0x00ff
-	.equ	SRAM_START	= 0x0100
-	.equ	SRAM_SIZE	= 2048
-	.equ	XRAMEND	= 0x0000
-	.equ	E2END	= 0x03ff
-	.equ	EEPROMEND	= 0x03ff
-	.equ	EEADRBITS	= 10
-
 	#pragma AVRPART MEMORY PROG_FLASH 32768
 	#pragma AVRPART MEMORY INT_SRAM SIZE 2048
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x100
@@ -57,7 +48,7 @@
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x1a			;Количество перырваний(без RESET)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x03			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_C5_RAM_BORDER_SIZE					= 0x08			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
+	.EQU	_C5_RAM_BORDER_SIZE					= 0x20			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.SET	_C5_STACK_SIZE							= 0x60			;Стек ядра
 	.EQU	RAMSTART									= 0x0100
 	.EQU	RAMEND									= 0x08ff
@@ -483,6 +474,7 @@ _INIT:
 	LDI TEMP,0xff
 	MOV C0xff,TEMP
 	JMP MAIN
+
 APPLICATION_BLOCK:
 
 .MACRO MCALL
@@ -549,6 +541,7 @@ APPLICATION_BLOCK:
 	_C5_POWER_ON PRTIM2
 	LDI TEMP,(1<<WGM21)|(0<<WGM20)
 	STS TCCR2A,TEMP
+	;TODO просто делитель на 8, а как-же разные CORE_FREQ?
 	LDI TEMP,(0<<CS22)|(1<<CS21)|(0<<CS20)						;/8
 	STS TCCR2B,TEMP
 	STS TCNT2,C0x00

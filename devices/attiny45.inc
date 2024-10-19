@@ -10,7 +10,6 @@
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;-----------------------------------------------------------------------------------------------------------------------
-;TODO обновить из atmega328
 
 ;---DESCRIPTION------------------------------------------
 ;core5277 for ATtiny45 (4KB ROM, 256B EEPROM, 256B SRAM) at 16MHz (LITTLE ENDIAN)
@@ -28,19 +27,19 @@
 	.SET	VPORTS									= 0x00			;Количество виртуальных портов(3 порта максимум)
 .endif
 
-	.equ	SRAM_START	= 0x0060+(VPORTS*3)
-
-
 	#pragma AVRPART MEMORY PROG_FLASH 4096
 	#pragma AVRPART MEMORY EEPROM 256
 	#pragma AVRPART MEMORY INT_SRAM SIZE 256
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60+(VPORTS*3)
 
+	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
+	.EQU	EEPROM_SIZE								= 0x200
+	.EQU	FLASH_SIZE								= 0x4000			;16K
+	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
+
 	.include "/devices/_common.inc"
 
 	.SET	MUL_SUPPORT								= 0x00
-	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB)
-
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
 	.MESSAGE "######## DEVICE ATtiny45"
@@ -420,7 +419,6 @@ APPLICATION_BLOCK:
 	POP TEMP
 	STS SREG,TEMP
 .ENDMACRO
-
 .MACRO _C5_POWER_ON
 	PUSH TEMP
 	LDS TEMP,PRR
@@ -428,7 +426,6 @@ APPLICATION_BLOCK:
 	STS PRR,TEMP
 	POP TEMP
 .ENDMACRO
-
 .MACRO _C5_POWER_OFF
 	PUSH TEMP
 	LDS TEMP,PRR

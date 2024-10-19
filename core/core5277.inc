@@ -993,9 +993,22 @@ C5_START:
 	;Разрешаем прерывания
 	SEI
 .if TS_MODE == TS_MODE_NO
-	;TODO простая реализаия переключения стека и переход на первую задачу
-.endif
-.if TS_MODE != TS_MODE_NO
+	LDI_Z _C5_TASKS_HEADER
+	LDD TEMP, Z+_C5_TASK_STACK_SIZE
+	LDD TEMP_L,Z+_C5_TASK_STACK_OFFSET+0x01
+	LDD TEMP_H,Z+_C5_TASK_STACK_OFFSET+0x00
+	SUB TEMP_L,TEMP
+	SBCI TEMP_H,0x00
+	CLI
+	STS SPH,TEMP_H
+	STS SPL,TEMP_L
+	;Восстанавливаем SREG
+	POP TEMP
+	STS SREG,TEMP
+	_C5_MACRO__POP_RDS
+	SEI
+	RET
+.else
 _C5_START__LOOP:
 	LDI PID,0x00													;Счетчик задач
 	LDI FLAGS,0x00
@@ -1112,19 +1125,9 @@ _C5_CREATE__TIMER_CODE_SKIP2:
 
 	;Помещаем точку возврата
 	MOV r0,TEMP
-.if TS_MODE == TS_MODE_NO
-	LDI TEMP,low(SRAM_START)
-.endif
-.if TS_MODE != TS_MODE_NO
 	LDI TEMP,low(_C5_TASK_ENDPOINT)
-.endif
 	PUSH TEMP
-.if TS_MODE == TS_MODE_NO
-	LDI TEMP,high(SRAM_START)
-.endif
-.if TS_MODE != TS_MODE_NO
 	LDI TEMP,high(_C5_TASK_ENDPOINT)
-.endif
 	PUSH TEMP
 	MOV TEMP,r0
 	RJMP _C5_CREATE__DRIVER_CODE_SKIP
@@ -1262,6 +1265,7 @@ _C5_EXEC__DONE:
 _C5_EXEC__ERROR:
 	LDI TEMP,DRV_RESULT_UNSUPPORTED
 	RET
+
 ;--------------------------------------------------------
 _C5_PROC_HEADER_GET:
 ;--------------------------------------------------------
@@ -1297,6 +1301,35 @@ _C5_PROC_HEADER_GET__END:
 	POP TEMP_L
 	POP TEMP_H
 	RET
+
+;--------------------------------------------------------
+_C5_TASK_ENDPOINT:
+;--------------------------------------------------------
+;Отрабатывает при завершении задачи
+;--------------------------------------------------------
+.if TS_MODE == TS_MODE_NO
+	RJMP PC
+.else
+	MCALL C5_DISPATCHER_LOCK
+
+	MOV PID,_PID
+	MCALL _C5_PROC_HEADER_GET
+
+	LDI TEMP,0x00
+	STD Z+_C5_TASK_STACK_SIZE,TEMP
+	MCALL _C5_STACK_TO_TOP
+	LDI TEMP,_C5_PROC_STATE_ABSENT
+	STD Z+_C5_PROC_STATE,TEMP
+
+	CLI
+	LDS TEMP,_C5_CORE_STACK+0x00
+	STS SPH,TEMP
+	LDS TEMP,_C5_CORE_STACK+0x01
+	STS SPL,TEMP
+	SEI
+	MCALL C5_DISPATCHER_UNLOCK
+	RET
+.endif
 
 .if TS_MODE != TS_MODE_NO
 ;--------------------------------------------------------
@@ -1341,31 +1374,6 @@ _C5_RESUME:
 	MCALL C5_DISPATCHER_UNLOCK
 	STS SREG,TEMP
 	POP TEMP
-	RET
-
-;--------------------------------------------------------
-_C5_TASK_ENDPOINT:
-;--------------------------------------------------------
-;Отрабатывает при завершении задачи
-;--------------------------------------------------------
-	MCALL C5_DISPATCHER_LOCK
-
-	MOV PID,_PID
-	MCALL _C5_PROC_HEADER_GET
-
-	LDI TEMP,0x00
-	STD Z+_C5_TASK_STACK_SIZE,TEMP
-	MCALL _C5_STACK_TO_TOP
-	LDI TEMP,_C5_PROC_STATE_ABSENT
-	STD Z+_C5_PROC_STATE,TEMP
-
-	CLI
-	LDS TEMP,_C5_CORE_STACK+0x00
-	STS SPH,TEMP
-	LDS TEMP,_C5_CORE_STACK+0x01
-	STS SPL,TEMP
-	SEI
-	MCALL C5_DISPATCHER_UNLOCK
 	RET
 
 ;--------------------------------------------------------
