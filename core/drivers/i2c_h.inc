@@ -21,7 +21,6 @@
 .include	"./io/port_mode_out.inc"
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_set_hi.inc"
-.include	"./core/wait.inc"
 
 ;---CONSTANTS--------------------------------------------
 	;---VARS---

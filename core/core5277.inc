@@ -347,7 +347,6 @@ C5_NAME:
 	.INCLUDE "./core/_dispatcher.inc"
 .ELSE
 	.MESSAGE "######## DISPATCHER DISABLED"
-	.INCLUDE "./core/wait_2ms.inc"
 C5_DISPATCHER_LOCK:
 C5_DISPATCHER_UNLOCK:
 	RET
