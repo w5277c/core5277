@@ -9,10 +9,23 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---FREQ---
-	.EQU	DRV_I2C_FREQ_50KHZ					= 0x98			;for 50kHz  ---(16000000/50000  - 16)/(2*4^0) = 152
-	.EQU	DRV_I2C_FREQ_100KHZ					= 0x48			;for 100kHz ---(16000000/100000 - 16)/(2*4^0) = 72
-	.EQU	DRV_I2C_FREQ_200KHZ					= 0x20			;for 200kHz ---(16000000/200000 - 16)/(2*4^0) = 32
-	.EQU	DRV_I2C_FREQ_400KHZ					= 0x0c			;for 400kHz ---(16000000/400000 - 16)/(2*4^0) = 12
+	.EQU	DRV_I2C_FREQ_10KHZ					= (CORE_FREQ*1000/10-16)/2
+	.EQU	DRV_I2C_FREQ_50KHZ					= (CORE_FREQ*1000/50-16)/2
+.if CORE_FREQ>1
+	.EQU	DRV_I2C_FREQ_100KHZ					= (CORE_FREQ*1000/100-16)/2
+.else
+	.message "Unsupported I2C freq. 100KHz, low CPU freq."
+.endif
+.if CORE_FREQ>3
+	.EQU	DRV_I2C_FREQ_200KHZ					= (CORE_FREQ*1000/200-16)/2
+.else
+	.message "Unsupported I2C freq. 200KHz, low CPU freq."
+.endif
+.if CORE_FREQ>7
+	.EQU	DRV_I2C_FREQ_400KHZ					= (CORE_FREQ*1000/400-16)/2
+.else
+	.message "Unsupported I2C freq. 400KHz, low CPU freq."
+.endif
 	;---DRIVER-STATES---
 	.EQU	DRV_I2C_ST_DONE						= 0x00
 	.EQU	DRV_I2C_ST_TR							= 0x01
@@ -29,6 +42,21 @@
 	.EQU	TWI_MR_SLA_R_NACK						= 0x48
 	.EQU	TWI_MR_ACK								= 0x50
 	.EQU	TWI_MR_NACK								= 0x58
+	;---
+	.EQU	TWI_SR_SLA_W							= 0x60
+	.EQU	TWI_SR_SLA_W_AL						= 0x68
+	.EQU	TWI_SR_SLA_R							= 0xA8
+	.EQU	TWI_SR_SLA_R_AL						= 0xB0
+	.EQU	TWI_SR_GC								= 0x70
+	.EQU	TWI_SR_GC_AL							= 0x78
+	.EQU	TWI_SR_RC_ACK							= 0x80
+	.EQU	TWI_SR_RC_NACK							= 0x88
+	.EQU	TWI_SR_GC_RC_ACK						= 0x90
+	.EQU	TWI_SR_GC_RC_NACK						= 0x98
+	.EQU	TWI_SR_TR_ACK							= 0xB8
+
+	.EQU	TWI_SR_RC_STOP							= 0xA0
+	.EQU	TWI_SR_TR_STOP							= 0xC0
 	;---STATES---
 	.EQU	DRV_I2C_STATE_TR						= 0x01
 	.EQU	DRV_I2C_STATE_RC						= 0x02

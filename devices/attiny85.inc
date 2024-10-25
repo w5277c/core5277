@@ -10,6 +10,7 @@
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;06.04.2023	konstantin@5277.ru		Экономия RAM в 46Б
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;26.10.2024	konstantin@5277.ru		Добавлены USI регистры
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -30,22 +31,15 @@
 	.SET	VPORTS									= 0x00			;Количество виртуальных портов(3 порта максимум)
 .endif
 
-	.equ	FLASHEND		= 0x0fff	; Note: Word address			;TODO убрать блок, вроде не нужен
-	.equ	IOEND			= 0x003f
-	.equ	SRAM_START	= 0x0060+(VPORTS*3)
-	.equ	SRAM_SIZE	= 512
-	.equ	XRAMEND		= 0x0000
-	.equ	E2END			= 0x01ff
-	.equ	EEPROMEND	= 0x01ff
-	.equ	EEADRBITS	= 9
-
-
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY EEPROM 512
 	#pragma AVRPART MEMORY INT_SRAM SIZE 512
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60+(VPORTS*3)
 
+	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
+	.EQU	EEPROM_SIZE								= 0x200
 	.EQU	FLASH_SIZE								= 0x2000			;8K
+	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
 
 	.include "/devices/_common.inc"
 
@@ -54,7 +48,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
-	.MESSAGE "######## DEVICE ATtiny45"
+	.MESSAGE "######## DEVICE ATtiny85"
 	.EQU	_MCALL_SIZE								= 0x01			;Размер MCALL
 	.EQU	_C5_DRIVERS_MAX_QNT					= 0x04			;Максимальное количество драйверов
 	.EQU	_C5_TASKS_MAX_QNT						= 0x02			;Максимальное количество задач
@@ -110,8 +104,8 @@
 	.EQU	DDRG										= 0xff
 	.EQU	PING										= 0xff
 
-	.EQU	SDA										= 0xff
-	.EQU	SCL										= 0xff
+	.EQU	SDA										= PB0
+	.EQU	SCL										= PB2
 	.EQU	RXD										= 0xff
 	.EQU	TXD										= 0xff
 	.EQU	RXD0										= RXD
@@ -290,6 +284,28 @@
 	.EQU	ADC_VREF_1_1_CAP						= (0<<REFS2)|(1<<REFS1)|(1<<REFS0)
 	.EQU	ADC_VREF_2_56							= (1<<REFS2)|(1<<REFS1)|(0<<REFS0)
 	.EQU	ADC_VREF_2_56_CAP						= (1<<REFS2)|(1<<REFS1)|(1<<REFS0)
+
+	;---USI---
+	.EQU	USIDR										= 0x2f
+	.EQU	USIBR										= 0x30
+	.EQU	USISR										= 0x2e
+	.EQU		USISIF								= 0x07
+	.EQU		USIOIF								= 0x06
+	.EQU		USIPIF								= 0x05
+	.EQU		USIDC									= 0x04
+	.EQU		USICNT3								= 0x03
+	.EQU		USICNT2								= 0x02
+	.EQU		USICNT1								= 0x01
+	.EQU		USICNT0								= 0x00
+	.EQU	USICR										= 0x2d
+	.EQU		USISIE								= 0x07
+	.EQU		USIOIE								= 0x06
+	.EQU		USIWM1								= 0x05
+	.EQU		USIWM0								= 0x04
+	.EQU		USICS1								= 0x03
+	.EQU		USICS0								= 0x02
+	.EQU		USICLK								= 0x01
+	.EQU		USITC									= 0x00
 
 	.SET	INT0_PORT								= PB2
 

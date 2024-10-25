@@ -9,7 +9,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
-;core5277 for ATMega168 (16Kb ROM, 512b EEPROM, 1Kb SRAM) at 16MHz (LITTLE ENDIAN)
+;core5277 for ATMega168 (16KB ROM, 512B EEPROM, 1KB SRAM) at 16MHz (LITTLE ENDIAN)
 ;avrdude -p m328 -c avrispmkII -U flash:w:main.hex
 ;Ext crystal 8.0-..., 1K CK/14 CK + 4.1ms, CKDIV8 disabled, BOD 4.3V, SPI enabled:
 ;avrdude -p m328p -c avrispmkII -U lfuse:w:0xdf:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m

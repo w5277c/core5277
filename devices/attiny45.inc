@@ -9,6 +9,7 @@
 ;09.10.2021	w5277c@gmail.com			Убран NOP из MCALL
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;26.10.2024	konstantin@5277.ru		Добавлены USI регистры
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -33,8 +34,8 @@
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60+(VPORTS*3)
 
 	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
-	.EQU	EEPROM_SIZE								= 0x200
-	.EQU	FLASH_SIZE								= 0x4000			;16K
+	.EQU	EEPROM_SIZE								= 0x100
+	.EQU	FLASH_SIZE								= 0x1000			;4K
 	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
 
 	.include "/devices/_common.inc"
@@ -50,7 +51,7 @@
 	.SET	C5_TASKS_QNT							= _C5_TASKS_MAX_QNT
 	.EQU	_C5_IR_QNT								= 0x0f			;Количество перырваний(без RESET)
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
-	.EQU	_C5_RAM_BORDER_SIZE					= 0x00			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
+	.EQU	_C5_RAM_BORDER_SIZE					= 0x04			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.SET	_C5_STACK_SIZE							= 0x28			;Стек ядра - 40B
 	.EQU	RAMSTART									= 0x0060+(VPORTS*3)
 	.EQU	RAMEND									= 0x015f
@@ -98,8 +99,8 @@
 	.EQU	DDRG										= 0xff
 	.EQU	PING										= 0xff
 
-	.EQU	SDA										= 0xff
-	.EQU	SCL										= 0xff
+	.EQU	SDA										= PB0
+	.EQU	SCL										= PB2
 	.EQU	RXD										= 0xff
 	.EQU	TXD										= 0xff
 	.EQU	RXD0										= RXD
@@ -278,6 +279,29 @@
 	.EQU	ADC_VREF_1_1_CAP						= (0<<REFS2)|(1<<REFS1)|(1<<REFS0)
 	.EQU	ADC_VREF_2_56							= (1<<REFS2)|(1<<REFS1)|(0<<REFS0)
 	.EQU	ADC_VREF_2_56_CAP						= (1<<REFS2)|(1<<REFS1)|(1<<REFS0)
+
+
+	;---USI---
+	.EQU	USIDR										= 0x2f
+	.EQU	USIBR										= 0x30
+	.EQU	USISR										= 0x2e
+	.EQU		USISIF								= 0x07
+	.EQU		USIOIF								= 0x06
+	.EQU		USIPIF								= 0x05
+	.EQU		USIDC									= 0x04
+	.EQU		USICNT3								= 0x03
+	.EQU		USICNT2								= 0x02
+	.EQU		USICNT1								= 0x01
+	.EQU		USICNT0								= 0x00
+	.EQU	USICR										= 0x2d
+	.EQU		USISIE								= 0x07
+	.EQU		USIOIE								= 0x06
+	.EQU		USIWM1								= 0x05
+	.EQU		USIWM0								= 0x04
+	.EQU		USICS1								= 0x03
+	.EQU		USICS0								= 0x02
+	.EQU		USICLK								= 0x01
+	.EQU		USITC									= 0x00
 
 	.SET	INT0_PORT								= PB2
 
