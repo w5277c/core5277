@@ -31,8 +31,8 @@
 	.SET	TIMERS											= 0	;0-...
 	.SET	TIMERS16											= 0	;0-...
 
-	.SET	LOGGING_PORT								= MISO		;PA0-PC7
-	.SET	LOGGING_LEVEL								= LOGGING_LVL_DBG
+	.SET	LOGGING_PORT									= PB1		;PA0-PC7
+	.SET	LOGGING_LEVEL									= LOGGING_LVL_DBG
 
 ;---INCLUDES---------------------------------------------
 	.INCLUDE "./core/core5277.inc"
@@ -52,7 +52,8 @@ MAIN:
 	LDI PID,PID_I2C_DRV
 	LDI_Z DRV_I2C_H_INIT
 	LDI ACCUM,0xff
-	LDI XL,DRV_I2C_FREQ_50KHZ										;TODO в _i2c.inc указан для 16MHz
+	LDI XH,0x00
+	LDI XL,DRV_I2C_FREQ_20KHZ
 	MCALL C5_CREATE
 
 	;Инициализация задачи
@@ -63,7 +64,7 @@ MAIN:
 	MJMP C5_START
 
 _TASK_DATA:
-.db	"PING"
+.db	DRV_OP_GET,0x00
 
 ;--------------------------------------------------------;
 TASK_INIT:
@@ -80,18 +81,19 @@ _TASK_LOOP:
 
 	LDI TEMP,PID_I2C_DRV
 	LDI_Z _TASK_DATA|0x8000
-	LDI ACCUM,'W'
-	LDI TEMP_H,0x04
-	LDI TEMP_L,0x08
+	LDI ACCUM,0x10
+	LDI TEMP_H,0x01
+	LDI TEMP_L,0x05
 	MOVW XL,YL
 	MCALL C5_EXEC
 
 	MCALL C5_OUT_BYTE
 	LDI TEMP,':'
 	MCALL C5_OUT_CHAR
-	LDI TEMP,0x08
+	LDI TEMP,0x05
 	MOVW ZL,YL
 	MCALL C5_OUT_BYTES
+	MCALL C5_OUT_CR
 
 	LDI TEMP_H,0x00
 	LDI TEMP_L,0x09

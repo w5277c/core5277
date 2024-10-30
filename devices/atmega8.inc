@@ -29,7 +29,7 @@
 
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY INT_SRAM SIZE 1024
-	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60+(VPORTS*3)
+	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60			;+(VPORTS*3) unsupported!
 	#pragma AVRPART MEMORY EEPROM 512
 
 	.EQU	BOOT_512W_ADDR							= 0xe00			;Начальный адрес килобайтного бутлоадера в словах

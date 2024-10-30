@@ -34,7 +34,7 @@
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY EEPROM 512
 	#pragma AVRPART MEMORY INT_SRAM SIZE 512
-	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60+(VPORTS*3)
+	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60			;+(VPORTS*3) unsupported!
 
 	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
 	.EQU	EEPROM_SIZE								= 0x200
@@ -44,7 +44,6 @@
 	.include "/devices/_common.inc"
 
 	.SET	MUL_SUPPORT								= 0x00
-	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB)
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY25
