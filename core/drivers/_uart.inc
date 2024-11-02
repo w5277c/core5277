@@ -17,4 +17,27 @@
 	.EQU	DRV_UART_ST_RECEIVING				= 0x04;
 	.EQU	DRV_UART_ST_FAIL						= 0x05;
 	.EQU	DRV_UART_ST_OVERFLOW					= 0x06;
+
+;--------------------------------------------------------
+_SOFT_UART_MODE_SET:
+;--------------------------------------------------------
+;Установка режима программного UART
+;--------------------------------------------------------
+	PUSH TEMP
+	LDI TEMP,(1<<_CFL_TIMER_UART_CORRECTION)
+	OR _C5_COREFLAGS,TEMP
+	POP TEMP
+	RET
+;--------------------------------------------------------
+_SOFT_UART_MODE_RESET:
+;--------------------------------------------------------
+;Снятие режима программного UART
+;--------------------------------------------------------
+	PUSH TEMP
+	LDI TEMP,~((1<<_CFL_TIMER_UART_CORRECTION))
+	AND _C5_COREFLAGS,TEMP
+	POP TEMP
+	RET
+.ENDIF
+
 .endif

@@ -15,9 +15,9 @@
 .message "included C5_FLAG_INVERT"
 .endif
 
-.include	"./inc/core/flag_get.inc"
-.include	"./inc/core/flag_set.inc"
-.include	"./inc/core/flag_reset.inc"
+.include	"./core/flag_get.inc"
+.include	"./core/flag_set.inc"
+.include	"./core/flag_reset.inc"
 
 ;--------------------------------------------------------
 C5_FLAG_INVERT:

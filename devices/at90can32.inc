@@ -26,9 +26,10 @@
 
 	.EQU	BOOT_512B_ADDR							= 0x3e00
 	.EQU	BOOT_1024B_ADDR						= 0x3c00
-	.EQU	FLASH_PAGESIZE							= 0x0100			;256 байт - размер страницы FLASH
-	.EQU	EEPROM_SIZE								= 0x0400			;1K
+	.EQU 	FLASH_PAGESIZE							= 0x80*0x02		;256Б-размер страницы FLASH
 	.EQU	FLASH_SIZE								= 0x8000			;32K
+	.EQU	EEPROM_PAGESIZE						= 0x08			;8Б-размер страницы EEPROM
+	.EQU	EEPROM_SIZE								= 0x0400			;1K
 	.EQU	PORTS_QUANTITY							= 0x07			;Кол-во реальных портов (PORTA,PORTB,PORTC,...)
 
 	.include "/devices/_common.inc"

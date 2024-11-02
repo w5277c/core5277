@@ -25,6 +25,12 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 64
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
+	.EQU 	FLASH_PAGESIZE							= 0x10*0x02		;32Б-размер страницы FLASH
+	.EQU	FLASH_SIZE								= 0x400			;1K
+	.EQU	EEPROM_PAGESIZE						= 0x04			;4Б-размер страницы EEPROM
+	.EQU	EEPROM_SIZE								= 0x40			;64Б
+	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
+
 	.include "/devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
@@ -32,7 +38,6 @@
 	.MESSAGE "######## DEVICE ATtiny13A"
 	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x009f
-	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB)
 
 	;SBI/CBI/SBIS/SBIC port defines
 	.EQU	PORTA										= 0xff

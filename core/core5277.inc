@@ -655,68 +655,6 @@ _C5_TIMER_C_IR:
 	POP_Y
 	POP_Z
 	RETI
-;--------------------------------------------------------
-;C5_TIMER_C_SET_VECTOR:
-;TODO: убрать, код вынесен в программные таймеры
-;--------------------------------------------------------
-;Установка адреса обработчика таймера C
-;IN: PID,X-адрес обработчика,Y-адрес выделенной памяти
-;--------------------------------------------------------
-;	STS _C5_TIMER_C_PID,PID
-;	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER1*3+0x00,YH
-;	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER1*3+0x01,YL
-;	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER2*3+0x00,XH
-;	STS _C5_IR_VECTORS_TABLE+C5_IR_RESERVED_CORE_TIMER2*3+0x01,XL
-;	RET
-;--------------------------------------------------------
-;C5_TIMER_C_SET_PERIOD:
-;TODO: убрать, код вынесен в программные таймеры
-;--------------------------------------------------------
-;Установка периода таймера C
-;IN: TEMP-длина периода
-;--------------------------------------------------------
-;	_C5_TIMERC_SET_PERIOD
-;	RET
-;--------------------------------------------------------
-;C5_TIMER_C_START_AT:
-;TODO: убрать, код вынесен в программные таймеры
-;--------------------------------------------------------
-;Запуск таймера C
-;IN: TEMP-длина периода
-;--------------------------------------------------------
-;	PUSH TEMP
-;	_C5_TIMERC_SET_PERIOD
-;	MCALL C5_TIMER_C_START
-;	POP TEMP
-;	RET
-;--------------------------------------------------------
-;C5_TIMER_C_START:
-;TODO: убрать, код вынесен в программные таймеры
-;--------------------------------------------------------
-;Запуск таймера C
-;--------------------------------------------------------
-;	_C5_TIMERC_START
-;	RET
-;--------------------------------------------------------
-;C5_TIMER_C_SET_COM:
-;--------------------------------------------------------
-;Устанавливаю режим работы вывода(OC2A) таймера C
-;IN: TEMP_H-TIMERC_COM_x
-;--------------------------------------------------------
-;	PUSH TEMP
-;	_C5_TIMERC_SET_COM
-;	POP TEMP
-;	RET
-;--------------------------------------------------------
-;C5_TIMER_C_STOP:
-;TODO: убрать, код вынесен в программные таймеры
-;--------------------------------------------------------
-;Останов таймера C
-;--------------------------------------------------------
-;	PUSH TEMP
-;	_C5_TIMERC_STOP
-;	POP TEMP
-;	RET
 .ENDIF
 
 ;========================================================================
@@ -917,27 +855,6 @@ _C5_IR_VECTOR_SET__END:
 	POP ZL
 	STS SREG,ZL
 	POP_Z
-	RET
-
-;--------------------------------------------------------
-C5_SOFT_UART_MODE_SET:
-;--------------------------------------------------------
-;Установка режима программного UART
-;--------------------------------------------------------
-	PUSH TEMP
-	LDI TEMP,(1<<_CFL_TIMER_UART_CORRECTION)
-	OR _C5_COREFLAGS,TEMP
-	POP TEMP
-	RET
-;--------------------------------------------------------
-C5_SOFT_UART_MODE_RESET:
-;--------------------------------------------------------
-;Снятие режима программного UART
-;--------------------------------------------------------
-	PUSH TEMP
-	LDI TEMP,~((1<<_CFL_TIMER_UART_CORRECTION))
-	AND _C5_COREFLAGS,TEMP
-	POP TEMP
 	RET
 
 ;--------------------------------------------------------
@@ -1281,22 +1198,27 @@ _C5_PROC_HEADER_GET:
 	RJMP _C5_PROC_HEADER_GET__TASK
 _C5_PROC_HEADER_GET__DRIVER:
 	LDI_Z _C5_DRIVERS_HEADER
-	LSL TEMP_H														;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
+	LSL TEMP_H															;Умножаем на 0x06(_C5_DRIVER_HEADER_SIZE)
 	MOV TEMP_L,TEMP_H
 	LSL TEMP_H
-	RJMP _C5_PROC_HEADER_GET__END
+	RJMP _C5_PROC_HEADER_GET__CONTINUE
 _C5_PROC_HEADER_GET__TASK:
 	LDI_Z _C5_TASKS_HEADER
-	MOV TEMP_L,TEMP_H												;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
+.if TS_MODE == TS_MODE_NO											;Вычисление не требуется, возможна только одна задача
+	RJMP _C5_PROC_HEADER_GET__END
+.else
+	MOV TEMP_L,TEMP_H													;Умножаем на 0x0b(_C5_TASK_HEADER_SIZE)
 	LSL TEMP_L
 	ADD TEMP_H,TEMP_L
 	LSL TEMP_L
 	LSL TEMP_L
-_C5_PROC_HEADER_GET__END:
+.endif
+_C5_PROC_HEADER_GET__CONTINUE:
 	ADD TEMP_L,TEMP_H
 	ADD ZL,TEMP_L
 	ADC ZH,C0x00
 
+_C5_PROC_HEADER_GET__END:
 	POP TEMP_L
 	POP TEMP_H
 	RET

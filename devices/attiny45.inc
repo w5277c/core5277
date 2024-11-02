@@ -33,9 +33,10 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 256
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60+(VPORTS*3)
 
-	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
-	.EQU	EEPROM_SIZE								= 0x100
+	.EQU 	FLASH_PAGESIZE							= 0x20*0x02		;64Б-размер страницы FLASH
 	.EQU	FLASH_SIZE								= 0x1000			;4K
+	.EQU	EEPROM_PAGESIZE						= 0x04			;4Б-размер страницы EEPROM
+	.EQU	EEPROM_SIZE								= 0x100			;256Б
 	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
 
 	.include "/devices/_common.inc"

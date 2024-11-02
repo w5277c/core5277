@@ -36,9 +36,10 @@
 	#pragma AVRPART MEMORY INT_SRAM SIZE 512
 	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60			;+(VPORTS*3) unsupported!
 
-	.EQU 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
-	.EQU	EEPROM_SIZE								= 0x200
+	.EQU 	FLASH_PAGESIZE							= 0x20*0x02		;64Б-размер страницы FLASH
 	.EQU	FLASH_SIZE								= 0x2000			;8K
+	.EQU	EEPROM_PAGESIZE						= 0x04			;4Б-размер страницы EEPROM
+	.EQU	EEPROM_SIZE								= 0x200			;512Б
 	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
 
 	.include "/devices/_common.inc"

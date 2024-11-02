@@ -34,7 +34,9 @@
 
 	.SET	BOOT_512B_ADDR							= 0x1e00
 	.SET	BOOT_1024B_ADDR						= 0x1c00
-	.SET 	FLASH_PAGESIZE							= 0x80			;128 байт - размер страницы FLASH
+	.EQU 	FLASH_PAGESIZE							= 0x40*0x02		;128Б-размер страницы FLASH
+	.EQU	FLASH_SIZE								= 0x4000			;16K
+	.EQU	EEPROM_PAGESIZE						= 0x04			;4Б-размер страницы EEPROM
 	.SET	EEPROM_SIZE								= 0x200
 	.EQU	PORTS_QUANTITY							= 0x04			;Кол-во реальных портов (PORTA,PORTB,PORTC,PORTD)
 
