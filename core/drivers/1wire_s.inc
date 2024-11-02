@@ -9,16 +9,20 @@
 ;03.07.2021	w5277c@gmail.com			Z->Y
 ;26.08.2021	w5277c@gmail.com			Блокировка перываний в процедуре передачи байта
 ;01.06.2024	konstantin@5277.ru		Результат операции в виде DRV_RESULT_...
+;02.11.2024	konstantin@5277.ru		PORT_GET в процедуре _DRV_1WIRE_RECV_BYTE слишком медленный для 8Mhz
+;-----------------------------------------------------------------------------------------------------------------------
+;TODO перейти на процедуры reg_bit
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_1WIRE
 .else
 .set DEF__C5_DRV_1WIRE = 1
-.message "Included driver 1Wire v0.3"
+.message "Included driver 1Wire v0.4"
 
 .include	"./io/port_mode_in.inc"
 .include	"./io/port_mode_out.inc"
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_get.inc"
+.include "./io/reg_bit_get.inc"
 ;.include	"./core/res_lock.inc"
 ;.include	"./core/res_unlock.inc"
 
@@ -164,24 +168,36 @@ _DRV_1WIRE_RECV_BYTE:
 ;IN: ACCUM-порт
 ;OUT: TEMP-байт
 ;--------------------------------------------------------
-	PUSH TEMP_L
+	PUSH_T16
+	PUSH ACCUM
 	PUSH LOOP_CNTR
+
+	PUSH ACCUM
+	MCALL PORT_OFFSETS
+	MOV TEMP_H,ACCUM
+	POP ACCUM
+
 	LDI LOOP_CNTR,0x08
 _DRV_1WIRE_RECV_BYTE__LOOP:
    CLI																	;(old 14us)
 	MCALL PORT_MODE_OUT
 	MCALL _DRV_1WIRE_DELAY_1US
 	MCALL PORT_MODE_IN
-   MCALL _DRV_1WIRE_DELAY_4US
-	MCALL PORT_GET														;Читаем состояние порта
+   MCALL _DRV_1WIRE_DELAY_1US
+	PUSH ACCUM
+	MOV ACCUM,TEMP_H
+	MCALL REG_BIT_GET													;Читаем состояние порта
+	POP ACCUM
 	SEI
 	ROR TEMP_L
-	C5_WAIT_500NS 45*2												;45us
+	C5_WAIT_500NS 48*2												;48us
 	DEC LOOP_CNTR
 	BRNE _DRV_1WIRE_RECV_BYTE__LOOP
 	MOV TEMP,TEMP_L
+
 	POP LOOP_CNTR
-	POP TEMP_L
+	POP ACCUM
+	POP_T16
 	RET
 
 ;--------------------------------------------------------
