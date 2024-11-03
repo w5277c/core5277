@@ -171,11 +171,30 @@ _DRV_I2C_SU_OVF_EVENT:
 	RCALL _DRV_I2C_SU__RESET
 	RJMP _DRV_I2C_SU_EVENT__END
 
-	SBI DDRB,(SDA & 0x0f)											;SDA out
+	STD Y+_DRV_I2C_SU_TR_LEN,C0x00
+	LDI TEMP,_DRV_I2C_SU_ST_RC_DATA_WAIT
 	ANDI LOOP_CNTR,0x01
-	INC LOOP_CNTR
+	BREQ __DRV_I2C_SU_OVF_EVENT__HANDLER_SKIP
+	LDD LOOP_CNTR,Y+_DRV_I2C_SU_POS
+	PUSH_X
+	MOVW XL,YL
+	ADIW XL,_DRV_I2C_SU_BUFFER
+	PUSH_Z
+	LDD ZH,Y+_DRV_I2C_SU_PROC_ADDR+0x00
+	LDD ZL,Y+_DRV_I2C_SU_PROC_ADDR+0x01
+	PUSH PID
+	LDD PID,Y+_DRV_I2C_SU_PROC_PID
+	ICALL																	;--------------------------------------------------------
+	STD Y+_DRV_I2C_SU_TR_LEN,LOOP_CNTR							;Параметры обработчика:
+	POP PID																;IN: X-буфер, PID-ид задачи, LOOP-CNTR-размер данных в
+	POP_Z																	;буфере
+	POP_X																	;OUT: LOOP_CNTR-размер данных ответа в буфере
+	LDI TEMP,_DRV_I2C_SU_ST_TR_DATA								;--------------------------------------------------------
 
-	STD Y+_DRV_I2C_SU_STATE,LOOP_CNTR
+__DRV_I2C_SU_OVF_EVENT__HANDLER_SKIP:
+	SBI DDRB,(SDA & 0x0f)											;SDA out
+	STD Y+_DRV_I2C_SU_STATE,TEMP
+	STD Y+_DRV_I2C_SU_POS,C0x00
 	STS USIDR,C0x00
 	LDI ACCUM,(1<<USISIF)|(1<<USIOIF)|(1<USIPIF)|(1<<USIDC)|(0x0E<<USICNT0)
 	STS USISR,ACCUM
@@ -190,7 +209,6 @@ _DRV_I2C_SH_EVENT__NO_CHECK_ADDRESS:
 	CBI DDRB,(SDA & 0x0f)											;SDA in
 	LDI TEMP,(1<<USISIF)|(1<<USIOIF)|(1<<USIPIF)|(1<<USIDC)|(0x00<<USICNT0)
 	STS USISR,TEMP
-	STD Y+_DRV_I2C_SU_TR_LEN,C0x00
 	RJMP _DRV_I2C_SU_EVENT__END
 
 _DRV_I2C_SH_EVENT__NO_RC_DATA_WAIT:
@@ -225,26 +243,12 @@ _DRV_I2C_SU_ST_NO_RC_ACK_SEND:
 	;---TRANSFER---
 	CPI TEMP,_DRV_I2C_SU_ST_TR_DATA
 	BRNE _DRV_I2C_SU_ST_NO_TR_DATA
-	LDD LOOP_CNTR,Y+_DRV_I2C_SU_POS
-	PUSH_X
-	MOVW XL,YL
-	ADIW XL,_DRV_I2C_SU_BUFFER
-	PUSH_Z
-	LDD ZH,Y+_DRV_I2C_SU_PROC_ADDR+0x00
-	LDD ZL,Y+_DRV_I2C_SU_PROC_ADDR+0x01
-	PUSH PID
-	LDD PID,Y+_DRV_I2C_SU_PROC_PID
-	ICALL																	;--------------------------------------------------------
-	POP PID																;Параметры обработчика:
-	POP_Z																	;IN: X-буфер, PID-ид задачи, LOOP-CNTR-размер данных в
-	POP_X																	;буфере
-	CPI LOOP_CNTR,0x00												;OUT: LOOP_CNTR-размер данных ответа в буфере
+	LDD TEMP,Y+_DRV_I2C_SU_TR_LEN
+	CPI TEMP,0x00
 	BRNE PC+0x03														;--------------------------------------------------------
 	RCALL _DRV_I2C_SU__RESET
 	RJMP _DRV_I2C_SU_EVENT__END
-	STD Y+_DRV_I2C_SU_TR_LEN,LOOP_CNTR
 	LDI LOOP_CNTR,0x00
-	STD Y+_DRV_I2C_SU_POS,LOOP_CNTR
 	RJMP _DRV_I2C_SU_EVENT__PUT_BYTE
 _DRV_I2C_SU_ST_NO_TR_DATA:
 	CPI TEMP,_DRV_I2C_SU_ST_TR_CHECK_ACK
