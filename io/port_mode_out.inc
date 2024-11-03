@@ -7,6 +7,7 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;18.08.2021	w5277c@gmail.com			Ничего не делаем, если порт не задан(0xff)
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_MODE_OUT
 .else
@@ -16,7 +17,8 @@
 .message "included PORT_MODE_OUT"
 .endif
 
-.include	"./io/port_offsets.inc"
+.include	"./io/_port_offset.inc"
+.include	"./io/reg_bit_hi.inc"
 
 ;--------------------------------------------------------
 PORT_MODE_OUT:
@@ -29,29 +31,14 @@ PORT_MODE_OUT:
 	RET
 
 	PUSH_Z
-	PUSH_T16
-	PUSH TEMP
 	PUSH ACCUM
-
-	MCALL PORT_OFFSETS
-	MOV ZH,C0x00
-	MOV ZL,TEMP_L
-
-	LDS TEMP_L,SREG
-	CLI
-	LD TEMP,Z
-	OR TEMP,ACCUM
-	ST Z,TEMP
-	STS SREG,TEMP_L
-.if VPORTS>0x00
-	CPI ZL,VPORTS_ADDR
-	BRCS PC+0x01+_MCALL_SIZE
-	MCALL VPORT_SET
-.endif
-
-	POP ACCUM
+	PUSH TEMP
+	MCALL _PORT_OFFSET
+	ADIW ZL,0x01
+	LPM TEMP,Z
+	MCALL REG_BIT_HI
 	POP TEMP
-	POP_T16
+	POP ACCUM
 	POP_Z
 	RET
 .endif

@@ -5,7 +5,7 @@
 ;01.08.2020	w5277c@gmail.com			Разбиение на файлы
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
-;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_GET_BYTE
 .else
@@ -15,7 +15,7 @@
 .message "included PORT_GET_BYTE"
 .endif
 
-.include	"./io/port_offsets.inc"
+.include	"./io/_port_offset.inc"
 
 ;--------------------------------------------------------
 PORT_GET_BYTE:
@@ -29,21 +29,17 @@ PORT_GET_BYTE:
 	RET
 
 	PUSH_Z
-	PUSH_T16
 	PUSH TEMP
-
-	MCALL PORT_OFFSETS
-	MOV ZH,C0x00
-	MOV ZL,TEMP
+	MCALL _PORT_OFFSET
+	ADIW ZL,0x02
+	LPM TEMP,Z
 .if VPORTS>0x00
 	CPI ZL,VPORTS_ADDR
 	BRCS PC+0x01+_MCALL_SIZE
 	MCALL VPORT_GET
 .endif
 	LD ACCUM,Z
-
 	POP TEMP
-	POP_T16
 	POP_Z
 	RET
 .endif

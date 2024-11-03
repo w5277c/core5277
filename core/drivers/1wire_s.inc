@@ -23,6 +23,7 @@
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_get.inc"
 .include "./io/reg_bit_get.inc"
+.include "./io/_port_offset.inc"
 ;.include	"./core/res_lock.inc"
 ;.include	"./core/res_unlock.inc"
 
@@ -142,7 +143,8 @@ _DRV_1WIRE_RESET:
 	MCALL _C5_WAIT_500NS
 	MCALL _C5_WAIT_500NS
 	MCALL PORT_MODE_IN
-	C5_WAIT_500NS 60*2												;60us
+	LDI TEMP,low((60*2-36)/(16/CORE_FREQ))						;60us
+	MCALL _C5_WAIT_500NS
 	MCALL PORT_GET														;Читаем состояние порта
 	BRCS _DRV_1WIRE_RESET__ABSENT
 	LDI TEMP,low((220-10)/(16/CORE_FREQ))						;440us(420 min)
@@ -172,10 +174,15 @@ _DRV_1WIRE_RECV_BYTE:
 	PUSH ACCUM
 	PUSH LOOP_CNTR
 
+
+	PUSH_Z
 	PUSH ACCUM
-	MCALL PORT_OFFSETS
+	MCALL _PORT_OFFSET
+	ADIW ZL,0x02
+	LPM TEMP,Z
 	MOV TEMP_H,ACCUM
 	POP ACCUM
+	POP_Z
 
 	LDI LOOP_CNTR,0x08
 _DRV_1WIRE_RECV_BYTE__LOOP:
@@ -190,7 +197,10 @@ _DRV_1WIRE_RECV_BYTE__LOOP:
 	POP ACCUM
 	SEI
 	ROR TEMP_L
-	C5_WAIT_500NS 48*2												;48us
+	PUSH TEMP
+	LDI TEMP,low((48*2-36)/(16/CORE_FREQ))						;48us
+	MCALL _C5_WAIT_500NS
+	POP TEMP
 	DEC LOOP_CNTR
 	BRNE _DRV_1WIRE_RECV_BYTE__LOOP
 	MOV TEMP,TEMP_L
@@ -220,7 +230,8 @@ _DRV_1WIRE_SEND_BYTE__LOOP:
 	BRCC PC+0x01+_MCALL_SIZE
 	MCALL PORT_MODE_IN
 	SEI
-	C5_WAIT_500NS 60*2												;60us
+	LDI TEMP,low((60*2-36)/(16/CORE_FREQ))						;60us
+	MCALL _C5_WAIT_500NS
 	MCALL PORT_MODE_IN
 	DEC LOOP_CNTR
 	BRNE _DRV_1WIRE_SEND_BYTE__LOOP

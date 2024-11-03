@@ -6,6 +6,7 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_OFFSETS
 .else
@@ -15,10 +16,10 @@
 .message "included PORT_OFFSETS"
 .endif
 
-.include	"./conv/bitnum_to_num.inc"
+.include	"./io/_port_offset.inc"
 
 ;--------------------------------------------------------
-PORT_OFFSETS:
+_PORT_OFFSETS:
 ;--------------------------------------------------------
 ;Возвращаем адреса для PORTx, DDRx и PINx,
 ;а также пин в виде числа(1,2,4,8,16,32,64,128)
@@ -31,32 +32,12 @@ PORT_OFFSETS:
 	CPI ACCUM,0xff
 	BRNE PC+0x02
 	RET
-.if VPORTS>0x00
-	CPI ACCUM,(PORTS_QUANTITY<<0x04)-0x01
-	BRCS PC+0x01+_MCALL_SIZE
-	MJMP VPORT_OFFSETS
-.endif
 
 	PUSH_Z
-
-	LDI_Z (PORTS_TABLE*2)
-	MOV TEMP,ACCUM
-	SWAP ACCUM
-	ANDI ACCUM,0x0f
-	MOV TEMP_H,ACCUM
-	LSL ACCUM
-	ADD ACCUM,TEMP_H
-	ADD ZL,ACCUM
-	ADC ZH,C0x00
+	MCALL _PORT_OFFSET
 	LPM TEMP_H,Z+
 	LPM TEMP_L,Z+
-	LPM ACCUM,Z
-	PUSH ACCUM
-	ANDI TEMP,0x0f
-	MCALL BITNUM_TO_NUM
-	MOV ACCUM,TEMP
-	POP TEMP
-
+	LPM TEMP,Z
 	POP_Z
 	RET
 .endif

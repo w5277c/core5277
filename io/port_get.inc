@@ -7,6 +7,7 @@
 ;05.12.2020	w5277c@gmail.com			-с5
 ;18.08.2021	w5277c@gmail.com			Ничего не делаем, если порт не задан(0xff)
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_GET
 .else
@@ -16,7 +17,9 @@
 .message "included PORT_GET"
 .endif
 
-.include	"./io/port_offsets.inc"
+.include	"./io/_port_offset.inc"
+.include	"./io/reg_bit_get.inc"
+
 
 ;--------------------------------------------------------
 PORT_GET:
@@ -30,25 +33,14 @@ PORT_GET:
 	RET
 
 	PUSH_Z
-	PUSH_T16
-	PUSH TEMP
 	PUSH ACCUM
-
-	MCALL PORT_OFFSETS
-	MOV ZH,C0x00
-	MOV ZL,TEMP
-.if VPORTS>0x00
-	CPI ZL,VPORTS_ADDR
-	BRCS PC+0x01+_MCALL_SIZE
-	MCALL VPORT_GET
-.endif
-	LD TEMP,Z
-	AND TEMP,ACCUM
-	ADD TEMP,C0xff
-
-	POP ACCUM
+	PUSH TEMP
+	MCALL _PORT_OFFSET
+	ADIW ZL,0x02
+	LPM TEMP,Z
+	MCALL REG_BIT_GET
 	POP TEMP
-	POP_T16
+	POP ACCUM
 	POP_Z
 	RET
 .endif

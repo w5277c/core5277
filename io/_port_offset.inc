@@ -1,42 +1,46 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;11.10.2021	w5277c@gmail.com			Начало
-;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
-;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
+;03.11.2024	konstantin@5277.ru			Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_PORT_SET_BYTE
+.ifdef DEF_PORT_OFFSET
 .else
-.set DEF_PORT_SET_BYTE = 1
+.set DEF_PORT_OFFSET = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included PORT_SET_BYTE"
+.message "included PORT_OFFSET"
 .endif
 
-.include	"./io/_port_offset.inc"
+.include	"./conv/_bitnum_to_num_table.inc"
 
 ;--------------------------------------------------------
-PORT_SET_BYTE:
+_PORT_OFFSET:
 ;--------------------------------------------------------
-;Запись состояния порта(8 бит)
-;IN: ACCUM-порт,TEMP-значение
+;Возвращаем смещение на первый адрес регистров порта
+;IN: ACCUM-сдвоенный порт и пин (PA0, PC7 и т.п.)
+;OUT: Z-адрес регистра PORTx, ACCUM-пин в виде числа
+;MODIFY: TEMP
 ;--------------------------------------------------------
-	CPI ACCUM,0xff
-	BRNE PC+0x02
-	RET
-
-	PUSH_Z
-	PUSH ACCUM
-	PUSH TEMP
-	MCALL _PORT_OFFSET
-	POP TEMP
-	ST Z,TEMP
 .if VPORTS>0x00
-	CPI ZL,VPORTS_ADDR
+	CPI ACCUM,(PORTS_QUANTITY<<0x04)-0x01
 	BRCS PC+0x01+_MCALL_SIZE
-	MCALL VPORT_SET
+	MJMP VPORT_OFFSETS
 .endif
-	POP ACCUM
-	POP_Z
+
+	MOV TEMP,ACCUM
+	ANDI ACCUM,0x0f
+
+	LDI_Z _BITNUM_TO_NUM_TABLE*2
+	ADD ZL,ACCUM
+	ADC ZH,C0x00
+	LPM ACCUM,Z
+
+	SWAP TEMP
+	ANDI TEMP,0x0f
+	LDI_Z (PORTS_TABLE*2)
+	ADD ZL,TEMP
+	ADD ZL,TEMP
+	ADD ZL,TEMP
+
 	RET
 .endif

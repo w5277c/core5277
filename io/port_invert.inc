@@ -7,6 +7,7 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_INVERT
 .else
@@ -16,42 +17,28 @@
 .message "included PORT_INVERT"
 .endif
 
-.include	"./io/port_offsets.inc"
+.include	"./io/_port_offset.inc"
+.include	"./io/reg_bit_inv.inc"
 
 ;--------------------------------------------------------
 PORT_INVERT:
 ;--------------------------------------------------------
 ;Инвертирование состояния порта
 ;IN: ACCUM адрес регистра PORTx
+;OUT: flag C-состояние бита(true = HI)
 ;--------------------------------------------------------;
 	CPI ACCUM,0xff
 	BRNE PC+0x02
 	RET
 
 	PUSH_Z
-	PUSH_T16
-	PUSH TEMP
 	PUSH ACCUM
-
-	MCALL PORT_OFFSETS
-
-	LDS TEMP_L,SREG
-	CLI
-	MOV ZH,C0x00
-	MOV ZL,TEMP_H
-	LD TEMP,Z
-	EOR TEMP,ACCUM
-	ST Z,TEMP
-	STS SREG,TEMP_L
-.if VPORTS>0x00
-	CPI ZL,VPORTS_ADDR
-	BRCS PC+0x01+_MCALL_SIZE
-	MCALL VPORT_SET
-.endif
-
-	POP ACCUM
+	PUSH TEMP
+	MCALL _PORT_OFFSET
+	LPM TEMP,Z
+	MCALL REG_BIT_INV
 	POP TEMP
-	POP_T16
+	POP ACCUM
 	POP_Z
 	RET
 .endif
