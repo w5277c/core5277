@@ -19,7 +19,7 @@
 .endif
 
 .include	"./io/_port_offset.inc"
-.include	"./io/reg_bit_hi.inc"
+.include	"./io/reg_bit_lo.inc"
 
 ;--------------------------------------------------------
 PORT_MODE_IN:
