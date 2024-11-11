@@ -6,6 +6,11 @@
 ;Поддерживаемые операции DRV_OP_ADD, DRV_OP_GET, DRV_OP_SET
 ;В главном блоке программы должен быть объявлен ID драйвера как DRV_VPORT_ID и количество виртуальных пртов VPORTS(до
 ;подгрузки библиотеки МК)
+;-----------------------------------------------------------------------------------------------------------------------
+;Драйвер чипа расширения должен поддерживать процедуры: DRV_OP_GET и DRV_OP_SET, с параметрами:
+;IN: TEMP_H-номер порта,TEMP_L-тип порта, FLAGS-число бита, ACCUM-состояние порта
+;OUT: ACCUM-состоянеи порта, TEMP-DRV_RESULT_...
+;-----------------------------------------------------------------------------------------------------------------------
 
 .ifdef DEF__DRV_VPORT
 .else
@@ -14,8 +19,8 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---DATA---
-	.EQU	_DRV_VPORT_DRIVER_IDS							= VPORT		;ID драйвера для всех виртуальных портов
-	.EQU	_DRV_VPORT_RAM_SIZE								= _DRV_VPORT_DRIVER_IDS+VPORT
+	.EQU	_DRV_VPORT_DRIVER_IDS							= VPORTS		;ID драйвера для всех виртуальных портов
+	.EQU	_DRV_VPORT_RAM_SIZE								= _DRV_VPORT_DRIVER_IDS+VPORTS
 
 
 ;--------------------------------------------------------
@@ -37,7 +42,7 @@ DRV_VPORT_INIT:
 ;Основной код.
 ;--------------------------------------------------------
 ;IN: FLAGS-код операции
-;TEMP-код результата DRV_RESULT_...
+;OUT: См. вызываемые процедуры
 ;--------------------------------------------------------
 	PUSH_Y
 
@@ -73,18 +78,12 @@ _DRV_VPORT__END:
 _DRV_VPORT_OP_ADD:
 ;--------------------------------------------------------
 ;Записываем ид драйвера
-;IN: TEMP-ID драйвера, ACCUM-начальный порт,
-;LOOP_CNTR-количество портов данного драйвера
-;OUT: TEMP-код результата DRV_RESULT_...
+;IN: TEMP_H-порядковый номер виртуального порта(0-...,
+;TEMP_L-ID драйвера
 ;--------------------------------------------------------
-	PUSH ACCUM
-
-	SUBI ACCUM,PORTS_QUANTITY
-	ADD YL,ACCUM
+	ADD YL,TEMP_H
 	ADC YH,C0x00
-	STD Y+_DRV_VPORT_DRIVER_IDS,TEMP
-
-	POP ACCUM
+	ST Y,TEMP_L
 	RET
 
 ;--------------------------------------------------------
@@ -94,13 +93,16 @@ _DRV_VPORT_OP_GET:
 ;IN: ZL-адрес на IO регистр, LOOP_CNTR-номер порта
 ;OUT: TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH ZH
+	PUSH_Z
 	PUSH ACCUM
+	PUSH_T16
+	PUSH FLAGS
 
-	RCALL _DRV__VPORT_GET_DRV_ID
+	RCALL _DRV__VPORT__GET_PARAMS
 	CPI TEMP,0xff
 	BREQ _DRV_VPORT_OP_GET__ERROR
 
+	MOV FLAGS,ACCUM
 	MCALL C5_DRV_EXEC
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_VPORT_OP_GET__ERROR
@@ -112,8 +114,10 @@ _DRV_VPORT_OP_GET:
 _DRV_VPORT_OP_GET__ERROR:
 	LDI TEMP,DRV_RESULT_ERROR
 _DRV_VPORT_OP_GET__END:
+	POP FLAGS
+	POP_T16
 	POP ACCUM
-	POP ZH
+	POP_Z
 	RET
 
 
@@ -121,16 +125,19 @@ _DRV_VPORT_OP_GET__END:
 _DRV_VPORT_OP_SET:
 ;--------------------------------------------------------
 ;Считываем значение с IO регистра и передаем его драйверу
-;IN: ZL-адрес на IO регистр, LOOP_CNTR-номер порта
+;IN: ZL-адрес на IO регистр
 ;OUT: TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH ZH
+	PUSH_Z
 	PUSH ACCUM
+	PUSH_T16
+	PUSH FLAGS
 
-	RCALL _DRV__VPORT_GET_DRV_ID
+	RCALL _DRV__VPORT__GET_PARAMS
 	CPI TEMP,0xff
 	BREQ _DRV_VPORT_OP_SET__ERROR
 
+	MOV FLAGS,ACCUM
 	LDI ZH,0x00
 	LD ACCUM,Z
 
@@ -141,77 +148,56 @@ _DRV_VPORT_OP_SET:
 _DRV_VPORT_OP_GET__ERROR:
 	LDI TEMP,DRV_RESULT_ERROR
 _DRV_VPORT_OP_GET__END:
+	POP FLAGS
+	POP_T16
 	POP ACCUM
-	POP ZH
+	POP_Z
 	RET
 
 ;--------------------------------------------------------
-_DRV__VPORT_GET_DRV_ID:
+_DRV__VPORT__GET_PARAMS:
 ;--------------------------------------------------------
-;IN: ZL-адрес на IO регистр
-;OUT: TEMP-ID драйвера
+;IN: ZL-адрес на IO регистр,Y-адрес на выделенную память
+;OUT: TEMP-ID драйвера,TEMP_H-номер порта,TEMP_L-тип
+;порта
 ;--------------------------------------------------------
-	PUSH LOOP_CNTR
+	PUSH_Y
+	PUSH ZL
 
-	LDI TEMP,VPORTS_ADDR
-	LDI LOOP_CNTR,VPORTS
-_VPORT_GET_DRV_ID__LOOP:
-	CP TEMP,ZL
-	BREQ _VPORT_GET_DRV_ID__END
-	INC TEMP
-	CP TEMP,ZL
-	BREQ _VPORT_GET_DRV_ID__END
-	INC TEMP
-	CP TEMP,ZL
-	BREQ _VPORT_GET_DRV_ID__END
-	INC TEMP
+	SUBI ZL,VPORTS_ADDR
+	MOV TEMP_L,ZL
 
-	DEC LOOP_CNTR
-	BRNE _VPORT_GET_DRV_ID__LOOP
-	LDI TEMP,0xff
+	MOV TEMP,ZL															;(X*5+X/2)>>4 (деление на 3, корректно до делимого 31 включительно, поэтому максимум 8 портов)
+	LSL ZL
+	LSL ZL
+	ADD ZL,TEMP
+	LSR TEMP
+	ADD ZL,TEMP
+	SWAP ZL
+	ANDI ZL,0x0f
 
-_VPORT_GET_DRV_ID__END:
-	POP LOOP_CNTR
-	RET
+	MOV TEMP_H,ZL														;Номер порта
+	ADD YL,ZL															;Смещение на ID драйвера
+	ADC YH,C0x00
+	LD TEMP,Y															;ID драйвера
 
-;--------------------------------------------------------
-VPORT_OFFSETS:
-;--------------------------------------------------------
-;Возвращаем адреса для PORTx, DDRx и PINx,
-;а также пин в виде числа(1,2,4,8,16,32,64,128)
-;IN: ACCUM-сдвоенный порт и пин (PA0, PC7 и т.п.)
-;OUT: TEMP_H-адрес регистра PORTx,
-;TEMP_L-адрес регистра DDRx,
-;TEMP-адрес регистра PINx
-;ACCUM-пин в виде числа
-;--------------------------------------------------------
-	PUSH ACCUM
-	SWAP ACCUM
-	ANDI ACCUM,0x0f
-	SUBI ACCUM,PORTS_QUANTITY
-	MOV TEMP_H,ACCUM
-	LSL ACCUM
-	ADD TEMP_H,ACCUM
-	LDI ACCUM,VPORTS_ADDR
-	ADD TEMP_H,ACCUM
-	MOV TEMP_L,TEMP_H
-	INC TEMP_L
-	MOV TEMP,TEMP_L
-	INC TEMP
-	POP TEMP
-	ANDI TEMP,0x0f
-	MCALL BITNUM_TO_NUM
-	MOV ACCUM,TEMP
+	LSL ZL																;Номер порта *3
+	ADD ZL,TEMP_H
+	SUB TEMP_L,ZL														;Тип порта (0-PORT,1-DDR,2-PIN)
+
+	POP ZL
+	POP_Y
 	RET
 
 ;--------------------------------------------------------
 VPORT_GET:
 ;--------------------------------------------------------
+;IN: ZL-адрес на IO регистр,ACCUM-число бита
+;--------------------------------------------------------
 	PUSH TEMP
 	PUSH FLAGS
 
 	LDI TEMP,DRV_VPORT_ID
-;TODO добавить номер порта, как узнать, где начало портов данного драйвера?
 	LDI FLAGS,DRV_OP_GET
 	MCALL C5_DRV_EXEC
 
@@ -222,11 +208,13 @@ VPORT_GET:
 ;--------------------------------------------------------
 VPORT_SET:
 ;--------------------------------------------------------
+;IN: ZL-адрес на IO регистр,ACCUM-число бита
+;--------------------------------------------------------
 	PUSH TEMP
 	PUSH FLAGS
 
 	LDI TEMP,DRV_VPORT_ID
-;TODO добавить номер порта относительно драйвера и тип операции GET,SET,SET_MODE
+	LDI FLAGS,DRV_OP_SET
 	MCALL C5_DRV_EXEC
 
 	POP FLAGS

@@ -20,7 +20,7 @@
 	.SET	VPORTS_ADDR								= 0x008c			;Начальный адрес блока для виртуальных портов(зона RESERVED)
 .ifdef VPORTS
 .else
-	.SET	VPORTS									= 0x00			;Количество виртуальных портов(11 портов максимум)
+	.SET	VPORTS									= 0x00			;Количество виртуальных портов(8 портов максимум)
 .endif
 
 	#pragma AVRPART MEMORY PROG_FLASH 16384
