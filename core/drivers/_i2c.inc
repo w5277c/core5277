@@ -28,9 +28,10 @@
 	.message "Unsupported I2C freq. 400KHz, low CPU freq."
 .endif
 	;---DRIVER-STATES---
-	.EQU	DRV_I2C_ST_DONE						= 0x00
 	.EQU	DRV_I2C_ST_TR							= 0x01
 	.EQU	DRV_I2C_ST_RC							= 0x02
+	.EQU	DRV_I2C_ST_OK							= DRV_RESULT_OK
+	.EQU	DRV_I2C_ST_ERROR						= DRV_RESULT_ERROR
 	;---TWI-STATES---
 	.EQU	TWI_MTR_START							= 0x08			;M-master,S-slave,T-transfer,R-receive
 	.EQU	TWI_MTR_NEXT_START					= 0x10
