@@ -5,6 +5,7 @@
 ;01.08.2023	konstantin@5277.ru			Черновой вариант
 ;06.08.2023	konstantin@5277.ru			Оттестирован DRV_OP_ASYNC_START, DRV_OP_SYNC_START, DRV_OP_BEEP, DRV_OP_SYNC_STOP
 ;													без модуляции
+;17.11.2024	konstantin@5277.ru			Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Драйвер BUZZER(активный и пассивный)
 ;DRV_OP_ON-включить,
@@ -19,14 +20,15 @@
 .ifdef DEF__C5_DRV_BUZZER
 .else
 .set DEF__C5_DRV_BUZZER = 1
-.message "Included driver BUZZER v0.2"
+.message "Included driver BUZZER v0.3"
 
+.include "./core/wait_2ms.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
 .include	"./core/timer_set.inc"
 .include	"./core/timer_start.inc"
 .include	"./core/timer_stop.inc"
-.include	"./io/port_offsets.inc"
+.include	"./io/_port_offset.inc"
 .include	"./io/reg_bit_hi.inc"
 .include	"./io/reg_bit_sset.inc"
 .include	"./io/reg_bit_inv.inc"
@@ -69,22 +71,19 @@ DRV_BUZZER_INIT:
 	STD Y+_DRV_BUZZER_MOD_TIMER_ID,TEMP_EL
 	STD Y+_DRV_BUZZER_BIT_TIME,TEMP_H
 
-	PUSH TEMP_L
+	PUSH_Z
 	MOV ACCUM,TEMP_L
 	ANDI ACCUM,0x7f
-	MCALL PORT_OFFSETS
-	POP TEMP
-	SBRC TEMP,0x07
-	ORI TEMP_H,0x80
-	PUSH TEMP
-	STD Y+_DRV_BUZZER_PA,TEMP_H
-	STD Y+_DRV_BUZZER_BN,ACCUM
-	MOV TEMP,TEMP_L													;OUT
-	MCALL REG_BIT_HI
-	MOV TEMP,TEMP_H
-	CLC
-	POP TEMP
+	MCALL _PORT_OFFSET
+	LDD TEMP,Z+0x00
+	SBRC TEMP_L,0x07
+	ORI TEMP,0x80
 	MCALL REG_BIT_SSET
+	STD Y+_DRV_BUZZER_PA,TEMP
+	STD Y+_DRV_BUZZER_BN,ACCUM
+	LDD TEMP,Z+0x01
+	MCALL REG_BIT_HI
+	POP_Z
 
 	CPI TEMP_EH,0xff
 	BREQ _DRV_BUZZER_INIT__SKIP_ASYNC_TIMER
@@ -105,7 +104,6 @@ _DRV_BUZZER_INIT__SKIP_ASYNC_TIMER:
 	MOV TEMP,TEMP_EL
 	MCALL C5_TIMER_SET
 _DRV_BUZZER_INIT__SKIP_MOD_TIMER:
-
 
 	LDI TEMP,_DRV_BUZZER_ST_READY
 	STD Y+_DRV_BUZZER_STATE,TEMP

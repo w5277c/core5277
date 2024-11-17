@@ -3,11 +3,11 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;13.10.2024	konstantin@5277.ru			Начало, в процессе разработки
 ;-----------------------------------------------------------------------------------------------------------------------
-;Поддерживаемые операции DRV_OP_ADD, DRV_OP_GET, DRV_OP_SET
+;Поддерживаемые операции DRV_OP_ADD, DRV_OP_GET_PORT, DRV_OP_SET_PORT
 ;В главном блоке программы должен быть объявлен ID драйвера как DRV_VPORT_ID и количество виртуальных пртов VPORTS(до
 ;подгрузки библиотеки МК)
 ;-----------------------------------------------------------------------------------------------------------------------
-;Драйвер чипа расширения должен поддерживать процедуры: DRV_OP_GET и DRV_OP_SET, с параметрами:
+;Драйвер чипа расширения должен поддерживать процедуры: DRV_OP_GET_PORT и DRV_OP_SET_PORT, с параметрами:
 ;IN: TEMP_H-номер порта,TEMP_L-тип порта(VPORT_REG_...), FLAGS-пин-число бита, ACCUM-состояние порта(для set)
 ;OUT: ACCUM-состоянеи порта(для get), TEMP-DRV_RESULT_...
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -18,13 +18,8 @@
 .message "Included driver VPORT v0.1"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	VPORT_REG_PORT									= 0x00	;Регситр уровня(выход: 0-lo,1-hi, вход 0-без подтяжки, 1-подтяжка к VCC)
-	.EQU	VPORT_REG_DDR									= 0x01	;Регистр направления(0-ввод, 1-вывод)
-	.EQU	VPORT_REG_PIN									= 0x02	;Регистр текущего состояния порта, чтение, при записи инвертируем
-	;---DATA---
 	.EQU	_DRV_VPORT_DRIVER_IDS						= VPORTS	;ID драйвера для всех виртуальных портов
 	.EQU	_DRV_VPORT_RAM_SIZE							= _DRV_VPORT_DRIVER_IDS+VPORTS
-
 
 ;--------------------------------------------------------
 DRV_VPORT_INIT:
@@ -56,21 +51,16 @@ DRV_VPORT_INIT:
 	MCALL _DRV_VPORT_OP_ADD
 	RJMP _DRV_VPORT__END
 _DRV_VPORT__NO_OP_ADD:
-	CPI FLAGS,DRV_OP_GET
+	CPI FLAGS,DRV_OP_GET_PORT
 	BRNE _DRV_VPORT__NO_OP_GET
 	MCALL _DRV_VPORT_OP_GET
 	RJMP _DRV_VPORT__END
 _DRV_VPORT__NO_OP_GET:
-	CPI FLAGS,DRV_OP_SET
+	CPI FLAGS,DRV_OP_SET_PORT
 	BRNE _DRV_VPORT__NO_OP_SET
 	MCALL _DRV_VPORT_OP_SET
 	RJMP _DRV_VPORT__END
 _DRV_VPORT__NO_OP_SET:
-	CPI FLAGS,DRV_OP_SET_MODE
-	BRNE _DRV_VPORT__NO_OP_SET
-	MCALL _DRV_VPORT_OP_SET
-	RJMP _DRV_VPORT__END
-_DRV_VPORT__NO_OP_SET_MODE:
 	LDI TEMP,DRV_RESULT_UNSUPPORTED
 _DRV_VPORT__END:
 
@@ -106,7 +96,7 @@ _DRV_VPORT_OP_GET:
 	BREQ _DRV_VPORT_OP_GET__ERROR
 
 	MOV FLAGS,ACCUM
-	MCALL C5_DRV_EXEC
+	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
 	BRNE _DRV_VPORT_OP_GET__ERROR
 
@@ -144,13 +134,13 @@ _DRV_VPORT_OP_SET:
 	LDI ZH,0x00
 	LD ACCUM,Z
 
-	MCALL C5_DRV_EXEC
+	MCALL C5_EXEC
 	CPI TEMP,DRV_RESULT_OK
-	BREQ _DRV_VPORT_OP_GET__END
+	BREQ _DRV_VPORT_OP_SET__END
 
-_DRV_VPORT_OP_GET__ERROR:
+_DRV_VPORT_OP_SET__ERROR:
 	LDI TEMP,DRV_RESULT_ERROR
-_DRV_VPORT_OP_GET__END:
+_DRV_VPORT_OP_SET__END:
 	POP FLAGS
 	POP_T16
 	POP ACCUM
@@ -200,9 +190,9 @@ VPORT_GET:
 	PUSH TEMP
 	PUSH FLAGS
 
-	LDI TEMP,DRV_VPORT_ID
-	LDI FLAGS,DRV_OP_GET
-	MCALL C5_DRV_EXEC
+	LDI TEMP,PID_VPORT_DRV
+	LDI FLAGS,DRV_OP_GET_PORT
+	MCALL C5_EXEC
 
 	POP FLAGS
 	POP TEMP
@@ -216,9 +206,9 @@ VPORT_SET:
 	PUSH TEMP
 	PUSH FLAGS
 
-	LDI TEMP,DRV_VPORT_ID
-	LDI FLAGS,DRV_OP_SET
-	MCALL C5_DRV_EXEC
+	LDI TEMP,PID_VPORT_DRV
+	LDI FLAGS,DRV_OP_SET_PORT
+	MCALL C5_EXEC
 
 	POP FLAGS
 	POP TEMP

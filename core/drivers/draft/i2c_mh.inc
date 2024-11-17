@@ -9,6 +9,7 @@
 .set DEF__C5_DRV_I2C_MH = 1
 .message "Included driver I2C(hardware) master v0.1"
 
+.include "./core/wait.inc"
 .include	"./core/drivers/_i2c.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -22,10 +23,11 @@
 	.EQU	_DRV_I2C_MH_ADDR						= 0x00			;1B-Адрес подчиненного устройства
 	.EQU	_DRV_I2C_MH_LED_PORT					= 0x01			;1B-Порт индикатора активности
 	.EQU	_DRV_I2C_MH_POS						= 0x02			;1B-Позиция в буфере
-	.EQU	_DRV_I2C_MH_LEN						= 0x03			;1B-Размер данных передачи
-	.EQU	_DRV_I2C_MH_BUFFER_SIZE				= 0x04			;1B-Размер буфера
-	.EQU	_DRV_I2C_MH_STATE						= 0x05			;1B-Статус
-	.EQU	_DRV_I2C_MH_BUFFER					= 0x06			;xB-Буфер
+	.EQU	_DRV_I2C_MH_TX_LEN					= 0x03			;1B-Размер данных передачи
+	.EQU	_DRV_I2C_MH_RX_LEN					= 0x04			;1B-Размер данных приема
+	.EQU	_DRV_I2C_MH_BUFFER_SIZE				= 0x05			;1B-Размер буфера
+	.EQU	_DRV_I2C_MH_STATE						= 0x06			;1B-Статус
+	.EQU	_DRV_I2C_MH_BUFFER					= 0x07			;xB-Буфер
 
 ;--------------------------------------------------------
 DRV_I2C_MH_INIT:
@@ -105,10 +107,10 @@ DRV_I2C_MH_INIT:
 	MCALL PORT_SET_HI
 
 	;Выключаю индикатор активности I2C_H
-	LDD ACCUM,Y+_DRV_I2C_H_LED_PORT
+	LDD ACCUM,Y+_DRV_I2C_MH_LED_PORT
 	MCALL PORT_SET_LO
 	;Получаю результат операции
-	LDD TEMP,Y+_DRV_I2C_H_STATE
+	LDD TEMP,Y+_DRV_I2C_MH_STATE
 
 	LDI TEMP,(1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)
 	STS TWCR,TEMP
@@ -175,7 +177,7 @@ _DRV_I2C_MH_EVENT__NO_START:
 	BREQ _DRV_I2C_MH_EVENT__TR_NEXT
 	CPI TEMP,TWI_MT_DATA_ACK
 	BRNE _DRV_I2C_MH_EVENT__NO_TR_NEXT
-_DRV_I2C_H_EVENT__TR_NEXT:
+_DRV_I2C_MH_EVENT__TR_NEXT:
 	;Считываем позицию в блоке данных
 	LDD TEMP,Y+_DRV_I2C_MH_POS
 	MOVW ZL,YL
@@ -192,12 +194,12 @@ _DRV_I2C_H_EVENT__TR_NEXT:
 	STD Y+_DRV_I2C_MH_POS,TEMP
 	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)
 	STS TWCR,TEMP
-	RJMP _DRV_I2C_H_EVENT__END
-_DRV_I2C_H_EVENT__RC:
+	RJMP _DRV_I2C_MH_EVENT__END
+_DRV_I2C_MH_EVENT__RC:
 	;Все данные переданы, обнуляем смещение
 	STD Y+_DRV_I2C_MH_POS,C0x00
 	;Проверяем на необходимость принять данные
-	LDD TEMP,Y+_DRV_I2C_H_RX_LEN
+	LDD TEMP,Y+_DRV_I2C_MH_RX_LEN
 	CPI TEMP,0x00
 	BREQ _DRV_I2C_MH_EVENT__SKIP_RC
 	;Переходим в режим приема
@@ -206,7 +208,7 @@ _DRV_I2C_H_EVENT__RC:
 	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWSTA)		;START
 	STS TWCR,TEMP
 	RJMP _DRV_I2C_MH_EVENT__END
-_DRV_I2C_H_EVENT__SKIP_RC:
+_DRV_I2C_MH_EVENT__SKIP_RC:
 	;Все данные отправлены, прием не нужен
 	LDI TEMP,DRV_RESULT_OK
 	STD Y+_DRV_I2C_MH_STATE,TEMP
@@ -239,14 +241,14 @@ _DRV_I2C_MH_EVENT__RC_ACK:
 	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA)		;ACK
 	STS TWCR,TEMP
 	RJMP _DRV_I2C_MH_EVENT__END
-_DRV_I2C_H_EVENT__RC_NEXT_END:
+_DRV_I2C_MH_EVENT__RC_NEXT_END:
 	;Все данные получены
 	LDI TEMP,DRV_RESULT_OK
 	STD Y+_DRV_I2C_MH_STATE,TEMP
 	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)					;NACK
 	STS TWCR,TEMP
 	RJMP _DRV_I2C_MH_EVENT__END
-_DRV_I2C_H_EVENT__NO_RC_NEXT:
+_DRV_I2C_MH_EVENT__NO_RC_NEXT:
 	;Ошибка
 	LDI TEMP,DRV_RESULT_ERROR
 	STD Y+_DRV_I2C_MH_STATE,TEMP
