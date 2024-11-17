@@ -17,7 +17,7 @@
 .include	"./core/ram/ram_realloc.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_I2C_SU_ST_CHECK_ADDRESS				= 0x00
+	.EQU	_DRV_I2C_SU_ST_CHECK_ADDRESS				= 0x00	;TODO вынести в _i2c.inc
 	.EQU	_DRV_I2C_SU_ST_RC_DATA_WAIT				= 0x01
 	.EQU	_DRV_I2C_SU_ST_TR_DATA						= 0x02
 	.EQU	_DRV_I2C_SU_ST_RC_ACK_SEND					= 0x03
@@ -27,11 +27,11 @@
 	.EQU	_DRV_I2C_SU_ADDR								= 0x00	;1B-Адрес устройства
 	.EQU	_DRV_I2C_SU_POS								= 0x01	;1B-Позиция в буфере
 	.EQU	_DRV_I2C_SU_TR_LEN							= 0x02	;1B-Размер данных передачи
-	.EQU	_DRV_I2C_SU_BUFFER_SIZE						= 0x03	;2B-Адрес блока буфера
-	.EQU	_DRV_I2C_SU_PROC_ADDR						= 0x05	;2B-Адрес процедуры обработчика запроса
-	.EQU	_DRV_I2C_SU_PROC_PID							= 0x07	;1B-PID задачи процедуры
-	.EQU	_DRV_I2C_SU_STATE								= 0x08	;1B-Статус
-	.EQU	_DRV_I2C_SU_BUFFER							= 0x09	;xB-Буфер
+	.EQU	_DRV_I2C_SU_BUFFER_SIZE						= 0x03	;1B-Размер буфера
+	.EQU	_DRV_I2C_SU_PROC_ADDR						= 0x04	;2B-Адрес процедуры обработчика запроса
+	.EQU	_DRV_I2C_SU_PROC_PID							= 0x06	;1B-PID задачи процедуры
+	.EQU	_DRV_I2C_SU_STATE								= 0x07	;1B-Статус
+	.EQU	_DRV_I2C_SU_BUFFER							= 0x08	;xB-Буфер
 
 ;--------------------------------------------------------
 DRV_I2C_SU_INIT:
