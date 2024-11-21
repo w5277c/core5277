@@ -5,6 +5,7 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;21.01.2020	w5277c@gmail.com			Вынесен блок определений пинов для процедур PORT_...
 ;29.05.2021	w5277c@gmail.com			Ввод параметров TS_MODE и MUL_SUPPORT
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_DEVICES_COMMON
 .else
@@ -62,6 +63,10 @@
 	.EQU	C5_PROCID_OPT_RESERV2				= 0x06			;Зарезервировано
 	.EQU	C5_PROCID_OPT_DRV						= 0x07			;Драйвер
 .endif
+
+	.EQU	PINx										= 0x00
+	.EQU	DDRx										= 0x01
+	.EQU	PORTx										= 0x02
 
 	.EQU	PA0										= (0x00<<4)|0x00
 	.EQU	PA1										= (0x00<<4)|0x01

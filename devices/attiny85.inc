@@ -11,6 +11,7 @@
 ;06.04.2023	konstantin@5277.ru		Экономия RAM в 46Б
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;26.10.2024	konstantin@5277.ru		Добавлены USI регистры
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 
@@ -25,7 +26,6 @@
 	;---SPECIFY-DEVICE---
 	.DEVICE ATtiny85
 
-	.SET	VPORTS_ADDR								= 0x0060			;Начальный адрес блока для виртуальных портов(вне зоны регистров)
 .ifdef VPORTS
 .else
 	.SET	VPORTS									= 0x00			;Количество виртуальных портов(3 порта максимум)
@@ -34,7 +34,7 @@
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY EEPROM 512
 	#pragma AVRPART MEMORY INT_SRAM SIZE 512
-	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60			;+(VPORTS*3) unsupported!
+	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
 	.EQU 	FLASH_PAGESIZE							= 0x20*0x02		;64Б-размер страницы FLASH
 	.EQU	FLASH_SIZE								= 0x2000			;8K
@@ -58,7 +58,7 @@
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x01			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x02			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.SET	_C5_STACK_SIZE							= 0x40			;Стек ядра
-	.EQU	RAMSTART									= 0x0060+(VPORTS*3)
+	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x025f
 	.SET	INPUT_BUFFER_SIZE						= 0x04			;Размер буфера ввода (не менее 2)
 
@@ -330,8 +330,8 @@
 	RCALL	_C5_IR														; USI start
 	RCALL	_C5_IR														; USI overflow
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
-	.db	0x00,0x00,0x00,0x38,0x37,0x36,0x00,0x00,0x00,0x00,0x00,0x00
+PORTS_TABLE:															;Таблица из адресов IO PINx регистров (-,B)
+	.db	0x00,0x36
 PCINT_TABLE:
 	.db	0x00,PCMSK,0x00,0x00
 INT_TABLE:

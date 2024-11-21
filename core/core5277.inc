@@ -205,43 +205,34 @@
 	.EQU	CFL_VIDEO_SYNC							= 0x03			;
 
 ;---RAM-OFFSETS------------------------------------------
-	.EQU	_C5_UPTIME								= RAMSTART+0x00;5B-отсчет времени (~75 лет при тике каждые 0.002мс)
-	.EQU	_C5_CORE_STACK							= RAMSTART+0x05;2B-хранит смещение стека ядра
-	.EQU	_C5_TOP_OF_STACK						= RAMSTART+0x07;2B-хранит вершину стека
-	.EQU	_C5_TOP_OF_FREE_RAM					= RAMSTART+0x09;2B-хранит вершину свободной памяти
-	.EQU	_C5_FLAGS								= RAMSTART+0x0b;4B-флагов (32 флага)
-	.EQU	_C5_TIMER_C_PID						= RAMSTART+0x0f;1B-PID задачи использующей таймер C
-	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_PID+0x01
-																			;1B-счетчик таймера ядра (каждые 0.000050с)
-	.EQU	_C5_MAIN_TIMER_TRHLD					= _C5_MAIN_TIMER_CNTR+0x01
-																			;1B-порог срабатывания таймера ядра
+	.EQU	VPORTS_ADDR								= RAMSTART																	;*3B-по 3 байт на каждый виртуальный порт
+	.EQU	_C5_UPTIME								= VPORTS_ADDR+VPORTS*0x03												;5B-отсчет времени (~75 лет при тике каждые 0.002мс)
+	.EQU	_C5_CORE_STACK							= _C5_UPTIME+0x05															;2B-хранит смещение стека ядра
+	.EQU	_C5_TOP_OF_STACK						= _C5_CORE_STACK+0x02													;2B-хранит вершину стека
+	.EQU	_C5_TOP_OF_FREE_RAM					= _C5_TOP_OF_STACK+0x02													;2B-хранит вершину свободной памяти
+	.EQU	_C5_FLAGS								= _C5_TOP_OF_FREE_RAM+0x02												;4B-флагов (32 флага)
+	.EQU	_C5_TIMER_C_PID						= _C5_FLAGS+0x04															;1B-PID задачи использующей таймер C
+	.EQU	_C5_MAIN_TIMER_CNTR					= _C5_TIMER_C_PID+0x01													;1B-счетчик таймера ядра (каждые 0.000050с)
+	.EQU	_C5_MAIN_TIMER_TRHLD					= _C5_MAIN_TIMER_CNTR+0x01												;1B-порог срабатывания таймера ядра
 .IFDEF C5_IN_PORT
-	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01
-																			;xB-буфер ввода
-	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE
-																			;1B-позиция в буфере на свободный элемент
-	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE+0x01
-																			;xB-таблица таймеров
+	.EQU	_C5_INPUT_BUFFER						= _C5_MAIN_TIMER_TRHLD+0x01											;xB-буфер ввода
+	.EQU	_C5_INPUT_BUFFER_POS					= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE								;1B-позиция в буфере на свободный элемент
+	.EQU	_C5_TIMERS								= _C5_INPUT_BUFFER+INPUT_BUFFER_SIZE+0x01							;xB-таблица таймеров
 .ELSE
-	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01
-																			;xB-таблица 8бит таймеров
+	.EQU	_C5_TIMERS								= _C5_MAIN_TIMER_TRHLD+0x01											;xB-таблица 8бит таймеров
 .ENDIF
-	.EQU	_C5_TIMERS16							= _C5_TIMERS+TIMERS*_C5_TIMER_STRUCT_SIZE
-																			;xB-таблица 16бит таймеров
-	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS16+TIMERS16*_C5_TIMER16_STRUCT_SIZE
-																			;xB-таблица прерываний (_C5_IR_QNT*3 для каждого прерывания, исключая RESET)
-	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3
-																			;xB-заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
-	.EQU	_C5_TASKS_HEADER						= _C5_DRIVERS_HEADER+C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE
-																			;xB-заголовки задач (X=C5_TASKS_QNT*_C5_TASK_HEADER_SIZE)
-	.EQU	_C5_RESOURCE_QUEUE					= _C5_TASKS_HEADER+C5_TASKS_QNT*_C5_TASK_HEADER_SIZE
-																			;xB-очередь задач к ресурсам(1B-RES_ID, 1B-TASK_ID...)
+	.EQU	_C5_TIMERS16							= _C5_TIMERS+TIMERS*_C5_TIMER_STRUCT_SIZE							;xB-таблица 16бит таймеров
+	.EQU	_C5_IR_VECTORS_TABLE					= _C5_TIMERS16+TIMERS16*_C5_TIMER16_STRUCT_SIZE					;xB-таблица прерываний (_C5_IR_QNT*3 для каждого прерывания, исключая RESET)
+	.EQU	_C5_DRIVERS_HEADER					= _C5_IR_VECTORS_TABLE+_C5_IR_QNT*3									;xB-заголовки драйвера (X=C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE)
+	.EQU	_C5_TASKS_HEADER						= _C5_DRIVERS_HEADER+C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE	;xB-заголовки задач (X=C5_TASKS_QNT*_C5_TASK_HEADER_SIZE)
+	.EQU	_C5_RESOURCE_QUEUE					= _C5_TASKS_HEADER+C5_TASKS_QNT*_C5_TASK_HEADER_SIZE			;xB-очередь задач к ресурсам(1B-RES_ID, 1B-TASK_ID...)
 	.EQU	C5_BUFFER								= _C5_RESOURCE_QUEUE+_C5_RES_QUEUE_SIZE
 	.EQU	_C5_FREE_RAM							= C5_BUFFER+BUFFER_SIZE
-	.EQU	_C5_STACK_END							= RAMEND-_C5_STACK_SIZE	;xB-стек ядра, далее буфер, стек задач и выделяемая память
+	.EQU	_C5_STACK_END							= RAMEND-_C5_STACK_SIZE													;xB-стек ядра, далее буфер, стек задач и выделяемая память
 														;TODO проверить что стек не перетирает первый байт буфера
 .IF AVRA == 0x01
 	.MESSAGE "######## RAMSTART:",RAMSTART
+	.MESSAGE "######## VPORTS",VPORTS
 	.MESSAGE "######## DRIVERS HEADERS OFFSET:",_C5_DRIVERS_HEADER
 	.MESSAGE "######## DRIVERS HEADERS SIZE:",C5_DRIVERS_QNT*_C5_DRIVER_HEADER_SIZE
 	.MESSAGE "######## TASKS HEADERS OFFSET:",_C5_TASKS_HEADER
@@ -820,7 +811,10 @@ C5_REINIT:
 	CLR _C5_DISPATCHER_LOCK_CNTR
 	;Инициализируем таймер (0.000050s - 800 тактов)
 	_C5_TIMERA_INIT
-
+	;Запуск таймера
+	_CORRE5277_TIMERA_START
+	;Разрешаем прерывания
+	SEI
 	RET
 
 ;--------------------------------------------------------
@@ -902,13 +896,10 @@ _C5_TIMER_B_IR:
 
 ;--------------------------------------------------------
 C5_START:
+C5_DISPATCHING:
 ;--------------------------------------------------------
-;Запуск ядра
+;Диспетчерезация задач
 ;--------------------------------------------------------
-	;Запуск таймера
-	_CORRE5277_TIMERA_START
-	;Разрешаем прерывания
-	SEI
 .if TS_MODE == TS_MODE_NO
 	LDI_Z _C5_TASKS_HEADER
 	LDD TEMP, Z+_C5_TASK_STACK_SIZE
@@ -926,15 +917,15 @@ C5_START:
 	SEI
 	RET
 .else
-_C5_START__LOOP:
+_C5_DISPATCHING__LOOP:
 	LDI PID,0x00													;Счетчик задач
 	LDI FLAGS,0x00
-_C5_START__TASKS_LOOP:
+_C5_DISPATCHING__TASKS_LOOP:
 	MCALL _C5_PROC_HEADER_GET
 	LDD TEMP,Z+_C5_PROC_STATE
 	ANDI TEMP,0x0f
 	CPI TEMP,_C5_PROC_STATE_READY
-	BRNE _C5_START__NEXT_TASK
+	BRNE _C5_DISPATCHING__NEXT_TASK
 	PUSH PID
 	MOV _PID,PID
 	PUSH FLAGS
@@ -942,13 +933,13 @@ _C5_START__TASKS_LOOP:
 	POP FLAGS
 	POP PID
 	ORI FLAGS,0x01
-_C5_START__NEXT_TASK:
+_C5_DISPATCHING__NEXT_TASK:
 	INC PID
 	CPI PID,C5_TASKS_QNT
-	BRNE _C5_START__TASKS_LOOP
+	BRNE _C5_DISPATCHING__TASKS_LOOP
 	SBRS FLAGS,0x00
 	SLEEP
-	RJMP _C5_START__LOOP
+	RJMP _C5_DISPATCHING__LOOP
 .endif
 ;========================================================================
 ;===Процедуры работы с задачами и драйверами=============================

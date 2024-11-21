@@ -10,6 +10,7 @@
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;06.04.2023	konstantin@5277.ru		Экономия RAM в 48Б
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 ;TODO обновить из atmega328
 ;---DESCRIPTION------------------------------------------
@@ -21,7 +22,6 @@
 	;---SPECIFY-DEVICE---
 	.DEVICE ATmega8
 
-	.SET	VPORTS_ADDR								= 0x0060			;Начальный адрес блока для виртуальных портов(вне зоны регистров)
 .ifdef VPORTS
 .else
 	.SET	VPORTS									= 0x00			;Количество виртуальных портов(8 портов максимум)
@@ -29,7 +29,7 @@
 
 	#pragma AVRPART MEMORY PROG_FLASH 8192
 	#pragma AVRPART MEMORY INT_SRAM SIZE 1024
-	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60			;+(VPORTS*3) unsupported!
+	#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 	#pragma AVRPART MEMORY EEPROM 512
 
 	.EQU	BOOT_512W_ADDR							= 0xe00			;Начальный адрес килобайтного бутлоадера в словах
@@ -53,7 +53,7 @@
 	.EQU	_C5_PCINT_PORTS_QNT					= 0x00			;Количество портов поддерживающих внешние прерывания(PCINT)
 	.EQU	_C5_RAM_BORDER_SIZE					= 0x04			;Минимальное допустимое расстояние между вершинами FREE_RAM и STACK
 	.SET	_C5_STACK_SIZE							= 0x40			;Стек ядра
-	.EQU	RAMSTART									= 0x0060+(VPORTS*3)
+	.EQU	RAMSTART									= 0x0060
 	.EQU	RAMEND									= 0x045f
 	.SET	INPUT_BUFFER_SIZE						= 0x40			;Размер буфера ввода (не менее 2)
 
@@ -332,8 +332,8 @@
 
 
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
-	.db	0x00,0x00,0x00,0x38,0x37,0x36,0x35,0x34,0x33,0x32,0x31,0x30
+PORTS_TABLE:															;Таблица из адресов IO PINx регистров (-,B,C,D)
+	.db	0x00,0x36,0x33,0x30
 PCINT_TABLE:
 	.db	0x00,0x00,0x00,0x00
 INT_TABLE:

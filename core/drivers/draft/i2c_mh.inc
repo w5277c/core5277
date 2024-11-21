@@ -3,7 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;12.11.2024	konstantin@5277.ru		За основу взят i2c_h.inc(не тестировано)
 ;-----------------------------------------------------------------------------------------------------------------------
-
+;Поддерживаемые
 .ifdef DEF__C5_DRV_I2C_MH
 .else
 .set DEF__C5_DRV_I2C_MH = 1
@@ -25,17 +25,15 @@
 	.EQU	_DRV_I2C_MH_POS						= 0x02			;1B-Позиция в буфере
 	.EQU	_DRV_I2C_MH_TX_LEN					= 0x03			;1B-Размер данных передачи
 	.EQU	_DRV_I2C_MH_RX_LEN					= 0x04			;1B-Размер данных приема
-	.EQU	_DRV_I2C_MH_BUFFER_SIZE				= 0x05			;1B-Размер буфера
-	.EQU	_DRV_I2C_MH_STATE						= 0x06			;1B-Статус
-	.EQU	_DRV_I2C_MH_BUFFER					= 0x07			;xB-Буфер
+	.EQU	_DRV_I2C_MH_STATE						= 0x05			;1B-Статус
+	.EQU	_DRV_I2C_MH_BUFFER_ADDR				= 0x06			;2B-Буфер
 
+	.EQU	_DRV_I2C_MH_RAM_SIZE					= 0x08
 ;--------------------------------------------------------
 DRV_I2C_MH_INIT:
 ;--------------------------------------------------------
 ;Инициализация
-;IN: TEMP_H-FREQ, TEMP_L-размер буфера
-;(1<TEMP_EL<0x100-_DRV_I2C_SH_RAM_SIZE),
-;FLAGS-порт инд. передачи(0xff-не исп)
+;IN: TEMP_H-FREQ, TEMP_L-порт инд. передачи(0xff-не исп)
 ;--------------------------------------------------------
 	;Подаем питание на TWI
 	_C5_POWER_ON PRTWI
@@ -43,12 +41,12 @@ DRV_I2C_MH_INIT:
 	STS TWAR,C0x00
 
 	;Выделяем память
-	LDI ACCUM,_DRV_I2C_MH_BUFFER
-	ADD ACCUM,TEMP_L
+	LDI ACCUM,_DRV_I2C_MH_RAM_SIZE
 	MCALL C5_RAM_REALLOC
 
 	;Инициализируем порт LED
-	STD Y+_DRV_I2C_MH_LED_PORT,FLAGS
+	STD Y+_DRV_I2C_MH_LED_PORT,TEMP_L
+	MOV ACCUM,TEMP_L
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
 
@@ -63,7 +61,7 @@ DRV_I2C_MH_INIT:
 	MCALL PORT_SET_LO													;Точно LO?
 
 	;Задаем частоту
-	STS TWBR,XL
+	STS TWBR,TEMP_H
 	;Prescaller x1
 	LDI TEMP,(0<<TWPS1)|(0<<TWPS0)
 	STS TWSR,TEMP
@@ -77,8 +75,8 @@ DRV_I2C_MH_INIT:
 
 ;--------------------------------------------------------
 ;Основной код, коммуникация
-;IN: ACCUM-адрес устройства, TEMP_H-длина данных на
-;передачу,TEMP_L-длина данных для приема.
+;IN: ACCUM-адрес устройства, Z-адрес буфера,TEMP_H-длина
+;данных на передачу,TEMP_L-длина данных для приема.
 ;OUT: TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_Y
@@ -89,6 +87,9 @@ DRV_I2C_MH_INIT:
 
 	;Записываем адрес подчиненного
 	STD Y+_DRV_I2C_MH_ADDR,ACCUM
+	;Записываем адрес буфера
+	STD Y+_DRV_I2C_MH_BUFFER_ADDR+0x00,ZH
+	STD Y+_DRV_I2C_MH_BUFFER_ADDR+0x01,ZL
 	;Записываем длину данных для передачи
 	STD Y+_DRV_I2C_MH_TX_LEN,TEMP_H
 	;Записываем длину данных для приема
@@ -180,7 +181,8 @@ _DRV_I2C_MH_EVENT__NO_START:
 _DRV_I2C_MH_EVENT__TR_NEXT:
 	;Считываем позицию в блоке данных
 	LDD TEMP,Y+_DRV_I2C_MH_POS
-	MOVW ZL,YL
+	LDD ZH,Y+_DRV_I2C_MH_BUFFER_ADDR+0x00
+	LDD ZL,Y+_DRV_I2C_MH_BUFFER_ADDR+0x01
 	ADD ZL,TEMP
 	ADC ZH,C0x00
 	LD ACCUM,Z
@@ -224,7 +226,8 @@ _DRV_I2C_MH_EVENT__NO_TR_NEXT:
 _DRV_I2C_MH_EVENT__RC_NEXT:
 	;Считываем позицию в блоке данных
 	LDD TEMP,Y+_DRV_I2C_MH_POS
-	MOVW ZL,YL
+	LDD ZH,Y+_DRV_I2C_MH_BUFFER_ADDR+0x00
+	LDD ZL,Y+_DRV_I2C_MH_BUFFER_ADDR+0x01
 	ADD ZL,TEMP
 	ADC ZH,C0x00
 	LDS ACCUM,TWDR

@@ -1,43 +1,36 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;25.06.2021	w5277c@gmail.com			Начало
-;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;17.11.2024	konstantin@5277.ru		Начало
 ;-----------------------------------------------------------------------------------------------------------------------
-.ifdef DEF_REG_BIT_INV
+.ifdef DEF_PORT_MODE_BYTE
 .else
-.set DEF_REG_BIT_INV = 1
+.set DEF_PORT_MODE_BYTE = 1
 
 .if REPORT_INCLUDES == 0x01
-.message "included REG_BIT_INV"
+.message "included PORT_MODE_BYTE"
 .endif
 
-;--------------------------------------------------------
-REG_BIT_INV:
-;--------------------------------------------------------
-;Инвертируем бит регистра и возвращаем его новое значение
-;IN: TEMP-адрес,ACCUM-число бита
-;OUT: flag C-состояние бита(true = HI)
-;--------------------------------------------------------
-	PUSH_Z
-	PUSH_T16
+.include	"./io/_port_offset.inc"
 
-	MOV ZH,C0x00
-	MOV ZL,TEMP
-	RCALL REG_BIT_INV_BY_Z
-
-	POP_T16
-	POP_Z
+;--------------------------------------------------------
+PORT_MODE_BYTE:
+;--------------------------------------------------------
+;Устанвливаем направление пора(8 бит)
+;IN: ACCUM-порт, TEMP-значение
+;--------------------------------------------------------
+	CPI ACCUM,0xff
+	BRNE PC+0x02
 	RET
 
-REG_BIT_INV_BY_Z:
-	LDS TEMP_H,SREG
-	CLI
-	LD TEMP_L,Z
-	EOR TEMP_L,ACCUM
-	ST Z,TEMP_L
-	AND TEMP_L,ACCUM
-	STS SREG,TEMP_H
+	PUSH_Z
+	PUSH ACCUM
+
+	PUSH TEMP
+	MCALL _PORT_OFFSET
+	POP TEMP
+	ADIW ZL,0x01
+	ST Z,TEMP
 .if VPORTS>0x00
 	CPI ZH,high(VPORTS_ADDR)
 	BRCS PC+0x04+_MCALL_SIZE
@@ -47,6 +40,7 @@ REG_BIT_INV_BY_Z:
 	MCALL VPORT_SET
 .endif
 
-	ADD TEMP_L,C0xff
+	POP ACCUM
+	POP_Z
 	RET
 .endif

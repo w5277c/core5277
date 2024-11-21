@@ -6,6 +6,7 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;05.12.2020	w5277c@gmail.com			-с5
 ;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_GET_BYTE
 .else
@@ -31,10 +32,11 @@ PORT_GET_BYTE:
 	PUSH_Z
 	PUSH TEMP
 	MCALL _PORT_OFFSET
-	ADIW ZL,0x02
-	LPM TEMP,Z
 .if VPORTS>0x00
-	CPI ZL,VPORTS_ADDR
+	CPI ZH,high(VPORTS_ADDR)
+	BRCS PC+0x04+_MCALL_SIZE
+	BRNE PC+0x03
+	CPI ZL,low(VPORTS_ADDR)
 	BRCS PC+0x01+_MCALL_SIZE
 	MCALL VPORT_GET
 .endif

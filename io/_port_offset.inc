@@ -1,7 +1,8 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
-;03.11.2024	konstantin@5277.ru			Начало
+;03.11.2024	konstantin@5277.ru		Начало
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_OFFSET
 .else
@@ -18,7 +19,7 @@ _PORT_OFFSET:
 ;--------------------------------------------------------
 ;Возвращаем смещение на первый адрес регистров порта
 ;IN: ACCUM-сдвоенный порт и пин (PA0, PC7 и т.п.)
-;OUT: Z-адрес регистра PORTx, ACCUM-пин в виде числа
+;OUT: Z-адрес регистра PINx, ACCUM-пин в виде числа
 ;MODIFY: TEMP
 ;--------------------------------------------------------
 	MOV TEMP,ACCUM
@@ -33,19 +34,22 @@ _PORT_OFFSET:
 	ANDI TEMP,0x0f
 
 .if VPORTS>0x00
-	CPI TEMP,PORTS_QUANTITY-0x01
+	CPI TEMP,PORTS_QUANTITY
 	BRCS _PORT_OFFSET__REALPORTS
-	LDI ZH,0x00
-	LDI ZL,VPORTS_ADDR
+	LDI_Z VPORTS_ADDR
 	SUBI TEMP,PORTS_QUANTITY
-	RJMP _PORT_OFFSET__REALPORTS2
+	ADD ZL,TEMP
+	ADC ZH,C0x00
+	LSL TEMP
+	ADD ZL,TEMP
+	ADC ZH,C0x00
+	RET
 .endif
 _PORT_OFFSET__REALPORTS:
-	LDI_Z (PORTS_TABLE*2)
-_PORT_OFFSET__REALPORTS2:
+	LDI_Z PORTS_TABLE*2
 	ADD ZL,TEMP
-	ADD ZL,TEMP
-	ADD ZL,TEMP
-
+	ADC ZH,C0x00
+	LPM ZL,Z
+	LDI ZH,0x00
 	RET
 .endif

@@ -8,6 +8,7 @@
 ;05.12.2020	w5277c@gmail.com			-с5
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_INVERT
 .else
@@ -35,8 +36,9 @@ PORT_INVERT:
 	PUSH ACCUM
 	PUSH TEMP
 	MCALL _PORT_OFFSET
-	LPM TEMP,Z
-	MCALL REG_BIT_INV
+	PUSH_T16
+	MCALL REG_BIT_INV_BY_Z
+	POP_T16
 	POP TEMP
 	POP ACCUM
 	POP_Z

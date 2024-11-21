@@ -9,6 +9,7 @@
 ;18.08.2021	w5277c@gmail.com			Ничего не делаем, если порт не задан(0xff)
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_SET_LO
 .else
@@ -35,8 +36,10 @@ PORT_SET_LO:
 	PUSH ACCUM
 	PUSH TEMP
 	MCALL _PORT_OFFSET
-	LPM TEMP,Z
-	MCALL REG_BIT_LO
+	ADIW ZL,0x02
+	PUSH_T16
+	MCALL REG_BIT_LO_BY_Z
+	POP_T16
 	POP TEMP
 	POP ACCUM
 	POP_Z

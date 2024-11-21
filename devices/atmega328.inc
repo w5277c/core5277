@@ -8,6 +8,7 @@
 ;05.06.2021	w5277c@gmail.com			Добавлены регистры SPI
 ;29.01.2022	w5277c@gmail.com			C5_RES_QUEUE_SIZE задается в ядре на основе _C5_TASKS_MAX_QNT
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 
 ;---DESCRIPTION------------------------------------------
@@ -19,7 +20,6 @@
 	;---SPECIFY-DEVICE---
 	.DEVICE ATmega328P
 
-	.SET	VPORTS_ADDR								= 0x008c			;Начальный адрес блока для виртуальных портов(зона RESERVED)
 .ifdef VPORTS
 .else
 	.SET	VPORTS									= 0x00			;Количество виртуальных портов(8 портов максимум)
@@ -458,8 +458,8 @@
 	CALL	_C5_IR														; 2-wire Serial Interface
 	CALL	_C5_IR														; Store Program Memory Ready
 
-PORTS_TABLE:															;Таблица из адресов IO регистров (A,B,C,D), поочередно PORTA,DDRA,PINA,PORTB,DDRB,PINB и т.д.
-	.db	0x00,0x00,0x00,0x25,0x24,0x23,0x28,0x27,0x26,0x2b,0x2a,0x29
+PORTS_TABLE:															;Таблица из адресов IO PINx регистров (-,B,C,D)
+	.db	0x00,0x23,0x26,0x29
 PCINT_TABLE:
 	.db	0x00,PCMSK0,PCMSK1,PCMSK2
 INT_TABLE:

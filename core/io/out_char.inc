@@ -4,6 +4,7 @@
 ;12.06.2020  w5277c@gmail.com        Начало
 ;01.08.2020  w5277c@gmail.com        Разбиение на файлы
 ;27.10.2020  w5277c@gmail.com        Обновлена информация об авторских правах
+;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_C5_OUT_CHAR
 .else
@@ -22,7 +23,8 @@ C5_OUT_CHAR:
 	PUSH TEMP
 	PUSH FLAGS
 
-	LDI_Z (PORTS_TABLE*2+((LOGGING_PORT>>4)*0x03))
+	LDI_Z PORTS_TABLE*2+(LOGGING_PORT>>4)						;PINx
+	ADIW ZL,0x02														;PORTx
 	LPM ZL,Z
 	CLR ZH
 
