@@ -21,23 +21,42 @@
 	.EQU	DRV_MCP23017_PORTA							= 0x00	;Номер порта A
 	.EQU	DRV_MCP23017_PORTB							= 0x01	;Номер порта B
 	;---
+;	.EQU	DRV_MCP23017_IODIR							= 0x00	;IODIR-регистр направления(0-выход)
+;	.EQU	DRV_MCP23017_IPOL								= 0x01	;IPOL-регистр инвертирования(1-инвертируем)
+;	.EQU	DRV_MCP23017_GPINTEN							= 0x02	;GPINTEN-регистр разрешения прерываний(1-прерывания разрешены)
+;	.EQU	DRV_MCP23017_DEFVAL							= 0x03	;DEFVAL-значение для сравнения, с последующим прерыванием при совпадении
+;	.EQU	DRV_MCP23017_INTCON							= 0x04	;INTCON-режим прерываний(сравниваем:0-с предыдущим значением,1-с DEFVAL)
+;	.EQU	DRV_MCP23017_IOCON							= 0x05	;IOCONF-регистр конфигурации
+;	.EQU		DRV_MCP23017_IOCON_INTPOL				= 0x01	;INPOL-полярность вывода INT(активен:0-низкий,1-высокий)
+;	.EQU		DRV_MCP23017_IOCON_ODR					= 0x02	;ODR-Режим вывода INT(0-отвечает INPOL,1-вывод отключен)
+;	.EQU		DRV_MCP23017_IOCON_DISSLW				= 0x04	;DISSLW-скорсоть наростания порта SDA(пока не понятно)
+;	.EQU		DRV_MCP23017_IOCON_SEQOP				= 0x05	;SEQOP-инкрементация адреса регистров(0-инкрементация включена,1-адрес не меняется)
+;	.EQU		DRV_MCP23017_IOCON_MIRROR				= 0x06	;MIRROR-объединение порта INTA и INTB(0-соединены друг с другом, 1-независимы)
+;	.EQU		DRV_MCP23017_IOCON_BANK					= 0x07	;BANK-режим работы с блоками(сортировк:0-по регистрам, 1-по портам)
+;	.EQU	DRV_MCP23017_GPPUA							= 0x06	;GPPUA-регистр подтяжки 100К к VCC(0-отключен)
+;	.EQU	DRV_MCP23017_INTF								= 0x07	;INTF-регистр флагов прерывания(0-пин не участвует в прерывании), только для чтения
+;	.EQU	DRV_MCP23017_INTCAP							= 0x08	;INTCAP-регистр значения GPIO в момент прерывания(0-низкий уровень), только для чтения, сбрасывает прерывание.
+;	.EQU	DRV_MCP23017_GPIO								= 0x09	;GPIO-регистр значения порта(0-низкий уровень), чтение сбрасывает прерывание.
+;	.EQU	DRV_MCP23017_OLAT								= 0x0a	;OLAT-регистр для записи значения в GPIO в режиме входа, прменяются при переходе в режим выхода
+
 	.EQU	DRV_MCP23017_IODIR							= 0x00	;IODIR-регистр направления(0-выход)
-	.EQU	DRV_MCP23017_IPOL								= 0x01	;IPOL-регистр инвертирования(1-инвертируем)
-	.EQU	DRV_MCP23017_GPINTEN							= 0x02	;GPINTEN-регистр разрешения прерываний(1-прерывания разрешены)
-	.EQU	DRV_MCP23017_DEFVAL							= 0x03	;DEFVAL-значение для сравнения, с последующим прерыванием при совпадении
-	.EQU	DRV_MCP23017_INTCON							= 0x04	;INTCON-режим прерываний(сравниваем:0-с предыдущим значением,1-с DEFVAL)
-	.EQU	DRV_MCP23017_IOCON							= 0x05	;IOCONF-регистр конфигурации
-	.EQU		DRV_MCP23017_IOCON_BANK					= 0x00	;BANK-режим работы с блоками(сортировк:0-по регистрам, 1-по портам)
-	.EQU		DRV_MCP23017_IOCON_MIRROR				= 0x01	;MIRROR-объединение порта INTA и INTB(0-соединены друг с другом, 1-независимы)
-	.EQU		DRV_MCP23017_IOCON_SEQOP				= 0x02	;SEQOP-инкрементация адреса регистров(0-инкрементация включена,1-адрес не меняется)
-	.EQU		DRV_MCP23017_IOCON_DISSLW				= 0x03	;DISSLW-скорсоть наростания порта SDA(пока не понятно)
-	.EQU		DRV_MCP23017_IOCON_ODR					= 0x05	;ODR-Редим вывода INT(0-отвечает INPOL,1-вывод отключен)
-	.EQU		DRV_MCP23017_IOCON_INTPOL				= 0x06	;INPOL-полярность вывода INT(активен:0-низкий,1-высокий)
-	.EQU	DRV_MCP23017_GPPUA							= 0x06	;GPPUA-регистр подтяжки 100К к VCC(0-отключен)
-	.EQU	DRV_MCP23017_INTF								= 0x07	;INTF-регистр флагов прерывания(0-пин не участвует в прерывании), только для чтения
-	.EQU	DRV_MCP23017_INTCAP							= 0x08	;INTCAP-регистр значения GPIO в момент прерывания(0-низкий уровень), только для чтения, сбрасывает прерывание.
-	.EQU	DRV_MCP23017_GPIO								= 0x09	;GPIO-регистр значения порта(0-низкий уровень), чтение сбрасывает прерывание.
-	.EQU	DRV_MCP23017_OLAT								= 0x0a	;OLAT-регистр для записи значения в GPIO в режиме входа, прменяются при переходе в режим выхода
+	.EQU	DRV_MCP23017_IPOL								= 0x02	;IPOL-регистр инвертирования(1-инвертируем)
+	.EQU	DRV_MCP23017_GPINTEN							= 0x04	;GPINTEN-регистр разрешения прерываний(1-прерывания разрешены)
+	.EQU	DRV_MCP23017_DEFVAL							= 0x06	;DEFVAL-значение для сравнения, с последующим прерыванием при совпадении
+	.EQU	DRV_MCP23017_INTCON							= 0x08	;INTCON-режим прерываний(сравниваем:0-с предыдущим значением,1-с DEFVAL)
+	.EQU	DRV_MCP23017_IOCON							= 0x0a	;IOCONF-регистр конфигурации
+	.EQU		DRV_MCP23017_IOCON_INTPOL				= 0x01	;INPOL-полярность вывода INT(активен:0-низкий,1-высокий)
+	.EQU		DRV_MCP23017_IOCON_ODR					= 0x02	;ODR-Режим вывода INT(0-отвечает INPOL,1-вывод отключен)
+	.EQU		DRV_MCP23017_IOCON_DISSLW				= 0x04	;DISSLW-скорсоть наростания порта SDA(пока не понятно)
+	.EQU		DRV_MCP23017_IOCON_SEQOP				= 0x05	;SEQOP-инкрементация адреса регистров(0-инкрементация включена,1-адрес не меняется)
+	.EQU		DRV_MCP23017_IOCON_MIRROR				= 0x06	;MIRROR-объединение порта INTA и INTB(0-соединены друг с другом, 1-независимы)
+	.EQU		DRV_MCP23017_IOCON_BANK					= 0x07	;BANK-режим работы с блоками(сортировк:0-по регистрам, 1-по портам)
+	.EQU	DRV_MCP23017_GPPUA							= 0x0c	;GPPUA-регистр подтяжки 100К к VCC(0-отключен)
+	.EQU	DRV_MCP23017_INTF								= 0x0e	;INTF-регистр флагов прерывания(0-пин не участвует в прерывании), только для чтения
+	.EQU	DRV_MCP23017_INTCAP							= 0x10	;INTCAP-регистр значения GPIO в момент прерывания(0-низкий уровень), только для чтения, сбрасывает прерывание.
+	.EQU	DRV_MCP23017_GPIO								= 0x12	;GPIO-регистр значения порта(0-низкий уровень), чтение сбрасывает прерывание.
+	.EQU	DRV_MCP23017_OLAT								= 0x14	;OLAT-регистр для записи значения в GPIO в режиме входа, прменяются при переходе в режим выхода
+
 	;---
 	.EQU	_DRV_MCP23017_I2C_ADDR						= 0x00	;1Б-адресс устройства
 	.EQU	_DRV_MCP23017_I2C_DRV_ID					= 0x01	;1Б-ИД драйвера I2C master
@@ -103,24 +122,24 @@ _DRV_MCP23017_GET_PORT:
 ;Z-адрес на I2C буфер
 ;OUT: TEMP-код результата DRV_RESULT_..., ACCUM-значение
 ;--------------------------------------------------------
-	PUSH FLAGS
+	PUSH LOOP_CNTR
 	PUSH TEMP_H
 
-	SWAP TEMP_H
+;	SWAP TEMP_H
 
 	CPI TEMP_L,PORTx
 	BREQ PC+0x03
 	CPI TEMP_L,PINx
 	BRNE _DRV_MCP23017_GET_PORT__NO_PORT
-	LDI FLAGS,DRV_MCP23017_GPIO
-	OR FLAGS,TEMP_H
+	LDI LOOP_CNTR,DRV_MCP23017_GPIO
+	ADD LOOP_CNTR,TEMP_H
 	RCALL _DRV_MCP23017_I2C_READ
 	RJMP _DRV_MCP23017_GET_PORT__END
 _DRV_MCP23017_GET_PORT__NO_PORT:
 	CPI TEMP_L,DDRx
 	BRNE _DRV_MCP23017_GET_PORT__NO_DDR
-	LDI FLAGS,DRV_MCP23017_IODIR
-	OR FLAGS,TEMP_H
+	LDI LOOP_CNTR,DRV_MCP23017_IODIR
+	ADD LOOP_CNTR,TEMP_H
 	RCALL _DRV_MCP23017_I2C_READ
 	RJMP _DRV_MCP23017_GET_PORT__END
 _DRV_MCP23017_GET_PORT__NO_DDR:
@@ -128,7 +147,7 @@ _DRV_MCP23017_GET_PORT__NO_DDR:
 
 _DRV_MCP23017_GET_PORT__END:
 	POP TEMP_H
-	POP FLAGS
+	POP LOOP_CNTR
 	RET
 
 ;--------------------------------------------------------
@@ -141,30 +160,30 @@ _DRV_MCP23017_SET_PORT:
 ;буфер
 ;OUT: TEMP-код результата DRV_RESULT_...
 ;--------------------------------------------------------
-	PUSH FLAGS
+	PUSH LOOP_CNTR
 	PUSH TEMP_H
 	PUSH ACCUM
 
-	SWAP TEMP_H
+;	SWAP TEMP_H
 
 	CPI TEMP_L,PORTx
 	BRNE _DRV_MCP23017_SET_PORT__NO_PORT
-	LDI FLAGS,DRV_MCP23017_GPIO
-	OR FLAGS,TEMP_H
+	LDI LOOP_CNTR,DRV_MCP23017_GPIO
+	ADD LOOP_CNTR,TEMP_H
 	RCALL _DRV_MCP23017_I2C_WRITE
 	RJMP _DRV_MCP23017_SET_PORT__END
 _DRV_MCP23017_SET_PORT__NO_PORT:
 	CPI TEMP_L,DDRx
 	BRNE _DRV_MCP23017_SET_PORT__NO_DDR
-	LDI FLAGS,DRV_MCP23017_IODIR
-	OR FLAGS,TEMP_H
+	LDI LOOP_CNTR,DRV_MCP23017_IODIR
+	ADD LOOP_CNTR,TEMP_H
 	RCALL _DRV_MCP23017_I2C_WRITE
 	RJMP _DRV_MCP23017_SET_PORT__END
 _DRV_MCP23017_SET_PORT__NO_DDR:
 	CPI TEMP_L,PINx
 	BRNE _DRV_MCP23017_SET_PORT__NO_PIN
-	LDI FLAGS,DRV_MCP23017_IPOL
-	OR FLAGS,TEMP_H
+	LDI LOOP_CNTR,DRV_MCP23017_IPOL
+	ADD LOOP_CNTR,TEMP_H
 	RCALL _DRV_MCP23017_I2C_WRITE
 	RJMP _DRV_MCP23017_SET_PORT__END
 _DRV_MCP23017_SET_PORT__NO_PIN:
@@ -173,18 +192,18 @@ _DRV_MCP23017_SET_PORT__NO_PIN:
 _DRV_MCP23017_SET_PORT__END:
 	POP ACCUM
 	POP TEMP_H
-	POP FLAGS
+	POP LOOP_CNTR
 	RET
 
 ;--------------------------------------------------------
 _DRV_MCP23017_I2C_READ:
 ;--------------------------------------------------------
-;IN:FLAGS-номер регистра, Z-адрес на I2C буфер
+;IN:LOOP_CNTR-номер регистра, Z-адрес на I2C буфер
 ;OUT:TEMP-DRV_RESULT_..., ACCUM-значение
 ;--------------------------------------------------------
 	PUSH_T16
 
-	STD Z+0x00,FLAGS
+	STD Z+0x00,LOOP_CNTR
 
 	LDD ACCUM,Y+_DRV_MCP23017_I2C_ADDR
 	LDD TEMP,Y+_DRV_MCP23017_I2C_DRV_ID
@@ -201,14 +220,14 @@ _DRV_MCP23017_I2C_READ:
 ;--------------------------------------------------------
 _DRV_MCP23017_I2C_WRITE:
 ;--------------------------------------------------------
-;IN:FLAGS-номер регистра, ACCUM-значение, Z-адрес на
+;IN:LOOP_CNTR-номер регистра, ACCUM-значение, Z-адрес на
 ;I2C буфер
 ;OUT:TEMP-DRV_RESULT_...
 ;--------------------------------------------------------
 	PUSH_T16
 	PUSH ACCUM
 
-	STD Z+0x00,FLAGS
+	STD Z+0x00,LOOP_CNTR
 	STD Z+0x01,ACCUM
 
 	LDD ACCUM,Y+_DRV_MCP23017_I2C_ADDR
