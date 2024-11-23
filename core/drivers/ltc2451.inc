@@ -2,9 +2,14 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;20.09.2021	w5277c@gmail.com			Начало
+;24.11.2024	konstantin@5277.ru		Скорректирован под новый драйвер i2c_mh.inc
 ;-----------------------------------------------------------------------------------------------------------------------
 ;16 бит АЦП с шиной I2C
 ;-----------------------------------------------------------------------------------------------------------------------
+.ifdef DEF__C5_DRV_LTC2451
+.else
+.set DEF__C5_DRV_LTC2451 = 1
+.message "Included driver LTC2451 v0.2"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -52,8 +57,7 @@ DRV_LTC2451_INIT:
 	STD Y+_DRV_LTC2451_BUFFER,TEMP
 	LDD TEMP,Y+_DRV_LTC2451_I2C_DRV
 	MOVW ZL,YL
-	MOVW XL,YL
-	ADIW Xl,_DRV_LTC2451_BUFFER
+	ADIW ZL,_DRV_LTC2451_BUFFER
 	
 	LDI TEMP_H,0x01
 	LDI TEMP_L,0x02
@@ -72,3 +76,4 @@ DRV_LTC2451_INIT:
 	POP_Y
 	POP_X
 	RET
+.endif
