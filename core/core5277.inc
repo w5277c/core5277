@@ -54,6 +54,10 @@
 
 ;Обработчики программных таймеров и таймера C могут не сохранять значения регистров ZH,ZL
 
+;При работе основного кода дарйвера(с C5_PROCID_OPT_LOCK) диспетчер заблокирован, т.е. повторный вызов C5_DISPATCHER_LOCK в основном коде драйвера приведет к вечной блокировке.
+;TODO Включать C5_PROCID_OPT_LOCK непосредственно в инициализаторе драйвера?
+;TODO Использовать CLI SEI вместе с C5_PROC_STATE в C5_EXEC?
+
 ;TODO нужна еще одна модель динамической памяти но с 16 битным размером. Плюс возможность задавать модель в main-е.
 ;TODO проверить использование _PID, специално введен, чтобы драйвер знал кто его вызвал (не нужно передавать отдельно
 ;как параметр)
@@ -1143,22 +1147,6 @@ C5_EXEC:
 	CPI TEMP,0xff
 	BREQ _C5_EXEC__ERROR
 
-	;Проверям на использование блокировки
-	;TODO Доработать, вероятна одновременная установка _C5_PROC_STATE_BUSY
-	SBRS TEMP,C5_PROCID_OPT_LOCK
-	RJMP C5_EXEC__NO_LOCK1
-	PUSH PID
-	PUSH_Z
-	MOV PID,TEMP
-	MCALL _C5_PROC_HEADER_GET
-C5_EXEC__LOCK_LOOP:
-	LDD PID,Z+_C5_PROC_STATE
-	SBRC PID,_C5_PROC_STATE_BUSY
-	RJMP C5_EXEC__LOCK_LOOP
-	POP_Z
-	POP PID
-C5_EXEC__NO_LOCK1:
-
 	PUSH PID
 	MCALL C5_DISPATCHER_LOCK
 	;Сохраняем значение Z
@@ -1175,14 +1163,6 @@ C5_EXEC__NO_LOCK1:
 	LDD TEMP,Z+_C5_DRIVER_OFFSET+0x00
 	LDD ZL,Z+_C5_DRIVER_OFFSET+0x01
 	MOV ZH,TEMP
-	SBRS PID,C5_PROCID_OPT_LOCK
-	RJMP C5_EXEC__NO_LOCK2
-	;Устанавливаем состояние BUSY
-	LDD TEMP,Z+_C5_PROC_STATE
-	ANDI TEMP,0xf0
-	ORI TEMP,_C5_PROC_STATE_BUSY
-	STD Z+_C5_PROC_STATE,TEMP
-C5_EXEC__NO_LOCK2:
 	POP TEMP
 	;Помещаем в стек адрес перехода на процедуру вызываемого драйвера
 	PUSH ZL
@@ -1190,21 +1170,15 @@ C5_EXEC__NO_LOCK2:
 	;Восстанавливаем значение Z
 	MOV ZH,_C5_DRIVER_EXEC_ZH
 	MOV ZL,_C5_DRIVER_EXEC_ZL
+	SBRC PID,C5_PROCID_OPT_LOCK
+	RJMP PC+0x01+_MCALL_SIZE
 	MCALL C5_DISPATCHER_UNLOCK
 	;Переходим на процедуру драйвера
 	RET
 _C5_EXEC__DONE:
 	SBRS PID,C5_PROCID_OPT_LOCK
-	RJMP C5_EXEC__NO_LOCK3
-	PUSH_Z
-	MCALL _C5_PROC_HEADER_GET
-	;Устанавливаем состояние READY
-	LDD PID,Z+_C5_PROC_STATE
-	ANDI PID,0xf0
-	ORI PID,_C5_PROC_STATE_READY
-	STD Z+_C5_PROC_STATE,PID
-	POP_Z
-C5_EXEC__NO_LOCK3:
+	RJMP PC+0x01+_MCALL_SIZE
+	MCALL C5_DISPATCHER_UNLOCK
 	POP PID
 	RET
 _C5_EXEC__ERROR:
