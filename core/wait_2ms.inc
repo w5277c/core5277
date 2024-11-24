@@ -21,9 +21,11 @@ C5_WAIT_2MS:
 ;--------------------------------------------------------
 ;Ждем истечения времени с момента прошлого сна или
 ;с момента вызова C5_TIMER_MARK
-;IN TEMP_H,TEMP_L,TEMP - время в 0.002s
+;IN PID,TEMP_H,TEMP_L,TEMP - время в 0.002s
 ;--------------------------------------------------------
 .if TS_MODE == TS_MODE_TIME
+	CPI PID,0xff
+	BREQ C5_WAIT_2MS_BY_TICS
 	_C5_MACRO__PUSH_RDS												;Пмещаем в стек рабочие регистры задачи
 	LDS FLAGS,SREG
 	PUSH FLAGS															;Помещаем в стек регистр флагов
@@ -46,8 +48,9 @@ C5_WAIT_2MS:
 	STS SREG,FLAGS
 
 	LDI TEMP,_C5_PROC_STATE_TIME_WAIT
-	MCALL _C5_SUSPEND__BODY
-.else
+	MJMP _C5_SUSPEND__BODY
+.endif
+C5_WAIT_2MS_BY_TICS:
 	PUSH TEMP_H
 	PUSH TEMP_L
 	PUSH TEMP
@@ -71,6 +74,5 @@ C5_WAIT_2MS__LOOP:
 	POP TEMP
 	POP TEMP_L
 	POP TEMP_H
-.endif
 	RET
 .endif

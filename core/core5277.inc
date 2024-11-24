@@ -738,6 +738,8 @@ C5_REINIT:
 ;--------------------------------------------------------
 ;Повторная инициализация ядра
 ;--------------------------------------------------------
+	;Задаем PID ядра = 0xff
+	LDI PID,0xff
 	;Чистка таблицы прерываний
 	LDI TEMP,0xff
 	LDI TEMP_H,0x00
@@ -1141,6 +1143,22 @@ C5_EXEC:
 	CPI TEMP,0xff
 	BREQ _C5_EXEC__ERROR
 
+	;Проверям на использование блокировки
+	;TODO Доработать, вероятна одновременная установка _C5_PROC_STATE_BUSY
+	SBRS TEMP,C5_PROCID_OPT_LOCK
+	RJMP C5_EXEC__NO_LOCK1
+	PUSH PID
+	PUSH_Z
+	MOV PID,TEMP
+	MCALL _C5_PROC_HEADER_GET
+C5_EXEC__LOCK_LOOP:
+	LDD PID,Z+_C5_PROC_STATE
+	SBRC PID,_C5_PROC_STATE_BUSY
+	RJMP C5_EXEC__LOCK_LOOP
+	POP_Z
+	POP PID
+C5_EXEC__NO_LOCK1:
+
 	PUSH PID
 	MCALL C5_DISPATCHER_LOCK
 	;Сохраняем значение Z
@@ -1157,6 +1175,14 @@ C5_EXEC:
 	LDD TEMP,Z+_C5_DRIVER_OFFSET+0x00
 	LDD ZL,Z+_C5_DRIVER_OFFSET+0x01
 	MOV ZH,TEMP
+	SBRS PID,C5_PROCID_OPT_LOCK
+	RJMP C5_EXEC__NO_LOCK2
+	;Устанавливаем состояние BUSY
+	LDD TEMP,Z+_C5_PROC_STATE
+	ANDI TEMP,0xf0
+	ORI TEMP,_C5_PROC_STATE_BUSY
+	STD Z+_C5_PROC_STATE,TEMP
+C5_EXEC__NO_LOCK2:
 	POP TEMP
 	;Помещаем в стек адрес перехода на процедуру вызываемого драйвера
 	PUSH ZL
@@ -1168,6 +1194,17 @@ C5_EXEC:
 	;Переходим на процедуру драйвера
 	RET
 _C5_EXEC__DONE:
+	SBRS PID,C5_PROCID_OPT_LOCK
+	RJMP C5_EXEC__NO_LOCK3
+	PUSH_Z
+	MCALL _C5_PROC_HEADER_GET
+	;Устанавливаем состояние READY
+	LDD PID,Z+_C5_PROC_STATE
+	ANDI PID,0xf0
+	ORI PID,_C5_PROC_STATE_READY
+	STD Z+_C5_PROC_STATE,PID
+	POP_Z
+C5_EXEC__NO_LOCK3:
 	POP PID
 	RET
 _C5_EXEC__ERROR:
