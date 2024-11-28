@@ -15,7 +15,7 @@
 
 ;---CONSTANTS--------------------------------------------
 	;---MAIN-CONSTANTS---
-	.EQU	IR_BUFFER_SIZE									= 0x08	;Максимальный размер буфера IR
+	.EQU	IR_BUFFER_SIZE									= 0x20	;Максимальный размер буфера IR
 	.EQU	TS_MODE											= TS_MODE_TIME		;TS_MODE_NO/TS_MODE_EVENT/TS_MODE_TIME
 	.EQU	BUS_LED_PORT									= PD5		;Порт индикации активности шины
 	.SET	ACT_LED_PORT									= PB2		;Порт индикации активности
@@ -42,7 +42,7 @@
 	.SET	TIMERS_SPEED									= TIMERS_SPEED_50US	;25/50us
 	.SET	TIMERS											= 0		;0-...
 .if FLASH_SIZE >= 0x4000
-	.SET	LOGGING_PORT									= CH1_PORT	;PA0-PC7
+	.SET	LOGGING_PORT									= CH3_PORT	;PA0-PC7
 	.SET	LOGGING_LEVEL									= LOGGING_LVL_PNC
 	.SET	MASTER_LOGGING									= 1
 	.SET	LOGGING_RAMUSAGE								= 0
@@ -81,7 +81,7 @@ MAIN:
 	;Инициализация светодиода и других портов(которые не инициализируются драйверами)
 	LDI ACCUM,BUS_LED_PORT
 	MCALL PORT_MODE_OUT
-	MCALL PORT_SET_LO
+	MCALL PORT_SET_HI
 	LDI ACCUM,ACT_LED_PORT
 	MCALL PORT_MODE_OUT
 	MCALL PORT_SET_LO
@@ -92,9 +92,9 @@ MAIN:
 	;Инициализация IR
 	LDI PID,PID_IR_DRV
 	LDI_Z DRV_IR_INIT
-	LDI TEMP_H,CH3_PORT
+	LDI TEMP_H,EXTR_PORT
 	LDI TEMP_L,0xff
-	LDI TEMP_EH,C5_IR_INT0
+	LDI TEMP_EH,C5_IR_INT1
 	LDI TEMP_EL,ACT_LED_PORT
 	LDI FLAGS,TIMER_C_FREQ_38KHz
 	MCALL C5_CREATE
