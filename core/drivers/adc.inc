@@ -5,11 +5,12 @@
 ;27.10.2020	w5277c@gmail.com			Обновлена информация об авторских правах
 ;09.06.2021	w5277c@gmail.com			Багфиксинг
 ;03.07.2021	w5277c@gmail.com			Z->Y
+;02.12.2024	konstantin@5277.ru		Пропускаю инициализацию таймера, если не задан
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_ADC
 .else
 .set DEF__C5_DRV_ADC = 1
-.message "Included driver ADC v0.3"
+.message "Included driver ADC v0.4"
 
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
@@ -56,11 +57,14 @@ DRV_ADC_INIT:
 
 	;Устанавливаю параметры таймера
 	STD Y+_DRV_ADC_TIMER_ID,ACCUM
+	CPI ACCUM,0xff
+	BREQ _DRV_ADC_INIT__TIMER_SKIP
 	MOV TEMP,ACCUM
 	LDI TEMP_H,high(_DRV_ADC_TIMER_EVENT)
 	LDI TEMP_L,low(_DRV_ADC_TIMER_EVENT)
 	LDI ACCUM,0x01
 	MCALL C5_TIMER_SET
+_DRV_ADC_INIT__TIMER_SKIP:
 
 .IFDEF ADCSRB
 	STS ADCSRB,C0x00
@@ -188,6 +192,8 @@ _DRV_ADC_TIMER_EVENT:
 	RJMP _DRV_ADC_TIMER_EVENT__END
 _DRV_ADC_TIMER_EVENT__STOP:
 	LDD TEMP,Y+_DRV_ADC_TIMER_ID
+	CPI TEMP,0xff
+	BREQ _DRV_ADC_TIMER_EVENT__END
 	MCALL C5_TIMER_STOP
 _DRV_ADC_TIMER_EVENT__END:
 
