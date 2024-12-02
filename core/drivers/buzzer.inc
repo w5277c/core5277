@@ -38,19 +38,19 @@
 	.EQU	_DRV_BUZZER_ST_BUSY				= 0x01				;Занят проигрыванием
 	.EQU	_DRV_BUZZER_ST_LOOP				= 0x02				;Занят проигрыванием по кругу
 
-	.EQU	_DRV_BUZZER_PA						= 0x00		;1B - адрес PORT
-	.EQU	_DRV_BUZZER_BN						= 0x01		;1B - номер бита
-	.EQU	_DRV_BUZZER_STATE					= 0x02		;1B - состояние
-	.EQU	_DRV_BUZZER_ASYNC_TIMER_ID		= 0x03		;1B - ид таймера для асинхронного вызова
-	.EQU	_DRV_BUZZER_MOD_TIMER_ID		= 0x04		;1B - ид таймера для модуляции
-	.EQU	_DRV_BUZZER_BIT_TIME				= 0x05		;1B - количество циклов для 1 бита
-	.EQU	_DRV_BUZZER_BIT_TIME_CNTR		= 0x06		;1B - счетчик для цилов для 1 бита
-	.EQU	_DRV_BUZZER_BIT_DATA				= 0x07		;2B - 16 бит сигнала
-	.EQU	_DRV_BUZZER_BIT_DATA2			= 0x09		;2B - 16 бит сигнала(копия)
-	.EQU	_DRV_BUZZER_BIT_CNTR				= 0x0a		;1B - счетчик бит
-	.EQU	_DRV_BUZZER_BIT_CNTR2			= 0x0b		;1B - счетчик бит(копия)
+	.EQU	_DRV_BUZZER_PA						= 0x00		;2B - адрес PINx
+	.EQU	_DRV_BUZZER_BN						= 0x02		;1B - номер бита
+	.EQU	_DRV_BUZZER_STATE					= 0x03		;1B - состояние
+	.EQU	_DRV_BUZZER_ASYNC_TIMER_ID		= 0x04		;1B - ид таймера для асинхронного вызова
+	.EQU	_DRV_BUZZER_MOD_TIMER_ID		= 0x05		;1B - ид таймера для модуляции
+	.EQU	_DRV_BUZZER_BIT_TIME				= 0x06		;1B - количество циклов для 1 бита
+	.EQU	_DRV_BUZZER_BIT_TIME_CNTR		= 0x07		;1B - счетчик для цилов для 1 бита
+	.EQU	_DRV_BUZZER_BIT_DATA				= 0x08		;2B - 16 бит сигнала
+	.EQU	_DRV_BUZZER_BIT_DATA2			= 0x0a		;2B - 16 бит сигнала(копия)
+	.EQU	_DRV_BUZZER_BIT_CNTR				= 0x0c		;1B - счетчик бит
+	.EQU	_DRV_BUZZER_BIT_CNTR2			= 0x0d		;1B - счетчик бит(копия)
 	;---
-	.EQU	_DRV_BUZZER_RAM_SIZE				= 0x0c
+	.EQU	_DRV_BUZZER_RAM_SIZE				= 0x0e
 
 ;--------------------------------------------------------
 DRV_BUZZER_INIT:
@@ -75,14 +75,16 @@ DRV_BUZZER_INIT:
 	MOV ACCUM,TEMP_L
 	ANDI ACCUM,0x7f
 	MCALL _PORT_OFFSET
-	LDD TEMP,Z+0x02													;PORTx
+	ADIW ZL,0x01														;DDRx
+	MCALL REG_BIT_HI_BY_Z
+	ADIW ZL,0x01														;PORTx
 	SBRC TEMP_L,0x07
-	ORI TEMP,0x80
-	MCALL REG_BIT_SSET
-	STD Y+_DRV_BUZZER_PA,TEMP
+	ORI ZH,(1<<0x07)
+	STD Y+_DRV_BUZZER_PA+0x00,ZH
+	STD Y+_DRV_BUZZER_PA+0x01,ZL
 	STD Y+_DRV_BUZZER_BN,ACCUM
-	LDD TEMP,Z+0x01													;DDRx
-	MCALL REG_BIT_HI
+	CLC
+	MCALL _DRV_BUZZER_SET
 	POP_Z
 
 	CPI TEMP_EH,0xff
@@ -335,14 +337,25 @@ _DRV_BUZZER_SET:
 ;Управление пинтанием buzzer
 ;IN: flag C
 ;--------------------------------------------------------
-	PUSH TEMP
+	PUSH_Z
 	PUSH ACCUM
 
-	LDD TEMP, Y+_DRV_BUZZER_PA
+	LDD ZH,Y+_DRV_BUZZER_PA+0x00
+	LDD ZL,Y+_DRV_BUZZER_PA+0x01
 	LDD ACCUM,Y+_DRV_BUZZER_BN
-	MCALL REG_BIT_SSET
+
+	PUSH ZH
+	BRCC PC+0x02
+	COM ZH
+	LSL ZH
+	POP ZH
+	BRCS PC+0x01+_MCALL_SIZE+0x01
+	MCALL REG_BIT_LO_BY_Z
+	RJMP PC+0x01+_MCALL_SIZE
+	MCALL REG_BIT_HI_BY_Z
+
 	POP ACCUM
-	POP TEMP
+	POP_Z
 	RET
 
 ;--------------------------------------------------------
@@ -417,12 +430,15 @@ _DRV_BUZZER_MOD_TIMER_EVENT:
 ;Обработчик перывания по таймеру для модуляции
 ;--------------------------------------------------------
 	PUSH ACCUM
-	PUSH TEMP
-	LDD TEMP,Y+_DRV_BUZZER_PA
-	ANDI TEMP,0x7f
+	PUSH_Z
+
+	LDD ZH,Y+_DRV_BUZZER_PA+0x00
+	LDD ZL,Y+_DRV_BUZZER_PA+0x01
 	LDD ACCUM,Y+_DRV_BUZZER_BN
-	MCALL REG_BIT_INV
-	POP TEMP
+	ANDI ZH,0x7f
+	MCALL REG_BIT_INV_BY_Z
+
+	POP_Z
 	POP ACCUM
 	RET
 .endif
