@@ -24,8 +24,8 @@ C5_OUT_CHAR:
 	PUSH FLAGS
 
 	LDI_Z PORTS_TABLE*2+(LOGGING_PORT>>4)						;PINx
-	ADIW ZL,0x02														;PORTx
 	LPM ZL,Z
+	ADIW ZL,0x02														;PORTx
 	CLR ZH
 
 	LD ACCUM,Z
