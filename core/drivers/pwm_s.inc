@@ -2,20 +2,23 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;30.10.2021	w5277c@gmail.com			Начало, не тестировано
-;31.11.2021	w5277c@gmail.com			Дписан код, не тестировано
+;31.11.2021	w5277c@gmail.com			Дописан код, не тестировано
+;19.12.2024	konstantin@5277.ru		Оттестировано с применением VPORT+MCP23017
 ;-----------------------------------------------------------------------------------------------------------------------
-
+;DRV_OP_SET_PORT - установка порта,
+;DRV_OP_SET - установка значение(от 0 до максимальная мощность)
+;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF__C5_DRV_PWM_S
 .else
 .set DEF__C5_DRV_PWM_S = 1
-.message "Included driver software PWM v0.1"
+.message "Included driver software PWM v0.2"
 
 .include	"./mem/ram_fill.inc"
 .include	"./core/timer_set.inc"
 .include	"./core/timer_start.inc"
 .include	"./core/ram/ram_offset.inc"
 .include	"./core/ram/ram_realloc.inc"
-.include	"./io/port_offsets.inc"
+.include	"./io/_port_offset.inc"
 .include	"./io/reg_bit_hi.inc"
 .include	"./io/reg_bit_lo.inc"
 
@@ -25,12 +28,9 @@
 	.EQU	_DRV_PWM_S_RAM_CNTR_TOP					= 0x02		;1B - верхний предел счетчика(максимальная мощность)
 	.EQU	_DRV_PWM_S_RAM_ITEMS_DATA				= 0x03		;xB - структура данных для каждого канала
 	;---ITEM-STRUCT---
-	.EQU	_DRV_PWM_S_ITEM_PA						= 0x00		;1B - адрес PORT
-	.EQU	_DRV_PWM_S_ITEM_BN						= 0x01		;1B - номер бита
-	.EQU	_DRV_PWM_S_ITEM_THRLD					= 0x02		;1B - граница срабатывания
-	;---OPERATIONS---
-	.EQU	DRV_PWM_S_OP_PORT_SET					= 0x00		;Устанавливаем порт канала
-	.EQU	DRV_PWM_S_OP_POWER_SET					= 0x01		;Устанавливаем мощность канала
+	.EQU	_DRV_PWM_S_ITEM_PA						= 0x00		;2B - адрес PORT
+	.EQU	_DRV_PWM_S_ITEM_BN						= 0x02		;1B - номер бита
+	.EQU	_DRV_PWM_S_ITEM_THRLD					= 0x03		;1B - граница срабатывания
 
 ;--------------------------------------------------------
 DRV_PWM_S_INIT:
@@ -41,10 +41,10 @@ DRV_PWM_S_INIT:
 ;TEMP_L-периодичность таймера(см. C5_TIMER_SET),
 ;TEMP-верхний предел счетчика(максимальная мощность)
 ;--------------------------------------------------------
-	;Выделяем память (кол-во каналов*4+2)
+	;Выделяем память (кол-во каналов*4+_DRV_PWM_S_RAM_ITEMS_DATA)
 	MOV ACCUM,LOOP_CNTR
 	LSL ACCUM
-	ADD ACCUM,LOOP_CNTR
+	LSL ACCUM
 	SUBI ACCUM,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
 	MCALL C5_RAM_REALLOC
 
@@ -83,11 +83,11 @@ DRV_PWM_S_INIT:
 
 	MCALL C5_RAM_OFFSET
 
-	CPI FLAGS,DRV_PWM_S_OP_PORT_SET
+	CPI FLAGS,DRV_OP_SET_PORT
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_PWM_S_OP_PORT_SET
 	RJMP _DRV_PWM_S__PROC_END
-	CPI FLAGS,DRV_PWM_S_OP_POWER_SET
+	CPI FLAGS,DRV_OP_SET
 	BRNE PC+0x01+_MCALL_SIZE+0x01
 	MCALL _DRV_PWM_S_OP_POWER_SET
 	RJMP _DRV_PWM_S__PROC_END
@@ -107,19 +107,16 @@ _DRV_PWM_S_OP_PORT_SET:
 	PUSH TEMP_L
 	PUSH ACCUM
 
-	MOV TEMP,TEMP_L
 	LSL TEMP_L
-	ADD TEMP_L,TEMP
+	LSL TEMP_L
 	SUBI TEMP_L,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
 	ADD YL,TEMP_L
 	ADC YH,C0x00
 
-	MCALL PORT_OFFSETS
-	MOV TEMP,TEMP_L
-	MCALL REG_BIT_HI
-	MOV TEMP,TEMP_H
-	MCALL REG_BIT_LO
-	STD Y+_DRV_PWM_S_ITEM_PA,TEMP_H
+	MCALL _PORT_OFFSET
+	ADIW ZL,0x02
+	STD Y+_DRV_PWM_S_ITEM_PA+0x00,ZH
+	STD Y+_DRV_PWM_S_ITEM_PA+0x01,ZL
 	STD Y+_DRV_PWM_S_ITEM_BN,ACCUM
 	STD Y+_DRV_PWM_S_ITEM_THRLD,C0x00
 
@@ -135,20 +132,14 @@ _DRV_PWM_S_OP_POWER_SET:
 ;IN: TEMP_H-мощность канала, TEMP_L-номер канала(0-...)
 ;--------------------------------------------------------
 	PUSH TEMP_L
-	PUSH_Z
 
-	MOV TEMP,TEMP_L
 	LSL TEMP_L
-	ADD TEMP_L,TEMP
+	LSL TEMP_L
 	SUBI TEMP_L,(0x100-_DRV_PWM_S_RAM_ITEMS_DATA)
-	MOVW ZL,YL
-	ADD ZL,TEMP_L
-	ADC ZH,C0x00
+	ADD YL,TEMP_L
+	ADC YH,C0x00
+	STD Y+_DRV_PWM_S_ITEM_THRLD,TEMP_H
 
-	STD Z+_DRV_PWM_S_ITEM_THRLD,TEMP_H
-	STD Y+_DRV_PWM_S_RAM_CNTR,C0x00
-
-	POP_Z
 	POP TEMP_L
 	RET
 
@@ -159,8 +150,7 @@ _DRV_PWM_S_TIMER_EVENT:
 ;*обработчики программных таймеров могут не сохранять
 ;значения регистров Y,Z
 ;--------------------------------------------------------
-	PUSH TEMP_H
-	PUSH TEMP_L
+	PUSH_T16
 	PUSH TEMP
 	PUSH LOOP_CNTR
 	PUSH ACCUM
@@ -169,56 +159,60 @@ _DRV_PWM_S_TIMER_EVENT:
 	CPI LOOP_CNTR,0x00
 	BREQ _DRV_PWM_S_TIMER_EVENT__END
 
-	MOVW ZL,YL
-	LDI TEMP,_DRV_PWM_S_RAM_ITEMS_DATA
-	ADD ZL,TEMP
-	ADC ZH,C0x00
-
-	LDD TEMP_H,Y+_DRV_PWM_S_RAM_CNTR_TOP
 	LDD TEMP_L,Y+_DRV_PWM_S_RAM_CNTR
-	CPI TEMP_L,0x00
+	LDD ACCUM,Y+_DRV_PWM_S_RAM_CNTR_TOP
+	MOV TEMP,TEMP_L
+	INC TEMP
+	CP ACCUM,TEMP
+	BRNE PC+0x02
+	CLR TEMP
+	STD Y+_DRV_PWM_S_RAM_CNTR,TEMP
+
+	ADIW YL,_DRV_PWM_S_RAM_ITEMS_DATA
+
+	CPI TEMP_L,0x00													;Проверка на начало периода
 	BRNE _DRV_PWM_S_TIMER_EVENT__CNTR_CHECK_LOOP
+
+	PUSH_Y
+	PUSH LOOP_CNTR
 _DRV_PWM_S_TIMER_EVENT__POWER_ON_LOOP:
-	LDD TEMP,Z+_DRV_PWM_S_ITEM_THRLD
-	CP TEMP,TEMP_L
-	BREQ PC+0x05+_MCALL_SIZE
-	LDD TEMP,Z+_DRV_PWM_S_ITEM_PA
-	LDD ACCUM,Z+_DRV_PWM_S_ITEM_BN
-	CPI ACCUM,0x00
-	BREQ PC+0x01+_MCALL_SIZE
-	MCALL REG_BIT_HI
-	ADIW ZL,0x03
+	LDD TEMP,Y+_DRV_PWM_S_ITEM_THRLD								;Включаем все порты если порог не 0
+	CPI TEMP,0x00														;Порог=0, включать не нужно
+	BREQ PC+0x07+_MCALL_SIZE+0x01
+	LDD ZH,Y+_DRV_PWM_S_ITEM_PA+0x00
+	LDD ZL,Y+_DRV_PWM_S_ITEM_PA+0x01
+	LDD ACCUM,Y+_DRV_PWM_S_ITEM_BN
+	CPI ACCUM,0x00														;=0 если порт не активирован
+	BREQ PC+0x02+_MCALL_SIZE+0x01
+	PUSH TEMP_L
+	MCALL REG_BIT_HI_BY_Z
+	POP TEMP_L
+	ADIW YL,0x04
 	DEC LOOP_CNTR
 	BRNE _DRV_PWM_S_TIMER_EVENT__POWER_ON_LOOP
-	RJMP _DRV_PWM_S_TIMER_EVENT__DONE
+	POP LOOP_CNTR
+	POP_Y
 
 _DRV_PWM_S_TIMER_EVENT__CNTR_CHECK_LOOP:
-	LDD TEMP,Z+_DRV_PWM_S_ITEM_THRLD
+	LDD TEMP,Y+_DRV_PWM_S_ITEM_THRLD
 	CP TEMP,TEMP_L
-	BRNE PC+0x07+_MCALL_SIZE
-	CP TEMP,TEMP_H
-	BREQ PC+0x05+_MCALL_SIZE
-	LDD TEMP,Z+_DRV_PWM_S_ITEM_PA
-	LDD ACCUM,Z+_DRV_PWM_S_ITEM_BN
+	BRNE PC+0x07+_MCALL_SIZE+0x01
+	LDD ZH,Y+_DRV_PWM_S_ITEM_PA+0x00
+	LDD ZL,Y+_DRV_PWM_S_ITEM_PA+0x01
+	LDD ACCUM,Y+_DRV_PWM_S_ITEM_BN
 	CPI ACCUM,0x00
-	BREQ PC+0x01+_MCALL_SIZE
-	MCALL REG_BIT_LO
-	ADIW ZL,0x03
+	BREQ PC+0x02+_MCALL_SIZE+0x01
+	PUSH TEMP_L
+	MCALL REG_BIT_LO_BY_Z
+	POP TEMP_L
+	ADIW YL,0x04
 	DEC LOOP_CNTR
 	BRNE _DRV_PWM_S_TIMER_EVENT__CNTR_CHECK_LOOP
-
-_DRV_PWM_S_TIMER_EVENT__DONE:
-	INC TEMP_L
-	CP TEMP_H,TEMP_L
-	BRNE PC+0x02
-	CLR TEMP_L
-	STD Y+_DRV_PWM_S_RAM_CNTR,TEMP_L
 
 _DRV_PWM_S_TIMER_EVENT__END:
 	POP ACCUM
 	POP LOOP_CNTR
 	POP TEMP
-	POP TEMP_L
-	POP TEMP_H
+	POP_T16
 	RET
 .endif
