@@ -3,7 +3,7 @@
 ;-----------------------------------------------------------------------------------------------------------------------
 ;11.04.2023	konstantin@5277.ru			Начало
 ;01.08.2023	konstantin@5277.ru			Черновой вариант
-;06.08.2023	konstantin@5277.ru			Оттестирован DRV_OP_ASYNC_START, DRV_OP_SYNC_START, DRV_OP_BEEP, DRV_OP_SYNC_STOP
+;06.08.2023	konstantin@5277.ru			Оттестирован DRV_OP_ASYNC_START, DRV_OP_SYNC_START, DRV_OP_BEEP, DRV_OP_STOP
 ;													без модуляции
 ;17.11.2024	konstantin@5277.ru			Актуализация
 ;-----------------------------------------------------------------------------------------------------------------------
@@ -339,6 +339,7 @@ _DRV_BUZZER_SET:
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
+	PUSH_T16
 
 	LDD ZH,Y+_DRV_BUZZER_PA+0x00
 	LDD ZL,Y+_DRV_BUZZER_PA+0x01
@@ -354,6 +355,7 @@ _DRV_BUZZER_SET:
 	RJMP PC+0x01+_MCALL_SIZE
 	MCALL REG_BIT_HI_BY_Z
 
+	POP_T16
 	POP ACCUM
 	POP_Z
 	RET
