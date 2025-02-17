@@ -34,23 +34,23 @@
 .include	"./io/reg_bit_inv.inc"
 
 ;---CONSTANTS--------------------------------------------
-	.EQU	_DRV_BUZZER_ST_READY				= 0x00				;Готов к работе
-	.EQU	_DRV_BUZZER_ST_BUSY				= 0x01				;Занят проигрыванием
-	.EQU	_DRV_BUZZER_ST_LOOP				= 0x02				;Занят проигрыванием по кругу
+	.EQU	_DRV_BUZZER_ST_READY			= 0x00		;Готов к работе
+	.EQU	_DRV_BUZZER_ST_BUSY				= 0x01		;Занят проигрыванием
+	.EQU	_DRV_BUZZER_ST_LOOP				= 0x02		;Занят проигрыванием по кругу
 
-	.EQU	_DRV_BUZZER_PA						= 0x00		;2B - адрес PINx
-	.EQU	_DRV_BUZZER_BN						= 0x02		;1B - номер бита
-	.EQU	_DRV_BUZZER_STATE					= 0x03		;1B - состояние
+	.EQU	_DRV_BUZZER_PA					= 0x00		;2B - адрес PINx
+	.EQU	_DRV_BUZZER_BN					= 0x02		;1B - номер бита
+	.EQU	_DRV_BUZZER_STATE				= 0x03		;1B - состояние
 	.EQU	_DRV_BUZZER_ASYNC_TIMER_ID		= 0x04		;1B - ид таймера для асинхронного вызова
 	.EQU	_DRV_BUZZER_MOD_TIMER_ID		= 0x05		;1B - ид таймера для модуляции
-	.EQU	_DRV_BUZZER_BIT_TIME				= 0x06		;1B - количество циклов для 1 бита
+	.EQU	_DRV_BUZZER_BIT_TIME			= 0x06		;1B - количество циклов для 1 бита
 	.EQU	_DRV_BUZZER_BIT_TIME_CNTR		= 0x07		;1B - счетчик для цилов для 1 бита
-	.EQU	_DRV_BUZZER_BIT_DATA				= 0x08		;2B - 16 бит сигнала
+	.EQU	_DRV_BUZZER_BIT_DATA			= 0x08		;2B - 16 бит сигнала
 	.EQU	_DRV_BUZZER_BIT_DATA2			= 0x0a		;2B - 16 бит сигнала(копия)
-	.EQU	_DRV_BUZZER_BIT_CNTR				= 0x0c		;1B - счетчик бит
+	.EQU	_DRV_BUZZER_BIT_CNTR			= 0x0c		;1B - счетчик бит
 	.EQU	_DRV_BUZZER_BIT_CNTR2			= 0x0d		;1B - счетчик бит(копия)
 	;---
-	.EQU	_DRV_BUZZER_RAM_SIZE				= 0x0e
+	.EQU	_DRV_BUZZER_RAM_SIZE			= 0x0e
 
 ;--------------------------------------------------------
 DRV_BUZZER_INIT:
@@ -339,7 +339,6 @@ _DRV_BUZZER_SET:
 ;--------------------------------------------------------
 	PUSH_Z
 	PUSH ACCUM
-	PUSH_T16
 
 	LDD ZH,Y+_DRV_BUZZER_PA+0x00
 	LDD ZL,Y+_DRV_BUZZER_PA+0x01
@@ -355,7 +354,6 @@ _DRV_BUZZER_SET:
 	RJMP PC+0x01+_MCALL_SIZE
 	MCALL REG_BIT_HI_BY_Z
 
-	POP_T16
 	POP ACCUM
 	POP_Z
 	RET

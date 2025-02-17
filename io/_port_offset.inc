@@ -20,8 +20,8 @@ _PORT_OFFSET:
 ;Возвращаем смещение на первый адрес регистров порта
 ;IN: ACCUM-сдвоенный порт и пин (PA0, PC7 и т.п.)
 ;OUT: Z-адрес регистра PINx, ACCUM-пин в виде числа
-;MODIFY: TEMP
 ;--------------------------------------------------------
+	PUSH TEMP
 	MOV TEMP,ACCUM
 	ANDI ACCUM,0x0f
 
@@ -43,6 +43,7 @@ _PORT_OFFSET:
 	LSL TEMP
 	ADD ZL,TEMP
 	ADC ZH,C0x00
+	POP TEMP
 	RET
 .endif
 _PORT_OFFSET__REALPORTS:
@@ -51,5 +52,6 @@ _PORT_OFFSET__REALPORTS:
 	ADC ZH,C0x00
 	LPM ZL,Z
 	LDI ZH,0x00
+	POP TEMP
 	RET
 .endif

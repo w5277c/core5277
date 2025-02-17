@@ -17,6 +17,9 @@
 .set DEF__DRV_VPORT = 1
 .message "Included driver VPORT v0.1"
 
+	.include	"./mem/ram_fill.inc"
+	.include	"./io/port_set_byte.inc"
+	.include	"./io/port_mode_byte.inc"
 ;---CONSTANTS--------------------------------------------
 	.EQU	_DRV_VPORT_DRIVER_IDS						= VPORTS	;ID драйвера для всех виртуальных портов
 	.EQU	_DRV_VPORT_RAM_SIZE							= _DRV_VPORT_DRIVER_IDS+VPORTS

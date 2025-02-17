@@ -21,17 +21,14 @@ REG_BIT_HI:
 ;IN: TEMP-адрес,ACCUM-число бита
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH_T16
-
 	MOV ZH,C0x00
 	MOV ZL,TEMP
 	RCALL REG_BIT_HI_BY_Z
-
-	POP_T16
 	POP_Z
 	RET
 
 REG_BIT_HI_BY_Z:
+	PUSH_T16
 	LDS TEMP_H,SREG
 	CLI
 	LD TEMP_L,Z
@@ -46,5 +43,6 @@ REG_BIT_HI_BY_Z:
 	BRCS PC+0x01+_MCALL_SIZE
 	MCALL VPORT_SET
 .endif
+	POP_T16
 	RET
 .endif

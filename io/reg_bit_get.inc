@@ -20,13 +20,9 @@ REG_BIT_GET:
 ;OUT: flag C-состояние бита(true = HI)
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH TEMP
-
 	MOV ZH,C0x00
 	MOV ZL,TEMP
 	RCALL REG_BIT_GET_BY_Z
-
-	POP TEMP
 	POP_Z
 	RET
 
@@ -39,8 +35,10 @@ REG_BIT_GET_BY_Z:
 	BRCS PC+0x01+_MCALL_SIZE
 	MCALL VPORT_GET
 .endif
+	PUSH TEMP
 	LD TEMP,Z
 	AND TEMP,ACCUM
 	ADD TEMP,C0xff
+	POP TEMP
 	RET
 .endif

@@ -20,17 +20,14 @@ REG_BIT_INV:
 ;OUT: flag C-состояние бита(true = HI)
 ;--------------------------------------------------------
 	PUSH_Z
-	PUSH_T16
-
 	MOV ZH,C0x00
 	MOV ZL,TEMP
 	RCALL REG_BIT_INV_BY_Z
-
-	POP_T16
 	POP_Z
 	RET
 
 REG_BIT_INV_BY_Z:
+	PUSH_T16
 	LDS TEMP_H,SREG
 	CLI
 	LD TEMP_L,Z
@@ -46,7 +43,7 @@ REG_BIT_INV_BY_Z:
 	BRCS PC+0x01+_MCALL_SIZE
 	MCALL VPORT_SET
 .endif
-
 	ADD TEMP_L,C0xff
+	POP_T16
 	RET
 .endif
