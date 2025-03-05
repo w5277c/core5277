@@ -171,6 +171,8 @@
 	.EQU	TIMER_FREQ_500Hz						= 40
 	.EQU	TIMER_FREQ_250Hz						= 80
 	.EQU	TIMER_FREQ_100Hz						= 128+5
+	.EQU	TIMER_FREQ_50Hz							= 128+10
+	.EQU	TIMER_FREQ_10Hz							= 128+50
 .else
 	.EQU	TIMER_FREQ_40KHz						= 1
 	.EQU	TIMER_FREQ_20KHz						= 2
@@ -181,7 +183,9 @@
 	.EQU	TIMER_FREQ_1KHz							= 40
 	.EQU	TIMER_FREQ_500Hz						= 80
 	.EQU	TIMER_FREQ_250Hz						= 128+2
-	.EQU	TIMER_FREQ_100Hz						= 128+5
+	.EQU	TIMER_FREQ_100Hz						= 128+10
+	.EQU	TIMER_FREQ_50Hz							= 128+20
+	.EQU	TIMER_FREQ_10Hz							= 128+100
 .endif
 .endif
 .ifdef CORE_FREQ

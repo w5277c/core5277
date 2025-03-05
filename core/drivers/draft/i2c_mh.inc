@@ -2,12 +2,13 @@
 ;Файл распространяется под лицензией GPL-3.0-or-later, https://www.gnu.org/licenses/gpl-3.0.txt
 ;-----------------------------------------------------------------------------------------------------------------------
 ;12.11.2024	konstantin@5277.ru		За основу взят i2c_h.inc(не тестировано)
+;25.02.2025	konstantin@5277.ru		Добавлен таймаут
 ;-----------------------------------------------------------------------------------------------------------------------
 ;Поддерживаемые
 .ifdef DEF__C5_DRV_I2C_MH
 .else
 .set DEF__C5_DRV_I2C_MH = 1
-.message "Included driver I2C(hardware) master v0.1"
+.message "Included driver I2C(hardware) master v0.2"
 
 .include "./core/wait.inc"
 .include	"./core/drivers/_i2c.inc"
@@ -18,23 +19,25 @@
 .include	"./io/port_set_lo.inc"
 .include	"./io/port_set_hi.inc"
 
-;---CONSTANTS--------------------------------------------
+;---CONSTANTS-----------------------------------------------
 	;---VARS---
-	.EQU	_DRV_I2C_MH_ADDR						= 0x00			;1B-Адрес подчиненного устройства
-	.EQU	_DRV_I2C_MH_LED_PORT					= 0x01			;1B-Порт индикатора активности
-	.EQU	_DRV_I2C_MH_POS						= 0x02			;1B-Позиция в буфере
-	.EQU	_DRV_I2C_MH_TX_LEN					= 0x03			;1B-Размер данных передачи
-	.EQU	_DRV_I2C_MH_RX_LEN					= 0x04			;1B-Размер данных приема
-	.EQU	_DRV_I2C_MH_STATE						= 0x05			;1B-Статус
-	.EQU	_DRV_I2C_MH_BUFFER_ADDR				= 0x06			;2B-Буфер
+	.EQU	_DRV_I2C_MH_ADDR						= 0x00	;1B-Адрес подчиненного устройства
+	.EQU	_DRV_I2C_MH_LED_PORT					= 0x01	;1B-Порт индикатора активности
+	.EQU	_DRV_I2C_MH_TIMEOUT						= 0x02	;1B-Таймаут *2мс
+	.EQU	_DRV_I2C_MH_POS							= 0x03	;1B-Позиция в буфере
+	.EQU	_DRV_I2C_MH_TX_LEN						= 0x04	;1B-Размер данных передачи
+	.EQU	_DRV_I2C_MH_RX_LEN						= 0x05	;1B-Размер данных приема
+	.EQU	_DRV_I2C_MH_STATE						= 0x06	;1B-Статус
+	.EQU	_DRV_I2C_MH_BUFFER_ADDR					= 0x07	;2B-Буфер
 
-	.EQU	_DRV_I2C_MH_RAM_SIZE					= 0x08
-;--------------------------------------------------------
+	.EQU	_DRV_I2C_MH_RAM_SIZE					= 0x09
+;-----------------------------------------------------------
 DRV_I2C_MH_INIT:
-;--------------------------------------------------------
+;-----------------------------------------------------------
 ;Инициализация
-;IN: TEMP_H-FREQ, TEMP_L-порт инд. передачи(0xff-не исп)
-;--------------------------------------------------------
+;IN: TEMP_H-FREQ, TEMP_L-порт инд. передачи(0xff-не исп),
+;LOOP_CNTR-timeout(*2ms, 0-без таймаута, не использовать 1)
+;-----------------------------------------------------------
 	;Подаем питание на TWI
 	_C5_POWER_ON PRTWI
 
@@ -43,6 +46,8 @@ DRV_I2C_MH_INIT:
 	;Выделяем память
 	LDI ACCUM,_DRV_I2C_MH_RAM_SIZE
 	MCALL C5_RAM_REALLOC
+
+	STD Y+_DRV_I2C_MH_TIMEOUT,LOOP_CNTR
 
 	;Инициализируем порт LED
 	STD Y+_DRV_I2C_MH_LED_PORT,TEMP_L
@@ -73,12 +78,12 @@ DRV_I2C_MH_INIT:
 
 	MCALL C5_READY
 
-;--------------------------------------------------------
+;-----------------------------------------------------------
 ;Основной код, коммуникация
 ;IN: ACCUM-адрес устройства, Z-адрес буфера,TEMP_H-длина
 ;данных на передачу,TEMP_L-длина данных для приема.
 ;OUT: TEMP-DRV_RESULT_...
-;--------------------------------------------------------
+;-----------------------------------------------------------
 	PUSH_Y
 	PUSH_T16
 	PUSH ACCUM
@@ -107,13 +112,24 @@ DRV_I2C_MH_INIT:
 	;Включаю индикатор активности I2C_H
 	LDD ACCUM,Y+_DRV_I2C_MH_LED_PORT
 	MCALL PORT_SET_HI
-
 	LDI TEMP,(1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)
 	STS TWCR,TEMP
+
+	LDD TEMP_L,Y+_DRV_I2C_MH_TIMEOUT
+	LDS TEMP_H,_C5_UPTIME+0x04
 _DRV_I2C_MH__PROC_WAIT_LOOP:
 	LDD TEMP,Y+_DRV_I2C_MH_STATE
-	CPI TEMP,DRV_RESULT_OK
+	CPI TEMP,0x80
+	BRCC _DRV_I2C_MH__END
+	CPI TEMP_L,0x00
+	BREQ _DRV_I2C_MH__PROC_WAIT_LOOP
+	LDS TEMP,_C5_UPTIME+0x04
+	SUB TEMP,TEMP_H
+	CP TEMP,TEMP_L
 	BRCS _DRV_I2C_MH__PROC_WAIT_LOOP
+	LDI TEMP,DRV_RESULT_TIMEOUT
+	RJMP _DRV_I2C_MH__END
+_DRV_I2C_MH__END:
 
 	LDD ACCUM,Y+_DRV_I2C_MH_LED_PORT
 	MCALL PORT_SET_LO
@@ -123,11 +139,11 @@ _DRV_I2C_MH__PROC_WAIT_LOOP:
 	POP_Y
 	RET
 
-;--------------------------------------------------------
+;-----------------------------------------------------------
 _DRV_I2C_MH_EVENT:
-;--------------------------------------------------------
+;-----------------------------------------------------------
 ;Событие от шины
-;--------------------------------------------------------
+;-----------------------------------------------------------
 	PUSH TEMP
 	PUSH ACCUM
 	PUSH_Y
@@ -194,10 +210,10 @@ _DRV_I2C_MH_EVENT__RC:
 	RJMP _DRV_I2C_MH_EVENT__END
 _DRV_I2C_MH_EVENT__SKIP_RC:
 	;Все данные отправлены, прием не нужен
-	LDI TEMP,DRV_RESULT_OK
-	STD Y+_DRV_I2C_MH_STATE,TEMP
 	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWSTO)		;STOP
 	STS TWCR,TEMP
+	LDI TEMP,DRV_I2C_ST_OK
+	STD Y+_DRV_I2C_MH_STATE,TEMP
 	RJMP _DRV_I2C_MH_EVENT__END
 _DRV_I2C_MH_EVENT__NO_TR_NEXT:
 	;TWI проверка на прием байта
@@ -208,6 +224,13 @@ _DRV_I2C_MH_EVENT__NO_TR_NEXT:
 _DRV_I2C_MH_EVENT__RC_NEXT:
 	;Считываем позицию в блоке данных
 	LDD TEMP,Y+_DRV_I2C_MH_POS
+	LDD ACCUM,Y+_DRV_I2C_MH_RX_LEN
+	CP TEMP,ACCUM
+	BRNE _DRV_I2C_MH_EVENT__RC_CAN_WRITE
+	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)					;NACK
+	STS TWCR,TEMP
+	RJMP _DRV_I2C_MH_EVENT__END
+_DRV_I2C_MH_EVENT__RC_CAN_WRITE:
 	LDD ZH,Y+_DRV_I2C_MH_BUFFER_ADDR+0x00
 	LDD ZL,Y+_DRV_I2C_MH_BUFFER_ADDR+0x01
 	ADD ZL,TEMP
@@ -218,24 +241,24 @@ _DRV_I2C_MH_EVENT__RC_NEXT:
 	INC TEMP
 	;Записываем новую позицию в блоке данных
 	STD Y+_DRV_I2C_MH_POS,TEMP
-	;Проверяем на конец приема
-	LDD ACCUM,Y+_DRV_I2C_MH_RX_LEN
-	CP TEMP,ACCUM
-	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)					;NACK
-	BREQ PC+0x02
 _DRV_I2C_MH_EVENT__RC_ACK:
 	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA)		;ACK
 	STS TWCR,TEMP
 	RJMP _DRV_I2C_MH_EVENT__END
 _DRV_I2C_MH_EVENT__RC_NO_ACK:
 	CPI TEMP,TWI_MR_NACK
-	BRNE _DRV_I2C_MH_EVENT__END
+	BRNE _DRV_I2C_MH_EVENT__UNEXPECTED
 	;Все данные получены
 	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWSTO)		;STOP
 	STS TWCR,TEMP
-	LDI TEMP,DRV_RESULT_OK
+	LDI TEMP,DRV_I2C_ST_OK
 	STD Y+_DRV_I2C_MH_STATE,TEMP
 	RJMP _DRV_I2C_MH_EVENT__END
+_DRV_I2C_MH_EVENT__UNEXPECTED:
+	LDI TEMP,(1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWSTO)		;STOP
+	STS TWCR,TEMP
+	LDI TEMP,DRV_I2C_ST_ERROR
+	STD Y+_DRV_I2C_MH_STATE,TEMP
 _DRV_I2C_MH_EVENT__END:
 
 	POP_Z
