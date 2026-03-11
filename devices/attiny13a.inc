@@ -31,7 +31,7 @@
 	.EQU	EEPROM_SIZE								= 0x40			;64Б
 	.EQU	PORTS_QUANTITY							= 0x02			;Кол-во реальных портов (---,PORTB,PORTC,PORTD)
 
-	.include "/devices/_common.inc"
+	.include "./devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATTINY13A

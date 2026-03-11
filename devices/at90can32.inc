@@ -32,7 +32,7 @@
 	.EQU	EEPROM_SIZE								= 0x0400			;1K
 	.EQU	PORTS_QUANTITY							= 0x07			;Кол-во реальных портов (PORTA,PORTB,PORTC,...)
 
-	.include "/devices/_common.inc"
+	.include "./devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= CAN32

@@ -40,7 +40,7 @@
 	.SET	EEPROM_SIZE								= 0x200
 	.EQU	PORTS_QUANTITY							= 0x04			;Кол-во реальных портов (PORTA,PORTB,PORTC,PORTD)
 
-	.include "/devices/_common.inc"
+	.include "./devices/_common.inc"
 
 ;---CONSTANTS--------------------------------------------
 	.SET	DEVICE_FAMILY							= ATMEGA16

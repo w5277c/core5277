@@ -9,6 +9,8 @@
 ;12.10.2024	konstantin@5277.ru		Реализация виртуальных портов
 ;03.11.2024	konstantin@5277.ru		Оптимизация(flash,cpu)
 ;21.11.2024	konstantin@5277.ru		Сократил PORTS_TABLE, оставив только PINx(всегда DDRx=PINx+1, PORTx=PINx+2)
+;12.03.2026	konstantin@5277.ru		Добавил смещение на PORTx(был PINx) так как REG_BIT_INV_BY_Z не ипользует PINx для
+;									инвертирования (учет виртуальных портов - возможно место для оптимизации)
 ;-----------------------------------------------------------------------------------------------------------------------
 .ifdef DEF_PORT_INVERT
 .else
@@ -35,6 +37,7 @@ PORT_INVERT:
 	PUSH_Z
 	PUSH ACCUM
 	MCALL _PORT_OFFSET
+	ADIW ZL,0x02
 	MCALL REG_BIT_INV_BY_Z
 	POP ACCUM
 	POP_Z
